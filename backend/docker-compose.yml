@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: .
+    volumes:
+      - .:/app  # Syncs your local folder to Docker (Live Code Editing)
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    # This keeps the container running so we can exec commands into it
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=dansbart
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

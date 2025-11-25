@@ -1,0 +1,15 @@
+fastapi>=0.109.0        # The Web Framework
+uvicorn[standard]       # The Web Server (ASGI)
+sqlalchemy>=2.0.0       # The ORM (Database)
+psycopg2-binary         # PostgreSQL Adapter
+pydantic-settings       # .env file management
+typer                   # CLI builder (for your manage.py)
+python-dotenv           # Loads .env files
+librosa                 # Audio analysis
+numpy                   # Math
+spotipy                 # Spotify API client
+yt-dlp                  # YouTube downloader
+scipy                   # Scientific computing
+Cython                  # For compiling madmom
+git+https://github.com/CPJKU/madmom.git                  # Beat tracking and onset detection
+essentia-tensorflow     # Audio analysis and feature extraction
