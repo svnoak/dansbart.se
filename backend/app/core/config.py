@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "folkmusic_db"
+    POSTGRES_DB: str = "dansbart"
     
     # Spotify (NEW: Add these lines)
     SPOTIPY_CLIENT_ID: str

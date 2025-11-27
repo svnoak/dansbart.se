@@ -13,3 +13,6 @@ scipy                   # Scientific computing
 Cython                  # For compiling madmom
 git+https://github.com/CPJKU/madmom.git                  # Beat tracking and onset detection
 essentia-tensorflow     # Audio analysis and feature extraction
+bs4                     # HTML parsing (for web scraping)
+music21                 # Music theory and notation analysis
+yt_dlp                  # YouTube downloader

@@ -27,20 +27,18 @@ class AnalysisSource(Base):
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
     source_type: Mapped[str] = mapped_column(String)
     raw_data: Mapped[dict] = mapped_column(JSONB)
-    
-    # --- NEW COLUMNS ADDED HERE ---
     confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
     analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    # ------------------------------
-
     track = relationship("Track", back_populates="analysis_sources")
 
 class TrackDanceStyle(Base):
     __tablename__ = "track_dance_styles"
-
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
-    dance_style: Mapped[str] = mapped_column(String)
+    dance_style: Mapped[str] = mapped_column(String, index=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    tempo_category: Mapped[str | None] = mapped_column(String, nullable=True)
     bpm_multiplier: Mapped[float] = mapped_column(Float, default=1.0)
     effective_bpm: Mapped[int] = mapped_column(Integer)
     

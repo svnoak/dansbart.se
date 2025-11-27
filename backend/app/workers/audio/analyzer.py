@@ -1,116 +1,281 @@
-import os
-import glob
 import librosa
 import numpy as np
-import yt_dlp
-import scipy.stats
-from sqlalchemy.orm import Session
-from app.repository.track import TrackRepository
-from app.repository.analysis import AnalysisRepository
-from app.core.models import Track
+import madmom
+import madmom.features.downbeats
+import essentia.standard as es
+import traceback
 
-# Temporary folder for MP3s
-TEMP_DIR = "./temp_audio"
-os.makedirs(TEMP_DIR, exist_ok=True)
+# ==========================================
+# 1. SHARED CONFIGURATION & CONSTANTS
+# ==========================================
+
+# Maps metadata keywords to forced Meter (Beats per Bar)
+METER_HINTS = {
+    # Ternary (3/4)
+    "hambo": 3, "hamburska": 3, 
+    "polska": 3, "pols": 3, "springlek": 3, "bondpolska": 3,
+    "slängpolska": 3, "släng": 3,
+    "vals": 3, "waltz": 3, "walz": 3, "hoppvals": 3,
+    "mazurka": 3,
+    
+    # Binary (2/4 or 4/4)
+    # We allow both 2 and 4 to let the beat tracker find the natural pulse,
+    # but we will normalize this in the classifier.
+    "schottis": [2, 4], "reinländer": [2, 4], "tyskpolka": [2, 4],
+    "engelska": [2, 4], "reel": [2, 4], "anglais": [2, 4],
+    "snoa": [2, 4], "gånglåt": [2, 4], "marsch": [2, 4],
+    "polka": [2, 4], "galopp": [2, 4], "polkett": [2, 4],
+}
+
+# ==========================================
+# 2. ANALYZER (Feature Extraction)
+# ==========================================
 
 class AudioAnalyzer:
-    def __init__(self, db: Session):
-        self.db = db
-        self.track_repo = TrackRepository(db)
-        self.analysis_repo = AnalysisRepository(db)
+    def __init__(self):
+        # Load heavy models once
+        print("🧠 Loading RNN Models...")
+        self.proc_beat = madmom.features.downbeats.RNNDownBeatProcessor()
 
-    def analyze_pending_tracks(self, limit=5, force=False):
-        """Finds tracks that haven't been analyzed yet and processes them"""
-        print(f"🔍 Looking for up to {limit} tracks to analyze...")
-        
-        # In a real app, you'd filter for tracks where AnalysisSource is missing.
-        # For now, we just grab all tracks to test the loop.
-        tracks = self.db.query(Track).limit(limit).all() 
-        
-        for track in tracks:
-            # Check if already analyzed to save time
-            existing = self.analysis_repo.get_latest_by_track(track.id, "librosa_v1")
-            if existing and not force:
-                print(f"⏭️  Skipping {track.title} (Already analyzed)")
-                continue
-
-            print(f"🔬 Analyzing: {track.title}...")
-            try:
-                self._process_track(track)
-            except Exception as e:
-                print(f"❌ Failed on {track.title}: {e}")
-
-    def _process_track(self, track):
-        # A. Find & Download Audio
-        search_query = f"{track.title} {track.artist_name} audio"
-        file_path = self._download_audio(search_query, str(track.id))
-        
-        if not file_path:
-            print(f"⚠️  Could not download audio for {track.title}")
-            return
-
-        # B. Analyze with Librosa
+    def analyze_file(self, file_path: str, metadata_context: str = "") -> dict:
+        """
+        Main entry point. Analyzes audio and returns a flat dictionary of metrics.
+        """
         try:
-            results = self._analyze_audio(file_path)
+            # --- 1. CONFIGURATION ---
+            beats_hint = self._get_meter_hint(metadata_context)
             
-            # C. Save to DB
-            self.analysis_repo.add_analysis(
-                track_id=track.id,
-                source_type="librosa_v1",
-                data=results
+            # --- 2. RHYTHM ANALYSIS (Madmom) ---
+            act = self.proc_beat(file_path)
+            
+            transition_lambda = 20 if beats_hint == 3 else 100
+            allowed_beats = beats_hint if beats_hint else [2, 3, 4]
+            
+            proc_decode = madmom.features.downbeats.DBNDownBeatTrackingProcessor(
+                beats_per_bar=allowed_beats, 
+                fps=100,
+                transition_lambda=transition_lambda
             )
-            print(f"✅ Saved Analysis: BPM={results['bpm']:.1f}")
+            beat_info = proc_decode(act) 
+
+            # --- 3. TIMING ANALYSIS (Librosa) ---
+            y, sr = librosa.load(file_path, sr=22050, duration=30)
+            onsets = librosa.onset.onset_detect(y=y, sr=sr, units='time', backtrack=True)
+
+            asym, meter, ratios = self._calculate_rhythm_metrics(beat_info, onsets)
+            swing = self._calculate_swing_ratio(beat_info, onsets)
             
-        finally:
-            # D. Cleanup (CRITICAL: Always delete the file)
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            raw_bpm = 0.0
+            if len(beat_info) > 1:
+                intervals = np.diff(beat_info[:, 0])
+                if len(intervals) > 0:
+                    raw_bpm = 60.0 / np.median(intervals)
 
-    def _download_audio(self, query, track_id):
-        # yt-dlp options to get a small audio file fast
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': f'{TEMP_DIR}/{track_id}.%(ext)s',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '128', # Low quality is fine for BPM
-            }],
-            'quiet': True,
-            'noplaylist': True
-        }
-        
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            try:
-                ydl.extract_info(f"ytsearch1:{query}", download=True)
-                # Find the file (extension might vary)
-                files = glob.glob(f"{TEMP_DIR}/{track_id}.mp3")
-                return files[0] if files else None
-            except Exception as e:
-                print(f"Download Error: {e}")
-                return None
+            # --- 4. SIGNAL ANALYSIS (Essentia) ---
+            loader = es.MonoLoader(filename=file_path, sampleRate=44100)
+            audio = loader()
+            
+            # These return tuples like (value, confidence) or arrays
+            danceability_out = es.Danceability()(audio)
+            energy_out = es.Energy()(audio)
+            onset_rate_out = es.OnsetRate()(audio)
 
-    def _analyze_audio(self, file_path):
-        # 1. Load Audio
-        y, sr = librosa.load(file_path, offset=10, duration=45)
-        
-        # 2. Onset Envelope (Normalized 0 to 1)
-        # This makes the volume independent of the recording level
-        onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        onset_env = librosa.util.normalize(onset_env) 
-        
-        # 3. Detect BPM
-        tempo, beat_frames = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr)
-        if isinstance(tempo, np.ndarray):
-            tempo = tempo[0]
+            # --- 5. FORMATTING & SAFETY ---
+            return {
+                "tempo_bpm": self._to_float(raw_bpm),
+                "meter": meter,
+                "asymmetry_score": self._to_float(asym),
+                "beat_ratios": ratios, 
+                "swing_ratio": self._to_float(swing),
+                # The _to_float helper handles the Essentia tuples here
+                "danceability": self._to_float(danceability_out),
+                "energy": self._to_float(energy_out),
+                "onset_rate": self._to_float(onset_rate_out)
+            }
 
-        # 4. Calculate Pulse Clarity (The "Stomp Factor")
-        # We look at the "contrast" of the onset envelope.
-        # High variance = distinct hits (Schottis). Low variance = smooth (Polska/Vals).
-        pulse_clarity = onset_env.var() # Variance is a robust proxy for clarity on normalized data
+        except Exception as e:
+            print(f"❌ Analysis Error for {file_path}: {e}")
+            traceback.print_exc()
+            return None
+        
+    def _to_float(self, value):
+        """
+        Robustly converts inputs to a single float.
+        Handles: Scalars, NumPy 0-d arrays, Lists, Tuples (takes first index).
+        """
+        try:
+            # Case 1: Tuple/List (Essentia often returns (value, probability))
+            if isinstance(value, (list, tuple)):
+                if len(value) > 0:
+                    return float(value[0])
+                return 0.0
+            
+            # Case 2: NumPy Array
+            if hasattr(value, 'item'):
+                return float(value.item())
+                
+            # Case 3: Standard Number
+            return float(value)
+        except Exception:
+            return 0.0
+
+    def _get_meter_hint(self, text: str):
+        text = text.lower()
+        for keyword, beats in METER_HINTS.items():
+            if keyword in text: return beats
+        return None
+
+    def _analyze_file(self, file_path, beats_hint=None):
+        # --- A. Madmom (Rhythm & Meter) ---
+        act = self.proc_beat(file_path) 
+        
+        allowed_beats = beats_hint if beats_hint else [2,3,4]
+        
+        # Keep the dynamic stiffness
+        if beats_hint == 3:
+            transition_lambda = 20 
+        else:
+            transition_lambda = 100
+        
+        proc_decode = madmom.features.downbeats.DBNDownBeatTrackingProcessor(
+            beats_per_bar=allowed_beats, 
+            fps=100,
+            transition_lambda=transition_lambda
+        )
+        
+        beat_info = proc_decode(act) 
+        
+        # --- B. Load Onsets with BACKTRACKING ---
+        # Backtrack=True moves the timestamp to the START of the sound, not the peak volume.
+        # This improves timing accuracy significantly.
+        y, sr = librosa.load(file_path, sr=22050, duration=30)
+        onsets = librosa.onset.onset_detect(y=y, sr=sr, units='time', backtrack=True)
+
+        # --- C. Custom Metrics ---
+        asymmetry_score, meter, avg_beat_ratios = self._calculate_rhythm_metrics(beat_info, onsets)
+        swing_ratio = self._calculate_swing_ratio(beat_info, onsets)
+
+        if len(beat_info) > 1:
+            intervals = np.diff(beat_info[:, 0])
+            raw_bpm = 60.0 / np.median(intervals)
+        else:
+            raw_bpm = 0
+
+        # --- D. Essentia ---
+        loader = es.MonoLoader(filename=file_path, sampleRate=44100)
+        audio = loader()
+        
+        danceability_res = es.Danceability()(audio)
+        danceability = danceability_res[0] if isinstance(danceability_res, tuple) else danceability_res
+        
+        energy = es.Energy()(audio)
+        onset_res = es.OnsetRate()(audio)
+        onset_rate = onset_res[0] if isinstance(onset_res, tuple) else onset_res
 
         return {
-            "bpm": float(tempo),
-            "pulse_clarity": float(pulse_clarity),
-            "duration_analyzed": 45
+            "tempo_bpm": self._safe_float(raw_bpm),
+            "meter": meter,
+            "asymmetry_score": self._safe_float(asymmetry_score),
+            "beat_ratios": avg_beat_ratios, 
+            "swing_ratio": self._safe_float(swing_ratio),
+            "danceability": self._safe_float(danceability),
+            "energy": self._safe_float(energy),
+            "onset_rate": self._safe_float(onset_rate)
         }
+
+    def _safe_float(self, value):
+        try:
+            if hasattr(value, 'item'): return float(value.item())
+            if isinstance(value, (list, tuple, np.ndarray)):
+                if len(value) == 1: return float(value[0])
+                if len(value) == 0: return 0.0
+                return float(np.mean(value))
+            return float(value)
+        except Exception:
+            return 0.0
+
+    def _calculate_rhythm_metrics(self, beat_info, onsets):
+        """
+        Calculates asymmetry. 
+        Attempt 3: Wide Window (0.25s) with Debugging.
+        """
+        if len(beat_info) == 0:
+            return 0.0, "0/4", []
+
+        beat_nums = beat_info[:, 1]
+        grid_times = beat_info[:, 0]
+        
+        # --- 1. SNAP LOGIC (Widened to 0.25s) ---
+        real_times = []
+        for t in grid_times:
+            # Widen window to 250ms (0.25s) to catch loose beats
+            nearby = [o for o in onsets if abs(o - t) < 0.25]
+            if nearby:
+                closest = min(nearby, key=lambda x: abs(x - t))
+                real_times.append(closest)
+            else:
+                real_times.append(None)
+        
+        max_beat = int(np.max(beat_nums)) if len(beat_nums) > 0 else 0
+        meter = f"{max_beat}/4"
+        
+        asymmetry_score = 0.0
+        avg_ratios = []
+
+        # --- 2. CALCULATE RATIOS ---
+        if max_beat == 3 and len(real_times) > 3:
+            triplets = []
+            limit = min(len(beat_nums), len(real_times))
+            
+            for i in range(limit - 3):
+                # Check for sequence 1-2-3
+                if beat_nums[i] == 1 and beat_nums[i+1] == 2 and beat_nums[i+2] == 3:
+                    
+                    t1, t2, t3, t4 = real_times[i], real_times[i+1], real_times[i+2], real_times[i+3]
+
+                    # Strict check: All beats must exist
+                    if t1 is not None and t2 is not None and t3 is not None and t4 is not None:
+                        d1 = t2 - t1
+                        d2 = t3 - t2
+                        d3 = t4 - t3
+                        
+                        total = d1 + d2 + d3
+                        if total > 0:
+                            triplets.append([d1/total, d2/total, d3/total])
+            
+            # --- DEBUG PRINT ---
+            # This will show up in your logs so we know if we are finding ANYTHING
+            print(f"   [DEBUG] Found {len(triplets)} valid measures out of {len(beat_nums)//3} total.")
+
+            if triplets:
+                avg_ratios = np.mean(triplets, axis=0).tolist()
+                asymmetry_score = np.sum(np.abs(np.array(avg_ratios) - 0.333))
+        
+        return asymmetry_score, meter, avg_ratios
+
+    def _calculate_swing_ratio(self, beat_info, onsets):
+        """
+        Calculates swing using pre-loaded onsets.
+        """
+        if len(beat_info) < 2: return 1.0
+        
+        ratios = []
+        for i in range(len(beat_info) - 1):
+            start = beat_info[i, 0]
+            end = beat_info[i+1, 0]
+            duration = end - start
+            
+            # Filter for onsets in the middle 60% of the beat
+            candidates = [o for o in onsets if (start + duration*0.2) < o < (end - duration*0.2)]
+            
+            if candidates:
+                # Pick the candidate closest to the geometric center
+                mid_point = min(candidates, key=lambda x: abs(x - (start + (duration / 2))))
+                first_half = mid_point - start
+                second_half = end - mid_point
+                
+                if second_half > 0.001:
+                    ratios.append(first_half / second_half)
+        
+        if not ratios: return 1.0
+        return float(np.median(ratios).item())

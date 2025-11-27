@@ -1,18 +1,19 @@
 import typer
-print("DEBUG: manage.py is running!")
 from app.core.database import Base, engine, SessionLocal
-from app.repository.track import TrackRepository
+
+# --- CHANGED: Import Advanced Workers ---
 from app.workers.ingestion.spotify import SpotifyIngestor
-from app.workers.ingestion.folkwiki import FolkwikiScraper # <--- 1. NEW IMPORT
-from app.workers.audio.analyzer import AudioAnalyzer
-from app.workers.synthesis.classifier import DanceClassifier
+from app.workers.ingestion.folkwiki import FolkwikiScraper
+from app.services.analysis import AnalysisService
 from app.workers.discovery.spider import DiscoverySpider
+from app.workers.ingestion.source_finder import SourceFinder
+from app.services.classification import ClassificationService
 
 app = typer.Typer()
 
 @app.command()
 def init_db():
-    """Creates the database tables (Run this first!)"""
+    """Creates the database tables"""
     print("Creating database tables...")
     Base.metadata.create_all(bind=engine)
     print("Tables created!")
@@ -32,27 +33,34 @@ def ingest_playlist(playlist_id: str):
 
 @app.command()
 def analyze_audio(limit: int = 5, force: bool = False):
-    """Downloads and analyzes audio for existing tracks"""
+    """Downloads audio, saves YouTube links, and runs analysis"""
     db = SessionLocal()
     try:
-        analyzer = AudioAnalyzer(db)
-        analyzer.analyze_pending_tracks(limit, force)
+        service = AnalysisService(db)
+        print(f"🚀 Starting Analysis Service (Limit: {limit})")
+        service.process_library(limit=limit, force=force)
+        
+    except Exception as e:
+        print(f"❌ Critical Error in Analysis Service: {e}")
     finally:
         db.close()
 
 @app.command()
-def classify(limit: int = 50):
-    """Classifies tracks into Dance Styles based on BPM + Title"""
+def classify(limit: int = 50, force: bool = False):
+    """Classifies tracks into Dance Styles using Multi-Label Logic"""
     db = SessionLocal()
     try:
-        classifier = DanceClassifier(db)
-        classifier.classify_tracks(limit)
+        # Initialize the Service (The Body), not just the Classifier (The Brain)
+        service = ClassificationService(db)
+        
+        # Run the orchestration method
+        service.classify_pending_tracks(limit=limit, force_refresh=force)
     finally:
         db.close()
 
 @app.command()
 def discover(limit: int = 1):
-    """Crawls Spotify for new folk artists based on existing tracks"""
+    """Crawls Spotify for new folk artists"""
     db = SessionLocal()
     try:
         spider = DiscoverySpider(db)
@@ -60,43 +68,35 @@ def discover(limit: int = 1):
     finally:
         db.close()
 
-# --- 2. NEW COMMAND START ---
 @app.command()
 def build_ground_truth(style: str = "Hambo", limit: int = 20):
-    """Scrapes Folkwiki to build a rhythmic profile for a genre"""
+    """Scrapes Folkwiki to build a rhythmic profile"""
     db = SessionLocal()
     try:
         scraper = FolkwikiScraper(db)
         scraper.build_ground_truth(style, limit)
     finally:
         db.close()
-# --- NEW COMMAND END ---
 
 @app.command()
 def check_coverage():
     """Reports how many tracks are successfully classified"""
-    # (Optional helper we discussed earlier)
     from app.core.models import Track, TrackDanceStyle
     db = SessionLocal()
     try:
         total = db.query(Track).count()
-        classified = db.query(TrackDanceStyle).count()
+        classified = db.query(TrackDanceStyle).distinct(TrackDanceStyle.track_id).count()
         print(f"📊 Coverage: {classified}/{total} tracks classified ({int((classified/total)*100) if total else 0}%)")
     finally:
         db.close()
 
 @app.command()
-def seed_fake_track():
-    """Test inserting a track manually"""
+def find_sources(limit: int = 50):
+    """Finds YouTube playback links for tracks that are missing them"""
     db = SessionLocal()
     try:
-        repo = TrackRepository(db)
-        if repo.get_by_isrc("SE-123-45"):
-            print("Track already exists!")
-            return
-        track = repo.create_track(title="Boda Hambo", artist="Rättviks Spelmanslag", isrc="SE-123-45")
-        repo.add_playback_link(track.id, "spotify", "spotify:track:xyz")
-        print(f"Created track: {track.title} with ID: {track.id}")
+        finder = SourceFinder(db)
+        finder.find_missing_youtube_links(limit)
     finally:
         db.close()
 
