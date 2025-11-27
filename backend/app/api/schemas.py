@@ -15,7 +15,9 @@ class TrackOut(BaseModel):
     # Computed fields from your classifier
     dance_style: str
     effective_bpm: int
-    
+    has_vocals: bool | None = False
+    style_confidence: float = 0.0
+
     playback_links: List[PlaybackLinkOut]
 
     class Config:

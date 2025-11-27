@@ -17,18 +17,36 @@ class StyleClassifier:
     # If these keywords appear in the title/album, we trust them 95%.
     KEYWORDS = {
         # Ternary (3/4)
-        "hambo": "Hambo", "hamburska": "Hambo", "hambor": "Hambo",
-        "polska": "Polska", "bondpolska": "Polska", "springlek": "Polska", "pols": "Polska",
-        "slängpolska": "Slängpolska", "släng": "Slängpolska",
+        "hambo": "Hambo",
+        "hamburska": "Hambo",
+        "hambor": "Hambo",
+        "polska": "Polska",
+        "bondpolska": "Polska",
+        "springlek": "Polska",
+        "pols": "Polska",
+        "slängpolska": "Slängpolska",
+        "släng": "Slängpolska",
         "mazurka": "Mazurka",
-        "vals": "Vals", "waltz": "Vals", "brudvals": "Vals", "walz": "Vals",
+        "masurka": "Mazurka",
+        "vals": "Vals",
+        "waltz": "Vals",
+        "brudvals": "Vals",
+        "walz": "Vals",
         "menuett": "Menuett",
         
         # Binary (2/4, 4/4)
-        "schottis": "Schottis", "reinländer": "Schottis", "reinlender": "Schottis", "rheinlender": "Schottis",
-        "snoa": "Snoa", "gånglåt": "Snoa", "marsch": "Snoa",
-        "polka": "Polka", "polkett": "Polka",
-        "engelska": "Engelska", "reel": "Engelska", "anglais": "Engelska"
+        "schottis": "Schottis",
+        "reinländer": "Schottis",
+        "reinlender": "Schottis",
+        "rheinlender": "Schottis",
+        "snoa": "Snoa",
+        "gånglåt": "Snoa",
+        "marsch": "Snoa",
+        "polka": "Polka",
+        "polkett": "Polka",
+        "engelska": "Engelska",
+        "reel": "Engelska",
+        "anglais": "Engelska"
     }
 
     # Used to categorize tempo description (Slow/Medium/Fast/Turbo)

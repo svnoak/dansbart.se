@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.core.models import Track, PlaybackLink
 from app.repository.analysis import AnalysisRepository
 from app.workers.audio.fetcher import AudioFetcher
-from backend.app.workers.audio.analyzer import AudioAnalyzer
+from app.workers.audio.analyzer import AudioAnalyzer
 
 class AnalysisService:
     def __init__(self, db: Session):

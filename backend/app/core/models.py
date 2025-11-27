@@ -15,10 +15,10 @@ class Track(Base):
     album_name: Mapped[str | None] = mapped_column(String, nullable=True)
     isrc: Mapped[str | None] = mapped_column(String, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
     analysis_sources = relationship("AnalysisSource", back_populates="track")
     playback_links = relationship("PlaybackLink", back_populates="track")
     dance_styles = relationship("TrackDanceStyle", back_populates="track")
+    has_vocals: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
 
 class AnalysisSource(Base):
     __tablename__ = "analysis_sources"
@@ -51,7 +51,7 @@ class PlaybackLink(Base):
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
     platform: Mapped[str] = mapped_column(String)
     deep_link: Mapped[str] = mapped_column(String)
-    
+    is_working: Mapped[bool] = mapped_column(Boolean, default=True)
     track = relationship("Track", back_populates="playback_links")
 
 class GenreProfile(Base):

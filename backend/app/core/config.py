@@ -2,14 +2,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict # Added SettingsC
 from pydantic import PostgresDsn, computed_field
 
 class Settings(BaseSettings):
-    # Database (Existing)
+    # Database
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "dansbart"
     
-    # Spotify (NEW: Add these lines)
+    # Spotify
     SPOTIPY_CLIENT_ID: str
     SPOTIPY_CLIENT_SECRET: str
 

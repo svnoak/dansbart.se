@@ -4,6 +4,7 @@ import madmom
 import madmom.features.downbeats
 import essentia.standard as es
 import traceback
+import os
 
 # ==========================================
 # 1. SHARED CONFIGURATION & CONSTANTS
@@ -16,7 +17,7 @@ METER_HINTS = {
     "polska": 3, "pols": 3, "springlek": 3, "bondpolska": 3,
     "slängpolska": 3, "släng": 3,
     "vals": 3, "waltz": 3, "walz": 3, "hoppvals": 3,
-    "mazurka": 3,
+    "mazurka": 3, "masurka": 3,
     
     # Binary (2/4 or 4/4)
     # We allow both 2 and 4 to let the beat tracker find the natural pulse,
@@ -31,11 +32,37 @@ METER_HINTS = {
 # 2. ANALYZER (Feature Extraction)
 # ==========================================
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 1. The Backbone (Audio -> Embeddings)
+MODEL_BACKBONE = os.path.join(BASE_DIR, "models", "msd-musicnn-1.pb")
+# 2. The Head (Embeddings -> Voice/Inst Probability)
+MODEL_VOICE = os.path.join(BASE_DIR, "models", "voice_instrumental-msd-musicnn-1.pb")
+
 class AudioAnalyzer:
     def __init__(self):
-        # Load heavy models once
-        print("🧠 Loading RNN Models...")
+        print("🧠 Loading Analysis Models...")
         self.proc_beat = madmom.features.downbeats.RNNDownBeatProcessor()
+        
+        try:
+            # --- LOADER 1: The Backbone (MusiCNN) ---
+            # Extracts high-level features (embeddings) from raw audio
+            self.tf_embeddings = es.TensorflowPredictMusiCNN(
+                graphFilename=MODEL_BACKBONE,
+                output="model/dense/BiasAdd" # The standard embedding layer node
+            )
+
+            # --- LOADER 2: The Classifier (Voice vs Instrumental) ---
+            self.tf_voice_classifier = es.TensorflowPredict(
+                graphFilename=MODEL_VOICE,
+                inputs=["model/Placeholder"],
+                outputs=["model/Softmax"] 
+            )
+            print("   ✅ Voice detection pipeline loaded.")
+        except Exception as e:
+            print(f"   ⚠️ Voice model failed to load: {e}")
+            self.tf_embeddings = None
+            self.tf_voice_classifier = None
 
     def analyze_file(self, file_path: str, metadata_context: str = "") -> dict:
         """
@@ -72,25 +99,27 @@ class AudioAnalyzer:
                     raw_bpm = 60.0 / np.median(intervals)
 
             # --- 4. SIGNAL ANALYSIS (Essentia) ---
-            loader = es.MonoLoader(filename=file_path, sampleRate=44100)
-            audio = loader()
-            
-            # These return tuples like (value, confidence) or arrays
-            danceability_out = es.Danceability()(audio)
-            energy_out = es.Energy()(audio)
-            onset_rate_out = es.OnsetRate()(audio)
+            loader_std = es.MonoLoader(filename=file_path, sampleRate=44100)
+            audio_std = loader_std()
 
-            # --- 5. FORMATTING & SAFETY ---
+            danceability_out = es.Danceability()(audio_std)
+            energy_out = es.Energy()(audio_std)
+            onset_rate_out = es.OnsetRate()(audio_std)
+
+            # --- 5. VOICE DETECTION ---
+            vocal_data = self._analyze_vocal_presence(audio_std)
+
+            # --- 5. RETURN ---
             return {
                 "tempo_bpm": self._to_float(raw_bpm),
                 "meter": meter,
                 "asymmetry_score": self._to_float(asym),
-                "beat_ratios": ratios, 
                 "swing_ratio": self._to_float(swing),
-                # The _to_float helper handles the Essentia tuples here
                 "danceability": self._to_float(danceability_out),
                 "energy": self._to_float(energy_out),
-                "onset_rate": self._to_float(onset_rate_out)
+                "onset_rate": self._to_float(onset_rate_out),
+                "melody_confidence": vocal_data['confidence'],
+                "is_likely_instrumental": vocal_data['is_instrumental']
             }
 
         except Exception as e:
@@ -279,3 +308,50 @@ class AudioAnalyzer:
         
         if not ratios: return 1.0
         return float(np.median(ratios).item())
+
+    def _analyze_vocal_presence(self, audio):
+        """
+        Estimates if there is a dominant voice/melody line.
+        Returns a dict with 'confidence' score and boolean flag.
+        """
+        # PitchMelodia extracts the dominant melody pitch curve
+        # hopSize=128 gives high resolution
+        run_melodia = es.PredominantPitchMelodia(frameSize=2048, hopSize=128)
+        pitch, confidence = run_melodia(audio)
+
+        # 1. Filter out silence/noise (confidence < 0.1)
+        valid_indices = confidence > 0.1
+        if np.sum(valid_indices) == 0:
+            return {"confidence": 0.0, "is_instrumental": True}
+
+        valid_pitch = pitch[valid_indices]
+        valid_confidence = confidence[valid_indices]
+
+        # 2. Vocal Range Filtering (approx 100Hz to 1000Hz)
+        # Violins go higher, Bass goes lower.
+        # If the majority of the melody is within human vocal range, it increases likelihood.
+        in_vocal_range = (valid_pitch > 80) & (valid_pitch < 1000)
+        
+        # Calculate scores
+        avg_confidence = np.mean(valid_confidence)
+        
+        # Calculate how much of the "Melody" is in vocal range
+        vocal_range_ratio = np.sum(in_vocal_range) / len(valid_pitch) if len(valid_pitch) > 0 else 0
+
+        # Heuristic: 
+        # Voice tracks usually have:
+        # 1. High confidence (it's a single clear source)
+        # 2. High percentage in vocal range
+        # 3. Violins have high confidence but often go > 1000Hz (E5 is ~660Hz, but harmonics go high)
+        
+        is_instrumental = True
+        
+        # Tunable Thresholds
+        if avg_confidence > 0.6 and vocal_range_ratio > 0.7:
+            is_instrumental = False # Likely Voice
+            
+        return {
+            "confidence": self._safe_float(avg_confidence),
+            "vocal_range_ratio": self._safe_float(vocal_range_ratio),
+            "is_instrumental": is_instrumental
+        }

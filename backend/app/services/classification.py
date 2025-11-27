@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.core.models import Track, AnalysisSource, TrackDanceStyle
 from app.workers.synthesis.style_classifier import StyleClassifier
+from app.repository import track
 
 class ClassificationService:
     def __init__(self, db: Session):
@@ -39,6 +40,10 @@ class ClassificationService:
             
             if not source or not source.raw_data:
                 continue
+
+            is_instrumental = source.raw_data.get('is_likely_instrumental', True)
+            track.has_vocals = not is_instrumental
+            self.db.add(track)
 
             # 3. RUN CLASSIFIER LOGIC
             # This returns a LIST of dicts (Primary + Secondaries)
