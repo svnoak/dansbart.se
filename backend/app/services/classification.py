@@ -91,3 +91,31 @@ class ClassificationService:
         except Exception as e:
             self.db.rollback()
             print(f"   ❌ Error saving {track.title}: {e}")
+
+    def reclassify_library(self, force: bool = False):
+        """
+        Re-runs logic on tracks that are NOT user confirmed.
+        """
+        # Find tracks with analysis but NO confirmed style
+        tracks = self.db.query(Track).join(AnalysisSource).all()
+        
+        count = 0
+        for track in tracks:
+            # Skip if user locked this track
+            primary_style = next((s for s in track.dance_styles if s.is_primary), None)
+            if primary_style and primary_style.is_user_confirmed:
+                continue
+                
+            # Get Analysis
+            source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
+            if not source: continue
+
+            # Run the classifier
+            # IMPORTANT: The StyleClassifier needs to instantiate ClassificationHead inside itself
+            predictions = self.classifier.classify(track, source.raw_data)
+            
+            # Save
+            self._save_predictions(track, predictions)
+            count += 1
+            
+        print(f"✅ Re-classified {count} tracks.")

@@ -44,8 +44,13 @@
             :use-spotify="useSpotifyFallback"
             :is-restricted="restrictedError"
             @close="closePlayer"
+            @report-link="handlePotentialBrokenLink" 
         ></music-player>
 
+        <broken-link-toast
+        :broken-state="potentialBrokenState"
+        @close="potentialBrokenState = null"
+    ></broken-link-toast>
     </div>
 
     <script type="module" src="./js/app.js"></script>

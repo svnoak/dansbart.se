@@ -8,6 +8,8 @@ from app.services.analysis import AnalysisService
 from app.workers.discovery.spider import DiscoverySpider
 from app.workers.ingestion.source_finder import SourceFinder
 from app.services.classification import ClassificationService
+from app.services.training import TrainingService
+from app.services.classification import ClassificationService
 
 app = typer.Typer()
 
@@ -97,6 +99,35 @@ def find_sources(limit: int = 50):
     try:
         finder = SourceFinder(db)
         finder.find_missing_youtube_links(limit)
+    finally:
+        db.close()
+
+@app.command()
+def optimize_ai():
+    """
+    Orchestrates the Active Learning Loop:
+    1. TrainingService fetches DB feedback -> Trains Model.
+    2. ClassificationService reads new Model -> Updates Library.
+    """
+    db = SessionLocal()
+    try:
+        # 1. Initialize Services
+        trainer = TrainingService(db)
+        classifier = ClassificationService(db)
+
+        # 2. Run Training
+        print("=== STEP 1: TRAINING ===")
+        training_success = trainer.train_from_feedback()
+
+        # 3. Run Re-classification (Only if training actually happened/succeeded)
+        if training_success:
+            print("\n=== STEP 2: APPLYING KNOWLEDGE ===")
+            classifier.reclassify_library(force=True)
+        else:
+            print("\n⏭️ Skipping re-classification (Model was not updated).")
+            
+    except Exception as e:
+        print(f"❌ Critical Error: {e}")
     finally:
         db.close()
 

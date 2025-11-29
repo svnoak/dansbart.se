@@ -15,10 +15,13 @@ class Track(Base):
     album_name: Mapped[str | None] = mapped_column(String, nullable=True)
     isrc: Mapped[str | None] = mapped_column(String, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    has_vocals: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
+    
+    # Relationships
     analysis_sources = relationship("AnalysisSource", back_populates="track")
     playback_links = relationship("PlaybackLink", back_populates="track")
     dance_styles = relationship("TrackDanceStyle", back_populates="track")
-    has_vocals: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
+    feedback = relationship("TrackFeedback", back_populates="track", uselist=False)
 
 class AnalysisSource(Base):
     __tablename__ = "analysis_sources"
@@ -29,18 +32,25 @@ class AnalysisSource(Base):
     raw_data: Mapped[dict] = mapped_column(JSONB)
     confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
     analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
     track = relationship("Track", back_populates="analysis_sources")
 
 class TrackDanceStyle(Base):
     __tablename__ = "track_dance_styles"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    
     dance_style: Mapped[str] = mapped_column(String, index=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
-    tempo_category: Mapped[str | None] = mapped_column(String, nullable=True)
+    
+    # Rhythmic Data
+    tempo_category: Mapped[str | None] = mapped_column(String, nullable=True) # Slow, Medium, Fast
     bpm_multiplier: Mapped[float] = mapped_column(Float, default=1.0)
     effective_bpm: Mapped[int] = mapped_column(Integer)
+    
+    # Locks the row so AI doesn't overwrite user input
+    is_user_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
     
     track = relationship("Track", back_populates="dance_styles")
 
@@ -52,22 +62,32 @@ class PlaybackLink(Base):
     platform: Mapped[str] = mapped_column(String)
     deep_link: Mapped[str] = mapped_column(String)
     is_working: Mapped[bool] = mapped_column(Boolean, default=True)
+    
     track = relationship("Track", back_populates="playback_links")
 
-class GenreProfile(Base):
+class TrackFeedback(Base):
     """
-    The 'Platinum Standard' definition of a genre based on Folkwiki analysis.
-    Used to validate audio guesses.
+    Stores user corrections. This is the 'Golden Dataset' for training.
     """
-    __tablename__ = "genre_profiles"
+    __tablename__ = "track_feedback"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    genre_name: Mapped[str] = mapped_column(String, unique=True, index=True) # e.g. 'Hambo'
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
     
-    # Statistical Averages
-    avg_note_density: Mapped[float] = mapped_column(Float) # Notes per bar
-    common_meters: Mapped[dict] = mapped_column(JSONB)     # e.g. {"3/4": 85, "3/8": 10}
-    rhythm_patterns: Mapped[dict] = mapped_column(JSONB)   # Top 10 bar patterns
+    # What the user said
+    suggested_style: Mapped[str] = mapped_column(String) # e.g. "Hambo"
+    tempo_correction: Mapped[str] = mapped_column(String) # "ok", "half", "double"
     
-    sample_size: Mapped[int] = mapped_column(Integer)      # How many tracks we analyzed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    track = relationship("Track", back_populates="feedback")
+
+class GenreProfile(Base):
+    __tablename__ = "genre_profiles"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    genre_name: Mapped[str] = mapped_column(String, unique=True, index=True)
+    avg_note_density: Mapped[float] = mapped_column(Float)
+    common_meters: Mapped[dict] = mapped_column(JSONB)
+    rhythm_patterns: Mapped[dict] = mapped_column(JSONB)
+    sample_size: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

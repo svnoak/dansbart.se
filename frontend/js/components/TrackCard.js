@@ -1,7 +1,7 @@
 export default {
     props: ['track', 'currentTrack', 'isSpotifyMode'], 
     emits: ['play', 'refresh'], // We emit 'refresh' so the parent can reload the list if a link is hidden
-    template: `
+    template: /*html*/`
     <div class="card bg-white p-5 rounded-lg shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         
         <div class="flex-1">
@@ -43,15 +43,9 @@ export default {
                      :class="isCurrent && !isSpotifyMode ? 'bg-red-600 border-red-600 text-white' : 'bg-red-50 border-red-200 text-red-700'">
                     
                     <button @click="$emit('play', track, 'youtube')" 
-                            class="px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 hover:bg-black/10 transition-colors border-r border-current/20">
+                            class="px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 hover:bg-black/10 transition-colors border-current/20">
                         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
                         YouTube
-                    </button>
-
-                    <button @click.stop="reportLink('youtube')" 
-                            title="Report broken link"
-                            class="px-2 py-1.5 hover:bg-black/10 transition-colors flex items-center justify-center">
-                        <svg height=16px stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#000000"><path d="M5 15L5.95039 4.54568C5.97849 4.23663 6.23761 4 6.54793 4H20.343C20.6958 4 20.9725 4.30295 20.9405 4.65432L20.0496 14.4543C20.0215 14.7634 19.7624 15 19.4521 15H5ZM5 15L4.4 21" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                     </button>
                 </div>                
                 <span v-if="!hasYouTube && !hasSpotify" class="text-xs text-gray-400 italic">No audio sources</span>

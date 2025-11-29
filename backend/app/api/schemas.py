@@ -3,6 +3,7 @@ from uuid import UUID
 from typing import List, Optional
 
 class PlaybackLinkOut(BaseModel):
+    id: str
     platform: str
     deep_link: str
 
@@ -14,9 +15,11 @@ class TrackOut(BaseModel):
     
     # Computed fields from your classifier
     dance_style: str
-    effective_bpm: int
     has_vocals: bool | None = False
     style_confidence: float = 0.0
+    
+    effective_bpm: int
+    tempo_category: str | None
 
     playback_links: List[PlaybackLinkOut]
 

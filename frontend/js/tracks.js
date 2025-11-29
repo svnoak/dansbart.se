@@ -37,7 +37,7 @@ export function useTracks() {
                 params.append('max_bpm', computedMax.value);
             }
 
-            const response = await fetch(`http://127.0.0.1:8000/api/tracks?${params.toString()}`);
+            const response = await fetch(`/api/tracks?${params.toString()}`);
             if (!response.ok) throw new Error('Network error');
             tracks.value = await response.json();
         } catch (error) {
