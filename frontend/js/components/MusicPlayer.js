@@ -7,12 +7,19 @@ export default {
 
     data() {
         return {
-            ytPlayer: null,
-            playbackStartTime: null
+            // REMOVED: ytPlayer: null, <--- This was causing the bug!
+            playbackStartTime: null,
+            nudgeStep: 'hidden', 
+            correction: { style: '', tempo: 'ok' },
+            isSubmitting: false,
+            availableStyles: ["Hambo", "Polska", "Slängpolska", "Vals", "Schottis", "Snoa", "Polka", "Mazurka", "Engelska"]
         }
     },
 
     mounted() {
+        // Initialize non-reactive property for the player instance
+        this.ytPlayer = null; 
+
         if (window.YT && window.YT.Player) {
             this.initPlayer();
         } else {
@@ -27,47 +34,11 @@ export default {
     },
 
     watch: {
-        track: {
-            immediate: true,
-            handler(newTrack) {
-                if (newTrack) {
-                    this.playbackStartTime = Date.now();
-                    
-                    const hasFeedback = localStorage.getItem(`fb_${newTrack.id}`);
-                    
-                    const isSettled = newTrack.style_confirmations >= 3;
-                    
-                    if (hasFeedback || isSettled) {
-                        this.nudgeStep = 'hidden';
-                    } else {
-                        this.nudgeStep = 'verify';
-                    }
-                    
-                    this.correction.style = newTrack.dance_style || "Polska";
-                    this.correction.tempo = 'ok';
-                }
-            }
-        },
-        // 1. STOP AUDIO WHEN SWITCHING TO SPOTIFY
-        useSpotify(newVal) {
-            if (newVal === true) {
-                console.log("Switching to Spotify: Stopping YouTube Audio");
-                if (this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
-                    this.ytPlayer.stopVideo();
-                }
-            } else {
-                // Optional: If switching back to YouTube, ensure player is ready
-                if (this.videoId && this.ytPlayer) {
-                    this.ytPlayer.loadVideoById(this.videoId);
-                }
-            }
-        },
-
         videoId(newId) {
-            // Only load YouTube if we are NOT in Spotify mode
             if (newId && !this.useSpotify) {
                 this.$nextTick(() => {
-                    if (this.ytPlayer && this.ytPlayer.loadVideoById) {
+                    // Check this.ytPlayer (instance variable), not data
+                    if (this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
                         this.ytPlayer.loadVideoById(newId);
                     } else {
                         this.initPlayer(); 
@@ -75,19 +46,31 @@ export default {
                 });
             }
         },
-
+        useSpotify(newVal) {
+            if (newVal === true) {
+                // STOP YouTube when switching tabs
+                if (this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
+                    this.ytPlayer.stopVideo();
+                }
+            }
+        },
         isRestricted(newVal) {
-            if (newVal === true && this.ytPlayer && this.ytPlayer.stopVideo) {
+            if (newVal === true && this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
                 this.ytPlayer.stopVideo();
             }
         },
-
         track(newTrack) {
-            if (!newTrack && this.ytPlayer && this.ytPlayer.stopVideo) {
+            // STOP Video when closing player (track becomes null)
+            if (!newTrack && this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
                 this.ytPlayer.stopVideo();
             }
+            
             if (newTrack) {
                 this.playbackStartTime = Date.now();
+                const hasFeedback = localStorage.getItem(`fb_${newTrack.id}`);
+                this.nudgeStep = hasFeedback ? 'hidden' : 'verify';
+                this.correction.style = newTrack.dance_style || "Polska";
+                this.correction.tempo = 'ok';
             }
         }
     },
@@ -119,13 +102,13 @@ export default {
             if (this.ytPlayer) return;
             if (!document.getElementById('youtube-player')) return;
             
+            // Assign directly to 'this', bypassing Vue reactivity system
             this.ytPlayer = new YT.Player('youtube-player', {
                 height: '100%',
                 width: '100%',
                 playerVars: { 'autoplay': 1, 'playsinline': 1, 'controls': 1 },
                 events: {
                     'onReady': (event) => {
-                        // Only auto-play if we are supposed to be in YouTube mode
                         if (this.videoId && !this.useSpotify) {
                             event.target.loadVideoById(this.videoId);
                         }
@@ -137,6 +120,31 @@ export default {
                     }
                 }
             });
+        },
+
+        startCorrection() { this.nudgeStep = 'fix-style'; },
+        nextToTempo() { this.nudgeStep = 'fix-tempo'; },
+
+        async submitCorrection() {
+            this.isSubmitting = true;
+            try {
+                // ... (Keep existing fetch logic) ...
+                const payload = {
+                    style: this.nudgeStep === 'verify' ? this.track.dance_style : this.correction.style,
+                    tempo_correction: this.nudgeStep === 'verify' ? 'ok' : this.correction.tempo
+                };
+                // Use absolute path or relative depending on config
+                await fetch(`/api/tracks/${this.track.id}/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                localStorage.setItem(`fb_${this.track.id}`, 'true');
+                this.nudgeStep = 'success';
+                setTimeout(() => { this.nudgeStep = 'hidden'; }, 2500);
+            } catch(e) { console.error(e); this.nudgeStep = 'hidden'; } 
+            finally { this.isSubmitting = false; }
         },
 
         handleClose() {
@@ -160,13 +168,10 @@ export default {
                 ></smart-nudge>
 
                 <div class="relative z-10 w-full shadow-2xl rounded-xl overflow-hidden bg-black border border-gray-800">
-                    
                     <div class="flex justify-between items-center bg-gray-900 text-white px-4 py-2 border-b border-gray-800">
-                        
                         <div class="flex items-center gap-2 overflow-hidden w-full mr-2">
                              <div v-if="state === 1 && !isRestricted && !useSpotify" class="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0"></div>
                              <div v-if="useSpotify" class="w-2 h-2 bg-[#1DB954] rounded-full shrink-0"></div>
-                             
                              <div class="flex flex-col overflow-hidden">
                                 <span class="text-xs font-medium truncate">{{ track?.title || 'Player' }}</span>
                                 <span v-if="track" class="text-[10px] text-gray-400">
@@ -174,7 +179,6 @@ export default {
                                 </span>
                              </div>
                         </div>
-                        
                         <div class="flex items-center gap-2">
                             <button @click="$refs.nudge?.openManualEdit()" class="text-gray-400 hover:text-indigo-400 p-1 transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -186,34 +190,20 @@ export default {
                     </div>
                     
                     <div class="relative pb-[56.25%] h-0 bg-black">
-                         
                          <div v-show="!isRestricted && !useSpotify" class="absolute inset-0 bg-black">
                              <div id="youtube-player" class="w-full h-full"></div>
                         </div>
-
                         <div v-if="useSpotify" class="absolute inset-0 bg-black">
-                            <iframe 
-                                style="border-radius:0px" 
-                                :src="spotifySrc" 
-                                width="100%" 
-                                height="100%" 
-                                frameBorder="0" 
-                                allowfullscreen 
-                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                loading="lazy">
-                            </iframe>
+                            <iframe style="border-radius:0px" :src="spotifySrc" width="100%" height="100%" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
                         </div>
-
                         <div v-if="isRestricted && !useSpotify" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 text-white p-6 text-center z-20">
                             <p class="text-xs text-gray-400 mb-4">Playback Restricted</p>
                             <a :href="\`https://www.youtube.com/watch?v=\${videoId}\`" target="_blank" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-colors flex items-center gap-2">
                                 <span>Watch on YouTube</span>
                             </a>
                         </div>
-
                     </div>
                 </div>
-
             </div>
         </transition>
     </div>

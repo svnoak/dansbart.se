@@ -1,23 +1,34 @@
-import { ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+import { ref, computed } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
 
-// Global Singleton State
-const currentTrack = ref(null);
-const currentVideoId = ref(null);
-const isPlayerVisible = ref(false);
-const playerState = ref(-1); 
-const restrictedError = ref(false);
-const useSpotifyFallback = ref(false);
+// GLOBAL STATE
+const queue = ref([]);           
+const currentIndex = ref(-1);    
+const isPlaying = ref(false);    
+const isShuffled = ref(false);   
+const repeatMode = ref('none'); 
+
+// NEW: Track the active source ('youtube' | 'spotify' | null)
+const activeSource = ref('youtube'); 
+
+const currentTrack = computed(() => {
+    if (currentIndex.value >= 0 && currentIndex.value < queue.value.length) {
+        return queue.value[currentIndex.value];
+    }
+    return null;
+});
+
+const currentVideoId = ref(null); 
+const isRestricted = ref(false);
 
 export function usePlayer() {
 
-    // --- Helpers ---
-    const isUrl = (str) => typeof str === 'string' && /^https?:\/\//.test(str);
-
+    // --- HELPERS (Unchanged) ---
     const getYouTubeId = (track) => {
         if (!track?.playback_links) return null;
         for (const linkObj of track.playback_links) {
             const val = linkObj.deep_link || linkObj;
-            if (typeof val === 'string' && !isUrl(val) && val.length > 5) return val;
+            const isUrl = typeof val === 'string' && /^https?:\/\//.test(val);
+            if (typeof val === 'string' && !isUrl && val.length > 5) return val;
         }
         return null;
     };
@@ -38,56 +49,118 @@ export function usePlayer() {
         return match ? match[1] : null;
     };
 
-    const hasLinks = (track) => getYouTubeId(track) || getSpotifyUrl(track);
+    // --- ACTIONS ---
 
-    // --- Actions ---
+    const loadCurrentTrack = () => {
+        const track = currentTrack.value;
+        if (!track) return;
 
-    const playTrack = (track, source = 'youtube') => {
-        currentTrack.value = track;
-        isPlayerVisible.value = true;
-        restrictedError.value = false; // Reset error state
-        
-        if (source === 'spotify') {
-            useSpotifyFallback.value = true;
-            currentVideoId.value = null;
-        } else {
-            const videoId = getYouTubeId(track);
-            if (!videoId) return; 
-            
-            // We only set the ID here. The MusicPlayer component watches this value
-            // and handles the actual API calls.
-            currentVideoId.value = videoId;
-            useSpotifyFallback.value = false;
+        isRestricted.value = false;
+        isPlaying.value = true;
+
+        const ytId = getYouTubeId(track);
+        const spotId = getSpotifyId(track);
+
+        // LOGIC: Try to stick to the active source, otherwise fallback
+        if (activeSource.value === 'youtube') {
+            if (ytId) {
+                currentVideoId.value = ytId;
+            } else if (spotId) {
+                activeSource.value = 'spotify'; // Fallback
+            } else {
+                nextTrack(); // Dead track
+            }
+        } 
+        else if (activeSource.value === 'spotify') {
+            if (spotId) {
+                currentVideoId.value = null; // Clear YT
+            } else if (ytId) {
+                activeSource.value = 'youtube'; // Fallback
+                currentVideoId.value = ytId;
+            } else {
+                nextTrack();
+            }
         }
     };
 
-    const closePlayer = () => {
-        isPlayerVisible.value = false;
-        currentTrack.value = null;
-        currentVideoId.value = null;
-        playerState.value = -1;
-        restrictedError.value = false;
-        useSpotifyFallback.value = false;
+    // New: Explicitly switch source
+    const setSource = (source) => {
+        if (source === 'spotify' && !getSpotifyId(currentTrack.value)) return;
+        if (source === 'youtube' && !getYouTubeId(currentTrack.value)) return;
+        
+        activeSource.value = source;
+        loadCurrentTrack(); // Reload to apply change
     };
 
+    // 1. Play Context (List of tracks)
+    const playContext = (tracks, startIndex = 0) => {
+        queue.value = tracks;
+        currentIndex.value = startIndex;
+        loadCurrentTrack();
+    };
+
+    // 2. Play Single Track (Helper for buttons)
+    const playTrack = (track, sourcePreference = 'youtube') => {
+        // Find track in queue or replace queue? 
+        // For simplicity here, we assume the UI handles queue setting, 
+        // but if called directly, we set the preference and load.
+        if (sourcePreference) activeSource.value = sourcePreference;
+        
+        // (If track is not in queue, you might want to add it here)
+        // For this example, we assume queue logic handles it or we just play:
+        if (currentTrack.value?.id !== track.id) {
+            // Simplified: just play it
+            queue.value = [track];
+            currentIndex.value = 0;
+        }
+        loadCurrentTrack();
+    };
+
+    // Standard Controls
+    const togglePlay = () => isPlaying.value = !isPlaying.value;
+    
+    const nextTrack = () => {
+        if (queue.value.length === 0) return;
+        if (isShuffled.value) {
+            currentIndex.value = Math.floor(Math.random() * queue.value.length);
+        } else if (currentIndex.value < queue.value.length - 1) {
+            currentIndex.value++;
+        } else if (repeatMode.value === 'all') {
+            currentIndex.value = 0;
+        }
+        loadCurrentTrack();
+    };
+
+    const prevTrack = () => {
+        if (currentIndex.value > 0) currentIndex.value--;
+        loadCurrentTrack();
+    };
+
+    const toggleShuffle = () => isShuffled.value = !isShuffled.value;
+
     const handlePlayerError = (errorCode) => {
-        console.warn("YouTube Player Error reported:", errorCode);
-        // Error 101, 150 = Embedding Restricted
-        if ([101, 150, 100].includes(errorCode)) {
-            // Try Auto-Fallback to Spotify
+        console.warn("Player Error:", errorCode);
+        // If YT fails (restricted), try switching to Spotify automatically
+        if ([101, 150, 100].includes(errorCode) && activeSource.value === 'youtube') {
             if (getSpotifyId(currentTrack.value)) {
-                console.log("⚠️ YouTube restricted. Auto-switching to Spotify.");
-                useSpotifyFallback.value = true; 
+                console.log("YT Restricted. Switching to Spotify.");
+                activeSource.value = 'spotify';
             } else {
                 restrictedError.value = true;
             }
         }
     };
 
+    const closePlayer = () => {
+        isPlaying.value = false;
+        currentIndex.value = -1;
+        currentVideoId.value = null;
+    };
+
     return {
-        currentTrack, currentVideoId, isPlayerVisible, playerState, 
-        restrictedError, useSpotifyFallback,
-        playTrack, closePlayer, handlePlayerError,
-        getYouTubeId, getSpotifyUrl, getSpotifyId, hasLinks
+        currentTrack, currentVideoId, activeSource, isRestricted, isPlaying, isShuffled,
+        playContext, playTrack, togglePlay, nextTrack, prevTrack, toggleShuffle, 
+        setSource, handlePlayerError, closePlayer,
+        getYouTubeId, getSpotifyId // Exported for UI checks
     };
 }

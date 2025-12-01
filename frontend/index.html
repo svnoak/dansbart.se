@@ -38,16 +38,9 @@
             </div>
         </div>
 
-        <music-player
-            v-show="isPlayerVisible"
-            :track="currentTrack"
-            :video-id="currentVideoId"
-            :state="playerState"
-            :use-spotify="useSpotifyFallback"
-            :is-restricted="restrictedError"
-            @close="closePlayer"
-            @report-link="handlePotentialBrokenLink" 
-        ></music-player>
+        <global-player
+            @report-link="handlePotentialBrokenLink"
+        ></global-player>
 
         <broken-link-toast
         :broken-state="potentialBrokenState"

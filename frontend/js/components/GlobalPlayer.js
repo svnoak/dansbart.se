@@ -1,0 +1,165 @@
+import SmartNudge from './SmartNudge.js';
+import YouTubeEngine from './player/YouTubeEngine.js'; // Import Engine
+import PlayerControls from './player/PlayerControls.js';
+import ProgressBar from './player/ProgressBar.js';
+import { usePlayer } from '../player.js'; 
+
+export default {
+    components: { SmartNudge, YouTubeEngine, PlayerControls, ProgressBar },
+    setup() {
+        const playerStore = usePlayer();
+        return { ...playerStore };
+    },
+    
+    data() {
+        return {
+            currentTime: 0,
+            duration: 0,
+        }
+    },
+
+    watch: {
+        // 1. Sync Global State -> Engine Component
+        isPlaying(shouldPlay) {
+            if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
+                shouldPlay ? this.$refs.ytEngine.play() : this.$refs.ytEngine.pause();
+            }
+        },
+        
+        // 2. Reset UI when switching sources
+        activeSource(val) {
+            if (val === 'spotify') {
+                this.currentTime = 0;
+                this.duration = 0;
+            }
+        }
+    },
+
+    methods: {
+        // --- Events from Engine ---
+        onTimeUpdate({ currentTime, duration }) {
+            this.currentTime = currentTime;
+            this.duration = duration;
+        },
+        
+        onYtStateChange(stateCode) {
+            // Update global store based on engine reality
+            if (stateCode === 1) this.isPlaying = true; // Playing
+            if (stateCode === 2) this.isPlaying = false; // Paused
+        },
+
+        // --- User Actions ---
+        handleSeek(seconds) {
+            if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
+                this.$refs.ytEngine.seekTo(seconds);
+            }
+        },
+        
+        handleMainButton() {
+            if (this.activeSource === 'youtube') this.togglePlay();
+        },
+        
+        formatTime(s) {
+            if (!s || isNaN(s)) return "0:00";
+            const m = Math.floor(s / 60);
+            const sc = Math.floor(s % 60);
+            return `${m}:${sc < 10 ? '0' : ''}${sc}`;
+        }
+    },
+    
+    computed: {
+        spotifySrc() {
+            if (!this.currentTrack?.playback_links) return '';
+            let link = this.currentTrack.playback_links.find(l => {
+                const val = l.deep_link || l;
+                return typeof val === 'string' && val.includes('spotify');
+            });
+            if (!link) return '';
+            const url = link.deep_link || link;
+            const match = url.match(/track\/([a-zA-Z0-9]+)/);
+            return match ? `https://open.spotify.com/embed/track/${match[1]}?utm_source=generator&theme=0` : '';
+        },
+        
+        hasYt() { return !!this.getYouTubeId(this.currentTrack); },
+        hasSpot() { return !!this.getSpotifyId(this.currentTrack); },
+        
+        fmtCurrent() { return this.formatTime(this.currentTime) },
+        fmtDuration() { return this.formatTime(this.duration) }
+    },
+
+    template: /*html*/`
+    <div v-if="currentTrack" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col">
+        
+        <div class="absolute bottom-full right-4 mb-2 w-80 z-40">
+            <smart-nudge :track="currentTrack"></smart-nudge>
+        </div>
+
+        <progress-bar 
+            :current-time="currentTime" 
+            :duration="duration" 
+            :disabled="activeSource !== 'youtube'"
+            @seek="handleSeek"
+        ></progress-bar>
+
+        <div class="flex items-center justify-between px-4 py-3 h-20 bg-white z-50 relative">
+            
+            <div class="flex items-center w-1/3 min-w-0 gap-3">
+                <div class="w-12 h-12 bg-gray-100 rounded flex items-center justify-center shrink-0 border border-gray-200">
+                    <span class="text-xl">🎵</span>
+                </div>
+                <div class="flex flex-col min-w-0">
+                    <div class="font-bold text-gray-900 truncate">{{ currentTrack.title }}</div>
+                    <div class="text-[10px] text-gray-400 font-mono mt-0.5" v-if="activeSource === 'youtube'">
+                        {{ fmtCurrent }} / {{ fmtDuration }}
+                    </div>
+                    <div class="text-[10px] text-green-600 font-bold mt-0.5" v-else>Spotify Active</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center w-1/3">
+                <player-controls 
+                    :is-playing="isPlaying"
+                    :is-shuffled="isShuffled"
+                    :has-spotify="activeSource === 'spotify'"
+                    @toggle-play="togglePlay"
+                    @next="nextTrack"
+                    @prev="prevTrack"
+                    @shuffle="toggleShuffle"
+                    @main-action="handleMainButton"
+                ></player-controls>
+            </div>
+
+            <div class="w-1/3 flex justify-end items-center gap-2">
+                <span class="text-[10px] text-gray-400 font-bold uppercase mr-2 hidden sm:inline">Källa</span>
+                <button @click="setSource('youtube')" :disabled="!hasYt" class="p-1.5 rounded border transition-all" :class="activeSource === 'youtube' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white text-gray-400 hover:text-gray-600 opacity-50'">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                </button>
+                <button @click="setSource('spotify')" :disabled="!hasSpot" class="p-1.5 rounded border transition-all" :class="activeSource === 'spotify' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white text-gray-400 hover:text-gray-600 opacity-50'">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="fixed bottom-24 left-4 shadow-2xl transition-all duration-300 overflow-hidden z-[60] border border-gray-800 bg-black"
+             :class="activeSource === 'youtube' ? 'w-64 h-36 rounded-lg opacity-100' : 'w-0 h-0 opacity-0 pointer-events-none'">
+            
+            <you-tube-engine 
+                ref="ytEngine"
+                :video-id="currentVideoId" 
+                :active-source="activeSource"
+                @state-change="onYtStateChange"
+                @time-update="onTimeUpdate"
+                @next="nextTrack"
+                @error="handlePlayerError"
+            ></you-tube-engine>
+
+        </div>
+
+        <div v-if="activeSource === 'spotify'" 
+             class="fixed bottom-24 left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200">
+            <iframe :src="spotifySrc" width="100%" height="100%" frameborder="0" allow="autoplay; encrypted-media; fullscreen"></iframe>
+        </div>
+
+    </div>
+    `
+}

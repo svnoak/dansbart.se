@@ -5,7 +5,7 @@ import { usePlayer } from './player.js';
 // Components
 import TrackCard from './components/TrackCard.js';
 import FilterBar from './components/FilterBar.js';
-import MusicPlayer from './components/MusicPlayer.js'; 
+import GlobalPlayer from './components/GlobalPlayer.js'; 
 import BrokenLinkToast from './components/BrokenLinkToast.js';
 import StatsDashboard from './components/StatsDashboard.js';
 
@@ -13,7 +13,7 @@ const app = createApp({
     components: {
         'track-card': TrackCard,
         'filter-bar': FilterBar,
-        'music-player': MusicPlayer,
+        'global-player': GlobalPlayer,
         'broken-link-toast': BrokenLinkToast,
         'stats-dashboard': StatsDashboard
     },
@@ -25,7 +25,6 @@ const app = createApp({
         // --- Handlers ---
         const handlePotentialBrokenLink = (payload) => {
             potentialBrokenState.value = payload;
-            // Auto-hide logic
             setTimeout(() => {
                 if (potentialBrokenState.value?.track.id === payload.track.id) {
                     potentialBrokenState.value = null;
@@ -33,8 +32,27 @@ const app = createApp({
             }, 10000);
         };
 
-        const handlePlay = (track, source) => {
-            playerLogic.playTrack(track, source);
+        const confirmBrokenLink = async (reason) => {
+            if (!potentialBrokenState.value) return;
+            const { track, badLink } = toRaw(potentialBrokenState.value);
+            potentialBrokenState.value = null; 
+
+            try {
+                if (badLink && badLink.id) {
+                    await fetch(`/api/links/${badLink.id}/report?reason=${reason}`, { method: 'PATCH' });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        const handlePlay = (track) => {
+            const list = trackLogic.tracks.value;
+            const index = list.findIndex(t => t.id === track.id);
+            
+            if (index !== -1) {
+                playerLogic.playContext(list, index);
+            }
         };
 
         onMounted(() => {
@@ -42,9 +60,11 @@ const app = createApp({
         });
 
         return { 
-            ...trackLogic, ...playerLogic,
+            ...trackLogic, 
+            ...playerLogic,
             handlePlay,
             handlePotentialBrokenLink,
+            confirmBrokenLink,
             potentialBrokenState
         };
     }
