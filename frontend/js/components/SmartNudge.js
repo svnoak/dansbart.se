@@ -81,11 +81,17 @@ export default {
         async submit(payload, nextState = 'success') {
             this.isSubmitting = true;
             try {
-                await fetch(`/api/tracks/${this.track.id}/feedback`, {
+                const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                
+                const data = await res.json(); // <--- Parse JSON
+
+                if (res.ok && data.updates) {
+                    Object.assign(this.track, data.updates);
+                }
                 
                 localStorage.setItem(`fb_${this.track.id}`, 'true');
                 
@@ -93,7 +99,7 @@ export default {
                     this.step = 'bonus';
                 } else {
                     this.step = 'success';
-                    setTimeout(() => { this.step = 'hidden'; }, 2000);
+                    setTimeout(() => { this.step = 'hidden'; }, 2500);
                 }
 
             } catch(e) {

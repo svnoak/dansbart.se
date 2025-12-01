@@ -3,38 +3,29 @@ from app.core.models import Track, PlaybackLink
 from app.repository.analysis import AnalysisRepository
 from app.workers.audio.fetcher import AudioFetcher
 from app.workers.audio.analyzer import AudioAnalyzer
+from app.services.classification import ClassificationService 
 
 class AnalysisService:
     def __init__(self, db: Session):
         self.db = db
         self.repo = AnalysisRepository(db)
         self.fetcher = AudioFetcher()
-        self.analyzer = AudioAnalyzer() # Instantiated once
+        self.analyzer = AudioAnalyzer()
+        self.classifier_service = ClassificationService(db)
 
-    def process_library(self, limit: int = 5, force: bool = False):
-        print(f"🔍 Scanning for {limit} tracks...")
-        
-        tracks = self.db.query(Track).limit(limit).all()
-        
-        count = 0
-        for track in tracks:
-            if not force and self.repo.get_latest_by_track(track.id, "hybrid_ml_v2"):
-                continue
-                
-            if self._process_single_track(track):
-                count += 1
-                if count >= limit: break
-                
-        print(f"🏁 Processed {count} tracks.")
+    def analyze_track_by_id(self, track_id: str):
+        """Background Task Entry Point"""
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if track:
+            self._process_single_track(track)
 
     def _process_single_track(self, track: Track) -> bool:
         print(f"▶️  Processing: {track.title}")
         
-        # Make the query more specific to official audio
-        query = f"{track.title} {track.artist_name} topic audio" 
+        # 1. FETCH AUDIO (Use existing link if available)
+        existing_link = next((l for l in track.playback_links if l.platform == 'youtube' and l.is_working), None)
+        query = existing_link.deep_link if existing_link else f"{track.title} {track.artist_name} topic audio"
         
-        # Pass the duration!
-        # Ensure your Track model has this field populated from Spotify
         result = self.fetcher.fetch_track_audio(
             track_id=str(track.id), 
             query=query, 
@@ -42,7 +33,6 @@ class AnalysisService:
         )
         
         if not result:
-            print(f"   ⚠️ No valid YouTube match found for {track.title}")
             return False
             
         file_path = result['file_path']
@@ -52,36 +42,33 @@ class AnalysisService:
             if youtube_id:
                 self._ensure_youtube_link(track, youtube_id)
 
+            # 2. ANALYZE (MusiCNN + Madmom)
             context = f"{track.title} {track.artist_name} {track.album_name or ''}"
             data = self.analyzer.analyze_file(file_path, context)
 
             if data:
+                # 3. SAVE RAW ANALYSIS
                 self.repo.add_analysis(
                     track_id=track.id,
                     source_type="hybrid_ml_v2",
                     data=data
                 )
-                print(f"   ✅ Saved analysis. Meter: {data['meter']}")
+                
+                # 4. CHAIN REACTION: CLASSIFY IMMEDIATELY ⚡️
+                # This makes the track visible in the frontend immediately
+                print(f"   🧠 Auto-classifying...")
+                self.classifier_service.classify_track_immediately(track)
+                
                 return True
-            else:
-                return False
+            return False
 
         finally:
             self.fetcher.cleanup(str(track.id))
 
     def _ensure_youtube_link(self, track, video_id):
-        """Idempotently saves the YouTube link"""
-        exists = self.db.query(PlaybackLink).filter_by(
-            track_id=track.id, 
-            platform="youtube"
-        ).first()
-        
+        # (Keep existing logic)
+        exists = self.db.query(PlaybackLink).filter_by(track_id=track.id, deep_link=video_id).first()
         if not exists:
-            print(f"   🔗 Found new source: YouTube ({video_id})")
-            link = PlaybackLink(
-                track_id=track.id,
-                platform="youtube",
-                deep_link=video_id
-            )
+            link = PlaybackLink(track_id=track.id, platform="youtube", deep_link=video_id)
             self.db.add(link)
             self.db.commit()

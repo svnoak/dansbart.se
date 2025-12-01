@@ -7,28 +7,27 @@ class FeedbackService:
     def __init__(self, db: Session):
         self.db = db
 
-    def process_feedback(self, track_id: str, style: str, tempo_correction: str):
+    def process_feedback(self, track_id: str, style: str, tempo_correction: str) -> dict | None:
         """
         1. Records user input.
-        2. Cleans up incorrect AI guesses.
-        3. Recalculates the Primary Style based on popular vote.
+        2. Purges AI guesses.
+        3. Elects new Primary style based on votes.
+        4. Returns the NEW Primary data for the frontend.
         """
         track = self.db.query(Track).filter(Track.id == track_id).first()
         if not track:
-            return False
+            return None
 
-        # --- STEP 1: RECORD VOTE (History) ---
-        # We assume every feedback submission is a "Vote" for that style/tempo combo
+        # --- STEP 1: RECORD VOTE ---
         new_fb = TrackFeedback(
             track_id=track.id,
             suggested_style=style,
             tempo_correction=tempo_correction
         )
         self.db.add(new_fb)
-        self.db.flush() # Save so we can count it in the election immediately
+        self.db.flush()
 
-        # --- STEP 2: CALCULATE METRICS (For the new entry) ---
-        # We need to know what the new style row *would* look like
+        # --- STEP 2: CALCULATE METRICS ---
         new_multiplier = 1.0
         if tempo_correction == "half": new_multiplier = 0.5
         elif tempo_correction == "double": new_multiplier = 2.0
@@ -39,34 +38,30 @@ class FeedbackService:
         category = categorize_tempo(style, effective_bpm)
 
         # --- STEP 3: PURGE AI GUESSES ---
-        # If a human has spoken, AI guesses for *other* styles are now irrelevant noise.
-        # Delete unconfirmed styles that contradict the current vote.
+        # Delete unconfirmed styles that contradict the current vote
         self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track.id,
             TrackDanceStyle.dance_style != style,
             TrackDanceStyle.is_user_confirmed == False
         ).delete(synchronize_session=False)
 
-        # --- STEP 4: UPSERT THE STYLE ROW ---
-        # Ensure a row exists for this specific style so it can be a candidate
+        # --- STEP 4: UPSERT CANDIDATE ROW ---
         style_row = self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track.id,
             TrackDanceStyle.dance_style == style
         ).first()
 
         if style_row:
-            # Update existing (Refine tempo/confidence)
             style_row.bpm_multiplier = new_multiplier
             style_row.effective_bpm = effective_bpm
             style_row.tempo_category = category
             style_row.is_user_confirmed = True
             style_row.confidence = 1.0 
         else:
-            # Create new candidate
             style_row = TrackDanceStyle(
                 track_id=track.id,
                 dance_style=style,
-                is_primary=False, # We decide primary in Step 5
+                is_primary=False, 
                 bpm_multiplier=new_multiplier,
                 effective_bpm=effective_bpm,
                 tempo_category=category,
@@ -75,21 +70,37 @@ class FeedbackService:
             )
             self.db.add(style_row)
         
-        self.db.flush() # Ensure row exists for the election
+        self.db.flush()
 
-        # --- STEP 5: THE ELECTION (Determine Primary) ---
+        # --- STEP 5: THE ELECTION ---
         self._elect_primary_style(track.id)
-
+        
+        # Commit to save everything
         self.db.commit()
-        return True
+
+        # --- STEP 6: FETCH THE WINNER ---
+        # We query the DB for the new Primary row to send back to the frontend.
+        # This ensures the UI reflects exactly what the database decided.
+        winner = self.db.query(TrackDanceStyle).filter(
+            TrackDanceStyle.track_id == track.id,
+            TrackDanceStyle.is_primary == True
+        ).first()
+
+        if winner:
+            return {
+                "dance_style": winner.dance_style,
+                "effective_bpm": winner.effective_bpm,
+                "tempo_category": winner.tempo_category,
+                "style_confidence": 1.0,
+                "bpm_multiplier": winner.bpm_multiplier
+            }
+        
+        return None
 
     def _elect_primary_style(self, track_id: str):
         """
-        Counts votes in TrackFeedback.
-        The style with the most votes becomes Primary.
-        Ties are broken by recency (latest vote wins).
+        Sets is_primary=True for the style with the most votes.
         """
-        # 1. Count votes per style
         vote_counts = (
             self.db.query(
                 TrackFeedback.suggested_style, 
@@ -104,15 +115,14 @@ class FeedbackService:
         if not vote_counts:
             return
 
-        # The winner is the first result (highest count)
         winning_style = vote_counts[0].suggested_style
 
-        # 2. Reset everyone to Secondary
+        # Reset all to Secondary
         self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track_id
         ).update({"is_primary": False})
 
-        # 3. Crown the King
+        # Set Winner to Primary
         self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track_id,
             TrackDanceStyle.dance_style == winning_style

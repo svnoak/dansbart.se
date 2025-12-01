@@ -21,33 +21,40 @@ class SpotifyIngestor:
         try:
             results = self.sp.playlist_tracks(playlist_id)
         except Exception as e:
-            print(f"❌ Error connecting to Spotify: {e}")
-            return
+            print(f"❌ Error: {e}")
+            return []
 
-        total_processed = 0
+        processed_ids = []
+
         while results:
             raw_items = [item.get('track') for item in results['items']]
-            total_processed += self.ingest_tracks_from_list(raw_items)
+            
+            # Helper returns IDs now
+            batch_ids = self.ingest_tracks_from_list(raw_items) 
+            processed_ids.extend(batch_ids)
 
             if results['next']:
                 results = self.sp.next(results)
             else:
                 results = None
         
-        print(f"✅ Finished! Processed {total_processed} tracks.")
+        print(f"✅ Ingestion complete. {len(processed_ids)} tracks ready for analysis.")
+        return processed_ids
 
-    def ingest_tracks_from_list(self, track_items: list):
-        """Reusable method to save a list of Spotify Track Objects"""
-        count = 0
+    def ingest_tracks_from_list(self, track_items: list) -> list[str]:
+        """Returns list of track IDs saved"""
+        saved_ids = []
         for track in track_items:
-            if not track or track.get('is_local'):
-                continue
+            if not track or track.get('is_local'): continue
+            
             try:
-                self._process_single_track(track)
-                count += 1
+                # _process_single_track now returns the DB object
+                db_track = self._process_single_track(track)
+                if db_track:
+                    saved_ids.append(str(db_track.id))
             except Exception as e:
                 print(f"⚠️ Error: {e}")
-        return count
+        return saved_ids
 
     # --- NEW: Full Discography Ingestion ---
     def ingest_artist_albums(self, artist_id: str):
@@ -144,3 +151,5 @@ class SpotifyIngestor:
                 platform="spotify", 
                 url=spotify_url
             )
+
+        return db_track

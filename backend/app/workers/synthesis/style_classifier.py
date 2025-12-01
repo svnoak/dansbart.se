@@ -75,23 +75,18 @@ class StyleClassifier:
         """
         
         # --- 1. GOD RULE: Metadata ---
-        # If the artist calls it a Hambo, it is a Hambo.
         meta = self._check_metadata(track)
         if meta: 
             return {
                 "style": meta, 
-                "confidence": 0.98, 
+                "confidence": 0.98,
                 "reason": f"Metadata match: '{meta}'"
             }
         
         # --- 2. THE BRAIN: AI Suggestion ---
-        # This comes from the 'Classification heead' which learned from previous feedback
         embedding = analysis.get("embedding")
-        
         if embedding:
-            # Ask the loaded head for a prediction
             ml_style = self.head.predict(embedding)
-            
             if ml_style != "Unknown":
                 return {
                     "style": ml_style,
@@ -100,74 +95,50 @@ class StyleClassifier:
                 }
 
         # --- 3. FALLBACK: Heuristics (Math) ---
-        # If metadata is empty and AI is untrained, guess based on rhythm metrics.
         meter = analysis.get("meter", "4/4")
         swing = analysis.get("swing_ratio", 1.0)
         bpm = analysis.get("tempo_bpm", 0)
-        ratios = analysis.get("avg_beat_ratios", [0.33, 0.33, 0.33]) # [Beat1, Beat2, Beat3]
-        punchiness = analysis.get("punchiness", 0) # High = Stompy, Low = Smooth
+        ratios = analysis.get("avg_beat_ratios", [0.33, 0.33, 0.33])
+        punchiness = analysis.get("punchiness", 0)
 
         # === TERNARY METER (3/4) ===
         if "3/" in meter:
             # Logic: Hambo has a long Beat 1 (dotted) and short Beat 2
             if ratios[0] > 0.40:
-                return {
-                    "style": "Hambo",
-                    "confidence": 0.70,
-                    "reason": "Rhythm: Long 1st Beat (Hambo Ratio)"
-                }
+                return {"style": "Hambo", "confidence": 0.70, "reason": "Rhythm: Long 1st Beat (Hambo Ratio)"}
             
             # Logic: Vals is symmetrical
             if abs(ratios[0] - 0.33) < 0.05 and abs(ratios[1] - 0.33) < 0.05:
-                return {
-                    "style": "Vals",
-                    "confidence": 0.60,
-                    "reason": "Rhythm: Even Beat lengths"
-                }
+                return {"style": "Vals", "confidence": 0.60, "reason": "Rhythm: Even Beat lengths"}
 
-            # Logic: Slängpolska is smooth (low punchiness), Polska is punchier
-            if punchiness < 0.1: # Threshold depends on normalization
-                return {
-                    "style": "Slängpolska",
-                    "confidence": 0.65,
-                    "reason": "Texture: Smooth/Flowing 16th notes"
-                }
+            # Logic: Slängpolska is smooth (low punchiness)
+            if punchiness < 0.1: 
+                return {"style": "Slängpolska", "confidence": 0.65, "reason": "Texture: Smooth/Flowing 16th notes"}
 
-            # Default
+            # --- CHANGED: Default to Unknown instead of Polska ---
             return {
-                "style": "Polska", 
-                "confidence": 0.50, 
-                "reason": "Generic 3/4 Rhythm"
+                "style": "Unknown", 
+                "confidence": 0.0, 
+                "reason": "Undetermined 3/4 Rhythm"
             }
 
         # === BINARY METER (2/4 or 4/4) ===
         else:
-            # Logic: Schottis has high swing (dotted notes)
+            # Logic: Schottis has high swing
             if swing > 1.25:
-                return {
-                    "style": "Schottis", 
-                    "confidence": 0.75, 
-                    "reason": f"Binary Meter + High Swing ({swing:.2f})"
-                }
+                return {"style": "Schottis", "confidence": 0.75, "reason": f"Binary Meter + High Swing ({swing:.2f})"}
             
-            # Logic: Tempo distinction
+            # Logic: Tempo distinction (Only if we are really sure about the range)
             if 80 < bpm < 115:
-                return {
-                    "style": "Snoa", 
-                    "confidence": 0.60, 
-                    "reason": "Binary Meter + Walking Tempo"
-                }
+                return {"style": "Snoa", "confidence": 0.60, "reason": "Binary Meter + Walking Tempo"}
             elif bpm >= 115:
-                return {
-                    "style": "Polka", 
-                    "confidence": 0.55, 
-                    "reason": "Binary Meter + Fast Tempo"
-                }
+                return {"style": "Polka", "confidence": 0.55, "reason": "Binary Meter + Fast Tempo"}
             
+            # --- Default to Unknown ---
             return {
-                "style": "Polka", 
-                "confidence": 0.40, 
-                "reason": "Generic Binary Rhythm"
+                "style": "Unknown", 
+                "confidence": 0.0, 
+                "reason": "Undetermined Binary Rhythm"
             }
 
     def _get_secondary_styles(self, primary, raw_bpm, analysis):

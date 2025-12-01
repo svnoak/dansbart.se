@@ -8,114 +8,113 @@ class ClassificationService:
         self.db = db
         self.classifier = StyleClassifier() # Instantiate the "Brain"
 
-    def classify_pending_tracks(self, limit: int = 50, force_refresh: bool = False):
-        """
-        Orchestrates the classification process:
-        1. Finds tracks with audio analysis.
-        2. Runs the StyleClassifier.
-        3. Saves Primary + Secondary styles to the DB.
-        """
-        print(f"🧠 Starting Batch Classification (Limit: {limit})...")
-        
-        # 1. Base Query: Tracks with 'hybrid_ml_v2' analysis data
-        query = (self.db.query(Track)
-                .join(AnalysisSource)
-                .filter(AnalysisSource.source_type == 'hybrid_ml_v2'))
-        
-        # Optimization: If not forcing refresh, skip tracks that already have styles
-        if not force_refresh:
-            query = query.outerjoin(TrackDanceStyle).filter(TrackDanceStyle.id == None)
-            
-        tracks = query.limit(limit).all()
-
-        if not tracks:
-            print("   ✨ No pending tracks found to classify.")
-            return
-
-        count = 0
-        for track in tracks:
-            # 2. Get the Analysis Data
-            # We grab the specific source we trust
-            source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
-            
-            if not source or not source.raw_data:
-                continue
-
-            is_instrumental = source.raw_data.get('is_likely_instrumental', True)
-            track.has_vocals = not is_instrumental
-            self.db.add(track)
-
-            # 3. RUN CLASSIFIER LOGIC
-            # This returns a LIST of dicts (Primary + Secondaries)
-            predictions = self.classifier.classify(track, source.raw_data)
-
-            # 4. SAVE RESULTS
-            self._save_predictions(track, predictions)
-            
-            # Logging for CLI
-            primary = predictions[0] # Primary is always first
-            print(f"   ✅ {track.title[:30]:<30} -> {primary['style']:<12} ({primary['dance_tempo']}) | Conf: {int(primary['confidence']*100)}%")
-            count += 1
-
-        print(f"🏁 Finished. Classified {count} tracks.")
-
     def _save_predictions(self, track, predictions):
-        """
-        Wipes old styles and saves new ones (Primary + Secondaries).
-        """
         try:
-            # A. Wipe existing styles for this track (Idempotency)
-            # This ensures we don't duplicate tags if we re-run
+            # 1. Wipe existing styles for this track
+            # Since we checked 'is_locked' in the loop above, we know 
+            # we are only deleting unconfirmed/AI-generated data here.
             self.db.query(TrackDanceStyle).filter(TrackDanceStyle.track_id == track.id).delete()
 
-            # B. Add new styles
+            # 2. Add new styles
             for p in predictions:
                 new_style = TrackDanceStyle(
                     track_id=track.id,
-                    
-                    # Core Style Info
                     dance_style=p['style'],
                     is_primary=(p['type'] == 'Primary'),
                     confidence=p.get('confidence', 0.0),
                     tempo_category=p.get('dance_tempo'),
-                    
-                    # Dancer Math (BPM / Multiplier)
                     bpm_multiplier=p.get('multiplier', 1.0),
-                    effective_bpm=p.get('effective_bpm', 0)
+                    effective_bpm=p.get('effective_bpm', 0),
+                    is_user_confirmed=False # AI predictions are never confirmed by default
                 )
                 self.db.add(new_style)
             
-            # Commit per track (so if one fails, previous ones are saved)
             self.db.commit()
             
         except Exception as e:
             self.db.rollback()
             print(f"   ❌ Error saving {track.title}: {e}")
 
-    def reclassify_library(self, force: bool = False):
+    def reclassify_library(self):
         """
-        Re-runs logic on tracks that are NOT user confirmed.
+        Loops through ALL tracks in the library.
+        If a track is NOT confirmed by a user, we re-run the classification 
+        using the latest AI Brain.
         """
-        # Find tracks with analysis but NO confirmed style
-        tracks = self.db.query(Track).join(AnalysisSource).all()
+        print("🔄 Re-evaluating library with new intelligence...")
         
-        count = 0
+        # 1. Get all tracks that have analysis data
+        # We join AnalysisSource to ensure they are ready to process
+        tracks = (self.db.query(Track)
+                  .join(AnalysisSource)
+                  .filter(AnalysisSource.source_type == 'hybrid_ml_v2')
+                  .all())
+        
+        updated_count = 0
+        skipped_count = 0
+        
         for track in tracks:
-            # Skip if user locked this track
-            primary_style = next((s for s in track.dance_styles if s.is_primary), None)
-            if primary_style and primary_style.is_user_confirmed:
-                continue
-                
-            # Get Analysis
+            # --- THE SAFETY LOCK ---
+            # Check if a human has touched this track.
+            # If ANY style associated with this track is confirmed, we skip it.
+            is_locked = any(s.is_user_confirmed for s in track.dance_styles)
+            
+            if is_locked:
+                skipped_count += 1
+                continue # Do not touch user data!
+
+            # --- THE RE-CLASSIFICATION ---
+            # If we are here, the track is "AI Managed".
+            # We don't care what it WAS (Polska, Unknown, etc).
+            # We want to know what it IS NOW according to the new Brain.
+
             source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
             if not source: continue
 
-            # Run the classifier
-            # IMPORTANT: The StyleClassifier needs to instantiate ClassificationHead inside itself
+            # 1. Ask the Brain (It will use the updated .pkl model automatically)
             predictions = self.classifier.classify(track, source.raw_data)
             
-            # Save
+            # 2. Save (This wipes the old unconfirmed styles and adds the new ones)
             self._save_predictions(track, predictions)
-            count += 1
             
-        print(f"✅ Re-classified {count} tracks.")
+            updated_count += 1
+            
+        print(f"✅ Re-classification complete.")
+        print(f"   - Updated: {updated_count} tracks (AI refined)")
+        print(f"   - Skipped: {skipped_count} tracks (User locked)")
+
+    def classify_track_immediately(self, track: Track):
+        """
+        Classifies a specific track instance immediately.
+        Used by AnalysisService to chain the pipeline.
+        """
+        # 1. Check if user locked it (Safety check)
+        # We access the relationship directly. 
+        # Note: If it's a fresh analysis, there probably aren't styles yet, but good to be safe.
+        for style in track.dance_styles:
+            if style.is_user_confirmed:
+                print(f"   🔒 Skipping {track.title} (User Confirmed)")
+                return
+
+        # 2. Get Analysis Data
+        # We assume the analysis was JUST saved, so it's there.
+        source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
+        
+        if not source or not source.raw_data:
+            print(f"   ⚠️ No analysis data found for {track.title}")
+            return
+
+        # 3. Update Vocals flag (Descriptive)
+        is_instrumental = source.raw_data.get('is_likely_instrumental', True)
+        track.has_vocals = not is_instrumental
+        self.db.add(track)
+
+        # 4. Run The Brain
+        predictions = self.classifier.classify(track, source.raw_data)
+
+        # 5. Save
+        self._save_predictions(track, predictions)
+        
+        # Logging
+        primary = predictions[0]
+        print(f"   ✅ Classified: {primary['style']} ({primary['dance_tempo']})")

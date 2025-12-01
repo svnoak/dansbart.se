@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
+from app.api.admin import router as admin_router
 
 app = FastAPI(title="Dansbart API")
 
@@ -14,6 +15,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 
 @app.get("/")
 def health_check():

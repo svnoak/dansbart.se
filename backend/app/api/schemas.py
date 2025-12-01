@@ -20,8 +20,16 @@ class TrackOut(BaseModel):
     
     effective_bpm: int
     tempo_category: str | None
+    duration: int | None = None
 
     playback_links: List[PlaybackLinkOut]
 
     class Config:
         from_attributes = True
+
+class LinkSubmission(BaseModel):
+    url: str
+
+class FeedbackIn(BaseModel):
+    style: str  # e.g., "Hambo"
+    tempo_correction: str # "ok", "half", "double"
