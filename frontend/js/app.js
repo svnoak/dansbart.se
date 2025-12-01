@@ -7,13 +7,15 @@ import TrackCard from './components/TrackCard.js';
 import FilterBar from './components/FilterBar.js';
 import MusicPlayer from './components/MusicPlayer.js'; 
 import BrokenLinkToast from './components/BrokenLinkToast.js';
+import StatsDashboard from './components/StatsDashboard.js';
 
 const app = createApp({
     components: {
         'track-card': TrackCard,
         'filter-bar': FilterBar,
         'music-player': MusicPlayer,
-        'broken-link-toast': BrokenLinkToast
+        'broken-link-toast': BrokenLinkToast,
+        'stats-dashboard': StatsDashboard
     },
     setup() {
         const trackLogic = useTracks();

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from app.services.tracks import TrackService
 from app.services.feedback import FeedbackService
 from app.services.links import LinkService
-
+from app.services.stats import StatsService
 
 router = APIRouter()
 
@@ -61,3 +61,8 @@ def report_broken_link(
         raise HTTPException(status_code=404, detail="Link not found")
     
     return {"status": "success", "message": f"Link flagged as {reason}"}
+
+@router.get("/stats")
+def get_library_stats(db: Session = Depends(get_db)):
+    service = StatsService(db)
+    return service.get_global_stats()
