@@ -1,28 +1,34 @@
-from importlib.resources import files
 import os
 import glob
 import yt_dlp
 import logging
+import difflib
 
 class AudioFetcher:
     def __init__(self, temp_dir="./temp_audio"):
         self.temp_dir = temp_dir
         os.makedirs(self.temp_dir, exist_ok=True)
         self.logger = logging.getLogger(__name__)
-
-    # app/workers/audio/fetcher.py
-
-    def fetch_track_audio(self, track_id: str, query: str) -> dict | None:
+        
+    def fetch_track_audio(self, track_id: str, query: str, expected_duration_ms: int = None) -> dict | None:
         """
-        Downloads audio and returns a dict with file path and YouTube metadata.
-        Returns None if failed.
+        1. Searches YouTube.
+        2. Validates duration and title.
+        3. Downloads if valid.
         """
         self.cleanup(track_id)
 
-        ydl_opts = {
+        # Phase 1: Search Options (Metadata Only, Fast)
+        search_opts = {
+            'quiet': True,
+            'noplaylist': True,
+            'default_search': 'ytsearch1', # Only get top result
+        }
+
+        # Phase 2: Download Options (Heavy)
+        dl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': f'{self.temp_dir}/{track_id}.%(ext)s',
-            'extractor_args': {'youtube': {'player_client': ['android', 'ios']}},
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
@@ -30,37 +36,42 @@ class AudioFetcher:
             }],
             'quiet': True,
             'noplaylist': True,
-            'no_warnings': True, 
         }
 
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                self.logger.info(f"Downloading: {query}")
+            # --- STEP A: PEEK AT METADATA ---
+            with yt_dlp.YoutubeDL(search_opts) as ydl:
+                self.logger.info(f"🔍 Searching: {query}")
+                info = ydl.extract_info(query, download=False) # <--- Critical: Don't download yet
                 
-                # 1. CAPTURE METADATA (download=True returns the info dict)
-                info = ydl.extract_info(f"ytsearch1:{query}", download=True)
-                
-                # 2. EXTRACT VIDEO ID
-                # ytsearch1 returns a playlist-like structure in 'entries'
                 if 'entries' in info and len(info['entries']) > 0:
                     video_data = info['entries'][0]
-                    youtube_id = video_data.get('id')
-                    youtube_title = video_data.get('title')
                 else:
-                    # Fallback if structure is different
-                    youtube_id = info.get('id')
-                    youtube_title = info.get('title')
+                    video_data = info
 
-                # 3. VERIFY FILE EXISTENCE
-                expected_file = f"{self.temp_dir}/{track_id}.mp3"
-                if os.path.exists(expected_file):
-                    # --- CRITICAL CHANGE HERE ---
-                    # We return a DICTIONARY, not a string
-                    return {
-                        "file_path": expected_file,
-                        "youtube_id": youtube_id,
-                        "youtube_title": youtube_title
-                    }
+                # --- STEP B: VALIDATION GUARD ---
+                if not self._is_valid_match(video_data, query, expected_duration_ms):
+                    self.logger.warning(f"❌ Match rejected for {query} (Duration/Title mismatch)")
+                    return None
+
+                # Extract verified ID
+                youtube_id = video_data.get('id')
+                youtube_title = video_data.get('title')
+                webpage_url = video_data.get('webpage_url') # Better for downloading specific video
+
+            # --- STEP C: DOWNLOAD THE VERIFIED VIDEO ---
+            with yt_dlp.YoutubeDL(dl_opts) as ydl:
+                self.logger.info(f"⬇️ Downloading verified match: {youtube_title}")
+                ydl.download([webpage_url])
+
+            # --- STEP D: RETURN RESULT ---
+            expected_file = f"{self.temp_dir}/{track_id}.mp3"
+            if os.path.exists(expected_file):
+                return {
+                    "file_path": expected_file,
+                    "youtube_id": youtube_id,
+                    "youtube_title": youtube_title
+                }
                 
         except Exception as e:
             self.logger.error(f"Download failed for {track_id}: {e}")
@@ -68,11 +79,46 @@ class AudioFetcher:
             
         return None
 
+    def _is_valid_match(self, video_data: dict, query: str, expected_duration_ms: int) -> bool:
+        """
+        Returns True if the video looks like the correct song.
+        """
+        video_title = video_data.get('title', '').lower()
+        query_lower = query.lower()
+        
+        # 1. DURATION CHECK (The most important filter)
+        if expected_duration_ms:
+            yt_duration_sec = video_data.get('duration', 0)
+            expected_sec = expected_duration_ms / 1000
+            
+            # Allow +/- 5 seconds tolerance (silence, intro differences)
+            diff = abs(yt_duration_sec - expected_sec)
+            
+            if diff > 10: 
+                self.logger.warning(f"Duration mismatch: Expected {expected_sec}s, Got {yt_duration_sec}s")
+                return False
+
+        # 2. FORBIDDEN WORDS CHECK
+        # If the original query didn't ask for "Live", but result is "Live", reject it.
+        forbidden_keywords = ['live', 'cover', 'karaoke', 'remix', 'mix', 'instrumental']
+        
+        for word in forbidden_keywords:
+            # If the bad word is in the result BUT NOT in our search query, it's a mismatch
+            if word in video_title and word not in query_lower:
+                self.logger.warning(f"Keyword mismatch: Found '{word}' in result but not in query.")
+                return False
+
+        # 3. CHANNEL CHECK (Bonus)
+        # "Topic" channels are auto-generated by YouTube from official distribution. High trust.
+        uploader = video_data.get('uploader', '')
+        if 'Topic' in uploader:
+            return True # Trusted source
+
+        return True
+
     def cleanup(self, track_id: str):
-        """Public cleanup method"""
         files = glob.glob(f"{self.temp_dir}/{track_id}.*")
         for f in files:
             try:
                 os.remove(f)
-            except OSError:
-                pass
+            except OSError: pass

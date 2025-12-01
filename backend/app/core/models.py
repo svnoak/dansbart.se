@@ -16,6 +16,7 @@ class Track(Base):
     isrc: Mapped[str | None] = mapped_column(String, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     has_vocals: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)
     
     # Relationships
     analysis_sources = relationship("AnalysisSource", back_populates="track")

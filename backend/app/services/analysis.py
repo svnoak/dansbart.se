@@ -30,10 +30,19 @@ class AnalysisService:
     def _process_single_track(self, track: Track) -> bool:
         print(f"▶️  Processing: {track.title}")
         
-        query = f"{track.title} {track.artist_name} audio"
-        result = self.fetcher.fetch_track_audio(str(track.id), query)
+        # Make the query more specific to official audio
+        query = f"{track.title} {track.artist_name} topic audio" 
+        
+        # Pass the duration!
+        # Ensure your Track model has this field populated from Spotify
+        result = self.fetcher.fetch_track_audio(
+            track_id=str(track.id), 
+            query=query, 
+            expected_duration_ms=track.duration_ms 
+        )
         
         if not result:
+            print(f"   ⚠️ No valid YouTube match found for {track.title}")
             return False
             
         file_path = result['file_path']

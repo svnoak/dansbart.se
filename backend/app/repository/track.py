@@ -9,12 +9,13 @@ class TrackRepository:
     def get_by_isrc(self, isrc: str) -> Track | None:
         return self.db.query(Track).filter(Track.isrc == isrc).first()
 
-    def create_track(self, title: str, artist: str, isrc: str, album: str = None) -> Track:
+    def create_track(self, title: str, artist: str, isrc: str, album: str = None, duration_ms: int = None) -> Track:
         new_track = Track(
-            title=title, 
-            artist_name=artist, 
+            title=title,
+            artist_name=artist,
             isrc=isrc,
-            album_name=album
+            album_name=album,
+            duration_ms=duration_ms
         )
         self.db.add(new_track)
         self.db.commit()

@@ -101,6 +101,9 @@ class SpotifyIngestor:
         isrc = external_ids.get('isrc')
         title = sp_track.get('name')
         
+        # --- 1. EXTRACT DURATION ---
+        duration_ms = sp_track.get('duration_ms') 
+        
         album_obj = sp_track.get('album', {})
         album_name = album_obj.get('name')
         
@@ -121,7 +124,8 @@ class SpotifyIngestor:
                 title=title, 
                 artist=artist_name, 
                 isrc=isrc,
-                album=album_name
+                album=album_name,
+                duration_ms=duration_ms
             )
         else:
             # Update Album if missing
