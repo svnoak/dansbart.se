@@ -156,8 +156,16 @@ export default {
         </div>
 
         <div v-if="activeSource === 'spotify'" 
-             class="fixed bottom-24 left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200">
-            <iframe :src="spotifySrc" width="100%" height="100%" frameborder="0" allow="autoplay; encrypted-media; fullscreen"></iframe>
+             class="fixed bottom-24 left-4 w-80 h-20 shadow-xl z-40 rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828]">
+            
+            <iframe 
+                :src="spotifySrc" 
+                class="w-full h-full block"
+                frameborder="0" 
+                scrolling="no"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture">
+            </iframe>
+            
         </div>
 
     </div>

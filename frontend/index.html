@@ -32,8 +32,11 @@
                     :key="track.id" 
                     :track="track"
                     :current-track="currentTrack"
-                    :is-spotify-mode="useSpotifyFallback" 
+                    :is-spotify-mode="useSpotifyFallback"
+                    :is-playing="isPlaying"
                     @play="handlePlay"
+                    @stop="togglePlay"
+                    @refresh="fetchTracks"
                 ></track-card>
             </div>
         </div>

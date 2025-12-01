@@ -21,6 +21,7 @@ const app = createApp({
         const trackLogic = useTracks();
         const playerLogic = usePlayer();
         const potentialBrokenState = ref(null);
+        const { isPlaying, togglePlay } = playerLogic;
 
         // --- Handlers ---
         const handlePotentialBrokenLink = (payload) => {
@@ -63,6 +64,7 @@ const app = createApp({
             ...trackLogic, 
             ...playerLogic,
             handlePlay,
+            togglePlay,
             handlePotentialBrokenLink,
             confirmBrokenLink,
             potentialBrokenState
