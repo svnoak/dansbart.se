@@ -64,6 +64,7 @@ class TrackService:
                 final_bpm = matched_style.effective_bpm
                 final_category = matched_style.tempo_category
                 final_confidence = matched_style.confidence
+                final_confirmations = matched_style.confirmation_count
             else:
                 # No style found -> "Unclassified"
                 final_style = "Unclassified"
@@ -82,6 +83,7 @@ class TrackService:
                 "effective_bpm": final_bpm,
                 "tempo_category": final_category,
                 "style_confidence": final_confidence,
+                "style_confirmations": final_confirmations,
                 "has_vocals": track.has_vocals,
                 "duration": track.duration_ms,
                 "playback_links": [

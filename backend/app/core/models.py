@@ -48,12 +48,10 @@ class TrackDanceStyle(Base):
     # Rhythmic Data
     tempo_category: Mapped[str | None] = mapped_column(String, nullable=True) # Slow, Medium, Fast
     bpm_multiplier: Mapped[float] = mapped_column(Float, default=1.0)
-    effective_bpm: Mapped[int] = mapped_column(Integer)
-    
-    # Locks the row so AI doesn't overwrite user input
-    is_user_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
-    
+    effective_bpm: Mapped[int] = mapped_column(Integer)   
     track = relationship("Track", back_populates="dance_styles")
+    confirmation_count: Mapped[int] = mapped_column(Integer, default=0)
+    is_user_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
 
 class PlaybackLink(Base):
     __tablename__ = "playback_links"

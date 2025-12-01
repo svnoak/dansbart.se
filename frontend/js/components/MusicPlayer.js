@@ -27,6 +27,27 @@ export default {
     },
 
     watch: {
+        track: {
+            immediate: true,
+            handler(newTrack) {
+                if (newTrack) {
+                    this.playbackStartTime = Date.now();
+                    
+                    const hasFeedback = localStorage.getItem(`fb_${newTrack.id}`);
+                    
+                    const isSettled = newTrack.style_confirmations >= 3;
+                    
+                    if (hasFeedback || isSettled) {
+                        this.nudgeStep = 'hidden';
+                    } else {
+                        this.nudgeStep = 'verify';
+                    }
+                    
+                    this.correction.style = newTrack.dance_style || "Polska";
+                    this.correction.tempo = 'ok';
+                }
+            }
+        },
         // 1. STOP AUDIO WHEN SWITCHING TO SPOTIFY
         useSpotify(newVal) {
             if (newVal === true) {

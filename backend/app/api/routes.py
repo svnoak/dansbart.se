@@ -51,7 +51,8 @@ def submit_track_feedback(
     def run_learning_loop():
         trainer = TrainingService(db)
         classifier = ClassificationService(db)
-        if trainer.train_from_feedback():
+        did_train = trainer.train_from_feedback(min_confirmations=1)
+        if did_train:
             classifier.reclassify_library()
 
     background_tasks.add_task(run_learning_loop)

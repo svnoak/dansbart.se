@@ -52,11 +52,25 @@ class FeedbackService:
         ).first()
 
         if style_row:
+            is_agreement = (
+                style_row.bpm_multiplier == new_multiplier and 
+                style_row.is_user_confirmed
+            )
+
+            style_row.is_primary = True
             style_row.bpm_multiplier = new_multiplier
             style_row.effective_bpm = effective_bpm
             style_row.tempo_category = category
             style_row.is_user_confirmed = True
-            style_row.confidence = 1.0 
+            style_row.confidence = 1.0
+            
+            if is_agreement:
+                style_row.confirmation_count += 1
+            else:
+                # If they changed the speed or revived a dead style, reset count to 1 (the current user)
+                style_row.confirmation_count = 1
+                
+            self.db.add(style_row)
         else:
             style_row = TrackDanceStyle(
                 track_id=track.id,
@@ -66,7 +80,8 @@ class FeedbackService:
                 effective_bpm=effective_bpm,
                 tempo_category=category,
                 is_user_confirmed=True,
-                confidence=1.0
+                confidence=1.0,
+                confirmation_count=1
             )
             self.db.add(style_row)
         

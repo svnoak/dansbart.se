@@ -17,7 +17,7 @@ class TrackOut(BaseModel):
     dance_style: str
     has_vocals: bool | None = False
     style_confidence: float = 0.0
-    
+    style_confirmations: int = 0
     effective_bpm: int
     tempo_category: str | None
     duration: int | None = None
