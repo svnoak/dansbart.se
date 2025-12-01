@@ -16,3 +16,4 @@ essentia-tensorflow     # Audio analysis and feature extraction
 bs4                     # HTML parsing (for web scraping)
 music21                 # Music theory and notation analysis
 yt_dlp                  # YouTube downloader
+alembic                 # Database migrations

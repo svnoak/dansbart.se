@@ -15,6 +15,15 @@ from app.core.models import Track, PlaybackLink, TrackDanceStyle
 # access to the values within the .ini file in use.
 config = context.config
 
+db_user = os.getenv("POSTGRES_USER", "postgres")
+db_password = os.getenv("POSTGRES_PASSWORD", "password")
+db_server = os.getenv("POSTGRES_SERVER", "localhost")
+db_name = os.getenv("POSTGRES_DB", "dansbart")
+
+db_url = f"postgresql://{db_user}:{db_password}@{db_server}/{db_name}"
+
+config.set_main_option("sqlalchemy.url", db_url)
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
