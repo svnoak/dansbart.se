@@ -1,6 +1,6 @@
 export default {
     props: ['track', 'currentTrack', 'isSpotifyMode'], 
-    emits: ['play', 'refresh'], // We emit 'refresh' so the parent can reload the list if a link is hidden
+    emits: ['play', 'refresh'], 
     template: /*html*/`
     <div class="card bg-white p-5 rounded-lg shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         
@@ -14,14 +14,20 @@ export default {
                         {{ Math.round(track.style_confidence * 100) }}%
                     </span>
                 </span>
-                <span class="text-gray-500 text-xs flex items-center font-mono border border-gray-100 bg-gray-50 px-2 py-1 rounded-full">
-                    {{ track.effective_bpm }} BPM
+
+                <span class="text-gray-500 text-xs flex items-center font-medium border border-gray-100 bg-gray-50 px-2 py-1 rounded-full">
+                    {{ tempoLabel }}
                 </span>
+
                 <span v-if="track.has_vocals" class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full flex items-center gap-1">
                     🎤 Vocals
                 </span>
                 <span v-else class="px-2 py-1 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full flex items-center gap-1">
                     🎻 Instr.
+                </span>
+
+                <span v-if="formattedDuration" class="px-2 py-1 text-gray-400 text-xs font-mono flex items-center gap-1 ml-auto sm:ml-0">
+                    🕒 {{ formattedDuration }}
                 </span>
             </div>
             
@@ -29,12 +35,11 @@ export default {
             <p class="text-gray-600 text-sm mb-4">{{ track.artist_name }} <span class="text-gray-300 mx-1">•</span> <span class="italic text-gray-500">{{ track.album_name }}</span></p>
 
             <div class="flex flex-wrap items-center gap-2">
-
                 <button v-if="hasSpotify" 
                         @click="$emit('play', track, 'spotify')"
                         :class="isCurrent && isSpotifyMode ? 'bg-[#1DB954] border-[#1DB954] text-white' : 'bg-green-50 border-green-200 text-green-700'"
                         class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border hover:shadow-sm transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.18.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
                     Spotify
                 </button>
                 
@@ -48,7 +53,6 @@ export default {
                         YouTube
                     </button>
                 </div>                
-                <span v-if="!hasYouTube && !hasSpotify" class="text-xs text-gray-400 italic">No audio sources</span>
             </div>
         </div>
     </div>
@@ -56,47 +60,31 @@ export default {
     computed: {
         hasYouTube() { return this.getLink('youtube'); },
         hasSpotify() { return this.getLink('spotify'); },
-        isCurrent() { return this.currentTrack?.id === this.track.id; }
+        isCurrent() { return this.currentTrack?.id === this.track.id; },
+        
+        // Formatter
+        formattedDuration() {
+            const ms = this.track.duration_ms; // Ensure this matches API field name
+            if (!ms) return null;
+            const min = Math.floor(ms / 60000);
+            const sec = ((ms % 60000) / 1000).toFixed(0);
+            return min + ":" + (sec < 10 ? '0' : '') + sec;
+        },
+        // Translator for labels
+        tempoLabel() {
+            const labels = { 'Slow': 'Lugn', 'Medium': 'Lagom', 'Fast': 'Rask', 'Turbo': 'Rojigt' };
+            return labels[this.track.tempo_category] || 'Lagom';
+        }
     },
     methods: {
-        // Helper to find the link object for a specific platform
         getLink(type) {
             if (!this.track.playback_links) return null;
             return this.track.playback_links.find(l => {
                 const val = l.deep_link || l;
-                // Safe check if it's an object or string
                 const url = typeof val === 'string' ? val : val.deep_link;
                 if (!url) return false;
-                
                 return type === 'spotify' ? url.includes('spotify') : !url.includes('spotify');
             });
-        },
-        async reportLink(type) {
-            const linkObj = this.getLink(type);
-            
-            // Safety check: Does the link exist and have an ID?
-            if (!linkObj || !linkObj.id) {
-                console.error("Cannot report: Missing Link ID");
-                return;
-            }
-
-            if (!confirm("Is this link broken or incorrect? It will be hidden for review.")) return;
-
-            try {
-                // Call the API endpoint
-                const response = await fetch(`http://127.0.0.1:8000/api/links/${linkObj.id}/report`, { 
-                    method: 'PATCH' 
-                });
-                
-                if (response.ok) {
-                    alert("Thanks! We will review this link.");
-                    this.$emit('refresh'); // Refresh list to hide the broken link immediately
-                } else {
-                    alert("Something went wrong reporting the link.");
-                }
-            } catch (e) {
-                console.error("Report failed", e);
-            }
         }
     }
 };

@@ -125,13 +125,18 @@ class SpotifyIngestor:
                 artist=artist_name, 
                 isrc=isrc,
                 album=album_name,
-                duration_ms=duration_ms
+                duration_ms=duration_ms # --- 2. PASS TO REPO ---
             )
         else:
             # Update Album if missing
             if not db_track.album_name and album_name:
                 print(f"📝 Updating Album: {title} -> {album_name}")
                 self.repo.update_album(db_track, album_name)
+            
+            # Update duration if existing track doesn't have it
+            if not db_track.duration_ms and duration_ms:
+                db_track.duration_ms = duration_ms
+                self.db.commit()
 
         if spotify_url:
             self.repo.add_playback_link(

@@ -83,6 +83,7 @@ class TrackService:
                 "tempo_category": final_category,
                 "style_confidence": final_confidence,
                 "has_vocals": track.has_vocals,
+                "duration": track.duration_ms,
                 "playback_links": [
                     {"id": str(l.id), "platform": l.platform, "deep_link": l.deep_link}
                     for l in valid_links
