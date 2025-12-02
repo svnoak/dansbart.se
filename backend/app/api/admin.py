@@ -15,7 +15,6 @@ class IngestRequest(BaseModel):
 @router.post("/ingest")
 def trigger_ingest(
     req: IngestRequest, 
-    background_tasks: BackgroundTasks,
     x_admin_token: str = Header(None),
     db: Session = Depends(get_db)
 ):
@@ -23,4 +22,4 @@ def trigger_ingest(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     pipeline = PipelineService(db)
-    return pipeline.ingest_and_process_playlist(req.playlist_id, background_tasks)
+    return pipeline.ingest_and_process_playlist(req.playlist_id)

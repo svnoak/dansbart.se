@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session
-from fastapi import BackgroundTasks
 from app.workers.ingestion.spotify import SpotifyIngestor
 from app.services.analysis import AnalysisService
+from app.workers.tasks import analyze_track_task
 
 class PipelineService:
     def __init__(self, db: Session):
         self.db = db
 
-    def ingest_and_process_playlist(self, playlist_id: str, background_tasks: BackgroundTasks):
+    def ingest_and_process_playlist(self, playlist_id: str):
         """
         1. Ingest (Blocking, creates DB rows).
         2. Schedule Analysis for every track found.
@@ -23,9 +23,7 @@ class PipelineService:
         print(f"⚙️ Scheduling analysis for {len(track_ids)} tracks...")
         
         for tid in track_ids:
-            # We add a separate task for each track. 
-            # FastAPI handles the queueing.
-            background_tasks.add_task(self._analyze_job, tid)
+            analyze_track_task.delay(tid)
         
         return {
             "status": "success", 

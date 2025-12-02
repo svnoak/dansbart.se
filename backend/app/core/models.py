@@ -23,6 +23,7 @@ class Track(Base):
     playback_links = relationship("PlaybackLink", back_populates="track")
     dance_styles = relationship("TrackDanceStyle", back_populates="track")
     feedback = relationship("TrackFeedback", back_populates="track", uselist=False)
+    processing_status: Mapped[str] = mapped_column(String, default="PENDING", server_default="PENDING")
 
 class AnalysisSource(Base):
     __tablename__ = "analysis_sources"

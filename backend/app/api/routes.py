@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.api.schemas import TrackOut, LinkSubmission, FeedbackIn
+from app.workers.tasks import analyze_track_task
 
 # Services
 from app.services.tracks import TrackService
@@ -49,12 +50,16 @@ def submit_track_feedback(
 
     # 2. Trigger Background Learning
     def run_learning_loop():
-        trainer = TrainingService(db)
-        classifier = ClassificationService(db)
-        did_train = trainer.train_from_feedback(min_confirmations=1)
-        if did_train:
-            classifier.reclassify_library()
-
+        bg_db = SessionLocal()
+        try:
+            trainer = TrainingService(db)
+            classifier = ClassificationService(db)
+            did_train = trainer.train_from_feedback(min_confirmations=1)
+            if did_train:
+                classifier.reclassify_library()
+        finally:
+            bg_db.close()
+            
     background_tasks.add_task(run_learning_loop)
     
     # 3. Return the new data to the frontend
@@ -82,11 +87,15 @@ def submit_link(
     def run_analysis_job(tid: str):
         print(f"🕵️‍♀️ Background Task: Analyzing {tid} with new link...")
         # Re-instantiate service to ensure clean session state
-        analysis_service = AnalysisService(db)
-        analysis_service.analyze_track_by_id(tid)
+        bg_db = SessionLocal() 
+        try:
+            analysis_service = AnalysisService(bg_db)
+            analysis_service.analyze_track_by_id(tid)
+        finally:
+            bg_db.close()
 
     # Schedule it
-    background_tasks.add_task(run_analysis_job, track_id)
+    analyze_track_task.delay(track_id)
     
     return result
 

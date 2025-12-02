@@ -14,16 +14,47 @@ class AnalysisService:
         self.classifier_service = ClassificationService(db)
 
     def analyze_track_by_id(self, track_id: str):
-        """Background Task Entry Point"""
+        """
+        Background Task Entry Point.
+        Manages the lifecycle state: PENDING -> PROCESSING -> DONE / FAILED
+        """
         track = self.db.query(Track).filter(Track.id == track_id).first()
-        if track:
-            self._process_single_track(track)
+        if not track:
+            return
+
+        # 1. UPDATE STATE: STARTING
+        print(f"🔄 Status Update: {track.title} -> PROCESSING")
+        track.processing_status = "PROCESSING"
+        self.db.commit() # Commit immediately so UI sees it's busy
+
+        try:
+            # 2. RUN LOGIC
+            success = self._process_single_track(track)
+
+            # 3. UPDATE STATE: FINISHED
+            if success:
+                track.processing_status = "DONE"
+                print(f"✅ Status Update: {track.title} -> DONE")
+            else:
+                track.processing_status = "FAILED"
+                print(f"❌ Status Update: {track.title} -> FAILED")
+
+        except Exception as e:
+            # 4. CATCH CRASHES
+            print(f"🔥 Critical Failure processing {track.title}: {e}")
+            track.processing_status = "FAILED"
+            
+        finally:
+            # Ensure the final status is saved no matter what
+            self.db.commit()
 
     def _process_single_track(self, track: Track) -> bool:
         print(f"▶️  Processing: {track.title}")
         
         # 1. FETCH AUDIO (Use existing link if available)
         existing_link = next((l for l in track.playback_links if l.platform == 'youtube' and l.is_working), None)
+        
+        # If we have a stored link, use it. Otherwise search by metadata.
         query = existing_link.deep_link if existing_link else f"{track.title} {track.artist_name} topic audio"
         
         result = self.fetcher.fetch_track_audio(
@@ -39,6 +70,7 @@ class AnalysisService:
         youtube_id = result.get('youtube_id')
 
         try:
+            # Save/Update the YouTube link if we found a new one
             if youtube_id:
                 self._ensure_youtube_link(track, youtube_id)
 
@@ -54,21 +86,28 @@ class AnalysisService:
                     data=data
                 )
                 
-                # 4. CHAIN REACTION: CLASSIFY IMMEDIATELY ⚡️
-                # This makes the track visible in the frontend immediately
+                # 4. AUTO-CLASSIFY
+                # This makes the track visible in the frontend immediately if successful
                 print(f"   🧠 Auto-classifying...")
                 self.classifier_service.classify_track_immediately(track)
                 
                 return True
+            
             return False
 
         finally:
+            # Cleanup temp files even if analysis crashed
             self.fetcher.cleanup(str(track.id))
 
     def _ensure_youtube_link(self, track, video_id):
-        # (Keep existing logic)
         exists = self.db.query(PlaybackLink).filter_by(track_id=track.id, deep_link=video_id).first()
         if not exists:
-            link = PlaybackLink(track_id=track.id, platform="youtube", deep_link=video_id)
+            link = PlaybackLink(
+                track_id=track.id, 
+                platform="youtube", 
+                deep_link=video_id,
+                is_working=True
+            )
             self.db.add(link)
+            # Note: No commit here, let the parent transaction handle it or commit if needed immediately
             self.db.commit()

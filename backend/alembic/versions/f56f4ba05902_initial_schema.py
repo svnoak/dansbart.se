@@ -1,8 +1,8 @@
 """Initial schema
 
-Revision ID: 1e62e5cec2b3
+Revision ID: f56f4ba05902
 Revises: 
-Create Date: 2025-12-01 08:32:49.649246
+Create Date: 2025-12-01 21:09:01.189846
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '1e62e5cec2b3'
+revision: str = 'f56f4ba05902'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -41,6 +41,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('has_vocals', sa.Boolean(), nullable=True),
     sa.Column('duration_ms', sa.Integer(), nullable=True),
+    sa.Column('processing_status', sa.String(), server_default='PENDING', nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tracks_isrc'), 'tracks', ['isrc'], unique=True)
@@ -73,6 +74,7 @@ def upgrade() -> None:
     sa.Column('tempo_category', sa.String(), nullable=True),
     sa.Column('bpm_multiplier', sa.Float(), nullable=False),
     sa.Column('effective_bpm', sa.Integer(), nullable=False),
+    sa.Column('confirmation_count', sa.Integer(), nullable=False),
     sa.Column('is_user_confirmed', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['track_id'], ['tracks.id'], ),
     sa.PrimaryKeyConstraint('id')

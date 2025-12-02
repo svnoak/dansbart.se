@@ -15,6 +15,7 @@ class TrackService:
         # 1. BASE QUERY
         # Use outerjoin so we don't lose tracks that have 0 styles
         query = self.db.query(Track).outerjoin(Track.dance_styles)
+        query = query.filter(Track.processing_status.in_(['DONE', 'FAILED']))
 
         # 2. APPLY FILTERS
         # Note: If filtering by style/bpm, we naturally exclude unclassified tracks
@@ -71,6 +72,7 @@ class TrackService:
                 final_bpm = 0
                 final_category = "Unknown"
                 final_confidence = 0.0
+                final_confirmations = 0
 
             # --- D. FORMAT OUTPUT ---
             # We return a dict that matches the Pydantic schema structure
