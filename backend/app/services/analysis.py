@@ -4,6 +4,8 @@ from app.repository.analysis import AnalysisRepository
 from app.workers.audio.fetcher import AudioFetcher
 from app.workers.audio.analyzer import AudioAnalyzer
 from app.services.classification import ClassificationService 
+from app.core.database import SessionLocal
+import time
 
 class AnalysisService:
     def __init__(self, db: Session):
@@ -22,31 +24,42 @@ class AnalysisService:
         if not track:
             return
 
+        db = SessionLocal()
+
         # 1. UPDATE STATE: STARTING
         print(f"🔄 Status Update: {track.title} -> PROCESSING")
         track.processing_status = "PROCESSING"
-        self.db.commit() # Commit immediately so UI sees it's busy
+        self.db.commit()
 
         try:
+            # 1. Start Transaction & Mark Processing
+            print(f"🔄 Status Update: {track.title} -> PROCESSING")
+            track.processing_status = "PROCESSING"
+
             # 2. RUN LOGIC
             success = self._process_single_track(track)
 
-            # 3. UPDATE STATE: FINISHED
+            # 3. UPDATE FINAL STATUS
             if success:
                 track.processing_status = "DONE"
                 print(f"✅ Status Update: {track.title} -> DONE")
+                self.db.commit()
             else:
                 track.processing_status = "FAILED"
                 print(f"❌ Status Update: {track.title} -> FAILED")
+                self.db.commit()
+            
+            # FINAL COMMIT: If we reach here without error, commit everything
+            self.db.commit()
 
         except Exception as e:
-            # 4. CATCH CRASHES
+            # Rollback if any part of the process failed (e.g., File Write, Classification Crash)
+            self.db.rollback() 
             print(f"🔥 Critical Failure processing {track.title}: {e}")
-            track.processing_status = "FAILED"
             
         finally:
-            # Ensure the final status is saved no matter what
-            self.db.commit()
+            # Cleanup temp files regardless of outcome
+            self.fetcher.cleanup(str(track.id))
 
     def _process_single_track(self, track: Track) -> bool:
         print(f"▶️  Processing: {track.title}")
@@ -74,9 +87,15 @@ class AnalysisService:
             if youtube_id:
                 self._ensure_youtube_link(track, youtube_id)
 
+            print(f"   [TIME] Starting CPU-intensive analysis...")
+            start_time = time.time()
+
             # 2. ANALYZE (MusiCNN + Madmom)
             context = f"{track.title} {track.artist_name} {track.album_name or ''}"
             data = self.analyzer.analyze_file(file_path, context)
+
+            end_time = time.time()
+            print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.") # <-- Shows duration
 
             if data:
                 # 3. SAVE RAW ANALYSIS
@@ -109,5 +128,3 @@ class AnalysisService:
                 is_working=True
             )
             self.db.add(link)
-            # Note: No commit here, let the parent transaction handle it or commit if needed immediately
-            self.db.commit()

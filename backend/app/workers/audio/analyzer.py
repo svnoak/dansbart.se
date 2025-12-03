@@ -29,24 +29,32 @@ class AudioAnalyzer:
     def analyze_file(self, file_path: str, metadata_context: str = "") -> dict:
         try:
             # --- 1. LOAD AUDIO & TEXTURE ---
+            print(f"   [ANALYSIS] Load audio and texture...")
             loader = es.MonoLoader(filename=file_path, sampleRate=16000, resampleQuality=4)
             audio_16k = loader()
             
+            print(f"   [ANALYSIS] Set embeddings...")
             raw_embeddings = self.tf_embeddings(audio_16k)
             avg_embedding = np.mean(raw_embeddings, axis=0) 
 
+
+           
             # --- 2. VOICE DETECTION ---
+            print(f"   [ANALYSIS] Doing voicedetection...")
             vocal_data = analyze_vocal_presence(audio_16k)
 
             # --- 3. RHYTHM ANALYSIS ---
             # Call method on the instance, NOT the class
+            print(f"   [ANALYSIS] Doing rythm analysis...")
             act, beat_times, beat_info = self.rhythm_extractor.analyze_beats(file_path, metadata_context)
             folk_features = self.rhythm_extractor.extract_folk_features(beat_times, act)
 
             # --- 4. SWING ANALYSIS ---
+            print(f"   [ANALYSIS] Doing swinganalysis...")
             swing_ratio = calculate_swing_ratio(file_path, beat_times)
 
             # --- 5. PREDICT STYLE ---
+            print(f"   [ANALYSIS] Predict style...")
             full_vector = np.concatenate([
                 avg_embedding, 
                 folk_features, 
@@ -56,6 +64,7 @@ class AudioAnalyzer:
             predicted_style = self.head.predict(full_vector)
 
             # --- 6. RETURN METRICS ---
+            print(f"   [ANALYSIS] Returning metrics...")
             raw_bpm = folk_features[0]
 
             return {
