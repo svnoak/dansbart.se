@@ -88,6 +88,9 @@ class TrackService:
                 "style_confirmations": final_confirmations,
                 "has_vocals": track.has_vocals,
                 "duration": track.duration_ms,
+                "bars": track.bars,
+                "sections": track.sections,
+                "section_labels": track.section_labels,
                 "playback_links": [
                     {"id": str(l.id), "platform": l.platform, "deep_link": l.deep_link}
                     for l in valid_links

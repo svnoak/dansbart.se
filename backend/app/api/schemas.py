@@ -21,7 +21,9 @@ class TrackOut(BaseModel):
     effective_bpm: int
     tempo_category: str | None
     duration: int | None = None
-
+    bars: List[float] | None = None
+    sections: List[float] | None = None,
+    section_labels: List[str] | None = None
     playback_links: List[PlaybackLinkOut]
 
     class Config:

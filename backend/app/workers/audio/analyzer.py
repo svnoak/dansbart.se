@@ -6,6 +6,8 @@ from .style_head import ClassificationHead
 from .extractors.rhythm import RhythmExtractor
 from .extractors.vocal import analyze_vocal_presence
 from .extractors.swing import calculate_swing_ratio
+from .extractors.structure import StructureExtractor
+from .extractors.section_labeler import ABSectionLabeler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_BACKBONE = os.path.join(BASE_DIR, "models", "msd-musicnn-1.pb")
@@ -14,6 +16,7 @@ class AudioAnalyzer:
     def __init__(self):
         print("🧠 Loading Analysis Models...")
         self.rhythm_extractor = RhythmExtractor()
+        self.structure_extractor = StructureExtractor()
         self.head = ClassificationHead()
         
         try:
@@ -34,11 +37,11 @@ class AudioAnalyzer:
             audio_16k = loader()
             
             print(f"   [ANALYSIS] Set embeddings...")
+            if self.tf_embeddings is None:
+                raise RuntimeError("MusiCNN embeddings model not loaded")
             raw_embeddings = self.tf_embeddings(audio_16k)
             avg_embedding = np.mean(raw_embeddings, axis=0) 
 
-
-           
             # --- 2. VOICE DETECTION ---
             print(f"   [ANALYSIS] Doing voicedetection...")
             vocal_data = analyze_vocal_presence(audio_16k)
@@ -48,6 +51,16 @@ class AudioAnalyzer:
             print(f"   [ANALYSIS] Doing rythm analysis...")
             act, beat_times, beat_info = self.rhythm_extractor.analyze_beats(file_path, metadata_context)
             folk_features = self.rhythm_extractor.extract_folk_features(beat_times, act)
+            bars = self.rhythm_extractor.get_bars(beat_info)
+
+            # 4. STRUCTURE (SECTIONS/REPRISER)
+            print(f"   [ANALYSIS] Structure analysis...")
+            sections = self.structure_extractor.extract_segments(bars)
+            if sections is None:
+                raise RuntimeError("StructureExtractor returned None")
+            section_labeler = ABSectionLabeler(sr=16000)
+            section_labels = section_labeler.label_sections(audio_16k, sections)
+
 
             # --- 4. SWING ANALYSIS ---
             print(f"   [ANALYSIS] Doing swinganalysis...")
@@ -76,7 +89,10 @@ class AudioAnalyzer:
                 "swing_ratio": self._to_float(swing_ratio),
                 "avg_beat_ratios": [self._to_float(x) for x in folk_features[3:6]],
                 "punchiness": self._to_float(folk_features[2]),
-                "meter": f"{int(np.max(beat_info[:,1])) if len(beat_info) > 0 else 0}/4"
+                "meter": f"{int(np.max(beat_info[:,1])) if len(beat_info) > 0 else 0}/4",
+                "bars": [self._to_float(b) for b in bars],
+                "sections": [self._to_float(s) for s in sections],
+                "section_labels": section_labels
             }
 
         except Exception as e:

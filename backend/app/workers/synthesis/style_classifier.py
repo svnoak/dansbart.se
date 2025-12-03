@@ -1,6 +1,7 @@
 from app.core.models import Track
 from app.workers.audio.style_head import ClassificationHead
 from app.core.music_theory import categorize_tempo, TEMPO_RANGES
+import numpy as np
 
 class StyleClassifier:
     """
@@ -9,7 +10,7 @@ class StyleClassifier:
     Decision Priority:
     1. Metadata (Keywords in Title/Album) -> 98% Confidence
     2. AI Brain (Texture + Rhythmic Fingerprint) -> 85% Confidence
-    3. Heuristics (Math on BPM, Swing, Ratios) -> 40-75% Confidence
+    3. Heuristics (Math on BPM, Swing, Ratios, Structure) -> 40-75% Confidence
     """
 
     # ====================================================
@@ -38,13 +39,12 @@ class StyleClassifier:
     # ====================================================
 
     def __init__(self):
-        # 2. LOAD THE BRAIN ON INIT
-        # This ensures we are always using the latest .pkl file
+        # Load the Brain (AI Model)
         self.head = ClassificationHead()
 
     def classify(self, track: Track, analysis: dict) -> list:
         """
-        Returns a list of classifications.
+        Returns a list of classifications (Primary + Secondaries).
         """
         results = []
         raw_bpm = analysis.get("tempo_bpm", 0)
@@ -75,15 +75,17 @@ class StyleClassifier:
         """
         
         # --- 1. GOD RULE: Metadata ---
+        # If the artist calls it a Hambo, it is a Hambo.
         meta = self._check_metadata(track)
         if meta: 
             return {
                 "style": meta, 
-                "confidence": 0.98,
+                "confidence": 0.98, 
                 "reason": f"Metadata match: '{meta}'"
             }
         
         # --- 2. THE BRAIN: AI Suggestion ---
+        # Check if the neural network recognizes the texture/rhythm fingerprint
         embedding = analysis.get("embedding")
         if embedding:
             ml_style = self.head.predict(embedding)
@@ -91,31 +93,64 @@ class StyleClassifier:
                 return {
                     "style": ml_style,
                     "confidence": 0.85, 
-                    "reason": "AI Groove Fingerprint (v2)"
+                    "reason": "AI Groove Fingerprint"
                 }
 
-        # --- 3. FALLBACK: Heuristics (Math) ---
+        # --- 3. FALLBACK: Heuristics (Math + Structure) ---
+        
         meter = analysis.get("meter", "4/4")
         swing = analysis.get("swing_ratio", 1.0)
         bpm = analysis.get("tempo_bpm", 0)
         ratios = analysis.get("avg_beat_ratios", [0.33, 0.33, 0.33])
         punchiness = analysis.get("punchiness", 0)
+        
+        # New: Structural Analysis
+        bars = analysis.get("bars", [])
+        sections = analysis.get("sections", [])
+        
+        # Calculate Phrase Length
+        avg_bars = 0
+        if len(sections) > 1 and len(bars) > 0:
+            lengths = []
+            for i in range(len(sections) - 1):
+                start = sections[i]
+                end = sections[i+1]
+                num_bars = len([b for b in bars if start <= b < end])
+                if num_bars > 4: 
+                    lengths.append(num_bars)
+            if lengths:
+                avg_bars = np.median(lengths)
+
+        # Helper: Is it "Square" (8, 16, 32)?
+        def is_square(val):
+            if 7.0 <= val <= 9.0: return True   # 8 bars
+            if 15.0 <= val <= 17.0: return True # 16 bars (A+A)
+            if 30.0 <= val <= 34.0: return True # 32 bars
+            return False
 
         # === TERNARY METER (3/4) ===
         if "3/" in meter:
-            # Logic: Hambo has a long Beat 1 (dotted) and short Beat 2
+            # Hambo Logic: Long 1st beat + Square Structure
             if ratios[0] > 0.40:
-                return {"style": "Hambo", "confidence": 0.70, "reason": "Rhythm: Long 1st Beat (Hambo Ratio)"}
+                confidence = 0.70
+                reason = "Rhythm: Long 1st Beat"
+                
+                if is_square(avg_bars):
+                    confidence += 0.15
+                    reason += f" + Square Structure ({int(avg_bars)} bars)"
+                
+                return {"style": "Hambo", "confidence": confidence, "reason": reason}
             
-            # Logic: Vals is symmetrical
+            # Vals Logic: Even beats
             if abs(ratios[0] - 0.33) < 0.05 and abs(ratios[1] - 0.33) < 0.05:
                 return {"style": "Vals", "confidence": 0.60, "reason": "Rhythm: Even Beat lengths"}
 
-            # Logic: Slängpolska is smooth (low punchiness)
+            # Slängpolska Logic: Smooth
             if punchiness < 0.1: 
-                return {"style": "Slängpolska", "confidence": 0.65, "reason": "Texture: Smooth/Flowing 16th notes"}
+                return {"style": "Slängpolska", "confidence": 0.65, "reason": "Texture: Smooth/Flowing"}
 
-            # --- CHANGED: Default to Unknown instead of Polska ---
+            # Polska Logic: Generic/Asymmetric (Often NOT square)
+            # We default to "Unknown" now, but if we had to guess, lack of squareness implies Polska over Hambo.
             return {
                 "style": "Unknown", 
                 "confidence": 0.0, 
@@ -124,17 +159,25 @@ class StyleClassifier:
 
         # === BINARY METER (2/4 or 4/4) ===
         else:
-            # Logic: Schottis has high swing
+            # Schottis Logic: High Swing + Square Structure
             if swing > 1.25:
-                return {"style": "Schottis", "confidence": 0.75, "reason": f"Binary Meter + High Swing ({swing:.2f})"}
+                confidence = 0.75
+                reason = f"High Swing ({swing:.2f})"
+                
+                if is_square(avg_bars):
+                    confidence += 0.10
+                    reason += f" + Square Structure"
+                    
+                return {"style": "Schottis", "confidence": confidence, "reason": reason}
             
-            # Logic: Tempo distinction (Only if we are really sure about the range)
+            # Snoa Logic: Strict Tempo Range
             if 80 < bpm < 115:
-                return {"style": "Snoa", "confidence": 0.60, "reason": "Binary Meter + Walking Tempo"}
-            elif bpm >= 115:
-                return {"style": "Polka", "confidence": 0.55, "reason": "Binary Meter + Fast Tempo"}
+                return {"style": "Snoa", "confidence": 0.60, "reason": "Walking Tempo"}
             
-            # --- Default to Unknown ---
+            # Polka Logic: Fast Tempo
+            elif bpm >= 115:
+                return {"style": "Polka", "confidence": 0.55, "reason": "Fast Tempo"}
+            
             return {
                 "style": "Unknown", 
                 "confidence": 0.0, 
@@ -143,7 +186,7 @@ class StyleClassifier:
 
     def _get_secondary_styles(self, primary, raw_bpm, analysis):
         """
-        Determines what ELSE you can dance to this track.
+        Determines compatible secondary styles.
         """
         style = primary['style']
         base_conf = primary['confidence']
@@ -162,21 +205,17 @@ class StyleClassifier:
                 "dance_tempo": categorize_tempo(new_style, eff)
             })
 
-        # 1. Snoa <-> Polka
         if style == "Snoa":
             add_secondary("Polka", "Compatible Rhythm (Slow Polka)")
         elif style == "Polka" and raw_bpm < 120:
             add_secondary("Snoa", "Compatible Rhythm (Fast Snoa)")
 
-        # 2. Engelska <-> Polka
         if style == "Engelska":
             add_secondary("Polka", "Rhythmically Identical")
 
-        # 3. Schottis -> Polka (If straight enough)
         if style == "Schottis" and swing < 1.4:
             add_secondary("Polka", "Low Swing Schottis", confidence_penalty=0.6)
 
-        # 4. Vals <-> Polska
         if style == "Vals":
             add_secondary("Polska", "Smooth 3/4", confidence_penalty=0.5)
 
@@ -187,28 +226,18 @@ class StyleClassifier:
     # ====================================================
 
     def _calculate_mpm(self, style: str, raw_bpm: float) -> tuple[float, int]:
-        """
-        Determines the correct multiplier to get a danceable BPM/MPM.
-        """
         if not raw_bpm: return 1.0, 0
             
         multiplier = 1.0
         
-        # Hambo: Usually counts in 3s. Standard is ~100-110 BPM.
         if style == "Hambo":
             if raw_bpm > 160: multiplier = 0.333
             elif raw_bpm < 70: multiplier = 2.0
-        
-        # Polska: Standard ~105-125 BPM.
         elif style in ["Polska", "Slängpolska"]:
             if raw_bpm > 180: multiplier = 0.5
-        
-        # Schottis: Steps are counted in 4s (~140-150 BPM).
         elif style == "Schottis":
             if raw_bpm > 200: multiplier = 0.5
             elif raw_bpm < 75: multiplier = 2.0
-            
-        # Vals: Measures Per Minute (MPM)
         elif style == "Vals":
             if raw_bpm > 100: multiplier = 0.333 
 

@@ -117,3 +117,13 @@ def report_broken_link(
 def get_library_stats(db: Session = Depends(get_db)):
     service = StatsService(db)
     return service.get_global_stats()
+
+@router.post("/tracks/{track_id}/structure")
+def submit_structure(
+    track_id: str, 
+    payload: dict, # { "bars": [...] }
+    db: Session = Depends(get_db)
+):
+    service = FeedbackService(db)
+    new_grid = service.process_structure_feedback(track_id, payload['bars'])
+    return {"status": "success", "new_bars": new_grid}

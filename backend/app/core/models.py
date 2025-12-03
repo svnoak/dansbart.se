@@ -23,6 +23,9 @@ class Track(Base):
     playback_links = relationship("PlaybackLink", back_populates="track")
     dance_styles = relationship("TrackDanceStyle", back_populates="track")
     feedback = relationship("TrackFeedback", back_populates="track", uselist=False)
+    bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
+    sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
+    section_labels: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     processing_status: Mapped[str] = mapped_column(String, default="PENDING", server_default="PENDING")
 
 class AnalysisSource(Base):
@@ -77,10 +80,11 @@ class TrackFeedback(Base):
     # What the user said
     suggested_style: Mapped[str] = mapped_column(String) # e.g. "Hambo"
     tempo_correction: Mapped[str] = mapped_column(String) # "ok", "half", "double"
-    
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    
+    corrected_bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
+    corrected_sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     track = relationship("Track", back_populates="feedback")
+    
 
 class GenreProfile(Base):
     __tablename__ = "genre_profiles"

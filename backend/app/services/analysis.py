@@ -20,6 +20,9 @@ class AnalysisService:
         Background Task Entry Point.
         Manages the lifecycle state: PENDING -> PROCESSING -> DONE / FAILED
         """
+        self.repo.db = self.db
+        self.classifier_service.db = self.db
+
         track = self.db.query(Track).filter(Track.id == track_id).first()
         if not track:
             return
@@ -43,11 +46,9 @@ class AnalysisService:
             if success:
                 track.processing_status = "DONE"
                 print(f"✅ Status Update: {track.title} -> DONE")
-                self.db.commit()
             else:
                 track.processing_status = "FAILED"
                 print(f"❌ Status Update: {track.title} -> FAILED")
-                self.db.commit()
             
             # FINAL COMMIT: If we reach here without error, commit everything
             self.db.commit()
@@ -56,6 +57,10 @@ class AnalysisService:
             # Rollback if any part of the process failed (e.g., File Write, Classification Crash)
             self.db.rollback() 
             print(f"🔥 Critical Failure processing {track.title}: {e}")
+            try:
+                track.processing_status = "FAILED"
+                self.db.commit()
+            except: pass
             
         finally:
             # Cleanup temp files regardless of outcome
@@ -104,6 +109,12 @@ class AnalysisService:
                     source_type="hybrid_ml_v2",
                     data=data
                 )
+
+                # ADDING BARS AND SECTIONS TO TRACK
+                track.bars = data.get('bars')
+                track.sections = data.get('sections')
+                track.section_labels = data.get('section_labels')
+                self.db.add(track)
                 
                 # 4. AUTO-CLASSIFY
                 # This makes the track visible in the frontend immediately if successful

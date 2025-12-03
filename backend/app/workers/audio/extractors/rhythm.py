@@ -87,3 +87,16 @@ class RhythmExtractor:
             activation_punchiness,
             best_ratios[0], best_ratios[1], best_ratios[2]
         ]
+    
+    def get_bars(self, beat_info):
+        """
+        Extracts timestamps of the '1's (Downbeats).
+        beat_info is a 2D numpy array: [[timestamp, beat_number], ...]
+        """
+        if len(beat_info) == 0:
+            return []
+            
+        # Filter rows where beat_number (index 1) is 1.0
+        # Return just the timestamp (index 0)
+        downbeats = [row[0] for row in beat_info if row[1] == 1.0]
+        return downbeats

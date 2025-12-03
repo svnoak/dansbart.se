@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.core.models import Track, TrackFeedback, TrackDanceStyle, AnalysisSource
 from app.core.music_theory import categorize_tempo
+import numpy as np
 
 class FeedbackService:
     def __init__(self, db: Session):
@@ -142,3 +143,37 @@ class FeedbackService:
             TrackDanceStyle.track_id == track_id,
             TrackDanceStyle.dance_style == winning_style
         ).update({"is_primary": True})
+
+    def process_structure_feedback(self, track_id: str, user_bars: list[float]):
+        """
+        Re-calculates the grid based on user tapping.
+        """
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        
+        # 1. Clean the data (Linear Regression)
+        # We assume the beat is constant-ish. 
+        # x = beat indices (0, 1, 2...), y = timestamps
+        x = np.arange(len(user_bars))
+        y = np.array(user_bars)
+        
+        # Find best fit line: y = mx + c
+        # m = seconds per bar (period)
+        # c = start time (phase)
+        m, c = np.polyfit(x, y, 1)
+        
+        # 2. Generate the full grid for the whole song duration
+        duration = track.duration_ms / 1000
+        new_bars = []
+        current_time = c
+        while current_time < duration:
+            if current_time >= 0:
+                new_bars.append(current_time)
+            current_time += m
+            
+        # 3. Save directly to Track (overwriting AI guess)
+        # In a pro system, you'd save to 'TrackFeedback' first, but for now, let's apply it.
+        track.bars = new_bars
+        self.db.add(track)
+        self.db.commit()
+        
+        return new_bars
