@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional, Any
+from datetime import datetime
 
 class PlaybackLinkOut(BaseModel):
     id: str
@@ -25,6 +26,7 @@ class TrackOut(BaseModel):
     sections: List[float] | None = None,
     section_labels: List[str] | None = None
     playback_links: List[PlaybackLinkOut]
+    version_count: int = 0
 
     class Config:
         from_attributes = True
@@ -40,3 +42,18 @@ class StructureIn(BaseModel):
     bars: Optional[List[float]] = None
     sections: Optional[List[float]] = None
     section_labels: Optional[List[str]] = None
+    author_alias: str | None = None
+
+class VoteIn(BaseModel):
+    vote_type: str  # "up" or "down"
+
+class StructureVersionOut(BaseModel):
+    id: UUID
+    created_at: datetime
+    description: Optional[str]
+    vote_count: int
+    is_active: bool
+    structure_data: Any
+
+    class Config:
+        from_attributes = True

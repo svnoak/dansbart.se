@@ -1,58 +1,88 @@
 import numpy as np
+import essentia.standard as es
 
 class StructureExtractor:
-    """
-    Folkmusik-stable structure extractor.
-    Uses bar positions (from rhythm analysis) to infer sections,
-    since Scandinavian fiddle tunes have stable and predictable phrasing.
-    """
-
     def __init__(self):
-        pass
+        self.w = es.Windowing(type='hann')
+        self.spectrum = es.Spectrum()
+        self.eqloudness = es.EqualLoudness()
+        self.mfcc = es.MFCC()
+        self.sbic = es.SBic(cpw=1.5)
 
-    def extract_segments(self, bars):
+    def extract_segments(self, audio, bars: list[float], style_hint: str = None):
         """
-        Parameters
-        ----------
-        bars : list of float
-            Bar times in seconds (from rhythm_extractor.get_bars())
-
-        Returns
-        -------
-        list of float
-            Structural section boundaries in seconds.
+        Tries Audio Analysis. If that fails or returns 0 sections, falls back to Math.
         """
+        style = style_hint.lower() if style_hint else ""
+        
+        # 1. PREFER MATH FOR SQUARE STYLES
+        # These styles are almost always 8/16 bars. Math is cleaner.
+        if any(x in style for x in ['hambo', 'schottis', 'snoa', 'polka', 'vals', 'engelska']):
+            return self._extract_segments_math(bars)
 
-        # ---- Safety checks ----
-        if bars is None or len(bars) < 4:
-            return [0.0]
+        # 2. TRY AUDIO ANALYSIS (For Polska/Unknown)
+        segments = self._extract_segments_audio(audio, bars)
 
+        # 3. FAILSAFE: If Audio found nothing (just [0.0]), Force Math
+        if len(segments) < 2 and len(bars) > 4:
+            print(f"   ⚠️ Audio structure failed. Falling back to Grid Math.")
+            return self._extract_segments_math(bars)
+            
+        return segments
+
+    def _extract_segments_math(self, bars):
+        """
+        Calculates sections based on bar count (8, 12, 16, 32).
+        """
+        if not bars or len(bars) < 4: return [0.0]
         total_bars = len(bars)
-
-        # ----- 1. Determine likely phrase length -----
-        # Scandinavian folk typically: 8, 12, 16, 32
+        
         candidates = [8, 12, 16, 32]
-
-        # pick the candidate that divides the tune closest to an integer number of phrases
         ratios = [abs((total_bars / c) - round(total_bars / c)) for c in candidates]
         phrase_bars = candidates[int(np.argmin(ratios))]
 
-        # If > 32 bars and strong periodicity, force 16 or 32
+        # Heuristic: If long track, prefer 16 over 8
         if total_bars > 64 and phrase_bars < 16:
             phrase_bars = 16
 
-        # ---- 2. Create section boundaries ----
         section_indices = list(range(0, total_bars, phrase_bars))
-
-        # Always include the first bar as section start
         sections = [bars[idx] for idx in section_indices]
-
-        # Ensure sorted unique values
         sections = sorted(list(set(sections)))
-
-        # ---- 3. Guarantee at least [0.0] section ----
-        if len(sections) == 0:
-            return [0.0]
-
-        # convert numpy types to python floats
+        
+        if len(sections) == 0: return [0.0]
         return [float(s) for s in sections]
+
+    def _extract_segments_audio(self, audio, bars):
+        """
+        Uses Essentia SBic to find texture changes.
+        """
+        mfccs = []
+        for frame in es.FrameGenerator(audio, frameSize=2048, hopSize=1024, startFromZero=True):
+            spec = self.spectrum(self.w(frame))
+            eq_spec = self.eqloudness(spec)
+            _, mfcc_coeffs = self.mfcc(eq_spec)
+            mfccs.append(mfcc_coeffs)
+
+        mfccs = np.array(mfccs)
+        if len(mfccs) < 200: return [0.0]
+
+        try:
+            segments = self.sbic(mfccs)
+            raw_times = [s * 1024.0 / 16000.0 for s in segments]
+
+            # Snap to grid
+            snapped_sections = [0.0]
+            if bars and len(bars) > 0:
+                for t in raw_times:
+                    closest_bar = min(bars, key=lambda x: abs(x - t))
+                    # Min duration check (8s)
+                    if (closest_bar - snapped_sections[-1]) > 8.0:
+                        snapped_sections.append(closest_bar)
+            else:
+                snapped_sections = [0.0] + raw_times
+
+            return [float(s) for s in snapped_sections]
+
+        except Exception as e:
+            print(f"   ⚠️ SBic failed: {e}")
+            return [0.0]

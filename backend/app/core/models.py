@@ -22,7 +22,8 @@ class Track(Base):
     analysis_sources = relationship("AnalysisSource", back_populates="track")
     playback_links = relationship("PlaybackLink", back_populates="track")
     dance_styles = relationship("TrackDanceStyle", back_populates="track")
-    feedback = relationship("TrackFeedback", back_populates="track", uselist=False)
+    style_votes = relationship("TrackStyleVote", back_populates="track")
+    structure_versions = relationship("TrackStructureVersion", back_populates="track")
     bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     section_labels: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
@@ -68,24 +69,46 @@ class PlaybackLink(Base):
     
     track = relationship("Track", back_populates="playback_links")
 
-class TrackFeedback(Base):
+class TrackStyleVote(Base):
     """
-    Stores user corrections. This is the 'Golden Dataset' for training.
+    Now strictly for users saying "This is a Waltz" or "This is too fast".
+    Structure data has been moved out.
     """
-    __tablename__ = "track_feedback"
+    __tablename__ = "track_style_votes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
     
-    # What the user said
-    suggested_style: Mapped[str | None] = mapped_column(String, nullable=True) # e.g. "Hambo"
-    tempo_correction: Mapped[str | None] = mapped_column(String, nullable=True) # "ok", "half", "double"
+    suggested_style: Mapped[str | None] = mapped_column(String, nullable=True) 
+    tempo_correction: Mapped[str | None] = mapped_column(String, nullable=True) 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    corrected_bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
-    corrected_sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
-    corrected_section_labels: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
-    track = relationship("Track", back_populates="feedback")
-    is_rejected: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    track = relationship("Track", back_populates="style_votes")
+
+class TrackStructureVersion(Base):
+    """
+    Stores versions of the Grid/Sections.
+    This allows us to have 'AI Version', 'User A Version', 'User B Version'.
+    """
+    __tablename__ = "track_structure_versions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    description: Mapped[str | None] = mapped_column(String, nullable=True) # e.g. "Fixed the bridge"
+    
+    # The Full Data Snapshot
+    structure_data: Mapped[dict] = mapped_column(JSONB) 
+    # Expected format: { "bars": [], "sections": [], "section_labels": [] }
+
+    # Voting & State
+    vote_count: Mapped[int] = mapped_column(Integer, default=1)
+    report_count: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False) # Is this the one currently applied to the Track?
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    author_alias: Mapped[str | None] = mapped_column(String, nullable=True)
+    track = relationship("Track", back_populates="structure_versions")
     
 
 class GenreProfile(Base):

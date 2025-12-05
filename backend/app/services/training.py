@@ -18,8 +18,6 @@ class TrainingService:
         print(f"🧠 Training Service: Looking for tracks with >= {min_confirmations} confirmations...")
 
         # 1. QUERY THE WINNERS
-        # We don't query TrackFeedback directly anymore. 
-        # We query the ELECTED styles that have enough votes.
         query = (self.db.query(TrackDanceStyle, AnalysisSource)
                  .join(Track, TrackDanceStyle.track_id == Track.id)
                  .join(AnalysisSource, AnalysisSource.track_id == Track.id)

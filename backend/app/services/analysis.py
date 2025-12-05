@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.core.models import Track, PlaybackLink
+from app.core.models import Track, PlaybackLink, TrackStructureVersion
 from app.repository.analysis import AnalysisRepository
 from app.workers.audio.fetcher import AudioFetcher
 from app.workers.audio.analyzer import AudioAnalyzer
@@ -110,6 +110,21 @@ class AnalysisService:
                     data=data
                 )
 
+                ai_version = TrackStructureVersion(
+                    track_id=track.id,
+                    description="Original AI Analysis",
+                    author_alias="AI", # Distinct from a User ID
+                    structure_data={
+                        "bars": data.get('bars'),
+                        "sections": data.get('sections'),
+                        "labels": data.get('section_labels')
+                    },
+                    is_active=True, # It starts as the Truth
+                    vote_count=0,   # AI has no votes, easy to overthrow
+                    is_hidden=False
+                )
+                self.db.add(ai_version)
+
                 # ADDING BARS AND SECTIONS TO TRACK
                 track.bars = data.get('bars')
                 track.sections = data.get('sections')
@@ -127,6 +142,48 @@ class AnalysisService:
 
         finally:
             # Cleanup temp files even if analysis crashed
+            self.fetcher.cleanup(str(track.id))
+
+    def refine_track_structure(self, track_id: str, confirmed_style: str):
+        """
+        Called when a user manually corrects a style and clicks "Regenerate Sections".
+        """
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track: return
+
+        print(f"🔧 Refining structure for {track.title} as '{confirmed_style}'")
+
+        # 1. We MUST re-fetch the audio because it was cleaned up
+        # (This is why we don't do this automatically on every dropdown change)
+        existing_link = next((l for l in track.playback_links if l.platform == 'youtube'), None)
+        query = existing_link.deep_link if existing_link else f"{track.title} {track.artist_name}"
+        
+        result = self.fetcher.fetch_track_audio(str(track.id), query)
+        if not result:
+            print("❌ Could not fetch audio for refinement.")
+            return
+
+        try:
+            # 2. Call the targeted analyzer method
+            # We use the EXISTING bars from the DB, we don't need to recalculate those.
+            new_structure_data = self.analyzer.refine_structure(
+                file_path=result['file_path'],
+                bars=track.bars, # Pass existing bars
+                new_style_hint=confirmed_style
+            )
+
+            # 3. Update Database
+            if new_structure_data:
+                track.sections = new_structure_data['sections']
+                track.section_labels = new_structure_data['section_labels']
+                
+                # Mark sections as "AI Generated but Refined" (optional flag)
+                # track.structure_status = "REFINED" 
+                
+                self.db.commit()
+                print(f"✅ Structure updated based on {confirmed_style}")
+
+        finally:
             self.fetcher.cleanup(str(track.id))
 
     def _ensure_youtube_link(self, track, video_id):

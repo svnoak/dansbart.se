@@ -35,15 +35,22 @@ class ClassificationHead:
             return "Unknown"
         
         try:
-            # 1. Normalize input (Standard Scaler expects 2D array)
+            # --- SAFETY CHECK FOR HYBRID UPDATE ---
+            # The model expects a specific number of features.
+            expected_features = self.scaler.n_features_in_
+            if len(embedding) > expected_features:
+                embedding = embedding[:expected_features]
+            elif len(embedding) < expected_features:
+                 return "Unknown"
+
+            # 1. Normalize
             scaled_features = self.scaler.transform([embedding])
             
             # 2. Predict
-            # We get the probability to ensure we are confident
             probs = self.model.predict_proba(scaled_features)
             max_prob = np.max(probs)
             
-            if max_prob < 0.4: # Low confidence threshold
+            if max_prob < 0.4: 
                 return "Unknown"
                 
             prediction_idx = np.argmax(probs)
@@ -51,7 +58,6 @@ class ClassificationHead:
         except Exception as e:
             print(f"⚠️ Head prediction failed: {e}")
             return "Unknown"
-
     def train(self, embeddings: list, labels: list):
         """
         Retrains the head using the provided Golden Dataset.

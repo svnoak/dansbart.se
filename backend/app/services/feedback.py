@@ -1,18 +1,23 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from app.core.models import Track, TrackFeedback, TrackDanceStyle, AnalysisSource
+from sqlalchemy import func, or_
+from app.core.models import Track, TrackStyleVote, TrackDanceStyle, TrackStructureVersion
 from app.core.music_theory import categorize_tempo
 import numpy as np
+import uuid
 
 class FeedbackService:
     def __init__(self, db: Session):
         self.db = db
 
+    # =========================================================================
+    #  PART 1: STYLE VOTING (Genre & Tempo)
+    # =========================================================================
+
     def process_feedback(self, track_id: str, style: str, tempo_correction: str) -> dict | None:
         """
-        1. Records user input.
-        2. Purges AI guesses.
-        3. Elects new Primary style based on votes.
+        1. Records user input in TrackStyleVote.
+        2. Purges unconfirmed AI guesses.
+        3. Elects new Primary style based on vote counts.
         4. Returns the NEW Primary data for the frontend.
         """
         track = self.db.query(Track).filter(Track.id == track_id).first()
@@ -20,12 +25,12 @@ class FeedbackService:
             return None
 
         # --- STEP 1: RECORD VOTE ---
-        new_fb = TrackFeedback(
+        new_vote = TrackStyleVote(
             track_id=track.id,
             suggested_style=style,
             tempo_correction=tempo_correction
         )
-        self.db.add(new_fb)
+        self.db.add(new_vote)
         self.db.flush()
 
         # --- STEP 2: CALCULATE METRICS ---
@@ -33,13 +38,14 @@ class FeedbackService:
         if tempo_correction == "half": new_multiplier = 0.5
         elif tempo_correction == "double": new_multiplier = 2.0
         
+        # Get raw BPM from analysis source (fallback logic)
         source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
         raw_bpm = source.raw_data.get('tempo_bpm', 0) if source else 0
         effective_bpm = int(raw_bpm * new_multiplier)
         category = categorize_tempo(style, effective_bpm)
 
-        # --- STEP 3: PURGE AI GUESSES ---
-        # Delete unconfirmed styles that contradict the current vote
+        # --- STEP 3: PURGE UNCONFIRMED AI GUESSES ---
+        # If users say "It's a Waltz", delete the unconfirmed "Cha Cha" guesses
         self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track.id,
             TrackDanceStyle.dance_style != style,
@@ -68,7 +74,7 @@ class FeedbackService:
             if is_agreement:
                 style_row.confirmation_count += 1
             else:
-                # If they changed the speed or revived a dead style, reset count to 1 (the current user)
+                # Speed change or revival reset
                 style_row.confirmation_count = 1
                 
             self.db.add(style_row)
@@ -88,15 +94,12 @@ class FeedbackService:
         
         self.db.flush()
 
-        # --- STEP 5: THE ELECTION ---
+        # --- STEP 5: RUN STYLE ELECTION ---
         self._elect_primary_style(track.id)
         
-        # Commit to save everything
         self.db.commit()
 
-        # --- STEP 6: FETCH THE WINNER ---
-        # We query the DB for the new Primary row to send back to the frontend.
-        # This ensures the UI reflects exactly what the database decided.
+        # --- STEP 6: RETURN WINNER ---
         winner = self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track.id,
             TrackDanceStyle.is_primary == True
@@ -115,16 +118,16 @@ class FeedbackService:
 
     def _elect_primary_style(self, track_id: str):
         """
-        Sets is_primary=True for the style with the most votes.
+        Sets is_primary=True for the dance style with the most votes.
         """
         vote_counts = (
             self.db.query(
-                TrackFeedback.suggested_style, 
-                func.count(TrackFeedback.id).label('count')
+                TrackStyleVote.suggested_style, 
+                func.count(TrackStyleVote.id).label('count')
             )
-            .filter(TrackFeedback.track_id == track_id)
-            .group_by(TrackFeedback.suggested_style)
-            .order_by(func.count(TrackFeedback.id).desc())
+            .filter(TrackStyleVote.track_id == track_id)
+            .group_by(TrackStyleVote.suggested_style)
+            .order_by(func.count(TrackStyleVote.id).desc())
             .all()
         )
 
@@ -133,57 +136,139 @@ class FeedbackService:
 
         winning_style = vote_counts[0].suggested_style
 
-        # Reset all to Secondary
         self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track_id
         ).update({"is_primary": False})
 
-        # Set Winner to Primary
         self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track_id,
             TrackDanceStyle.dance_style == winning_style
         ).update({"is_primary": True})
 
-    def process_structure_feedback(self, track_id: str, bars: list[float] = None, sections: list[float] = None, labels: list[str] = None) -> bool:
+
+    # =========================================================================
+    #  PART 2: STRUCTURE VERSIONING (Grid, Sections, Labels)
+    # =========================================================================
+
+    def create_structure_version(self, track_id: str, bars: list = None, sections: list = None, labels: list = None, description: str = None, author_alias: str = None):
         """
-        Handles structural corrections (Grid, Sections, Labels).
-        Strategy: Immediate Update + History Log.
+        Creates a new candidate version.
+        If it's the first human edit, it usually becomes active immediately.
         """
         track = self.db.query(Track).filter(Track.id == track_id).first()
-        if not track:
-            return False
+        if not track: return None
 
-        # 1. SAVE HISTORY (The Golden Dataset)
-        # We create a feedback entry to record WHO changed WHAT.
-        # (If you add user_id later, this becomes an audit log)
-        new_fb = TrackFeedback(
-            track_id=track.id,
-            # We reuse the existing model but populate structural fields
-            corrected_bars=bars,
-            corrected_sections=sections,
-            corrected_section_labels=labels
-            # suggested_style/tempo left null
-        )
-        self.db.add(new_fb)
-
-        # 2. APPLY UPDATES (Live Correction)
-        # If the user provided new data, we overwrite the Track's current state.
-        # We trust the human editor over the AI or previous state.
-        
+        # 1. Clean Data
+        cleaned_bars = bars
         if bars:
-            # If bars are provided (e.g. from Tap-to-Beat), we might want to 
-            # linearize them (fix jitter) before saving.
             cleaned_bars = self._linearize_bars(bars, track.duration_ms)
-            track.bars = cleaned_bars
-            
-        if sections:
-            track.sections = sections
-            
-        if labels:
-            track.section_labels = labels
+        
+        # Use existing track data if parts are missing (partial update)
+        final_bars = cleaned_bars if cleaned_bars is not None else track.bars
+        final_sections = sections if sections is not None else track.sections
+        final_labels = labels if labels is not None else track.section_labels
 
+        snapshot_data = {
+            "bars": final_bars,
+            "sections": final_sections,
+            "labels": final_labels
+        }
+
+        final_alias = author_alias if author_alias and author_alias.strip() else "Anonym Användare"
+
+        # 2. Create Version
+        new_version = TrackStructureVersion(
+            track_id=track.id,
+            description=description or "Användarkorrigering",
+            structure_data=snapshot_data,
+            vote_count=1, # Creator's vote
+            is_active=False, # Election will decide,
+            author_alias=final_alias
+        )
+        self.db.add(new_version)
         self.db.commit()
-        return True
+        self.db.refresh(new_version)
+
+        # 3. Trigger Election
+        self._run_structure_election(track.id)
+        
+        return new_version
+
+    def vote_on_structure(self, version_id: str, vote_type: str):
+        """
+        Upvote/Downvote a version. 
+        """
+        version = self.db.query(TrackStructureVersion).filter(TrackStructureVersion.id == version_id).first()
+        if not version: return None
+
+        if vote_type == "up":
+            version.vote_count += 1
+        elif vote_type == "down":
+            version.vote_count -= 1
+        
+        self.db.commit()
+        self._run_structure_election(version.track_id)
+
+        return {"new_score": version.vote_count, "is_active": version.is_active}
+
+    def report_structure(self, version_id: str):
+        """
+        Flags a version. Hides it if too many reports.
+        """
+        version = self.db.query(TrackStructureVersion).filter(TrackStructureVersion.id == version_id).first()
+        if not version: return
+
+        version.report_count += 1
+        if version.report_count >= 5:
+            version.is_hidden = True
+            # If we hid the active one, we MUST elect a replacement
+            if version.is_active:
+                version.is_active = False
+                self.db.commit() # Save state before running election
+                self._run_structure_election(version.track_id)
+        
+        self.db.commit()
+
+    def _run_structure_election(self, track_id: uuid.UUID):
+        """
+        Decides which version is the 'Truth'.
+        Logic: The non-hidden version with the highest vote_count wins.
+        """
+        # 1. Find the winner
+        candidates = (
+            self.db.query(TrackStructureVersion)
+            .filter(
+                TrackStructureVersion.track_id == track_id,
+                TrackStructureVersion.is_hidden == False
+            )
+            .order_by(TrackStructureVersion.vote_count.desc(), TrackStructureVersion.created_at.desc())
+            .all()
+        )
+
+        if not candidates:
+            return
+
+        winner = candidates[0]
+
+        # 2. Apply Winner if not already active
+        if not winner.is_active:
+            # Deactivate all
+            self.db.query(TrackStructureVersion).filter(
+                TrackStructureVersion.track_id == track_id
+            ).update({"is_active": False})
+
+            # Activate Winner
+            winner.is_active = True
+            
+            # 3. FAST LOAD: Update the main Track table
+            track = self.db.query(Track).filter(Track.id == track_id).first()
+            if track:
+                data = winner.structure_data
+                track.bars = data.get("bars")
+                track.sections = data.get("sections")
+                track.section_labels = data.get("labels")
+
+            self.db.commit()
 
     def _linearize_bars(self, raw_taps: list[float], duration_ms: int) -> list[float]:
         """
@@ -192,76 +277,18 @@ class FeedbackService:
         if not raw_taps or len(raw_taps) < 2:
             return raw_taps
 
-        # Linear Regression: y = mx + c
         x = np.arange(len(raw_taps))
         y = np.array(raw_taps)
-        m, c = np.polyfit(x, y, 1) # m = seconds/bar, c = start offset
+        m, c = np.polyfit(x, y, 1)
 
-        # Generate full grid
         duration_sec = (duration_ms or 0) / 1000
-        if duration_sec == 0: duration_sec = raw_taps[-1] + 10 # Fallback
+        if duration_sec == 0: duration_sec = raw_taps[-1] + 10
 
         new_bars = []
         current = c
         while current < duration_sec:
             if current >= 0:
-                new_bars.append(round(current, 3)) # Round for cleaner JSON
+                new_bars.append(round(current, 3))
             current += m
             
         return new_bars
-    
-def reset_track_structure(self, track_id: str) -> dict | None:
-        """
-        1. Reverts Track to AI defaults.
-        2. Marks all previous user structural edits as REJECTED.
-        """
-        track = self.db.query(Track).filter(Track.id == track_id).first()
-        if not track: return None
-        
-        # 1. Fetch original AI data
-        source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
-        if not source or not source.raw_data:
-            return None
-
-        original_bars = source.raw_data.get('bars')
-        original_sections = source.raw_data.get('sections')
-        original_labels = source.raw_data.get('section_labels')
-
-        # 2. MARK HISTORY AS REJECTED
-        # We find any feedback that touched the structure and mark it as 'bad'
-        self.db.query(TrackFeedback).filter(
-            TrackFeedback.track_id == track.id,
-            TrackFeedback.is_rejected == False, # Only touch currently valid ones
-            # Check if they touched bars OR sections
-            or_(
-                TrackFeedback.corrected_bars.isnot(None), 
-                TrackFeedback.corrected_sections.isnot(None)
-            )
-        ).update({"is_rejected": True})
-
-        # 3. RESTORE TRACK STATE
-        track.bars = original_bars
-        track.sections = original_sections
-        track.section_labels = original_labels
-        
-        # 4. LOG THE RESET ACTION
-        # We create a new row saying "System Reset", which acts as the new "Head" of history
-        reset_log = TrackFeedback(
-            track_id=track.id,
-            tempo_correction="reset_structure",
-            suggested_style="System Reset",
-            corrected_bars=original_bars,
-            corrected_sections=original_sections,
-            corrected_section_labels=original_labels,
-            is_rejected=False # This is a valid action
-        )
-        
-        self.db.add(reset_log)
-        self.db.add(track)
-        self.db.commit()
-        
-        return {
-            "bars": original_bars,
-            "sections": original_sections,
-            "section_labels": original_labels
-        }

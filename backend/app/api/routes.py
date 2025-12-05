@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
-from app.api.schemas import TrackOut, LinkSubmission, FeedbackIn, StructureIn
+from app.api.schemas import (
+    TrackOut, LinkSubmission, FeedbackIn, StructureIn, 
+    StructureVersionOut, VoteIn
+)
+from app.core.models import TrackStructureVersion
 from app.workers.tasks import analyze_track_task
 
 # Services
@@ -15,7 +19,6 @@ from app.services.classification import ClassificationService
 
 router = APIRouter()
 
-# --- ROUTES ---
 @router.get("/tracks", response_model=list[TrackOut])
 def get_tracks(
     style: str = Query(None),
@@ -37,7 +40,6 @@ def submit_track_feedback(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    # 1. Process Logic via Service
     service = FeedbackService(db)
     updated_data = service.process_feedback(
         track_id=track_id,
@@ -48,12 +50,12 @@ def submit_track_feedback(
     if not updated_data:
         raise HTTPException(status_code=404, detail="Track not found")
 
-    # 2. Trigger Background Learning
+    # Trigger Background Learning
     def run_learning_loop():
         bg_db = SessionLocal()
         try:
-            trainer = TrainingService(db)
-            classifier = ClassificationService(db)
+            trainer = TrainingService(bg_db) # Use bg_db here
+            classifier = ClassificationService(bg_db)
             did_train = trainer.train_from_feedback(min_confirmations=1)
             if did_train:
                 classifier.reclassify_library()
@@ -62,7 +64,6 @@ def submit_track_feedback(
             
     background_tasks.add_task(run_learning_loop)
     
-    # 3. Return the new data to the frontend
     return {
         "status": "success", 
         "message": "Feedback recorded.",
@@ -82,19 +83,7 @@ def submit_link(
     if not result['success']:
         raise HTTPException(status_code=400, detail=result['message'])
     
-    # --- TRIGGER RE-ANALYSIS ---
-    # Define the background task wrapper
-    def run_analysis_job(tid: str):
-        print(f"🕵️‍♀️ Background Task: Analyzing {tid} with new link...")
-        # Re-instantiate service to ensure clean session state
-        bg_db = SessionLocal() 
-        try:
-            analysis_service = AnalysisService(bg_db)
-            analysis_service.analyze_track_by_id(tid)
-        finally:
-            bg_db.close()
-
-    # Schedule it
+    # Trigger Re-analysis task
     analyze_track_task.delay(track_id)
     
     return result
@@ -107,10 +96,8 @@ def report_broken_link(
 ):
     service = LinkService(db)
     success = service.report_broken(link_id, reason)
-    
     if not success:
         raise HTTPException(status_code=404, detail="Link not found")
-    
     return {"status": "success", "message": f"Link flagged as {reason}"}
 
 @router.get("/stats")
@@ -118,21 +105,79 @@ def get_library_stats(db: Session = Depends(get_db)):
     service = StatsService(db)
     return service.get_global_stats()
 
+# --- NEW & UPDATED STRUCTURE ROUTES ---
 @router.post("/tracks/{track_id}/structure")
-def submit_structure(
+def submit_structure_proposal(
     track_id: str, 
-    payload: StructureIn, 
+    payload: StructureIn,
+    description: str = Query(None, description="Short note on what you fixed"),
     db: Session = Depends(get_db)
 ):
+    """
+    Creates a new Candidate Version instead of overwriting.
+    """
     service = FeedbackService(db)
-    success = service.process_structure_feedback(
+    new_version = service.create_structure_version(
         track_id=track_id,
         bars=payload.bars,
         sections=payload.sections,
-        labels=payload.section_labels
+        labels=payload.section_labels,
+        description=description,
+        author_alias=payload.author_alias
     )
 
-    if not success:
+    if not new_version:
         raise HTTPException(status_code=404, detail="Track not found")
     
-    return {"status": "success", "message": "Structure updated."}
+    return {
+        "status": "success", 
+        "message": "Version created", 
+        "version_id": new_version.id,
+        "is_active": new_version.is_active # Tell frontend if their edit went live immediately
+    }
+
+@router.get("/tracks/{track_id}/structure-versions", response_model=list[StructureVersionOut])
+def get_structure_versions(track_id: str, db: Session = Depends(get_db)):
+    """
+    UPDATED: Returns list of versions sorted by relevance.
+    """
+    versions = (
+        db.query(TrackStructureVersion)
+        .filter(
+            TrackStructureVersion.track_id == track_id,
+            TrackStructureVersion.is_hidden == False
+        )
+        .order_by(
+            TrackStructureVersion.is_active.desc(),  # Active one first
+            TrackStructureVersion.vote_count.desc(), # Highest votes second
+            TrackStructureVersion.created_at.desc()  # Newest third
+        )
+        .all()
+    )
+    return versions
+
+@router.post("/structure-versions/{version_id}/vote")
+def vote_on_version(
+    version_id: str, 
+    vote: VoteIn, 
+    db: Session = Depends(get_db)
+):
+    """
+    NEW: Allows upvoting/downvoting a specific version.
+    """
+    service = FeedbackService(db)
+    result = service.vote_on_structure(version_id, vote.vote_type)
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Version not found")
+        
+    return result
+
+@router.post("/structure-versions/{version_id}/report")
+def report_version(version_id: str, db: Session = Depends(get_db)):
+    """
+    NEW: Flags a version as spam/bogus.
+    """
+    service = FeedbackService(db)
+    service.report_structure(version_id)
+    return {"status": "success", "message": "Report received"}
