@@ -3,10 +3,11 @@ import YouTubeEngine from './player/YouTubeEngine.js';
 import PlayerControls from './player/PlayerControls.js';
 import ProgressBar from './player/ProgressBar.js';
 import { usePlayer } from '../player.js'; 
+import StructureEditor from './StructureEditor.js';
 import { ref, nextTick } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
 
 export default {
-    components: { SmartNudge, YouTubeEngine, PlayerControls, ProgressBar },
+    components: { SmartNudge, YouTubeEngine, PlayerControls, ProgressBar, StructureEditor },
     setup() {
         const playerStore = usePlayer();
         return { ...playerStore };
@@ -31,7 +32,8 @@ export default {
             isDraggingVideo: false,
             dragOffset: { x: 0, y: 0 },
             
-            structureMode: 'none'
+            structureMode: 'none',
+            showStructureEditor: false
         }
     },
 
@@ -204,7 +206,19 @@ export default {
             } else {
                 this.createPlayer();
             }
-        }
+        },
+        openEditor() {
+            this.showStructureEditor = true;
+            if (this.isPlaying) this.togglePlay(); 
+        },
+        handleTrackEnd() {
+            if (this.showStructureEditor) {
+                // If editing, just stop here. Don't advance.
+                this.isPlaying = false;
+            } else {
+                this.nextTrack();
+            }
+        },
     },
     
     computed: {
@@ -240,13 +254,24 @@ export default {
 
     template: /*html*/`
     <div v-if="currentTrack" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col">
+
+            <structure-editor 
+            :is-open="showStructureEditor" 
+            :track="currentTrack"
+            :current-time="visualTime"   
+            :duration="duration"          
+            :is-playing="isPlaying"       
+            @close="showStructureEditor = false"
+            @seek="handleSeek"            
+            @toggle-play="togglePlay"     
+        ></structure-editor>
         
         <div class="absolute bottom-full right-4 mb-2 w-80 z-40">
             <smart-nudge :track="currentTrack"></smart-nudge>
         </div>
 
         <progress-bar 
-            :current-time="visualTime" 
+            :current-time="visualTime"
             :duration="duration" 
             :disabled="activeSource !== 'youtube'"
             :structure-mode="structureMode"
@@ -275,6 +300,7 @@ export default {
                         >
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="structureButtonIcon" stroke-width="2" stroke-linecap="round"></svg>
                         </button>
+                        <button @click="showStructureEditor = true" ...>✏️</button>
                     </div>
                 </div>
             </div>
@@ -318,7 +344,7 @@ export default {
                 :active-source="activeSource"
                 @state-change="onYtStateChange"
                 @time-update="onTimeUpdate"
-                @next="nextTrack"
+                @next="handleTrackEnd"
                 @error="handlePlayerError"
             ></you-tube-engine>
         </div>
