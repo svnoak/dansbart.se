@@ -7,7 +7,6 @@ export default {
 
     data() {
         return {
-            // REMOVED: ytPlayer: null, <--- This was causing the bug!
             playbackStartTime: null,
             nudgeStep: 'hidden', 
             correction: { style: '', tempo: 'ok' },

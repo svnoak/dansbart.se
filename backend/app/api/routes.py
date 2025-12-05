@@ -139,7 +139,7 @@ def submit_structure_proposal(
 @router.get("/tracks/{track_id}/structure-versions", response_model=list[StructureVersionOut])
 def get_structure_versions(track_id: str, db: Session = Depends(get_db)):
     """
-    UPDATED: Returns list of versions sorted by relevance.
+    Returns the list of versions for the carousel.
     """
     versions = (
         db.query(TrackStructureVersion)
@@ -148,9 +148,9 @@ def get_structure_versions(track_id: str, db: Session = Depends(get_db)):
             TrackStructureVersion.is_hidden == False
         )
         .order_by(
-            TrackStructureVersion.is_active.desc(),  # Active one first
-            TrackStructureVersion.vote_count.desc(), # Highest votes second
-            TrackStructureVersion.created_at.desc()  # Newest third
+            TrackStructureVersion.is_active.desc(),  # Active first
+            TrackStructureVersion.vote_count.desc(), # Highest votes
+            TrackStructureVersion.created_at.desc()  # Newest
         )
         .all()
     )

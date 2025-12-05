@@ -7,7 +7,10 @@ export default {
     components: { AddLinkModal, SparklesIcon },
     
     data() { 
-        return { showLinkModal: false } 
+        return {
+            useSpotifyFallback: false,
+            showLinkModal: false
+        } 
     },
 
     template: /*html*/`

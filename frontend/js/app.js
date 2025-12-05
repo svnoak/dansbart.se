@@ -22,6 +22,7 @@ const app = createApp({
         const playerLogic = usePlayer();
         const potentialBrokenState = ref(null);
         const { isPlaying, togglePlay } = playerLogic;
+        const useSpotifyFallback = ref(false);
 
         // --- Handlers ---
         const handlePotentialBrokenLink = (payload) => {
@@ -67,7 +68,8 @@ const app = createApp({
             togglePlay,
             handlePotentialBrokenLink,
             confirmBrokenLink,
-            potentialBrokenState
+            potentialBrokenState,
+            useSpotifyFallback
         };
     }
 });

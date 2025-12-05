@@ -4,10 +4,16 @@ import PlayerControls from './player/PlayerControls.js';
 import ProgressBar from './player/ProgressBar.js';
 import { usePlayer } from '../player.js'; 
 import StructureEditor from './StructureEditor.js';
-import { ref, nextTick } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
 
 export default {
-    components: { SmartNudge, YouTubeEngine, PlayerControls, ProgressBar, StructureEditor },
+    components: { 
+        SmartNudge, 
+        YouTubeEngine, 
+        PlayerControls, 
+        ProgressBar, 
+        StructureEditor 
+    },
+    
     setup() {
         const playerStore = usePlayer();
         return { ...playerStore };
@@ -28,12 +34,21 @@ export default {
             ytPlayer: null,
             
             // Dragging State for Video Window
-            videoPos: { x: 16, y: 96 }, // Default bottom-left offset (bottom: 96px, left: 16px)
+            videoPos: { x: 16, y: 96 }, 
             isDraggingVideo: false,
             dragOffset: { x: 0, y: 0 },
             
+            // UI State
             structureMode: 'none',
-            showStructureEditor: false
+            showStructureEditor: false,
+            
+            // Fixes the Vue warning
+            useSpotifyFallback: false, 
+
+            // --- VERSION CAROUSEL STATE ---
+            availableVersions: [],
+            currentVersionIndex: 0,
+            isFetchingVersions: false
         }
     },
 
@@ -58,7 +73,6 @@ export default {
             if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
                 val ? this.$refs.ytEngine.play() : this.$refs.ytEngine.pause();
             }
-            // Reset interpolation timestamp when state changes
             if (val) this.lastTick = performance.now();
         },
         
@@ -67,21 +81,93 @@ export default {
                 this.realTime = 0;
                 this.visualTime = 0;
                 this.duration = 0;
-                this.videoPos = { x: 16, y: 96 }; // Reset position
+                this.videoPos = { x: 16, y: 96 }; 
+            }
+        },
+        'currentTrack.id': {
+            immediate: true,
+            handler(newId) {
+                if (newId) this.fetchVersions(newId);
             }
         }
     },
 
     methods: {
-        // --- 1. SMOOTH ANIMATION LOOP ---
+        // --- 1. VERSION HANDLING (NEW) ---
+        async fetchVersions(trackId) {
+            this.availableVersions = [];
+            this.currentVersionIndex = 0;
+            this.isFetchingVersions = true;
+
+            try {
+                // Fetch from your backend
+                const res = await fetch(`api/tracks/${trackId}/structure-versions`);
+                if (res.ok) {
+                    this.availableVersions = await res.json();
+                    
+                    // Default to the 'Active' version if found
+                    const activeIdx = this.availableVersions.findIndex(v => v.is_active);
+                    this.currentVersionIndex = activeIdx >= 0 ? activeIdx : 0;
+                }
+            } catch (e) {
+                console.warn("Could not fetch versions", e);
+            } finally {
+                this.isFetchingVersions = false;
+            }
+        },
+
+        cycleVersion(direction) {
+            if (this.availableVersions.length <= 1) return;
+
+            // Calculate new index (Looping)
+            let newIndex = this.currentVersionIndex + direction;
+            if (newIndex >= this.availableVersions.length) newIndex = 0;
+            if (newIndex < 0) newIndex = this.availableVersions.length - 1;
+
+            this.currentVersionIndex = newIndex;
+            const version = this.availableVersions[newIndex];
+
+            // Hot Swap the data
+            this.handleVersionPreview(version.structure_data);
+            
+            // Auto-show structure if hidden, so user sees the change
+            if (this.structureMode === 'none') this.structureMode = 'sections';
+        },
+
+        handleVersionPreview(structureData) {
+            if (this.currentTrack && structureData) {
+                // Update Reactive Object in memory (updates Visualizer instantly)
+                this.currentTrack.bars = structureData.bars || [];
+                this.currentTrack.sections = structureData.sections || [];
+                this.currentTrack.section_labels = structureData.labels || [];
+            }
+        },
+
+        async confirmVersion() {
+            const version = this.availableVersions[this.currentVersionIndex];
+            if (!version) return;
+
+            // Optimistic UI update
+            version.vote_count++; 
+            alert("Röst mottagen! Tack för att du förbättrar datan.");
+
+            try {
+                await fetch(`http://localhost:8000/structure-versions/${version.id}/vote`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ vote_type: 'up' })
+                });
+            } catch (e) {
+                console.error("Vote failed", e);
+            }
+        },
+
+        // --- 2. SMOOTH ANIMATION LOOP ---
         startSmoothLoop() {
             const loop = (now) => {
                 if (this.isPlaying && this.activeSource === 'youtube' && this.duration > 0) {
-                    // Calculate delta time since last frame
                     const delta = (now - this.lastTick) / 1000;
-                    
-                    // Predict where we are (don't go past duration)
-                    if (delta < 1.0) { // Avoid huge jumps if tab was backgrounded
+                    if (delta < 1.0) { 
                         this.visualTime = Math.min(this.visualTime + delta, this.duration);
                     }
                 }
@@ -91,47 +177,34 @@ export default {
             this.rafId = requestAnimationFrame(loop);
         },
 
-        // Called when YouTube Engine sends a "Real" update (every ~500ms)
         onTimeUpdate({ currentTime, duration }) {
             this.realTime = currentTime;
             this.duration = duration;
-            
-            // Sync Visual time to Real time
-            // If they drifted too far apart (> 0.5s), snap visually.
-            // Otherwise, trust the visual time to look smooth.
             if (Math.abs(this.visualTime - this.realTime) > 0.5) {
                 this.visualTime = this.realTime;
             }
         },
 
-        // --- 2. DRAGGABLE VIDEO LOGIC ---
+        // --- 3. DRAGGABLE VIDEO LOGIC ---
         startDrag(e) {
             this.isDraggingVideo = true;
-            // Calculate offset from the bottom-left corner
-            // We use bottom/left CSS positioning
             const rect = this.$refs.videoContainer.getBoundingClientRect();
-            
-            // Store offset relative to mouse position
-            // Note: using clientX/Y vs window dimensions
             this.dragOffset = {
                 x: e.clientX - rect.left,
-                y: window.innerHeight - rect.bottom // Distance from bottom
+                y: window.innerHeight - rect.bottom 
             };
         },
         onDrag(e) {
             if (!this.isDraggingVideo) return;
             e.preventDefault();
             
-            // Calculate new Left/Bottom values
             let newLeft = e.clientX - this.dragOffset.x;
             let newBottom = (window.innerHeight - e.clientY) - this.dragOffset.y;
-
-            // Boundaries (Keep it on screen)
-            const maxX = window.innerWidth - 260; // Width of player
+            const maxX = window.innerWidth - 260; 
             const maxY = window.innerHeight - 200;
             
             this.videoPos.x = Math.max(0, Math.min(newLeft, maxX));
-            this.videoPos.y = Math.max(80, Math.min(newBottom, maxY)); // Min 80px to clear player bar
+            this.videoPos.y = Math.max(80, Math.min(newBottom, maxY)); 
         },
         stopDrag() {
             this.isDraggingVideo = false;
@@ -141,12 +214,12 @@ export default {
         onYtStateChange(stateCode) {
             if (stateCode === 1) {
                 this.isPlaying = true;
-                this.lastTick = performance.now(); // Resync timer
+                this.lastTick = performance.now();
             }
             if (stateCode === 2) this.isPlaying = false;
         },
         handleSeek(seconds) {
-            this.visualTime = seconds; // Instant visual update
+            this.visualTime = seconds; 
             if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
                 this.$refs.ytEngine.seekTo(seconds);
             }
@@ -165,7 +238,6 @@ export default {
             const sc = Math.floor(s % 60);
             return `${m}:${sc < 10 ? '0' : ''}${sc}`;
         },
-        // ... (Init/Create Player methods same as before) ...
         initYouTube() {
             if (window.YT && window.YT.Player) { this.createPlayer(); } 
             else {
@@ -213,7 +285,6 @@ export default {
         },
         handleTrackEnd() {
             if (this.showStructureEditor) {
-                // If editing, just stop here. Don't advance.
                 this.isPlaying = false;
             } else {
                 this.nextTrack();
@@ -236,7 +307,6 @@ export default {
         hasYt() { return !!this.getYouTubeId(this.currentTrack); },
         hasSpot() { return !!this.getSpotifyId(this.currentTrack); },
         
-        // USE VISUAL TIME HERE
         fmtCurrent() { return this.formatTime(this.visualTime) },
         fmtDuration() { return this.formatTime(this.duration) },
         
@@ -255,7 +325,7 @@ export default {
     template: /*html*/`
     <div v-if="currentTrack" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col">
 
-            <structure-editor 
+        <structure-editor 
             :is-open="showStructureEditor" 
             :track="currentTrack"
             :current-time="visualTime"   
@@ -300,8 +370,42 @@ export default {
                         >
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="structureButtonIcon" stroke-width="2" stroke-linecap="round"></svg>
                         </button>
-                        <button @click="showStructureEditor = true" ...>✏️</button>
-                    </div>
+                        
+                        <button 
+                            @click="showStructureEditor = true"
+                            class="text-[9px] font-bold border border-gray-200 rounded px-1.5 py-0.5 hover:bg-gray-50 text-gray-500"
+                            title="Open Editor"
+                        >
+                            ✏️
+                        </button>
+
+                        <div v-if="availableVersions.length > 1" 
+                             class="flex items-center bg-gray-50 rounded-full border border-gray-200 px-1 py-0.5 ml-2">
+                            
+                            <button @click="cycleVersion(-1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">
+                                ‹
+                            </button>
+
+                            <div class="text-[8px] font-mono px-1.5 text-center min-w-[50px] leading-tight select-none">
+                                <div class="font-bold text-gray-700">
+                                    v.{{ currentVersionIndex + 1 }}
+                                </div>
+                            </div>
+
+                            <button @click="cycleVersion(1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">
+                                ›
+                            </button>
+                            
+                            <button 
+                                v-if="!availableVersions[currentVersionIndex].is_active"
+                                @click="confirmVersion"
+                                class="ml-1 w-4 h-4 flex items-center justify-center text-green-600 hover:bg-green-100 rounded-full text-[10px]"
+                                title="Rösta på denna version"
+                            >
+                                ✓
+                            </button>
+                        </div>
+                        </div>
                 </div>
             </div>
 

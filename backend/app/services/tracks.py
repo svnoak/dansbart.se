@@ -34,7 +34,8 @@ class TrackService:
         # might return the same track row multiple times in SQL
         query = query.options(
             joinedload(Track.playback_links),
-            joinedload(Track.dance_styles)
+            joinedload(Track.dance_styles),
+            joinedload(Track.structure_versions)
         ).distinct()
 
         tracks = query.all()
@@ -91,6 +92,7 @@ class TrackService:
                 "bars": track.bars,
                 "sections": track.sections,
                 "section_labels": track.section_labels,
+                "version_count": len(track.structure_versions),
                 "playback_links": [
                     {"id": str(l.id), "platform": l.platform, "deep_link": l.deep_link}
                     for l in valid_links
