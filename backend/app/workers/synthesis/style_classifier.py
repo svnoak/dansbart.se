@@ -29,7 +29,7 @@ class StyleClassifier:
         # Binary (2/4, 4/4)
         "schottis": "Schottis", "reinländer": "Schottis", "reinlender": "Schottis",
         "rheinlender": "Schottis",
-        "snoa": "Snoa", "gånglåt": "Snoa", "marsch": "Snoa",
+        "snoa": "Snoa", "gånglåt": "Gånglåt", "marsch": "Gånglåt",
         "polka": "Polka", "polkett": "Polka",
         "engelska": "Engelska", "reel": "Engelska", "anglais": "Engelska"
     }

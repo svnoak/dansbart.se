@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.pipeline import PipelineService
 from pydantic import BaseModel
+from app.services.feedback import FeedbackService
 
 router = APIRouter()
 
@@ -23,3 +24,21 @@ def trigger_ingest(
 
     pipeline = PipelineService(db)
     return pipeline.ingest_and_process_playlist(req.playlist_id)
+
+
+@router.post("/tracks/{track_id}/structure/reset")
+def reset_track_structure_endpoint(
+    track_id: str, 
+    db: Session = Depends(get_db)
+):
+    service = FeedbackService(db)
+    result = service.reset_track_structure(track_id)
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Track or AI source not found")
+    
+    return {
+        "status": "success", 
+        "message": "Structure reset to AI defaults.",
+        "updates": result
+    }

@@ -78,12 +78,14 @@ class TrackFeedback(Base):
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
     
     # What the user said
-    suggested_style: Mapped[str] = mapped_column(String) # e.g. "Hambo"
-    tempo_correction: Mapped[str] = mapped_column(String) # "ok", "half", "double"
+    suggested_style: Mapped[str | None] = mapped_column(String, nullable=True) # e.g. "Hambo"
+    tempo_correction: Mapped[str | None] = mapped_column(String, nullable=True) # "ok", "half", "double"
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     corrected_bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     corrected_sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
+    corrected_section_labels: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     track = relationship("Track", back_populates="feedback")
+    is_rejected: Mapped[bool] = mapped_column(Boolean, default=False)
     
 
 class GenreProfile(Base):

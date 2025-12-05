@@ -144,36 +144,124 @@ class FeedbackService:
             TrackDanceStyle.dance_style == winning_style
         ).update({"is_primary": True})
 
-    def process_structure_feedback(self, track_id: str, user_bars: list[float]):
+    def process_structure_feedback(self, track_id: str, bars: list[float] = None, sections: list[float] = None, labels: list[str] = None) -> bool:
         """
-        Re-calculates the grid based on user tapping.
+        Handles structural corrections (Grid, Sections, Labels).
+        Strategy: Immediate Update + History Log.
         """
         track = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track:
+            return False
+
+        # 1. SAVE HISTORY (The Golden Dataset)
+        # We create a feedback entry to record WHO changed WHAT.
+        # (If you add user_id later, this becomes an audit log)
+        new_fb = TrackFeedback(
+            track_id=track.id,
+            # We reuse the existing model but populate structural fields
+            corrected_bars=bars,
+            corrected_sections=sections,
+            corrected_section_labels=labels
+            # suggested_style/tempo left null
+        )
+        self.db.add(new_fb)
+
+        # 2. APPLY UPDATES (Live Correction)
+        # If the user provided new data, we overwrite the Track's current state.
+        # We trust the human editor over the AI or previous state.
         
-        # 1. Clean the data (Linear Regression)
-        # We assume the beat is constant-ish. 
-        # x = beat indices (0, 1, 2...), y = timestamps
-        x = np.arange(len(user_bars))
-        y = np.array(user_bars)
-        
-        # Find best fit line: y = mx + c
-        # m = seconds per bar (period)
-        # c = start time (phase)
-        m, c = np.polyfit(x, y, 1)
-        
-        # 2. Generate the full grid for the whole song duration
-        duration = track.duration_ms / 1000
-        new_bars = []
-        current_time = c
-        while current_time < duration:
-            if current_time >= 0:
-                new_bars.append(current_time)
-            current_time += m
+        if bars:
+            # If bars are provided (e.g. from Tap-to-Beat), we might want to 
+            # linearize them (fix jitter) before saving.
+            cleaned_bars = self._linearize_bars(bars, track.duration_ms)
+            track.bars = cleaned_bars
             
-        # 3. Save directly to Track (overwriting AI guess)
-        # In a pro system, you'd save to 'TrackFeedback' first, but for now, let's apply it.
-        track.bars = new_bars
+        if sections:
+            track.sections = sections
+            
+        if labels:
+            track.section_labels = labels
+
+        self.db.commit()
+        return True
+
+    def _linearize_bars(self, raw_taps: list[float], duration_ms: int) -> list[float]:
+        """
+        Takes messy human taps and returns a mathematically perfect grid.
+        """
+        if not raw_taps or len(raw_taps) < 2:
+            return raw_taps
+
+        # Linear Regression: y = mx + c
+        x = np.arange(len(raw_taps))
+        y = np.array(raw_taps)
+        m, c = np.polyfit(x, y, 1) # m = seconds/bar, c = start offset
+
+        # Generate full grid
+        duration_sec = (duration_ms or 0) / 1000
+        if duration_sec == 0: duration_sec = raw_taps[-1] + 10 # Fallback
+
+        new_bars = []
+        current = c
+        while current < duration_sec:
+            if current >= 0:
+                new_bars.append(round(current, 3)) # Round for cleaner JSON
+            current += m
+            
+        return new_bars
+    
+def reset_track_structure(self, track_id: str) -> dict | None:
+        """
+        1. Reverts Track to AI defaults.
+        2. Marks all previous user structural edits as REJECTED.
+        """
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track: return None
+        
+        # 1. Fetch original AI data
+        source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
+        if not source or not source.raw_data:
+            return None
+
+        original_bars = source.raw_data.get('bars')
+        original_sections = source.raw_data.get('sections')
+        original_labels = source.raw_data.get('section_labels')
+
+        # 2. MARK HISTORY AS REJECTED
+        # We find any feedback that touched the structure and mark it as 'bad'
+        self.db.query(TrackFeedback).filter(
+            TrackFeedback.track_id == track.id,
+            TrackFeedback.is_rejected == False, # Only touch currently valid ones
+            # Check if they touched bars OR sections
+            or_(
+                TrackFeedback.corrected_bars.isnot(None), 
+                TrackFeedback.corrected_sections.isnot(None)
+            )
+        ).update({"is_rejected": True})
+
+        # 3. RESTORE TRACK STATE
+        track.bars = original_bars
+        track.sections = original_sections
+        track.section_labels = original_labels
+        
+        # 4. LOG THE RESET ACTION
+        # We create a new row saying "System Reset", which acts as the new "Head" of history
+        reset_log = TrackFeedback(
+            track_id=track.id,
+            tempo_correction="reset_structure",
+            suggested_style="System Reset",
+            corrected_bars=original_bars,
+            corrected_sections=original_sections,
+            corrected_section_labels=original_labels,
+            is_rejected=False # This is a valid action
+        )
+        
+        self.db.add(reset_log)
         self.db.add(track)
         self.db.commit()
         
-        return new_bars
+        return {
+            "bars": original_bars,
+            "sections": original_sections,
+            "section_labels": original_labels
+        }

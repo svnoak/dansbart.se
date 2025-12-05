@@ -35,3 +35,8 @@ class LinkSubmission(BaseModel):
 class FeedbackIn(BaseModel):
     style: str  # e.g., "Hambo"
     tempo_correction: str # "ok", "half", "double"
+
+class StructureIn(BaseModel):
+    bars: Optional[List[float]] = None
+    sections: Optional[List[float]] = None
+    section_labels: Optional[List[str]] = None

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
-from app.api.schemas import TrackOut, LinkSubmission, FeedbackIn
+from app.api.schemas import TrackOut, LinkSubmission, FeedbackIn, StructureIn
 from app.workers.tasks import analyze_track_task
 
 # Services
@@ -121,9 +121,18 @@ def get_library_stats(db: Session = Depends(get_db)):
 @router.post("/tracks/{track_id}/structure")
 def submit_structure(
     track_id: str, 
-    payload: dict, # { "bars": [...] }
+    payload: StructureIn, 
     db: Session = Depends(get_db)
 ):
     service = FeedbackService(db)
-    new_grid = service.process_structure_feedback(track_id, payload['bars'])
-    return {"status": "success", "new_bars": new_grid}
+    success = service.process_structure_feedback(
+        track_id=track_id,
+        bars=payload.bars,
+        sections=payload.sections,
+        labels=payload.section_labels
+    )
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Track not found")
+    
+    return {"status": "success", "message": "Structure updated."}
