@@ -59,7 +59,6 @@ export default {
             this.correction.style = this.track.dance_style || "Polska";
             this.correction.tempo = 'ok';
         },
-
         // --- NAVIGATION ---
         startCorrection() {
             this.mode = 'correction';

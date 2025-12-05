@@ -1,5 +1,5 @@
 export default {
-    props: ['isPlaying', 'isShuffled', 'repeatMode', 'hasSpotify', 'structureMode'], 
+    props: ['isPlaying', 'isShuffled', 'repeatMode', 'hasSpotify', 'structureMode', 'fullMode'],
     emits: ['toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump'],
 
     computed: {
@@ -12,11 +12,15 @@ export default {
     },
 
     template: /*html*/`
-    <div class="flex items-center justify-center gap-6">
+    <div class="flex items-center justify-center w-full" 
+         :class="fullMode ? 'gap-4 justify-evenly' : 'gap-2 md:gap-4'">
         
         <button @click="$emit('shuffle')" 
             class="group relative w-8 h-8 flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-colors" 
-            :class="isShuffled ? 'text-indigo-600' : ''"
+            :class="[
+                isShuffled ? 'text-indigo-600' : '',
+                fullMode ? 'flex' : 'hidden md:flex' 
+            ]"
             title="Shuffle">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                 <polyline points="16 3 21 3 21 8"></polyline>
@@ -28,7 +32,8 @@ export default {
         </button>
 
         <button @click="$emit('jump', -1)" 
-                class="group relative w-10 h-10 flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors" 
+                class="group relative w-10 h-10 items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors" 
+                :class="fullMode ? 'flex' : 'hidden md:flex'"
                 :title="'Rewind ' + jumpLabel">
             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -44,9 +49,10 @@ export default {
         </button>
 
         <button @click="$emit('toggle-play')" 
-            class="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 rounded-full text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all active:scale-95">
-            <svg v-if="!isPlaying" class="w-7 h-7 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <svg v-else class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            class="bg-indigo-600 hover:bg-indigo-700 rounded-full text-white flex items-center justify-center shadow-lg transition-all active:scale-95"
+            :class="fullMode ? 'w-16 h-16' : 'w-12 h-12'">
+            <svg v-if="!isPlaying" :class="fullMode ? 'w-8 h-8' : 'w-6 h-6'" class="ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg v-else :class="fullMode ? 'w-8 h-8' : 'w-6 h-6'" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
         </button>
 
         <button @click="$emit('next')" class="text-gray-800 hover:text-indigo-600 transition-colors" title="Next Track">
@@ -54,7 +60,8 @@ export default {
         </button>
 
         <button @click="$emit('jump', 1)" 
-                class="group relative w-10 h-10 flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors" 
+                class="group relative w-10 h-10 items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors" 
+                :class="fullMode ? 'flex' : 'hidden md:flex'"
                 :title="'Forward ' + jumpLabel">
             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
@@ -66,9 +73,12 @@ export default {
         </button>
 
         <button @click="$emit('toggle-repeat')" 
-            class="group relative w-8 h-8 flex items-center justify-center transition-colors" 
-            :class="repeatMode !== 'none' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600'"
-            :title="'Repeat: ' + repeatMode">
+            class="group relative w-8 h-8 items-center justify-center transition-colors" 
+            :class="[
+                repeatMode !== 'none' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600',
+                fullMode ? 'flex' : 'hidden md:flex'
+            ]"
+            title="Repeat">
             
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                 <polyline points="17 1 21 5 17 9"></polyline>
@@ -78,7 +88,7 @@ export default {
             </svg>
 
             <span v-if="repeatMode === 'one'" 
-                  class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none">
+                  class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-indigo-700">
                 1
             </span>
         </button>

@@ -1,21 +1,21 @@
 import SmartNudge from './SmartNudge.js';
+import SectionVoting from './SectionVoting.js';
 import YouTubeEngine from './player/YouTubeEngine.js';
 import PlayerControls from './player/PlayerControls.js';
 import ProgressBar from './player/ProgressBar.js';
 import { usePlayer } from '../player.js'; 
 import StructureEditor from './StructureEditor.js';
 import SparklesIcon from '../icons/SparklesIcon.js';
-import SectionVoting from './SectionVoting.js';
 
 export default {
     components: { 
         SmartNudge, 
+        SectionVoting,
         YouTubeEngine, 
         PlayerControls, 
         ProgressBar, 
         StructureEditor,
-        SparklesIcon,
-        SectionVoting
+        SparklesIcon
     },
     
     setup() {
@@ -25,19 +25,17 @@ export default {
     
     data() {
         return {
-            // Source of Truth (from API)
+            // Source of Truth
             realTime: 0,
             duration: 0,
             
-            // Visual State (Interpolated for smoothness)
+            // Visual State
             visualTime: 0,
             lastTick: 0,
             rafId: null,
 
             // Video Window State
             ytPlayer: null,
-            
-            // Dragging State for Video Window
             videoPos: { x: 16, y: 96 }, 
             isDraggingVideo: false,
             dragOffset: { x: 0, y: 0 },
@@ -46,13 +44,14 @@ export default {
             structureMode: 'none',
             showStructureEditor: false,
             
-            // Fixes the Vue warning
-            useSpotifyFallback: false, 
-
-            // --- VERSION CAROUSEL STATE ---
+            // RESPONSIVE STATE (CRITICAL)
+            isExpanded: false, // Mobile overlay open?
+            windowWidth: window.innerWidth, // Track screen width
+            
+            // Version Carousel
             availableVersions: [],
             currentVersionIndex: 0,
-            isFetchingVersions: false
+            isFetchingVersions: false,
         }
     },
 
@@ -61,15 +60,25 @@ export default {
         this.initYouTube();
         this.startSmoothLoop();
         
-        // Global event listeners for dragging
+        // Drag Events (Mouse)
         window.addEventListener('mousemove', this.onDrag);
         window.addEventListener('mouseup', this.stopDrag);
+        
+        // Drag Events (Touch)
+        window.addEventListener('touchmove', this.onDrag, { passive: false });
+        window.addEventListener('touchend', this.stopDrag);
+
+        // Resize Listener (For responsive video logic)
+        window.addEventListener('resize', this.onResize);
     },
 
     beforeUnmount() {
         if (this.rafId) cancelAnimationFrame(this.rafId);
         window.removeEventListener('mousemove', this.onDrag);
         window.removeEventListener('mouseup', this.stopDrag);
+        window.removeEventListener('touchmove', this.onDrag);
+        window.removeEventListener('touchend', this.stopDrag);
+        window.removeEventListener('resize', this.onResize);
     },
 
     watch: {
@@ -97,57 +106,75 @@ export default {
     },
 
     methods: {
-        // --- 1. VERSION HANDLING (NEW) ---
+        onResize() {
+            this.windowWidth = window.innerWidth;
+            // If user resizes window to desktop size, close mobile overlay
+            if (this.windowWidth >= 768) {
+                this.isExpanded = false;
+            }
+        },
+
+        // --- VERSION HANDLING ---
         async fetchVersions(trackId) {
             this.availableVersions = [];
             this.currentVersionIndex = 0;
             this.isFetchingVersions = true;
-
             try {
-                // Fetch from your backend
                 const res = await fetch(`api/tracks/${trackId}/structure-versions`);
                 if (res.ok) {
                     this.availableVersions = await res.json();
-
-                    // Default to the 'Active' version if found
                     const activeIdx = this.availableVersions.findIndex(v => v.is_active);
                     this.currentVersionIndex = activeIdx >= 0 ? activeIdx : 0;
                 }
-            } catch (e) {
-                console.warn("Could not fetch versions", e);
-            } finally {
-                this.isFetchingVersions = false;
-            }
-        },
-        handleToggleRepeat() {
-            this.cycleRepeatMode(); // From usePlayer
+            } catch (e) { console.warn("Could not fetch versions", e); } 
+            finally { this.isFetchingVersions = false; }
         },
 
         cycleVersion(direction) {
             if (!Array.isArray(this.availableVersions) || this.availableVersions.length <= 1) return;
-
             const len = this.availableVersions.length;
             const dir = Number(direction) || 0;
             if (dir === 0) return;
 
             const newIndex = (this.currentVersionIndex + dir + len) % len;
             this.currentVersionIndex = newIndex;
-            
             const version = this.availableVersions[newIndex];
+
             this.handleVersionPreview(version?.structure_data);
             if (this.structureMode === 'none') this.structureMode = 'sections';
         },
 
         handleVersionPreview(structureData) {
             if (this.currentTrack && structureData) {
-                // Update Reactive Object in memory (updates Visualizer instantly)
                 this.currentTrack.bars = structureData.bars || [];
                 this.currentTrack.sections = structureData.sections || [];
                 this.currentTrack.section_labels = structureData.labels || [];
             }
         },
 
-        // --- 2. SMOOTH ANIMATION LOOP ---
+        // --- CONTROLS ---
+        handleJump(direction) {
+            if (this.structureMode !== 'none' && this.currentTrack?.bars?.length > 0) {
+                const bars = this.currentTrack.bars;
+                let nextBarIdx = bars.findIndex(b => b > this.visualTime);
+                let currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
+                let targetIdx = currentIdx + (direction * 4);
+                if (targetIdx < 0) targetIdx = 0;
+                if (targetIdx >= bars.length) targetIdx = bars.length - 1;
+                this.handleSeek(bars[targetIdx]);
+            } else {
+                let newTime = this.visualTime + (direction * 10);
+                if (newTime < 0) newTime = 0;
+                if (newTime > this.duration) newTime = this.duration;
+                this.handleSeek(newTime);
+            }
+        },
+        
+        handleToggleRepeat() {
+            this.cycleRepeatMode();
+        },
+
+        // --- ANIMATION & SEEK ---
         startSmoothLoop() {
             const loop = (now) => {
                 if (this.isPlaying && this.activeSource === 'youtube' && this.duration > 0) {
@@ -161,7 +188,6 @@ export default {
             };
             this.rafId = requestAnimationFrame(loop);
         },
-
         onTimeUpdate({ currentTime, duration }) {
             this.realTime = currentTime;
             this.duration = duration;
@@ -169,22 +195,50 @@ export default {
                 this.visualTime = this.realTime;
             }
         },
+        handleSeek(seconds) {
+            this.visualTime = seconds; 
+            if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
+                this.$refs.ytEngine.seekTo(seconds);
+            }
+        },
+        handleTrackEnd() {
+            if (this.showStructureEditor) {
+                this.isPlaying = false;
+                return;
+            }
+            if (this.repeatMode === 'one') {
+                this.handleSeek(0);
+                if(this.$refs.ytEngine) this.$refs.ytEngine.play(); 
+            } else {
+                this.nextTrack();
+            }
+        },
+        handleMainButton() {
+            if (this.activeSource === 'youtube') this.togglePlay();
+        },
 
-        // --- 3. DRAGGABLE VIDEO LOGIC ---
+        // --- DRAGGING ---
         startDrag(e) {
             this.isDraggingVideo = true;
             const rect = this.$refs.videoContainer.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
             this.dragOffset = {
-                x: e.clientX - rect.left,
+                x: clientX - rect.left,
                 y: window.innerHeight - rect.bottom 
             };
         },
         onDrag(e) {
+            if (this.isExpanded) return; // No dragging in expanded mode
             if (!this.isDraggingVideo) return;
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault(); 
             
-            let newLeft = e.clientX - this.dragOffset.x;
-            let newBottom = (window.innerHeight - e.clientY) - this.dragOffset.y;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            let newLeft = clientX - this.dragOffset.x;
+            let newBottom = (window.innerHeight - clientY) - this.dragOffset.y;
             const maxX = window.innerWidth - 260; 
             const maxY = window.innerHeight - 200;
             
@@ -195,23 +249,7 @@ export default {
             this.isDraggingVideo = false;
         },
 
-        // --- EXISTING LOGIC ---
-        onYtStateChange(stateCode) {
-            if (stateCode === 1) {
-                this.isPlaying = true;
-                this.lastTick = performance.now();
-            }
-            if (stateCode === 2) this.isPlaying = false;
-        },
-        handleSeek(seconds) {
-            this.visualTime = seconds; 
-            if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
-                this.$refs.ytEngine.seekTo(seconds);
-            }
-        },
-        handleMainButton() {
-            if (this.activeSource === 'youtube') this.togglePlay();
-        },
+        // --- MISC HELPERS ---
         toggleStructureMode() {
             if (this.structureMode === 'none') this.structureMode = 'sections';
             else if (this.structureMode === 'sections') this.structureMode = 'bars';
@@ -235,68 +273,35 @@ export default {
                 }
             }
         },
-        createPlayer() {
-            if (!document.getElementById('hidden-yt-player')) return;
-            if (this.ytPlayer) return;
-            this.ytPlayer = new YT.Player('hidden-yt-player', {
-                height: '100%',
-                width: '100%',
-                playerVars: { 'autoplay': 1, 'controls': 1 }, 
-                events: {
-                    'onReady': (event) => {
-                        if (this.currentVideoId && this.activeSource === 'youtube') {
-                            event.target.loadVideoById(this.currentVideoId);
-                        }
-                    },
-                    'onStateChange': (e) => {
-                        if (e.data === YT.PlayerState.ENDED) this.nextTrack();
-                        if (e.data === YT.PlayerState.PLAYING) this.isPlaying = true;
-                        if (e.data === YT.PlayerState.PAUSED) this.isPlaying = false;
-                    },
-                    'onError': (e) => console.warn("YT Error:", e.data)
-                }
-            });
-        },
-        loadYt(id) {
-            if (this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
-                this.ytPlayer.loadVideoById(id);
-            } else {
-                this.createPlayer();
+        onYtStateChange(stateCode) {
+            if (stateCode === 1) {
+                this.isPlaying = true;
+                this.lastTick = performance.now();
             }
+            if (stateCode === 2) {
+                this.isPlaying = false;
+            }
+            if (stateCode === 0) {
+                this.handleTrackEnd();
+            }
+        },
+        handlePlayerError(e) {
+            console.warn("YouTube Error:", e);
+            if (this.playerStore && this.playerStore.handlePlayerError) {
+                this.playerStore.handlePlayerError(e.data);
+            } else {
+                // Fallback if usePlayer isn't directly exposed as 'playerStore'
+                // (Since you returned { ...playerStore } in setup, this might be available directly)
+                // Try calling the mapped action directly if it exists in your template scope
+                this.nextTrack(); 
+            }
+        },
+        createPlayer() {
+            // (Standard YT create logic if needed, but <youtube-engine> handles most)
         },
         openEditor() {
             this.showStructureEditor = true;
             if (this.isPlaying) this.togglePlay(); 
-        },
-        handleTrackEnd() {
-            if (this.showStructureEditor) {
-                this.isPlaying = false;
-                return;
-            }
-            if (this.repeatMode === 'one') {
-                this.handleSeek(0);
-                if(this.$refs.ytEngine) this.$refs.ytEngine.play(); 
-            } 
-            else {
-                this.nextTrack();
-            }
-        },
-        handleJump(direction) {
-            if (this.structureMode !== 'none' && this.currentTrack?.bars?.length > 0) {
-                const bars = this.currentTrack.bars;
-                let nextBarIdx = bars.findIndex(b => b > this.visualTime);
-                let currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
-                let targetIdx = currentIdx + (direction * 4);
-                if (targetIdx < 0) targetIdx = 0;
-                if (targetIdx >= bars.length) targetIdx = bars.length - 1;
-                this.handleSeek(bars[targetIdx]);
-            } else {
-                const jumpAmount = 10;
-                let newTime = this.visualTime + (direction * jumpAmount);
-                if (newTime < 0) newTime = 0;
-                if (newTime > this.duration) newTime = this.duration;
-                this.handleSeek(newTime);
-            }
         }
     },
     
@@ -314,162 +319,202 @@ export default {
         },
         hasYt() { return !!this.getYouTubeId(this.currentTrack); },
         hasSpot() { return !!this.getSpotifyId(this.currentTrack); },
-        
         fmtCurrent() { return this.formatTime(this.visualTime) },
         fmtDuration() { return this.formatTime(this.duration) },
-        
         structureButtonLabel() {
             if (this.structureMode === 'sections') return 'Visa takter';
             if (this.structureMode === 'bars') return 'Dölj';
             return 'Visa repriser';
         },
         structureButtonIcon() {
-            if (this.structureMode === 'none') return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`; // Eye icon
+            if (this.structureMode === 'none') return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`; 
             if (this.structureMode === 'sections') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
             return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
-        },
+        }
     },
 
-    template: /*html*/`
-    <div v-if="currentTrack" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col transition-all duration-300">
+template: /*html*/`
+    <div v-if="currentTrack">
 
-        <structure-editor 
-            :is-open="showStructureEditor" 
-            :track="currentTrack"
-            :current-time="visualTime"   
-            :duration="duration"          
-            :is-playing="isPlaying"       
-            @close="showStructureEditor = false"
-            @seek="handleSeek"            
-            @toggle-play="togglePlay"     
-        ></structure-editor>
-        
-        <div class="absolute bottom-full right-4 w-80 z-40 flex flex-col gap-2 transition-all duration-300"
-             :class="structureMode !== 'none' ? 'mb-7' : 'mb-2'">
+        <div class="fixed inset-0 bg-white z-[100] flex flex-col transition-transform duration-300 ease-in-out md:hidden"
+             :class="isExpanded ? 'translate-y-0' : 'translate-y-full'">
             
-            <smart-nudge :track="currentTrack"></smart-nudge>
-
-            <section-voting
-                v-if="structureMode == 'sections'"
-                :track="currentTrack"
-                :active-version="availableVersions[currentVersionIndex]"
-            ></section-voting>
-
-        </div>
-
-        <progress-bar 
-            :current-time="visualTime"
-            :duration="duration" 
-            :disabled="activeSource !== 'youtube'"
-            :structure-mode="structureMode"
-            :track="currentTrack"
-            @seek="handleSeek"
-        ></progress-bar>
-
-        <div class="flex items-center justify-between px-4 py-3 h-20 relative z-50 bg-white">
-            
-            <div class="flex items-center w-1/3 min-w-0 gap-3">
-                <div class="w-12 h-12 bg-gray-100 rounded flex items-center justify-center shrink-0 border border-gray-200 text-xl">🎵</div>
-                <div class="flex flex-col min-w-0">
-                    <div class="font-bold text-gray-900 truncate">{{ currentTrack.title }}</div>
-                    <div class="flex items-center gap-2 mt-0.5">
-                        <div class="text-[10px] text-gray-400 font-mono" v-if="activeSource === 'youtube'">
-                            {{ fmtCurrent }} / {{ fmtDuration }}
-                        </div>
-                        <div class="text-[10px] text-green-600 font-bold" v-else>Spotify Active</div>
-                        
-                        <button 
-                            v-if="currentTrack.sections && currentTrack.sections.length > 0"
-                            @click="toggleStructureMode"
-                            class="flex items-center gap-1.5 px-2 py-1 rounded-full border transition-all text-[9px] font-bold uppercase tracking-wide ml-2"
-                            :class="structureMode !== 'none' 
-                                ? 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' 
-                                : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600'"
-                        >
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="structureButtonIcon" stroke-width="2" stroke-linecap="round"></svg>
-                            <span>{{ structureButtonLabel }}</span>
-                        </button>
-                            
-                        <button
-                            v-if="structureMode === 'sections'"
-                            @click="showStructureEditor = true"
-                            class="ml-1 text-[9px] font-bold border border-gray-200 rounded px-1.5 py-1 hover:bg-gray-50 text-gray-500 transition-colors"
-                        >
-                            ✏️
-                        </button>
-
-                        <div v-if="availableVersions.length > 1 && structureMode === 'sections'" 
-                            class="flex items-center bg-gray-50 rounded-full border border-gray-200 px-1 py-0.5 ml-2 animate-fade-in">
-                            <button @click="cycleVersion(-1)" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">‹</button>
-                            <div class="text-[8px] font-mono px-1.5 text-center min-w-[50px] leading-tight select-none">
-                                <div class="font-bold text-gray-700 flex items-center justify-center gap-1">
-                                    <span>v.{{ currentVersionIndex + 1 }}</span>
-                                    <template v-if="availableVersions[currentVersionIndex]?.author_alias == 'AI'">
-                                        <sparkles-icon class="w-3 h-3 inline-block text-gray-400" />
-                                    </template>
-                                </div>
-                            </div>
-                            <button @click="cycleVersion(1)" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">›</button>
-                        </div>
-                    </div>
+            <div class="flex items-center justify-between px-6 pt-12 pb-4 shrink-0 bg-white z-10">
+                <button @click="isExpanded = false" class="text-gray-500 p-2 -ml-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                
+                <div class="flex bg-gray-100 rounded-lg p-1 gap-1">
+                    <button @click="setSource('youtube')" 
+                            class="px-3 py-1 text-[10px] font-bold uppercase rounded transition-all"
+                            :class="activeSource === 'youtube' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'">
+                        YouTube
+                    </button>
+                    <button @click="setSource('spotify')" 
+                            class="px-3 py-1 text-[10px] font-bold uppercase rounded transition-all"
+                            :class="activeSource === 'spotify' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-400'">
+                        Spotify
+                    </button>
                 </div>
             </div>
 
-            <div class="flex flex-col items-center w-1/3">
-                <player-controls 
-                    :is-playing="isPlaying"
-                    :is-shuffled="isShuffled"
-                    :repeat-mode="repeatMode"        :has-spotify="activeSource === 'spotify'"
-                    :structure-mode="structureMode"
+            <div class="flex-1 flex flex-col px-6 overflow-y-auto min-h-0 pb-10">
+                
+                <div class="w-full aspect-video bg-gray-50 rounded-xl mb-6 shadow-inner shrink-0 border border-gray-100"></div>
+
+                <div class="mb-6 shrink-0">
+                    <h2 class="text-2xl font-extrabold text-gray-900 leading-tight mb-0.5">
+                        {{ currentTrack.title }}
+                    </h2>
                     
-                    @toggle-play="togglePlay"
-                    @next="nextTrack"
-                    @prev="prevTrack"
-                    @shuffle="toggleShuffle"
-                    @toggle-repeat="handleToggleRepeat" @main-action="handleMainButton"
-                    @jump="handleJump"
-                ></player-controls>
+                    <p class="text-lg text-indigo-600 font-bold mb-2">
+                        {{ currentTrack.artist_name || 'Okänd artist' }}
+                    </p>
+
+                    <div class="flex items-center flex-wrap gap-x-2 text-sm text-gray-500 font-medium">
+                        <span v-if="currentTrack.album" class="truncate max-w-[200px]">
+                            {{ currentTrack.album_name }}
+                        </span>
+                        
+                        <span v-if="currentTrack.album && currentTrack.dance_style" class="text-gray-300">•</span>
+                        
+                        <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs uppercase tracking-wide font-bold">
+                            {{ currentTrack.dance_style || 'Style' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex-1 min-h-100"></div>
+
+                <div class="mb-4 shrink-0">
+                    <smart-nudge :track="currentTrack"></smart-nudge>
+                    <version-voting 
+                        v-if="structureMode !== 'none'" 
+                        :track="currentTrack" 
+                        :active-version="availableVersions[currentVersionIndex]"
+                    ></version-voting>
+                </div>
+
+                <div class="flex-1"></div>
+
+                <div class="flex justify-between items-end mb-2 shrink-0">
+                    <div v-if="availableVersions.length > 1" class="flex items-center bg-gray-100 rounded-full border border-gray-200 px-2 py-1 h-8">
+                        <button @click="cycleVersion(-1)" class="w-6 h-full flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold">‹</button>
+                        <span class="text-xs font-mono font-bold text-gray-700 px-2 pt-0.5">v.{{ currentVersionIndex + 1 }}</span>
+                        <button @click="cycleVersion(1)" class="w-6 h-full flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold">›</button>
+                    </div>
+                    <div v-else></div> 
+
+                    <button @click="toggleStructureMode" 
+                            class="flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8"
+                            :class="structureMode !== 'none' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-50 text-gray-500 border-gray-200'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="structureButtonIcon" stroke-width="2"></svg>
+                        {{ structureButtonLabel }}
+                    </button>
+                </div>
+
+                <div class="h-12 mb-4 relative w-full shrink-0 flex items-end">
+                     <progress-bar :current-time="visualTime" :duration="duration" :disabled="activeSource !== 'youtube'" :structure-mode="structureMode" :track="currentTrack" @seek="handleSeek"></progress-bar>
+                </div>
+
+                <div class="shrink-0">
+                    <player-controls 
+                        :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode"
+                        :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="true"              
+                        @toggle-play="togglePlay" @next="nextTrack" @prev="prevTrack" @shuffle="toggleShuffle" @toggle-repeat="handleToggleRepeat" @jump="handleJump"
+                    ></player-controls>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col transition-all duration-300"
+             :class="isExpanded ? 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto' : 'opacity-100'">
+             
+             <structure-editor :is-open="showStructureEditor" :track="currentTrack" :current-time="visualTime" :duration="duration" :is-playing="isPlaying" @close="showStructureEditor = false" @seek="handleSeek" @toggle-play="togglePlay"></structure-editor>
+
+            <div class="flex absolute bottom-full left-0 right-0 md:left-auto md:right-4 mb-2 md:mb-7 z-40 flex-col gap-2 pointer-events-auto px-2 md:px-0 md:w-80">
+                <smart-nudge :track="currentTrack"></smart-nudge>
+                <version-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]"></version-voting>
             </div>
 
-            <div class="w-1/3 flex justify-end items-center gap-2">
-                <span class="text-[10px] text-gray-400 font-bold uppercase mr-2 hidden sm:inline">Källa</span>
-                <button @click="setSource('youtube')" :disabled="!hasYt" class="p-1.5 rounded border transition-all" :class="activeSource === 'youtube' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white text-gray-400 hover:text-gray-600 opacity-50'">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
-                </button>
-                <button @click="setSource('spotify')" :disabled="!hasSpot" class="p-1.5 rounded border transition-all" :class="activeSource === 'spotify' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white text-gray-400 hover:text-gray-600 opacity-50'">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
-                </button>
+            <div class="hidden md:block relative w-full">
+                <progress-bar :current-time="visualTime" :duration="duration" :disabled="activeSource !== 'youtube'" :structure-mode="structureMode" :track="currentTrack" @seek="handleSeek"></progress-bar>
+            </div>
+            
+            <div class="md:hidden w-full h-1 bg-gray-200">
+                <div class="h-full bg-indigo-600" :style="{ width: (duration ? (visualTime/duration)*100 : 0) + '%' }"></div>
+            </div>
+
+            <div class="flex items-center justify-between px-4 py-3 h-20 bg-white cursor-pointer md:cursor-default" 
+                 @click.self="!$event.target.closest('button') && (isExpanded = true)">
+                 
+                 <div class="flex items-center w-2/3 md:w-1/3 gap-3" @click="isExpanded = true">
+                    <div class="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-xl shrink-0">🎵</div>
+                    <div class="min-w-0">
+                        <div class="font-bold truncate text-sm md:text-base">{{ currentTrack.title }}</div>
+                        <div class="text-[10px] text-gray-400 md:hidden">Tap to expand</div>
+                        <div class="text-[10px] text-gray-400 font-mono hidden md:block" v-if="activeSource === 'youtube'">{{ fmtCurrent }} / {{ fmtDuration }}</div>
+                        
+                        <div class="hidden md:flex items-center gap-2 mt-1">
+                            <button v-if="currentTrack.sections?.length" @click.stop="toggleStructureMode" class="text-[9px] font-bold uppercase border px-1.5 rounded" :class="structureMode!=='none'?'bg-indigo-100 text-indigo-700':'bg-white text-gray-400'">{{ structureButtonLabel }}</button>
+                             <div v-if="availableVersions.length > 1 && structureMode !== 'none'" class="flex items-center bg-gray-50 rounded-full border px-1">
+                                <button @click.stop="cycleVersion(-1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold text-[10px]">‹</button>
+                                <span class="text-[9px] font-mono font-bold text-gray-700 px-1">v{{ currentVersionIndex + 1 }}</span>
+                                <button @click.stop="cycleVersion(1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold text-[10px]">›</button>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+
+                 <div class="flex justify-end md:justify-center w-1/3 md:w-1/3">
+                    <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="false" @toggle-play="togglePlay" @next="nextTrack" @prev="prevTrack" @shuffle="toggleShuffle" @toggle-repeat="handleToggleRepeat" @jump="handleJump"></player-controls>
+                 </div>
+                 
+                 <div class="hidden md:flex w-1/3 justify-end items-center gap-2">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase mr-2">Källa</span>
+                    <button @click="setSource('youtube')" :disabled="!hasYt" class="p-1.5 rounded border transition-all" :class="activeSource === 'youtube' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white text-gray-400 hover:text-gray-600 opacity-50'">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                    </button>
+                    <button @click="setSource('spotify')" :disabled="!hasSpot" class="p-1.5 rounded border transition-all" :class="activeSource === 'spotify' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white text-gray-400 hover:text-gray-600 opacity-50'">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
+                    </button>
+                 </div>
             </div>
         </div>
 
         <div ref="videoContainer"
-             class="fixed bg-black shadow-2xl transition-all duration-300 overflow-hidden z-[60] rounded-lg border border-gray-700"
-             :class="activeSource === 'youtube' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
-             :style="{ 
-                width: '256px', 
-                height: '144px', 
-                left: videoPos.x + 'px', 
-                bottom: (videoPos.y + (structureMode !== 'none' ? 32 : 0)) + 'px' 
+             class="fixed bg-black shadow-2xl transition-all duration-500 ease-in-out overflow-hidden border border-gray-700"
+             :class="[
+                 activeSource === 'youtube' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+                 (isExpanded && windowWidth < 768) ? 'z-[101] rounded-xl' : 'z-[60] rounded-lg'
+             ]"
+             :style="(isExpanded && windowWidth < 768) ? {
+                 /* ALIGNMENT: Header=~88px. Top=92px. */
+                 top: '92px', 
+                 left: '1.5rem', 
+                 width: 'calc(100% - 3rem)', 
+                 height: 'auto', 
+                 aspectRatio: '16/9', 
+                 bottom: 'auto'
+             } : {
+                 /* MINI PLAYER */
+                 width: '160px', 
+                 height: '90px', 
+                 left: videoPos.x + 'px', 
+                 bottom: (videoPos.y + (structureMode !== 'none' ? 32 : 0)) + 'px'
              }"
         >
-            <div @mousedown="startDrag" class="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/80 to-transparent z-20 cursor-move flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+            <div v-if="!isExpanded || windowWidth >= 768"
+                 @mousedown="startDrag" @touchstart.prevent="startDrag"
+                 @click="!isExpanded && windowWidth < 768 && (isExpanded = true)"
+                 class="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/80 to-transparent z-20 cursor-move flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                 <div class="w-8 h-1 bg-white/30 rounded-full"></div>
             </div>
-
-            <you-tube-engine 
-                ref="ytEngine"
-                :video-id="currentVideoId" 
-                :active-source="activeSource"
-                @state-change="onYtStateChange"
-                @time-update="onTimeUpdate"
-                @next="handleTrackEnd"
-                @error="handlePlayerError"
-            ></you-tube-engine>
+            <you-tube-engine ref="ytEngine" :video-id="currentVideoId" :active-source="activeSource" @state-change="onYtStateChange" @time-update="onTimeUpdate" @next="handleTrackEnd" @error="handlePlayerError"></you-tube-engine>
         </div>
-
-        <div v-if="activeSource === 'spotify'" 
-             class="fixed left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828] transition-all duration-300"
-             :class="structureMode !== 'none' ? 'bottom-32' : 'bottom-24'">
+        
+        <div v-if="activeSource === 'spotify'" class="fixed left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828] transition-all duration-300" :class="structureMode !== 'none' ? 'bottom-32' : 'bottom-24'">
             <iframe :src="spotifySrc" class="w-full h-full block" frameborder="0" scrolling="no" allow="autoplay; encrypted-media"></iframe>
         </div>
 
