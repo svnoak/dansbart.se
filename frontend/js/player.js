@@ -7,7 +7,6 @@ const isPlaying = ref(false);
 const isShuffled = ref(false);   
 const repeatMode = ref('none'); 
 
-// NEW: Track the active source ('youtube' | 'spotify' | null)
 const activeSource = ref('youtube'); 
 
 const currentTrack = computed(() => {
@@ -123,10 +122,14 @@ export function usePlayer() {
         if (queue.value.length === 0) return;
         if (isShuffled.value) {
             currentIndex.value = Math.floor(Math.random() * queue.value.length);
-        } else if (currentIndex.value < queue.value.length - 1) {
-            currentIndex.value++;
-        } else if (repeatMode.value === 'all') {
-            currentIndex.value = 0;
+        }
+        else {
+            if (currentIndex.value < queue.value.length - 1) {
+                currentIndex.value++;
+            } 
+            else if (repeatMode.value === 'all') {
+                currentIndex.value = 0; // Loop back to start
+            }
         }
         loadCurrentTrack();
     };
@@ -151,6 +154,12 @@ export function usePlayer() {
         }
     };
 
+    const cycleRepeatMode = () => {
+        if (repeatMode.value === 'none') repeatMode.value = 'all';
+        else if (repeatMode.value === 'all') repeatMode.value = 'one';
+        else repeatMode.value = 'none';
+    };
+
     const closePlayer = () => {
         isPlaying.value = false;
         currentIndex.value = -1;
@@ -161,6 +170,6 @@ export function usePlayer() {
         currentTrack, currentVideoId, activeSource, isRestricted, isPlaying, isShuffled,
         playContext, playTrack, togglePlay, nextTrack, prevTrack, toggleShuffle, 
         setSource, handlePlayerError, closePlayer,
-        getYouTubeId, getSpotifyId // Exported for UI checks
+        getYouTubeId, getSpotifyId, repeatMode, cycleRepeatMode
     };
 }

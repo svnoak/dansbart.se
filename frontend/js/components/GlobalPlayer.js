@@ -119,6 +119,9 @@ export default {
                 this.isFetchingVersions = false;
             }
         },
+        handleToggleRepeat() {
+            this.cycleRepeatMode(); // From usePlayer
+        },
 
         cycleVersion(direction) {
             if (!Array.isArray(this.availableVersions) || this.availableVersions.length <= 1) return;
@@ -268,10 +271,33 @@ export default {
         handleTrackEnd() {
             if (this.showStructureEditor) {
                 this.isPlaying = false;
-            } else {
+                return;
+            }
+            if (this.repeatMode === 'one') {
+                this.handleSeek(0);
+                if(this.$refs.ytEngine) this.$refs.ytEngine.play(); 
+            } 
+            else {
                 this.nextTrack();
             }
         },
+        handleJump(direction) {
+            if (this.structureMode !== 'none' && this.currentTrack?.bars?.length > 0) {
+                const bars = this.currentTrack.bars;
+                let nextBarIdx = bars.findIndex(b => b > this.visualTime);
+                let currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
+                let targetIdx = currentIdx + (direction * 4);
+                if (targetIdx < 0) targetIdx = 0;
+                if (targetIdx >= bars.length) targetIdx = bars.length - 1;
+                this.handleSeek(bars[targetIdx]);
+            } else {
+                const jumpAmount = 10;
+                let newTime = this.visualTime + (direction * jumpAmount);
+                if (newTime < 0) newTime = 0;
+                if (newTime > this.duration) newTime = this.duration;
+                this.handleSeek(newTime);
+            }
+        }
     },
     
     computed: {
@@ -324,7 +350,7 @@ export default {
             <smart-nudge :track="currentTrack"></smart-nudge>
 
             <section-voting
-                v-if="structureMode !== 'none'"
+                v-if="structureMode == 'sections'"
                 :track="currentTrack"
                 :active-version="availableVersions[currentVersionIndex]"
             ></section-voting>
@@ -393,12 +419,15 @@ export default {
                 <player-controls 
                     :is-playing="isPlaying"
                     :is-shuffled="isShuffled"
-                    :has-spotify="activeSource === 'spotify'"
+                    :repeat-mode="repeatMode"        :has-spotify="activeSource === 'spotify'"
+                    :structure-mode="structureMode"
+                    
                     @toggle-play="togglePlay"
                     @next="nextTrack"
                     @prev="prevTrack"
                     @shuffle="toggleShuffle"
-                    @main-action="handleMainButton"
+                    @toggle-repeat="handleToggleRepeat" @main-action="handleMainButton"
+                    @jump="handleJump"
                 ></player-controls>
             </div>
 
