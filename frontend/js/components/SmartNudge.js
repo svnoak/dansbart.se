@@ -60,12 +60,6 @@ export default {
             this.correction.tempo = 'ok';
         },
 
-        // --- PUBLIC METHOD CALLED BY PARENT ---
-        openManualEdit() {
-            this.resetForm();
-            this.step = 'menu'; // Open the new Menu
-        },
-
         // --- NAVIGATION ---
         startCorrection() {
             this.mode = 'correction';

@@ -23,7 +23,7 @@ class TrackOut(BaseModel):
     tempo_category: str | None
     duration: int | None = None
     bars: List[float] | None = None
-    sections: List[float] | None = None,
+    sections: List[float] | None = None
     section_labels: List[str] | None = None
     playback_links: List[PlaybackLinkOut]
     version_count: int = 0
@@ -54,6 +54,7 @@ class StructureVersionOut(BaseModel):
     vote_count: int
     is_active: bool
     structure_data: Any
+    author_alias: Optional[str] = None
 
     class Config:
         from_attributes = True

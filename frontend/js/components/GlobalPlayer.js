@@ -4,6 +4,8 @@ import PlayerControls from './player/PlayerControls.js';
 import ProgressBar from './player/ProgressBar.js';
 import { usePlayer } from '../player.js'; 
 import StructureEditor from './StructureEditor.js';
+import SparklesIcon from '../icons/SparklesIcon.js';
+import SectionVoting from './SectionVoting.js';
 
 export default {
     components: { 
@@ -11,7 +13,9 @@ export default {
         YouTubeEngine, 
         PlayerControls, 
         ProgressBar, 
-        StructureEditor 
+        StructureEditor,
+        SparklesIcon,
+        SectionVoting
     },
     
     setup() {
@@ -104,7 +108,7 @@ export default {
                 const res = await fetch(`api/tracks/${trackId}/structure-versions`);
                 if (res.ok) {
                     this.availableVersions = await res.json();
-                    
+
                     // Default to the 'Active' version if found
                     const activeIdx = this.availableVersions.findIndex(v => v.is_active);
                     this.currentVersionIndex = activeIdx >= 0 ? activeIdx : 0;
@@ -117,20 +121,17 @@ export default {
         },
 
         cycleVersion(direction) {
-            if (this.availableVersions.length <= 1) return;
+            if (!Array.isArray(this.availableVersions) || this.availableVersions.length <= 1) return;
 
-            // Calculate new index (Looping)
-            let newIndex = this.currentVersionIndex + direction;
-            if (newIndex >= this.availableVersions.length) newIndex = 0;
-            if (newIndex < 0) newIndex = this.availableVersions.length - 1;
+            const len = this.availableVersions.length;
+            const dir = Number(direction) || 0;
+            if (dir === 0) return;
 
+            const newIndex = (this.currentVersionIndex + dir + len) % len;
             this.currentVersionIndex = newIndex;
-            const version = this.availableVersions[newIndex];
-
-            // Hot Swap the data
-            this.handleVersionPreview(version.structure_data);
             
-            // Auto-show structure if hidden, so user sees the change
+            const version = this.availableVersions[newIndex];
+            this.handleVersionPreview(version?.structure_data);
             if (this.structureMode === 'none') this.structureMode = 'sections';
         },
 
@@ -140,25 +141,6 @@ export default {
                 this.currentTrack.bars = structureData.bars || [];
                 this.currentTrack.sections = structureData.sections || [];
                 this.currentTrack.section_labels = structureData.labels || [];
-            }
-        },
-
-        async confirmVersion() {
-            const version = this.availableVersions[this.currentVersionIndex];
-            if (!version) return;
-
-            // Optimistic UI update
-            version.vote_count++; 
-            alert("Röst mottagen! Tack för att du förbättrar datan.");
-
-            try {
-                await fetch(`http://localhost:8000/structure-versions/${version.id}/vote`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ vote_type: 'up' })
-                });
-            } catch (e) {
-                console.error("Vote failed", e);
             }
         },
 
@@ -311,19 +293,19 @@ export default {
         fmtDuration() { return this.formatTime(this.duration) },
         
         structureButtonLabel() {
-            if (this.structureMode === 'none') return 'Visa Struktur';
-            if (this.structureMode === 'sections') return 'Visar Repriser';
-            return 'Visar Takter';
+            if (this.structureMode === 'sections') return 'Visa takter';
+            if (this.structureMode === 'bars') return 'Dölj';
+            return 'Visa repriser';
         },
         structureButtonIcon() {
-            if (this.structureMode === 'none') return `<path d="M4 6h16M4 12h16M4 18h16"/>`;
+            if (this.structureMode === 'none') return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`; // Eye icon
             if (this.structureMode === 'sections') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
             return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
-        }
+        },
     },
 
     template: /*html*/`
-    <div v-if="currentTrack" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col">
+    <div v-if="currentTrack" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col transition-all duration-300">
 
         <structure-editor 
             :is-open="showStructureEditor" 
@@ -336,8 +318,17 @@ export default {
             @toggle-play="togglePlay"     
         ></structure-editor>
         
-        <div class="absolute bottom-full right-4 mb-2 w-80 z-40">
+        <div class="absolute bottom-full right-4 w-80 z-40 flex flex-col gap-2 transition-all duration-300"
+             :class="structureMode !== 'none' ? 'mb-7' : 'mb-2'">
+            
             <smart-nudge :track="currentTrack"></smart-nudge>
+
+            <section-voting
+                v-if="structureMode !== 'none'"
+                :track="currentTrack"
+                :active-version="availableVersions[currentVersionIndex]"
+            ></section-voting>
+
         </div>
 
         <progress-bar 
@@ -349,7 +340,7 @@ export default {
             @seek="handleSeek"
         ></progress-bar>
 
-        <div class="flex items-center justify-between px-4 py-3 h-20 bg-white z-50 relative">
+        <div class="flex items-center justify-between px-4 py-3 h-20 relative z-50 bg-white">
             
             <div class="flex items-center w-1/3 min-w-0 gap-3">
                 <div class="w-12 h-12 bg-gray-100 rounded flex items-center justify-center shrink-0 border border-gray-200 text-xl">🎵</div>
@@ -364,48 +355,37 @@ export default {
                         <button 
                             v-if="currentTrack.sections && currentTrack.sections.length > 0"
                             @click="toggleStructureMode"
-                            class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors flex items-center gap-1"
-                            :class="structureMode !== 'none' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'text-gray-400 border-gray-200 hover:border-gray-300'"
-                            :title="structureButtonLabel"
+                            class="flex items-center gap-1.5 px-2 py-1 rounded-full border transition-all text-[9px] font-bold uppercase tracking-wide ml-2"
+                            :class="structureMode !== 'none' 
+                                ? 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm' 
+                                : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600'"
                         >
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="structureButtonIcon" stroke-width="2" stroke-linecap="round"></svg>
+                            <span>{{ structureButtonLabel }}</span>
                         </button>
-                        
-                        <button 
+                            
+                        <button
+                            v-if="structureMode === 'sections'"
                             @click="showStructureEditor = true"
-                            class="text-[9px] font-bold border border-gray-200 rounded px-1.5 py-0.5 hover:bg-gray-50 text-gray-500"
-                            title="Open Editor"
+                            class="ml-1 text-[9px] font-bold border border-gray-200 rounded px-1.5 py-1 hover:bg-gray-50 text-gray-500 transition-colors"
                         >
                             ✏️
                         </button>
 
-                        <div v-if="availableVersions.length > 1" 
-                             class="flex items-center bg-gray-50 rounded-full border border-gray-200 px-1 py-0.5 ml-2">
-                            
-                            <button @click="cycleVersion(-1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">
-                                ‹
-                            </button>
-
+                        <div v-if="availableVersions.length > 1 && structureMode === 'sections'" 
+                            class="flex items-center bg-gray-50 rounded-full border border-gray-200 px-1 py-0.5 ml-2 animate-fade-in">
+                            <button @click="cycleVersion(-1)" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">‹</button>
                             <div class="text-[8px] font-mono px-1.5 text-center min-w-[50px] leading-tight select-none">
-                                <div class="font-bold text-gray-700">
-                                    v.{{ currentVersionIndex + 1 }}
+                                <div class="font-bold text-gray-700 flex items-center justify-center gap-1">
+                                    <span>v.{{ currentVersionIndex + 1 }}</span>
+                                    <template v-if="availableVersions[currentVersionIndex]?.author_alias == 'AI'">
+                                        <sparkles-icon class="w-3 h-3 inline-block text-gray-400" />
+                                    </template>
                                 </div>
                             </div>
-
-                            <button @click="cycleVersion(1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">
-                                ›
-                            </button>
-                            
-                            <button 
-                                v-if="!availableVersions[currentVersionIndex].is_active"
-                                @click="confirmVersion"
-                                class="ml-1 w-4 h-4 flex items-center justify-center text-green-600 hover:bg-green-100 rounded-full text-[10px]"
-                                title="Rösta på denna version"
-                            >
-                                ✓
-                            </button>
+                            <button @click="cycleVersion(1)" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors text-xs font-bold">›</button>
                         </div>
-                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -434,9 +414,14 @@ export default {
         </div>
 
         <div ref="videoContainer"
-             class="fixed bg-black shadow-2xl transition-shadow duration-300 overflow-hidden z-[60] rounded-lg border border-gray-700"
+             class="fixed bg-black shadow-2xl transition-all duration-300 overflow-hidden z-[60] rounded-lg border border-gray-700"
              :class="activeSource === 'youtube' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
-             :style="{ width: '256px', height: '144px', left: videoPos.x + 'px', bottom: videoPos.y + 'px' }"
+             :style="{ 
+                width: '256px', 
+                height: '144px', 
+                left: videoPos.x + 'px', 
+                bottom: (videoPos.y + (structureMode !== 'none' ? 32 : 0)) + 'px' 
+             }"
         >
             <div @mousedown="startDrag" class="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/80 to-transparent z-20 cursor-move flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                 <div class="w-8 h-1 bg-white/30 rounded-full"></div>
@@ -454,7 +439,8 @@ export default {
         </div>
 
         <div v-if="activeSource === 'spotify'" 
-             class="fixed bottom-24 left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828]">
+             class="fixed left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828] transition-all duration-300"
+             :class="structureMode !== 'none' ? 'bottom-32' : 'bottom-24'">
             <iframe :src="spotifySrc" class="w-full h-full block" frameborder="0" scrolling="no" allow="autoplay; encrypted-media"></iframe>
         </div>
 
