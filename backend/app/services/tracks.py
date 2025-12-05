@@ -53,11 +53,17 @@ class TrackService:
                 continue
 
             # --- B. DETERMINE STYLE ---
-            # Try to find the specific style requested, OR the Primary style
-            matched_style = next(
-                (s for s in track.dance_styles if (not style or s.dance_style.lower() == style.lower())), 
-                next((s for s in track.dance_styles if s.is_primary), None)
-            )
+            # Always prefer the primary style first
+            primary_style = next((s for s in track.dance_styles if s.is_primary), None)
+
+            # If user asked for a specific style, filter by that
+            if style:
+                matched_style = next(
+                    (s for s in track.dance_styles if s.dance_style.lower() == style.lower()),
+                    primary_style
+                )
+            else:
+                matched_style = primary_style
 
             # --- C. HANDLE UNCLASSIFIED ---
             if matched_style:
