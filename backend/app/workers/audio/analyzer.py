@@ -6,6 +6,7 @@ from .style_head import ClassificationHead
 from .extractors.rhythm import RhythmExtractor
 from .extractors.vocal import analyze_vocal_presence
 from .extractors.swing import calculate_swing_ratio
+from .extractors.feel import analyze_feel
 from .extractors.structure import StructureExtractor
 from .extractors.section_labeler import ABSectionLabeler
 
@@ -85,6 +86,9 @@ class AudioAnalyzer:
             # --- 4. SWING ANALYSIS ---
             print(f"   [ANALYSIS] Doing swinganalysis...")
             swing_ratio = calculate_swing_ratio(file_path, beat_times)
+
+            print(f"   [ANALYSIS] Analyzing feel/texture...")
+            feel_data = analyze_feel(audio_16k, beat_times, swing_ratio)
 
             # --- 5. LIGHTWEIGHT STRUCTURAL PROXIES (NEW) ---
             # This is the "Safety Net" feature injection

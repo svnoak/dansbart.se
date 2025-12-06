@@ -107,44 +107,52 @@ class SpotifyIngestor:
         external_ids = sp_track.get('external_ids', {})
         isrc = external_ids.get('isrc')
         title = sp_track.get('name')
-        
-        # --- 1. EXTRACT DURATION ---
         duration_ms = sp_track.get('duration_ms') 
         
-        album_obj = sp_track.get('album', {})
-        album_name = album_obj.get('name')
-        
-        artists = sp_track.get('artists', [])
-        artist_name = artists[0]['name'] if artists else "Unknown Artist"
-        
-        external_urls = sp_track.get('external_urls', {})
-        spotify_url = external_urls.get('spotify')
-
         if not isrc:
             return
 
+        # --- 1. EXTRACT RICH DATA ---
+        
+        # Album Info
+        album_obj = sp_track.get('album', {})
+        album_images = album_obj.get('images', [])
+        cover_url = album_images[0]['url'] if album_images else None
+        
+        album_data = {
+            'name': album_obj.get('name'),
+            'cover': cover_url,
+            'date': album_obj.get('release_date')
+        }
+
+        # Artists Info (List of dicts)
+        artists_data = []
+        for artist in sp_track.get('artists', []):
+            artists_data.append({
+                'name': artist['name'],
+                'id': artist['id'] # Spotify ID
+            })
+
+        # --- 2. DATABASE INTERACTION ---
         db_track = self.repo.get_by_isrc(isrc)
 
         if not db_track:
-            print(f"✨ New Track: {title} - {album_name}")
+            print(f"✨ New Track: {title}")
             db_track = self.repo.create_track(
                 title=title, 
-                artist=artist_name, 
                 isrc=isrc,
-                album=album_name,
-                duration_ms=duration_ms # --- 2. PASS TO REPO ---
+                duration_ms=duration_ms,
+                album_data=album_data,
+                artists_data=artists_data
             )
         else:
-            # Update Album if missing
-            if not db_track.album_name and album_name:
-                print(f"📝 Updating Album: {title} -> {album_name}")
-                self.repo.update_album(db_track, album_name)
-            
-            # Update duration if existing track doesn't have it
             if not db_track.duration_ms and duration_ms:
                 db_track.duration_ms = duration_ms
                 self.db.commit()
 
+        # Link Spotify URL
+        external_urls = sp_track.get('external_urls', {})
+        spotify_url = external_urls.get('spotify')
         if spotify_url:
             self.repo.add_playback_link(
                 track_id=db_track.id, 

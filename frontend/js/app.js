@@ -5,8 +5,8 @@ import { usePlayer } from './player.js';
 // Components
 import TrackCard from './components/TrackCard.js';
 import FilterBar from './components/FilterBar.js';
-import GlobalPlayer from './components/GlobalPlayer.js'; 
-import BrokenLinkToast from './components/BrokenLinkToast.js';
+import GlobalPlayer from './components/player/GlobalPlayer.js'; 
+import BrokenLinkToast from './components/toasts/BrokenLinkToast.js';
 import StatsDashboard from './components/StatsDashboard.js';
 
 const app = createApp({

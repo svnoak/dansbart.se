@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from app.core.models import Track, TrackDanceStyle
+from app.core.models import Track, TrackDanceStyle, TrackArtist
 
 class TrackService:
     def __init__(self, db: Session):
@@ -13,13 +13,10 @@ class TrackService:
         """
         
         # 1. BASE QUERY
-        # Use outerjoin so we don't lose tracks that have 0 styles
         query = self.db.query(Track).outerjoin(Track.dance_styles)
         query = query.filter(Track.processing_status.in_(['DONE', 'FAILED']))
 
         # 2. APPLY FILTERS
-        # Note: If filtering by style/bpm, we naturally exclude unclassified tracks
-        # because the WHERE clause won't match NULL rows.
         if style:
             query = query.filter(TrackDanceStyle.dance_style.ilike(style))
         
@@ -29,13 +26,18 @@ class TrackService:
         if max_bpm:
             query = query.filter(TrackDanceStyle.effective_bpm <= max_bpm)
 
-        # 3. OPTIMIZE LOADING
-        # distinct() is needed because joining one track to multiple styles 
-        # might return the same track row multiple times in SQL
+        # 3. OPTIMIZE LOADING (CRITICAL UPDATE)
         query = query.options(
             joinedload(Track.playback_links),
             joinedload(Track.dance_styles),
-            joinedload(Track.structure_versions)
+            joinedload(Track.structure_versions),
+            
+            # NEW: Eager load the Album
+            joinedload(Track.album),
+            
+            # NEW: Eager load the Bridge Table -> Then the Artist
+            # This ensures track.artist_links[0].artist is already loaded
+            joinedload(Track.artist_links).joinedload(TrackArtist.artist)
         ).distinct()
 
         tracks = query.all()
@@ -43,20 +45,14 @@ class TrackService:
 
         for track in tracks:
             # --- A. FILTER BROKEN LINKS ---
-            valid_links = [
-                l for l in track.playback_links 
-                if l.is_working
-            ]
+            valid_links = [l for l in track.playback_links if l.is_working]
 
-            # If no working links (Spotify OR Youtube), skip the track entirely.
             if not valid_links:
                 continue
 
             # --- B. DETERMINE STYLE ---
-            # Always prefer the primary style first
             primary_style = next((s for s in track.dance_styles if s.is_primary), None)
 
-            # If user asked for a specific style, filter by that
             if style:
                 matched_style = next(
                     (s for s in track.dance_styles if s.dance_style.lower() == style.lower()),
@@ -67,27 +63,48 @@ class TrackService:
 
             # --- C. HANDLE UNCLASSIFIED ---
             if matched_style:
-                # We have a valid style
                 final_style = matched_style.dance_style
                 final_bpm = matched_style.effective_bpm
                 final_category = matched_style.tempo_category
                 final_confidence = matched_style.confidence
                 final_confirmations = matched_style.confirmation_count
             else:
-                # No style found -> "Unclassified"
                 final_style = "Unclassified"
                 final_bpm = 0
                 final_category = "Unknown"
                 final_confidence = 0.0
                 final_confirmations = 0
 
-            # --- D. FORMAT OUTPUT ---
-            # We return a dict that matches the Pydantic schema structure
+            # --- D. FORMAT OUTPUT ---            
+            sorted_links = sorted(
+                track.artist_links, 
+                key=lambda x: 0 if x.role == 'primary' else 1
+            )
+            
+            artist_list = []
+            for link in sorted_links:
+                artist_list.append({
+                    "id": link.artist.id,
+                    "name": link.artist.name,
+                    "role": link.role,
+                    "image_url": link.artist.image_url
+                })
+
+            # 2. Build Album Object
+            album_data = None
+            if track.album:
+                album_data = {
+                    "id": track.album.id,
+                    "title": track.album.title,
+                    "cover_image_url": track.album.cover_image_url,
+                    "release_date": track.album.release_date
+                }
+
             results.append({
                 "id": str(track.id),
                 "title": track.title,
-                "artist_name": track.artist_name,
-                "album_name": track.album_name,
+                "artists": artist_list,
+                "album": album_data,
                 "dance_style": final_style,
                 "effective_bpm": final_bpm,
                 "tempo_category": final_category,

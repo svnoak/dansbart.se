@@ -245,7 +245,14 @@ class StyleClassifier:
         return multiplier, effective_bpm
 
     def _check_metadata(self, track):
-        text = f"{track.title} {track.artist_name} {track.album_name or ''}".lower()
+
+        artist_names = []
+        if track.artist_links:
+            artist_names = [link.artist.name for link in track.artist_links]
+        
+        album_title = track.album.title if track.album else ""
+
+        text = f"{track.title} {' '.join(artist_names)} {album_title}".lower()
         for keyword, style in self.KEYWORDS.items():
             if keyword in text:
                 return style

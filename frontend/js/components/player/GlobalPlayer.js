@@ -1,0 +1,366 @@
+import YouTubeEngine from './YouTubeEngine.js';
+import StructureEditor from '../modals/StructureEditor.js';
+import { usePlayer } from '../../player.js'; 
+
+import PlayerMobileView from './PlayerMobileView.js';
+import PlayerDockedView from './PlayerDockedView.js';
+
+export default {
+    components: { 
+        YouTubeEngine, 
+        StructureEditor,
+        PlayerMobileView,
+        PlayerDockedView
+    },
+    
+    setup() {
+        return { ...usePlayer() };
+    },
+    
+    data() {
+        return {
+            realTime: 0,
+            duration: 0,
+            visualTime: 0,
+            lastTick: 0,
+            rafId: null,
+            ytPlayer: null,
+            videoPos: { x: 16, y: 96 }, 
+            isDraggingVideo: false,
+            dragOffset: { x: 0, y: 0 },
+            structureMode: 'none',
+            showStructureEditor: false,
+            isExpanded: false,
+            windowWidth: window.innerWidth,
+            availableVersions: [],
+            currentVersionIndex: 0,
+            isFetchingVersions: false,
+            isNudgeVisible: false
+        }
+    },
+
+    mounted() {
+        this.initYouTube();
+        this.startSmoothLoop();
+        window.addEventListener('mousemove', this.onDrag);
+        window.addEventListener('mouseup', this.stopDrag);
+        window.addEventListener('touchmove', this.onDrag, { passive: false });
+        window.addEventListener('touchend', this.stopDrag);
+        window.addEventListener('resize', this.onResize);
+    },
+
+    beforeUnmount() {
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+        window.removeEventListener('mousemove', this.onDrag);
+        window.removeEventListener('mouseup', this.stopDrag);
+        window.removeEventListener('touchmove', this.onDrag);
+        window.removeEventListener('touchend', this.stopDrag);
+        window.removeEventListener('resize', this.onResize);
+    },
+
+    watch: {
+        isPlaying(val) {
+            if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
+                val ? this.$refs.ytEngine.play() : this.$refs.ytEngine.pause();
+            }
+            if (val) this.lastTick = performance.now();
+        },
+        activeSource(val) {
+            if (val === 'spotify') {
+                this.realTime = 0;
+                this.visualTime = 0;
+                this.duration = 0;
+                this.videoPos = { x: 16, y: 96 }; 
+            }
+        },
+        'currentTrack.id': {
+            immediate: true,
+            handler(newId) { if (newId) this.fetchVersions(newId); }
+        }
+    },
+
+    computed: {
+        spotifySrc() {
+            if (!this.currentTrack?.playback_links) return '';
+            let link = this.currentTrack.playback_links.find(l => {
+                const val = l.deep_link || l;
+                return typeof val === 'string' && val.includes('spotify');
+            });
+            if (!link) return '';
+            const url = link.deep_link || link;
+            const match = url.match(/track\/([a-zA-Z0-9]+)/);
+            return match ? `https://open.spotify.com/embed/track/${match[1]}?utm_source=generator&theme=0&autoplay=1` : '';
+        },
+        hasYt() { return !!this.getYouTubeId(this.currentTrack); },
+        hasSpot() { return !!this.getSpotifyId(this.currentTrack); },
+        fmtCurrent() { return this.formatTime(this.visualTime) },
+        fmtDuration() { return this.formatTime(this.duration) },
+        
+        // --- UPDATED HELPERS FOR NEW SCHEMA ---
+        trackArtist() {
+            const t = this.currentTrack;
+            if (!t) return 'Unknown Artist';
+            
+            // 1. New Schema (Array of Objects)
+            if (Array.isArray(t.artists) && t.artists.length > 0) {
+                // Filter primaries first if you want, or just join all names
+                return t.artists.map(a => a.name).join(', ');
+            }
+            
+            // 2. Fallback (Old String)
+            if (typeof t.artist_name === 'string' && t.artist_name) return t.artist_name;
+            
+            return 'Unknown Artist';
+        },
+        
+        trackAlbum() {
+            const t = this.currentTrack;
+            if (!t) return '';
+            
+            // 1. New Schema (Object)
+            if (t.album && t.album.title) return t.album.title;
+            
+            // 2. Fallback (Old String)
+            if (typeof t.album_name === 'string') return t.album_name;
+            
+            return '';
+        }
+    },
+
+    methods: {
+        onResize() {
+            this.windowWidth = window.innerWidth;
+            if (this.windowWidth >= 768) this.isExpanded = false;
+        },
+        async fetchVersions(trackId) {
+            this.availableVersions = [];
+            this.currentVersionIndex = 0;
+            this.isFetchingVersions = true;
+            try {
+                const res = await fetch(`api/tracks/${trackId}/structure-versions`);
+                if (res.ok) {
+                    this.availableVersions = await res.json();
+                    const activeIdx = this.availableVersions.findIndex(v => v.is_active);
+                    this.currentVersionIndex = activeIdx >= 0 ? activeIdx : 0;
+                }
+            } catch (e) { console.warn("Could not fetch versions", e); } 
+            finally { this.isFetchingVersions = false; }
+        },
+        cycleVersion(direction) {
+            if (!Array.isArray(this.availableVersions) || this.availableVersions.length <= 1) return;
+            const len = this.availableVersions.length;
+            const dir = Number(direction) || 0;
+            if (dir === 0) return;
+            const newIndex = (this.currentVersionIndex + dir + len) % len;
+            this.currentVersionIndex = newIndex;
+            this.handleVersionPreview(this.availableVersions[newIndex]?.structure_data);
+            if (this.structureMode === 'none') this.structureMode = 'sections';
+        },
+        handleVersionPreview(structureData) {
+            if (this.currentTrack && structureData) {
+                this.currentTrack.bars = structureData.bars || [];
+                this.currentTrack.sections = structureData.sections || [];
+                this.currentTrack.section_labels = structureData.labels || [];
+            }
+        },
+        handleJump(direction) {
+            if (this.structureMode !== 'none' && this.currentTrack?.bars?.length > 0) {
+                const bars = this.currentTrack.bars;
+                let nextBarIdx = bars.findIndex(b => b > this.visualTime);
+                let currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
+                let targetIdx = currentIdx + (direction * 4);
+                if (targetIdx < 0) targetIdx = 0;
+                if (targetIdx >= bars.length) targetIdx = bars.length - 1;
+                this.handleSeek(bars[targetIdx]);
+            } else {
+                let newTime = this.visualTime + (direction * 10);
+                if (newTime < 0) newTime = 0;
+                if (newTime > this.duration) newTime = this.duration;
+                this.handleSeek(newTime);
+            }
+        },
+        handleToggleRepeat() { this.cycleRepeatMode(); },
+        startSmoothLoop() {
+            const loop = (now) => {
+                if (this.isPlaying && this.activeSource === 'youtube' && this.duration > 0) {
+                    const delta = (now - this.lastTick) / 1000;
+                    if (delta < 1.0) this.visualTime = Math.min(this.visualTime + delta, this.duration);
+                }
+                this.lastTick = now;
+                this.rafId = requestAnimationFrame(loop);
+            };
+            this.rafId = requestAnimationFrame(loop);
+        },
+        onTimeUpdate({ currentTime, duration }) {
+            this.realTime = currentTime;
+            this.duration = duration;
+            if (Math.abs(this.visualTime - this.realTime) > 0.5) this.visualTime = this.realTime;
+        },
+        handleSeek(seconds) {
+            this.visualTime = seconds; 
+            if (this.activeSource === 'youtube' && this.$refs.ytEngine) this.$refs.ytEngine.seekTo(seconds);
+        },
+        handleTrackEnd() {
+            if (this.showStructureEditor) { this.isPlaying = false; return; }
+            if (this.repeatMode === 'one') {
+                this.handleSeek(0);
+                if(this.$refs.ytEngine) this.$refs.ytEngine.play(); 
+            } else {
+                this.nextTrack();
+            }
+        },
+        handleMainButton() { if (this.activeSource === 'youtube') this.togglePlay(); },
+        startDrag(e) {
+            this.isDraggingVideo = true;
+            const rect = this.$refs.videoContainer.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            this.dragOffset = { x: clientX - rect.left, y: window.innerHeight - rect.bottom };
+        },
+        onDrag(e) {
+            if (this.isExpanded) return;
+            if (!this.isDraggingVideo) return;
+            if (e.cancelable) e.preventDefault(); 
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let newLeft = clientX - this.dragOffset.x;
+            let newBottom = (window.innerHeight - clientY) - this.dragOffset.y;
+            const maxX = window.innerWidth - 260; 
+            const maxY = window.innerHeight - 200;
+            this.videoPos.x = Math.max(0, Math.min(newLeft, maxX));
+            this.videoPos.y = Math.max(80, Math.min(newBottom, maxY)); 
+        },
+        stopDrag() { this.isDraggingVideo = false; },
+        toggleStructureMode() {
+            if (this.structureMode === 'none') this.structureMode = 'sections';
+            else if (this.structureMode === 'sections') this.structureMode = 'bars';
+            else this.structureMode = 'none';
+        },
+        formatTime(s) {
+            if (!s || isNaN(s)) return "0:00";
+            const m = Math.floor(s / 60);
+            const sc = Math.floor(s % 60);
+            return `${m}:${sc < 10 ? '0' : ''}${sc}`;
+        },
+        initYouTube() {
+            if (window.YT && window.YT.Player) { } 
+            else {
+                window.onYouTubeIframeAPIReady = () => {};
+                if (!document.getElementById('yt-api-script')) {
+                    const tag = document.createElement('script');
+                    tag.id = 'yt-api-script';
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    document.head.appendChild(tag);
+                }
+            }
+        },
+        onYtStateChange(stateCode) {
+            if (stateCode === 1) { this.isPlaying = true; this.lastTick = performance.now(); }
+            if (stateCode === 2) this.isPlaying = false;
+            if (stateCode === 0) this.handleTrackEnd();
+        },
+        handlePlayerError(e) {
+            console.warn("YouTube Error:", e);
+            if (this.playerStore && this.playerStore.handlePlayerError) this.playerStore.handlePlayerError(e.data);
+            else this.nextTrack(); 
+        }
+    },
+
+    template: /*html*/`
+    <div v-if="currentTrack">
+    
+        <player-mobile-view
+            :current-track="currentTrack"
+            :available-versions="availableVersions"
+            :current-version-index="currentVersionIndex"
+            :is-playing="isPlaying"
+            :is-shuffled="isShuffled"
+            :repeat-mode="repeatMode"
+            :structure-mode="structureMode"
+            :active-source="activeSource"
+            :visual-time="visualTime"
+            :duration="duration"
+            :is-expanded="isExpanded"
+            :track-artist="trackArtist"
+            :track-album="trackAlbum"
+            @close="isExpanded = false"
+            @set-source="setSource"
+            @cycle-version="cycleVersion"
+            @toggle-structure-mode="toggleStructureMode"
+            @seek="handleSeek"
+            @toggle-play="togglePlay"
+            @next="nextTrack"
+            @prev="prevTrack"
+            @shuffle="toggleShuffle"
+            @toggle-repeat="handleToggleRepeat"
+            @jump="handleJump"
+            @nudge-visibility="isNudgeVisible = $event"
+        ></player-mobile-view>
+
+        <player-docked-view
+            :current-track="currentTrack"
+            :available-versions="availableVersions"
+            :current-version-index="currentVersionIndex"
+            :is-playing="isPlaying"
+            :is-shuffled="isShuffled"
+            :repeat-mode="repeatMode"
+            :structure-mode="structureMode"
+            :active-source="activeSource"
+            :visual-time="visualTime"
+            :duration="duration"
+            :is-expanded="isExpanded"
+            :has-yt="hasYt"
+            :has-spot="hasSpot"
+            :fmt-current="fmtCurrent"
+            :fmt-duration="fmtDuration"
+            @expand="isExpanded = true"
+            @set-source="setSource"
+            @cycle-version="cycleVersion"
+            @toggle-structure-mode="toggleStructureMode"
+            @seek="handleSeek"
+            @toggle-play="togglePlay"
+            @next="nextTrack"
+            @prev="prevTrack"
+            @shuffle="toggleShuffle"
+            @toggle-repeat="handleToggleRepeat"
+            @jump="handleJump"
+        ></player-docked-view>
+
+        <div ref="videoContainer"
+             class="fixed bg-black shadow-2xl transition-all duration-500 ease-in-out overflow-hidden border border-gray-700"
+             :class="[
+                 activeSource === 'youtube' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+                 (isExpanded && windowWidth < 768) ? 'z-[101] rounded-xl' : 'z-[60] rounded-lg'
+             ]"
+             :style="(isExpanded && windowWidth < 768) ? {
+                 top: '92px', 
+                 left: '1.5rem', 
+                 width: 'calc(100% - 3rem)', 
+                 height: 'auto', 
+                 aspectRatio: '16/9', 
+                 bottom: 'auto'
+             } : {
+                 width: '160px', 
+                 height: '90px', 
+                 left: videoPos.x + 'px', 
+                 bottom: (videoPos.y + (structureMode !== 'none' ? 32 : 0) + (isNudgeVisible ? 90 : 0)) + 'px'
+             }"
+        >
+            <div v-if="!isExpanded || windowWidth >= 768"
+                 @mousedown="startDrag" @touchstart.prevent="startDrag"
+                 @click="!isExpanded && windowWidth < 768 && (isExpanded = true)"
+                 class="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/80 to-transparent z-20 cursor-move flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                <div class="w-8 h-1 bg-white/30 rounded-full"></div>
+            </div>
+            <you-tube-engine ref="ytEngine" :video-id="currentVideoId" :active-source="activeSource" @state-change="onYtStateChange" @time-update="onTimeUpdate" @next="handleTrackEnd" @error="handlePlayerError"></you-tube-engine>
+        </div>
+        
+        <div v-if="activeSource === 'spotify'" class="fixed left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828] transition-all duration-300" :class="structureMode !== 'none' ? 'bottom-32' : 'bottom-24'">
+            <iframe :src="spotifySrc" class="w-full h-full block" frameborder="0" scrolling="no" allow="autoplay; encrypted-media"></iframe>
+        </div>
+
+        <structure-editor :is-open="showStructureEditor" :track="currentTrack" :current-time="visualTime" :duration="duration" :is-playing="isPlaying" @close="showStructureEditor = false" @seek="handleSeek" @toggle-play="togglePlay"></structure-editor>
+
+    </div>
+    `
+}

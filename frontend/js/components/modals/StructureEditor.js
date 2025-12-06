@@ -1,5 +1,5 @@
 import { toRaw } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
-import ProgressBar from './player/ProgressBar.js';
+import ProgressBar from '../player/ProgressBar.js';
 
 export default {
     components: { ProgressBar },

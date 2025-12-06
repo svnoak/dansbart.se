@@ -8,13 +8,29 @@ class PlaybackLinkOut(BaseModel):
     platform: str
     deep_link: str
 
+class AlbumOut(BaseModel):
+    id: UUID
+    title: str
+    cover_image_url: Optional[str] = None
+    release_date: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ArtistOut(BaseModel):
+    id: UUID
+    name: str
+    role: str
+    image_url: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
 class TrackOut(BaseModel):
     id: UUID
     title: str
-    artist_name: str
-    album_name: Optional[str] = None
-    
-    # Computed fields from your classifier
+    artists: List[ArtistOut]
+    album: Optional[AlbumOut] = None
     dance_style: str
     has_vocals: bool | None = False
     style_confidence: float = 0.0

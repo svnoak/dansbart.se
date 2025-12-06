@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from app.core.models import Track, PlaybackLink, TrackStructureVersion
+from sqlalchemy.orm import Session, joinedload
+from app.core.models import Track, PlaybackLink, TrackStructureVersion, TrackArtist
 from app.repository.analysis import AnalysisRepository
 from app.workers.audio.fetcher import AudioFetcher
 from app.workers.audio.analyzer import AudioAnalyzer
@@ -23,7 +23,11 @@ class AnalysisService:
         self.repo.db = self.db
         self.classifier_service.db = self.db
 
-        track = self.db.query(Track).filter(Track.id == track_id).first()
+        track = self.db.query(Track).options(
+            joinedload(Track.playback_links),
+            joinedload(Track.album),
+            joinedload(Track.artist_links).joinedload(TrackArtist.artist)
+        ).filter(Track.id == track_id).first()
         if not track:
             return
 
@@ -71,9 +75,18 @@ class AnalysisService:
         
         # 1. FETCH AUDIO (Use existing link if available)
         existing_link = next((l for l in track.playback_links if l.platform == 'youtube' and l.is_working), None)
+
+        artist_name = ""
+        primary_link = next((l for l in track.artist_links if l.role == 'primary'), None)
+        if primary_link:
+            artist_name = primary_link.artist.name
+        else:
+            artist_name = track.artist_links[0].artist.name
+
+        album_name = track.album.title if track.album else ""
         
         # If we have a stored link, use it. Otherwise search by metadata.
-        query = existing_link.deep_link if existing_link else f"{track.title} {track.artist_name} topic audio"
+        query = existing_link.deep_link if existing_link else f"{track.title} {artist_name} topic audio"
         
         result = self.fetcher.fetch_track_audio(
             track_id=str(track.id), 
@@ -96,7 +109,7 @@ class AnalysisService:
             start_time = time.time()
 
             # 2. ANALYZE (MusiCNN + Madmom)
-            context = f"{track.title} {track.artist_name} {track.album_name or ''}"
+            context = f"{track.title} {artist_name} {album_name}"
             data = self.analyzer.analyze_file(file_path, context)
 
             end_time = time.time()
@@ -142,48 +155,6 @@ class AnalysisService:
 
         finally:
             # Cleanup temp files even if analysis crashed
-            self.fetcher.cleanup(str(track.id))
-
-    def refine_track_structure(self, track_id: str, confirmed_style: str):
-        """
-        Called when a user manually corrects a style and clicks "Regenerate Sections".
-        """
-        track = self.db.query(Track).filter(Track.id == track_id).first()
-        if not track: return
-
-        print(f"🔧 Refining structure for {track.title} as '{confirmed_style}'")
-
-        # 1. We MUST re-fetch the audio because it was cleaned up
-        # (This is why we don't do this automatically on every dropdown change)
-        existing_link = next((l for l in track.playback_links if l.platform == 'youtube'), None)
-        query = existing_link.deep_link if existing_link else f"{track.title} {track.artist_name}"
-        
-        result = self.fetcher.fetch_track_audio(str(track.id), query)
-        if not result:
-            print("❌ Could not fetch audio for refinement.")
-            return
-
-        try:
-            # 2. Call the targeted analyzer method
-            # We use the EXISTING bars from the DB, we don't need to recalculate those.
-            new_structure_data = self.analyzer.refine_structure(
-                file_path=result['file_path'],
-                bars=track.bars, # Pass existing bars
-                new_style_hint=confirmed_style
-            )
-
-            # 3. Update Database
-            if new_structure_data:
-                track.sections = new_structure_data['sections']
-                track.section_labels = new_structure_data['section_labels']
-                
-                # Mark sections as "AI Generated but Refined" (optional flag)
-                # track.structure_status = "REFINED" 
-                
-                self.db.commit()
-                print(f"✅ Structure updated based on {confirmed_style}")
-
-        finally:
             self.fetcher.cleanup(str(track.id))
 
     def _ensure_youtube_link(self, track, video_id):

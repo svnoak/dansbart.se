@@ -1,6 +1,6 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
-from app.core.models import Track, PlaybackLink
+from app.core.models import Track, PlaybackLink, TrackArtist
 from app.workers.audio.fetcher import AudioFetcher
 
 class SourceFinder:
@@ -14,7 +14,9 @@ class SourceFinder:
         """
         # 1. Get tracks that do NOT have a youtube link
         # (Simplified query logic for clarity)
-        tracks = self.db.query(Track).filter(
+        tracks = self.db.query(Track).options(
+            joinedload(Track.artist_links).joinedload(TrackArtist.artist)
+        ).filter(
             ~Track.playback_links.any(PlaybackLink.platform == 'youtube')
         ).limit(limit).all()
 
@@ -22,13 +24,20 @@ class SourceFinder:
 
         for track in tracks:
             # Construct a robust query
-            # "Artist - Title" is usually best. 
+            # "Artist - Title" is usually best.
             # Adding "Audio" helps avoid live versions or fan covers sometimes.
-            query = f"{track.artist_name} - {track.title} Audio"
+            artist_name = ""
+
+            primary_link = next((l for l in track.artist_links if l.role == 'primary'), None)
+            if primary_link:
+                    artist_name = primary_link.artist.name
+            else:
+                artist_name = track.artist_links[0].artist.name
+
+            query = f"{artist_name} - {track.title} Audio"
             
             # If we have an ISRC, we can sometimes use it, but title/artist is 
             # often more reliable for YouTube search than ISRC alone.
-            
             print(f"   Searching for: {query}")
             video_id = self.fetcher.get_youtube_id(query)
 

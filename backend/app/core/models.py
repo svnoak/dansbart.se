@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Integer, Float, Boolean, ForeignKey, DateTime
+from typing import List, Optional
+from sqlalchemy import String, Integer, Float, Boolean, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -11,9 +12,10 @@ class Track(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String, index=True)
-    artist_name: Mapped[str] = mapped_column(String)
-    album_name: Mapped[str | None] = mapped_column(String, nullable=True)
     isrc: Mapped[str | None] = mapped_column(String, unique=True, index=True)
+    album_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("albums.id"), nullable=True)
+    album: Mapped["Album"] = relationship("Album", back_populates="tracks")
+    artist_links: Mapped[List["TrackArtist"]] = relationship("TrackArtist", back_populates="track", cascade="all, delete-orphan")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     has_vocals: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)
@@ -28,6 +30,51 @@ class Track(Base):
     sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     section_labels: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     processing_status: Mapped[str] = mapped_column(String, default="PENDING", server_default="PENDING")
+
+    @property
+    def primary_artist(self) -> Optional["Artist"]:
+        """Returns the first artist marked as primary."""
+        for link in self.artist_links:
+            if link.role == 'primary':
+                return link.artist
+        return self.artist_links[0].artist if self.artist_links else None
+
+class TrackArtist(Base):
+    __tablename__ = "track_artists"
+    __table_args__ = (
+        UniqueConstraint('track_id', 'artist_id', name='unique_track_artist'),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    artist_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("artists.id"))
+    role: Mapped[str] = mapped_column(String, default="primary") # 'primary', 'featured', 'remixer'
+    track: Mapped["Track"] = relationship("Track", back_populates="artist_links")
+    artist: Mapped["Artist"] = relationship("Artist", back_populates="track_links")
+
+class Artist(Base):
+    __tablename__ = "artists"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String, index=True)
+    image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    spotify_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
+    track_links: Mapped[List["TrackArtist"]] = relationship("TrackArtist", back_populates="artist")
+    albums: Mapped[List["Album"]] = relationship("Album", back_populates="artist")
+
+class Album(Base):
+    __tablename__ = "albums"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String, index=True)
+    cover_image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    release_date: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Link to the main "Album Artist" (e.g., Jay-Z album, even if Linkin Park is on a track)
+    artist_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("artists.id"), nullable=True)
+    
+    # Relationships
+    artist: Mapped["Artist"] = relationship("Artist", back_populates="albums")
+    tracks: Mapped[List["Track"]] = relationship("Track", back_populates="album")
 
 class AnalysisSource(Base):
     __tablename__ = "analysis_sources"
