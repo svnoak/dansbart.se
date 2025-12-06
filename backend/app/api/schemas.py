@@ -33,6 +33,10 @@ class TrackOut(BaseModel):
     album: Optional[AlbumOut] = None
     dance_style: str
     has_vocals: bool | None = False
+    swing_ratio: float | None = None
+    articulation: float | None = None
+    bounciness: float | None = None
+    feel_tags: List[str] = []
     style_confidence: float = 0.0
     style_confirmations: int = 0
     effective_bpm: int
@@ -74,3 +78,7 @@ class StructureVersionOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class MovementVoteIn(BaseModel):
+    dance_style: str  # The context (e.g., "Polska")
+    tags: list[str]   # The tags selected (e.g., ["Sviktande", "Tungt"])

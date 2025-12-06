@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from app.core.models import Track, TrackDanceStyle, TrackArtist
+from app.core.models import Track, TrackDanceStyle, TrackArtist, DanceMovementFeedback
 
 class TrackService:
     def __init__(self, db: Session):
@@ -41,6 +41,17 @@ class TrackService:
         ).distinct()
 
         tracks = query.all()
+
+        # Gather all unique styles currently visible in this list
+        visible_styles = set()
+        for t in tracks:
+            primary = next((s for s in t.dance_styles if s.is_primary), None)
+            if primary:
+                visible_styles.add(primary.dance_style)
+        
+        # Fetch the top tags for these styles in ONE query
+        style_feel_map = self._get_global_feels(list(visible_styles))
+
         results = []
 
         for track in tracks:
@@ -80,6 +91,12 @@ class TrackService:
                 track.artist_links, 
                 key=lambda x: 0 if x.role == 'primary' else 1
             )
+
+            # 1. Get generic tags for this style (e.g. Hambo -> Sviktande)
+            global_tags = style_feel_map.get(final_style, [])
+
+            # 2. Refine based on THIS track's physics (Bounciness)
+            final_tags = self._refine_tags_with_physics(global_tags, track.bounciness)
             
             artist_list = []
             for link in sorted_links:
@@ -106,10 +123,14 @@ class TrackService:
                 "artists": artist_list,
                 "album": album_data,
                 "dance_style": final_style,
+                "feel_tags": final_tags,
                 "effective_bpm": final_bpm,
                 "tempo_category": final_category,
                 "style_confidence": final_confidence,
                 "style_confirmations": final_confirmations,
+                "swing_ratio": track.swing_ratio,
+                "articulation": track.articulation,
+                "bounciness": track.bounciness,
                 "has_vocals": track.has_vocals,
                 "duration": track.duration_ms,
                 "bars": track.bars,
@@ -123,3 +144,46 @@ class TrackService:
             })
 
         return results
+    
+    def _get_global_feels(self, styles: list[str]) -> dict:
+        """
+        Returns: {'Hambo': ['Sviktande', 'Majestätisk'], 'Schottis': [...]}
+        """
+        if not styles: return {}
+
+        rows = (
+            self.db.query(DanceMovementFeedback)
+            .filter(DanceMovementFeedback.dance_style.in_(styles))
+            .order_by(DanceMovementFeedback.score.desc())
+            .all()
+        )
+
+        mapped = {}
+        for r in rows:
+            if r.dance_style not in mapped:
+                mapped[r.dance_style] = []
+            # Cap at top 3 tags per style
+            if len(mapped[r.dance_style]) < 3:
+                mapped[r.dance_style].append(r.movement_tag)
+        return mapped
+
+    def _refine_tags_with_physics(self, global_tags: list[str], bounciness: float | None) -> list[str]:
+        """
+        Adjusts tags based on audio analysis.
+        """
+        if not bounciness: return global_tags
+        
+        tags = global_tags[:] # Copy
+
+        # If it's physically flat, remove bouncy words
+        if bounciness < 0.35 and "Studsigt" in tags:
+            tags.remove("Studsigt")
+            if "Flytande" not in tags: tags.append("Flytande")
+
+        # If it's physically bouncy, ensure bouncy words are first
+        if bounciness > 0.65:
+            if "Sviktande" in tags:
+                tags.remove("Sviktande")
+                tags.insert(0, "Sviktande")
+        
+        return tags[:3]

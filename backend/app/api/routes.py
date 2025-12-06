@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
 from app.api.schemas import (
     TrackOut, LinkSubmission, FeedbackIn, StructureIn, 
-    StructureVersionOut, VoteIn
+    StructureVersionOut, VoteIn, MovementVoteIn
 )
 from app.core.models import TrackStructureVersion
 from app.workers.tasks import analyze_track_task
@@ -13,7 +13,6 @@ from app.services.tracks import TrackService
 from app.services.feedback import FeedbackService
 from app.services.links import LinkService
 from app.services.stats import StatsService
-from app.services.analysis import AnalysisService
 from app.services.training import TrainingService
 from app.services.classification import ClassificationService
 
@@ -69,6 +68,28 @@ def submit_track_feedback(
         "message": "Feedback recorded.",
         "updates": updated_data
     }
+
+@router.post("/tracks/{track_id}/movement")
+def submit_movement_vote(
+    track_id: str,
+    payload: MovementVoteIn,
+    db: Session = Depends(get_db)
+):
+    """
+    Receives tags like ["Sviktande", "Tungt"] for a specific track.
+    Updates the global wisdom for that dance style.
+    """
+    service = FeedbackService(db)
+    success = service.process_movement_feedback(
+        track_id=track_id,
+        style=payload.dance_style,
+        tags=payload.tags
+    )
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Track not found")
+        
+    return {"status": "success", "message": "Movement feedback recorded"}
 
 @router.post("/tracks/{track_id}/links")
 def submit_link(

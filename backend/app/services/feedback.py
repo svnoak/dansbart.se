@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
-from app.core.models import Track, TrackStyleVote, TrackDanceStyle, TrackStructureVersion
+from app.core.models import Track, TrackStyleVote, TrackDanceStyle, TrackStructureVersion, DanceMovementFeedback
 from app.core.music_theory import categorize_tempo
 import numpy as np
 import uuid
@@ -292,3 +292,50 @@ class FeedbackService:
             current += m
             
         return new_bars
+    
+
+    # =========================================================================
+    #  PART 3: MOVEMENT / FEEL VOTING (The "Smart Nudge")
+    # =========================================================================
+
+    def process_movement_feedback(self, track_id: str, style: str, tags: list[str]):
+        """
+        1. Logs the specific tags for this track (TrackFeelVote).
+        2. Updates the Global Score for this Style (DanceMovementFeedback).
+        """
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track: return False
+
+        # --- A. Record Individual Votes (For History/Reversion) ---
+        for tag in tags:
+            vote = TrackFeelVote(
+                track_id=track.id,
+                feel_tag=tag
+            )
+            self.db.add(vote)
+
+        # --- B. Update The Global Brain (Self-Adjusting Weights) ---
+        for tag in tags:
+            # Check if this tag exists for this style
+            global_stat = self.db.query(DanceMovementFeedback).filter(
+                DanceMovementFeedback.dance_style == style,
+                DanceMovementFeedback.movement_tag == tag
+            ).first()
+
+            if not global_stat:
+                # New discovery! A user used a word we haven't seen for this style.
+                global_stat = DanceMovementFeedback(
+                    dance_style=style,
+                    movement_tag=tag,
+                    score=0,
+                    occurrences=0
+                )
+                self.db.add(global_stat)
+            
+            # THE LEARNING MATH
+            # You can tweak this. Current: Linear (+10 per vote).
+            global_stat.score += 10
+            global_stat.occurrences += 1
+
+        self.db.commit()
+        return True

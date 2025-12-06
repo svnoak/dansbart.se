@@ -140,6 +140,8 @@ class AudioAnalyzer:
                 "is_likely_instrumental": vocal_data['is_instrumental'],
                 "voice_probability": vocal_data['confidence'],
                 "swing_ratio": self._to_float(swing_ratio),
+                "articulation": feel_data['articulation'],
+                "bounciness": feel_data['bounciness'],
                 "avg_beat_ratios": [self._to_float(x) for x in folk_features[3:6]],
                 "punchiness": self._to_float(folk_features[2]),
                 "meter": f"{int(np.max(beat_info[:,1])) if len(beat_info) > 0 else 0}/4",

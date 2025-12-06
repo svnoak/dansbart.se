@@ -14,18 +14,30 @@ class Track(Base):
     title: Mapped[str] = mapped_column(String, index=True)
     isrc: Mapped[str | None] = mapped_column(String, unique=True, index=True)
     album_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("albums.id"), nullable=True)
+    
+    # Metadata Relationships
     album: Mapped["Album"] = relationship("Album", back_populates="tracks")
     artist_links: Mapped[List["TrackArtist"]] = relationship("TrackArtist", back_populates="track", cascade="all, delete-orphan")
+    
+    # Audio Features
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     has_vocals: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)
+    swing_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    articulation: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bounciness: Mapped[float | None] = mapped_column(Float, nullable=True)
     
-    # Relationships
+    # Logic Relationships
     analysis_sources = relationship("AnalysisSource", back_populates="track")
     playback_links = relationship("PlaybackLink", back_populates="track")
     dance_styles = relationship("TrackDanceStyle", back_populates="track")
+    
+    # Voting & Structure
     style_votes = relationship("TrackStyleVote", back_populates="track")
+    feel_votes = relationship("TrackFeelVote", back_populates="track")
     structure_versions = relationship("TrackStructureVersion", back_populates="track")
+    
+    # Analysis Data blobs
     bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     section_labels: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
@@ -48,7 +60,7 @@ class TrackArtist(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
     artist_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("artists.id"))
-    role: Mapped[str] = mapped_column(String, default="primary") # 'primary', 'featured', 'remixer'
+    role: Mapped[str] = mapped_column(String, default="primary")
     track: Mapped["Track"] = relationship("Track", back_populates="artist_links")
     artist: Mapped["Artist"] = relationship("Artist", back_populates="track_links")
 
@@ -68,11 +80,8 @@ class Album(Base):
     title: Mapped[str] = mapped_column(String, index=True)
     cover_image_url: Mapped[str | None] = mapped_column(String, nullable=True)
     release_date: Mapped[str | None] = mapped_column(String, nullable=True)
-
-    # Link to the main "Album Artist" (e.g., Jay-Z album, even if Linkin Park is on a track)
     artist_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("artists.id"), nullable=True)
     
-    # Relationships
     artist: Mapped["Artist"] = relationship("Artist", back_populates="albums")
     tracks: Mapped[List["Track"]] = relationship("Track", back_populates="album")
 
@@ -97,10 +106,10 @@ class TrackDanceStyle(Base):
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
     
-    # Rhythmic Data
-    tempo_category: Mapped[str | None] = mapped_column(String, nullable=True) # Slow, Medium, Fast
+    tempo_category: Mapped[str | None] = mapped_column(String, nullable=True)
     bpm_multiplier: Mapped[float] = mapped_column(Float, default=1.0)
     effective_bpm: Mapped[int] = mapped_column(Integer)   
+    
     track = relationship("Track", back_populates="dance_styles")
     confirmation_count: Mapped[int] = mapped_column(Integer, default=0)
     is_user_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -118,8 +127,7 @@ class PlaybackLink(Base):
 
 class TrackStyleVote(Base):
     """
-    Now strictly for users saying "This is a Waltz" or "This is too fast".
-    Structure data has been moved out.
+    Users saying 'This is a Waltz' or 'This is too fast'.
     """
     __tablename__ = "track_style_votes"
 
@@ -133,26 +141,19 @@ class TrackStyleVote(Base):
     track = relationship("Track", back_populates="style_votes")
 
 class TrackStructureVersion(Base):
-    """
-    Stores versions of the Grid/Sections.
-    This allows us to have 'AI Version', 'User A Version', 'User B Version'.
-    """
     __tablename__ = "track_structure_versions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    description: Mapped[str | None] = mapped_column(String, nullable=True) # e.g. "Fixed the bridge"
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
     
-    # The Full Data Snapshot
     structure_data: Mapped[dict] = mapped_column(JSONB) 
-    # Expected format: { "bars": [], "sections": [], "section_labels": [] }
-
-    # Voting & State
+    
     vote_count: Mapped[int] = mapped_column(Integer, default=1)
     report_count: Mapped[int] = mapped_column(Integer, default=0)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=False) # Is this the one currently applied to the Track?
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
     author_alias: Mapped[str | None] = mapped_column(String, nullable=True)
     track = relationship("Track", back_populates="structure_versions")
@@ -167,3 +168,39 @@ class GenreProfile(Base):
     rhythm_patterns: Mapped[dict] = mapped_column(JSONB)
     sample_size: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class DanceMovementFeedback(Base):
+    """
+    Stores the GLOBAL consensus on how a specific Dance Style feels.
+    Self-adjusts based on TrackFeelVotes.
+    """
+    __tablename__ = "dance_movement_feedback"
+    __table_args__ = (
+        UniqueConstraint('dance_style', 'movement_tag', name='_dance_move_uc'),
+    )
+
+    # Use UUID to match the rest of your system, or Integer if you prefer small lookups.
+    # Using UUID for consistency with your Base.
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # The Key: Which dance are we talking about?
+    dance_style: Mapped[str] = mapped_column(String, index=True, nullable=False)  # e.g., "Hambo"
+    
+    # The Value: What is the vibe/movement?
+    movement_tag: Mapped[str] = mapped_column(String, index=True, nullable=False) # e.g., "Sviktande"
+    
+    # The Weights (The "Brain")
+    score: Mapped[float] = mapped_column(Float, default=0.0)      # Cumulative points
+    occurrences: Mapped[int] = mapped_column(Integer, default=0)  # Total votes count
+
+class TrackFeelVote(Base):
+    """
+    Users tagging a specific track with a movement feel.
+    Example: Track A (Hambo) -> "Sviktande".
+    """
+    __tablename__ = "track_feel_votes"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    feel_tag: Mapped[str] = mapped_column(String, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    track = relationship("Track", back_populates="feel_votes")

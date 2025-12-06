@@ -1,7 +1,7 @@
 import numpy as np
-import essentia as es
+import essentia.standard as es
 
-def analyze_feel(self, audio: np.array, beat_times: np.array, swing: float) -> dict:
+def analyze_feel(audio: np.array, beat_times: np.array, swing: float) -> dict:
         """
         Determines the textural character: 'Smooth', 'Bouncy', 'Driving', 'Stumpy'.
         """
@@ -47,27 +47,19 @@ def analyze_feel(self, audio: np.array, beat_times: np.array, swing: float) -> d
             # 5.0+ = Very sharp staccato
             staccato_ratio = avg_peak / avg_dip
 
-            # 2. Combine with Swing to determine Feel
-            bounciness = (staccato_ratio * 0.7) + (swing * 0.3)
+            # Normalize bounciness to roughly 0.0 - 1.0 range for easier UI handling
+            # (Heuristic: Swing contributes 30%, Staccato 70%)
+            # Staccato 1.0 -> 0.0, Staccato 4.0 -> 1.0
+            norm_staccato = np.clip((staccato_ratio - 1.0) / 3.0, 0.0, 1.0)
+            norm_swing = np.clip((swing - 1.0) / 0.5, 0.0, 1.0)
             
-            # 3. Classify
-            character = "Neutral"
-            
-            if staccato_ratio < 1.5:
-                character = "Flytande" # Smooth/Legato (Wall of sound)
-            elif swing > 1.3 and staccato_ratio > 2.5:
-                character = "Sviktande" # Bouncy (High swing + silence between beats)
-            elif swing <= 1.1 and staccato_ratio > 3.0:
-                character = "Stumpig" # Stumpy (Straight rhythm but short notes)
-            elif staccato_ratio > 2.0:
-                character = "Drivande" # Driving (Distinct beats but not too jerky)
-            
+            bounciness = (norm_staccato * 0.7) + (norm_swing * 0.3)
+
             return {
-                "character": character,
-                "staccato_factor": float(staccato_ratio),
+                "articulation": float(staccato_ratio),
                 "bounciness": float(bounciness)
             }
 
         except Exception as e:
             print(f"⚠️ Feel analysis failed: {e}")
-            return {"character": "Unknown", "staccato_factor": 0.0, "bounciness": 0.0}
+            return {"articulation": 0.0, "bounciness": 0.0}

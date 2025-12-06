@@ -142,6 +142,9 @@ class AnalysisService:
                 track.bars = data.get('bars')
                 track.sections = data.get('sections')
                 track.section_labels = data.get('section_labels')
+                track.swing_ratio = data.get('swing_ratio')
+                track.articulation = data.get('articulation')
+                track.bounciness = data.get('bounciness')
                 self.db.add(track)
                 
                 # 4. AUTO-CLASSIFY
