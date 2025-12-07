@@ -254,7 +254,8 @@ export default {
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             let newLeft = clientX - this.dragOffset.x;
             let newBottom = (window.innerHeight - clientY) - this.dragOffset.y;
-            const maxX = window.innerWidth - 260; 
+            const videoWidth = this.windowWidth >= 768 ? 400 : 160;
+            const maxX = window.innerWidth - videoWidth - 16; 
             const maxY = window.innerHeight - 200;
             this.videoPos.x = Math.max(0, Math.min(newLeft, maxX));
             this.videoPos.y = Math.max(80, Math.min(newBottom, maxY)); 
@@ -376,8 +377,8 @@ export default {
                  aspectRatio: '16/9', 
                  bottom: 'auto'
              } : {
-                 width: '160px', 
-                 height: '90px', 
+                 width: windowWidth >= 768 ? '400px' : '160px', 
+                 height: windowWidth >= 768 ? '225px' : '90px', 
                  left: videoPos.x + 'px', 
                  bottom: (videoPos.y + (structureMode !== 'none' ? 32 : 0) + (isNudgeVisible ? 90 : 0)) + 'px'
              }"
