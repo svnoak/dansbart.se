@@ -48,12 +48,12 @@ const app = createApp({
             }
         };
 
-        const handlePlay = (track) => {
+        const handlePlay = (track, sourcePreference = null) => {
             const list = trackLogic.tracks.value;
             const index = list.findIndex(t => t.id === track.id);
             
             if (index !== -1) {
-                playerLogic.playContext(list, index);
+                playerLogic.playContext(list, index, sourcePreference);
             }
         };
 

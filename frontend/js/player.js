@@ -92,9 +92,11 @@ export function usePlayer() {
     };
 
     // 1. Play Context (List of tracks)
-    const playContext = (tracks, startIndex = 0) => {
+    const playContext = (tracks, startIndex = 0, sourcePreference = null) => {
         queue.value = tracks;
         currentIndex.value = startIndex;
+        // If caller provided a source preference (e.g. 'spotify' from TrackCard), apply it
+        if (sourcePreference) activeSource.value = sourcePreference;
         loadCurrentTrack();
     };
 
