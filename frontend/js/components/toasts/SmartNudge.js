@@ -11,8 +11,13 @@ export default {
             
             correction: { style: '', tempo: 'ok' },
             isSubmitting: false,
-            availableStyles: ["Hambo", "Polska", "Slängpolska", "Vals", "Schottis", "Snoa", "Polka", "Mazurka", "Engelska"]
+            availableStyles: ["Hambo", "Polska", "Slängpolska", "Vals", "Schottis", "Snoa", "Polka", "Mazurka", "Engelska", "Gånglåt"],
+            showDelayTimer: null,   // Timer to delay showing the nudge
+            autoDismissTimer: null  // Timer to auto-dismiss if no interaction
         }
+    },
+    beforeUnmount() {
+        this.clearTimers();
     },
     computed: {
         tempoLabel() {
@@ -45,9 +50,24 @@ export default {
         track: {
             immediate: true,
             handler(newTrack) {
+                // Clear any pending timers when track changes
+                this.clearTimers();
+                
                 if (newTrack) {
                     const hasFeedback = localStorage.getItem(`fb_${newTrack.id}`);
-                    this.step = hasFeedback ? 'hidden' : 'verify';
+                    if (hasFeedback) {
+                        this.step = 'hidden';
+                    } else {
+                        // Delay showing the nudge by 7 seconds to let user settle in
+                        this.step = 'hidden';
+                        this.showDelayTimer = setTimeout(() => {
+                            // Double-check we're still on the same track
+                            if (this.track?.id === newTrack.id) {
+                                this.step = 'verify';
+                                this.startAutoDismiss();
+                            }
+                        }, 7000);
+                    }
                     this.mode = 'correction'; // Default mode
                     this.resetForm();
                 }
@@ -55,16 +75,36 @@ export default {
         }
     },
     methods: {
+        clearTimers() {
+            if (this.showDelayTimer) {
+                clearTimeout(this.showDelayTimer);
+                this.showDelayTimer = null;
+            }
+            if (this.autoDismissTimer) {
+                clearTimeout(this.autoDismissTimer);
+                this.autoDismissTimer = null;
+            }
+        },
+        startAutoDismiss() {
+            // Auto-dismiss after 20 seconds if no interaction
+            this.autoDismissTimer = setTimeout(() => {
+                if (this.step === 'verify') {
+                    this.step = 'hidden';
+                }
+            }, 20000);
+        },
         resetForm() {
             this.correction.style = this.track.dance_style || "Polska";
             this.correction.tempo = 'ok';
         },
         // --- NAVIGATION ---
         startCorrection() {
+            this.clearTimers(); // User is interacting
             this.mode = 'correction';
             this.step = 'fix-style';
         },
         startAddition() {
+            this.clearTimers(); // User is interacting
             this.mode = 'addition';
             this.correction.style = ''; // Reset selection for clean add
             this.step = 'fix-style';
@@ -72,6 +112,7 @@ export default {
 
         // --- SUBMISSION ---
         async submit(payload, nextState = 'success') {
+            this.clearTimers(); // User is interacting
             this.isSubmitting = true;
             try {
                 const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
@@ -137,7 +178,7 @@ export default {
                         <span>Ja</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-2 text-indigo-300 hover:text-white text-xs">×</button>
+                <button @click="step = 'hidden'" class="absolute top-0 right-0 p-2 text-indigo-300 hover:text-white text-sm leading-none">×</button>
             </div>
 
             <div v-else-if="step === 'menu'" class="bg-gray-800 p-3 pb-4 text-white">
@@ -208,7 +249,7 @@ export default {
                         <span>+ Lägg till</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-2 text-teal-200 hover:text-white text-xs">×</button>
+                <button @click="step = 'hidden'" class="absolute top-0 right-0 p-2 text-teal-200 hover:text-white text-sm leading-none">×</button>
             </div>
 
         </div>

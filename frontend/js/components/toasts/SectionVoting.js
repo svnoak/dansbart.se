@@ -5,8 +5,14 @@ export default {
         return {
             // States: 'hidden' | 'verify' | 'success'
             step: 'hidden', 
-            isSubmitting: false
+            isSubmitting: false,
+            showDelayTimer: null,  // Timer to delay showing the nudge
+            autoDismissTimer: null // Timer to auto-dismiss if no interaction
         }
+    },
+
+    beforeUnmount() {
+        this.clearTimers();
     },
 
     watch: {
@@ -24,7 +30,21 @@ export default {
     },
 
     methods: {
+        clearTimers() {
+            if (this.showDelayTimer) {
+                clearTimeout(this.showDelayTimer);
+                this.showDelayTimer = null;
+            }
+            if (this.autoDismissTimer) {
+                clearTimeout(this.autoDismissTimer);
+                this.autoDismissTimer = null;
+            }
+        },
+
         evaluateState() {
+            // Clear any pending timers when state is re-evaluated
+            this.clearTimers();
+
             // Safety check: Don't show if data is missing
             if (!this.track || !this.activeVersion) {
                 this.step = 'hidden';
@@ -32,21 +52,42 @@ export default {
             }
 
             // 1. Check GLOBAL LOCK (Did we vote YES on this track?)
-            // I changed the key to 'structure_vote_v1' to reset your previous tests
             const hasConfirmed = localStorage.getItem(`structure_vote_v1_${this.track.id}`);
             
             if (hasConfirmed) {
                 // If yes, we never show this component again for this track
                 this.step = 'hidden';
             } else {
-                // If no global lock, we show the question
-                this.step = 'verify';
+                // Delay showing the nudge by 5 seconds to let user see the sections first
+                this.step = 'hidden';
+                this.showDelayTimer = setTimeout(() => {
+                    // Double-check we're still on the same track/version
+                    if (this.track && this.activeVersion) {
+                        this.step = 'verify';
+                        this.startAutoDismiss();
+                    }
+                }, 5000);
             }
+        },
+
+        startAutoDismiss() {
+            // Auto-dismiss after 20 seconds if no interaction
+            this.autoDismissTimer = setTimeout(() => {
+                if (this.step === 'verify') {
+                    this.step = 'hidden';
+                }
+            }, 20000);
         },
 
         async castVote(voteType) {
             if (this.isSubmitting) return;
             this.isSubmitting = true;
+
+            // Clear auto-dismiss timer since user is interacting
+            if (this.autoDismissTimer) {
+                clearTimeout(this.autoDismissTimer);
+                this.autoDismissTimer = null;
+            }
 
             // 1. API Call (Optimistic - we don't wait for it to finish to update UI)
             if (this.activeVersion && this.activeVersion.id) {
@@ -117,7 +158,7 @@ export default {
                         <span>Ja</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-2 text-indigo-300 hover:text-white text-xs">×</button>
+                <button @click="step = 'hidden'" class="absolute top-0 right-0 p-2 text-indigo-300 hover:text-white text-sm leading-none">×</button>
             </div>
 
             <div v-else-if="step === 'success'" class="bg-green-600 p-4 text-white flex justify-center items-center">
