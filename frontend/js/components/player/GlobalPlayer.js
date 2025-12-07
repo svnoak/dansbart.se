@@ -17,6 +17,8 @@ export default {
         return { ...usePlayer() };
     },
     
+    emits: ['report-link'],
+    
     data() {
         return {
             realTime: 0,
@@ -35,7 +37,8 @@ export default {
             availableVersions: [],
             currentVersionIndex: 0,
             isFetchingVersions: false,
-            isNudgeVisible: false
+            isNudgeVisible: false,
+            ytPlayStartTime: null // Track when YouTube playback started
         }
     },
 
@@ -65,17 +68,43 @@ export default {
             }
             if (val) this.lastTick = performance.now();
         },
-        activeSource(val) {
-            if (val === 'spotify') {
+        activeSource(newVal, oldVal) {
+            // Check for potential broken link: switching from youtube to spotify within 5 seconds
+            if (oldVal === 'youtube' && newVal === 'spotify' && this.ytPlayStartTime) {
+                const elapsed = (Date.now() - this.ytPlayStartTime) / 1000;
+                if (elapsed < 5) {
+                    // Find the YouTube link that was playing
+                    const track = this.currentTrack;
+                    const badLink = track?.playback_links?.find(l => {
+                        const val = l.deep_link || l;
+                        return typeof val === 'string' && !val.includes('spotify');
+                    });
+                    if (badLink) {
+                        this.$emit('report-link', { track, badLink });
+                        // Auto-dismiss after 8 seconds (handled in parent, but we can also set a timer here)
+                    }
+                }
+            }
+            
+            if (newVal === 'spotify') {
                 this.realTime = 0;
                 this.visualTime = 0;
                 this.duration = 0;
-                this.videoPos = { x: 16, y: 96 }; 
+                this.videoPos = { x: 16, y: 96 };
+                this.ytPlayStartTime = null; // Reset when switching away from YouTube
+            } else if (newVal === 'youtube') {
+                // Will be set when YouTube actually starts playing (in onYtStateChange)
+                this.ytPlayStartTime = null;
             }
         },
         'currentTrack.id': {
             immediate: true,
-            handler(newId) { if (newId) this.fetchVersions(newId); }
+            handler(newId) { 
+                if (newId) {
+                    this.fetchVersions(newId);
+                    this.ytPlayStartTime = null; // Reset on track change
+                }
+            }
         }
     },
 
@@ -255,7 +284,14 @@ export default {
             }
         },
         onYtStateChange(stateCode) {
-            if (stateCode === 1) { this.isPlaying = true; this.lastTick = performance.now(); }
+            if (stateCode === 1) { 
+                this.isPlaying = true; 
+                this.lastTick = performance.now();
+                // Track when YouTube playback actually started (for broken link detection)
+                if (!this.ytPlayStartTime) {
+                    this.ytPlayStartTime = Date.now();
+                }
+            }
             if (stateCode === 2) this.isPlaying = false;
             if (stateCode === 0) this.handleTrackEnd();
         },

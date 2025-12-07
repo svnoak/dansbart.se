@@ -31,7 +31,7 @@ const app = createApp({
                 if (potentialBrokenState.value?.track.id === payload.track.id) {
                     potentialBrokenState.value = null;
                 }
-            }, 10000);
+            }, 8000); // Auto-dismiss after 8 seconds
         };
 
         const confirmBrokenLink = async (reason) => {
