@@ -138,32 +138,32 @@ export default {
     >
         <div v-if="step !== 'hidden'" class="w-full relative z-0 shadow-xl rounded-xl overflow-hidden font-sans">
             
-            <div v-if="step === 'verify'" class="bg-indigo-600 p-3 pb-4 text-white flex justify-between items-center">
-                <div class="text-xs leading-tight">
+            <div v-if="step === 'verify'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+                <div class="text-sm md:text-xs leading-tight">
                     <p class="opacity-80">Stämmer repriserna?</p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-3 md:gap-2">
                     <button 
                         @click="castVote('no')" 
                         :disabled="isSubmitting"
-                        class="bg-indigo-800 hover:bg-indigo-900 text-[10px] font-bold px-3 py-1.5 rounded transition-colors"
+                        class="bg-indigo-800 hover:bg-indigo-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
                     >
                         Nej
                     </button>
                     <button 
                         @click="castVote('yes')" 
                         :disabled="isSubmitting"
-                        class="bg-white text-indigo-700 hover:bg-indigo-50 text-[10px] font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1"
+                        class="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1"
                     >
                         <span>Ja</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-0 right-0 p-2 text-indigo-300 hover:text-white text-sm leading-none">×</button>
+                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-indigo-300 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
-            <div v-else-if="step === 'success'" class="bg-green-600 p-4 text-white flex justify-center items-center">
-                <div class="text-sm font-bold flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <div v-else-if="step === 'success'" class="bg-green-600 p-5 md:p-4 text-white flex justify-center items-center">
+                <div class="text-base md:text-sm font-bold flex items-center gap-2">
+                    <svg class="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     Tack för feedback!
                 </div>
             </div>

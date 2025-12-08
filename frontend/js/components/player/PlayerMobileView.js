@@ -1,5 +1,6 @@
 import SmartNudge from '../toasts/SmartNudge.js';
 import SectionVoting from '../toasts/SectionVoting.js';
+import BrokenLinkToast from '../toasts/BrokenLinkToast.js';
 import PlayerControls from './PlayerControls.js';
 import ProgressBar from './ProgressBar.js';
 
@@ -9,14 +10,16 @@ export default {
         'isPlaying', 'isShuffled', 'repeatMode', 
         'structureMode', 'activeSource', 
         'visualTime', 'duration', 
-        'isExpanded', 'trackArtist', 'trackAlbum'
+        'isExpanded', 'trackArtist', 'trackAlbum',
+        'brokenState'
     ],
     emits: [
         'close', 'set-source', 'cycle-version', 
         'toggle-structure-mode', 'seek', 
-        'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump'
+        'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump',
+        'dismiss-broken'
     ],
-    components: { SmartNudge, SectionVoting, PlayerControls, ProgressBar },
+    components: { SmartNudge, SectionVoting, BrokenLinkToast, PlayerControls, ProgressBar },
     
     computed: {
         structureButtonLabel() {
@@ -53,12 +56,9 @@ export default {
 
             <div class="mb-2 shrink-0">
                 <h2 class="text-2xl font-extrabold text-gray-900 leading-tight mb-0.5">{{ currentTrack.title }}</h2>
-                <p class="text-lg text-indigo-600 font-bold mb-2">{{ trackArtist }}</p>
-                <div class="flex items-center flex-wrap gap-x-2 text-sm text-gray-500 font-medium">
-                    <span v-if="trackAlbum" class="truncate max-w-[200px]">{{ trackAlbum }}</span>
-                    <span v-if="trackAlbum && currentTrack.dance_style" class="text-gray-300">•</span>
-                    <span v-if="currentTrack.dance_style" class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs uppercase tracking-wide font-bold">{{ currentTrack.dance_style }}</span>
-                </div>
+                <p class="text-lg text-indigo-600 font-bold">{{ trackArtist }}</p>
+                <p v-if="trackAlbum" class="text-sm text-gray-500 font-medium truncate mb-2">{{ trackAlbum }}</p>
+                <span v-if="currentTrack.dance_style" class="inline-block bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs uppercase tracking-wide font-bold">{{ currentTrack.dance_style }}</span>
             </div>
 
             <div class="flex-1 min-h-[20px]"></div>
@@ -66,6 +66,12 @@ export default {
             <div class="mb-4 shrink-0">
                 <smart-nudge :track="currentTrack" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
                 <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]"></section-voting>
+                <broken-link-toast 
+                    :broken-state="brokenState" 
+                    :structure-mode="structureMode"
+                    :inline-mode="true"
+                    @close="$emit('dismiss-broken')"
+                ></broken-link-toast>
             </div>
 
             <div class="flex justify-between items-end mb-2 shrink-0">

@@ -360,6 +360,7 @@ export default {
             :is-expanded="isExpanded"
             :track-artist="trackArtist"
             :track-album="trackAlbum"
+            :broken-state="potentialBrokenState"
             @close="isExpanded = false"
             @set-source="setSource"
             @cycle-version="cycleVersion"
@@ -372,6 +373,7 @@ export default {
             @toggle-repeat="handleToggleRepeat"
             @jump="handleJump"
             @nudge-visibility="isNudgeVisible = $event"
+            @dismiss-broken="potentialBrokenState = null"
         ></player-mobile-view>
 
         <player-docked-view
@@ -470,6 +472,7 @@ export default {
         <structure-editor :is-open="showStructureEditor" :track="currentTrack" :current-time="visualTime" :duration="duration" :is-playing="isPlaying" @close="showStructureEditor = false" @seek="handleSeek" @toggle-play="togglePlay"></structure-editor>
 
         <broken-link-toast
+            class="hidden md:block"
             :broken-state="potentialBrokenState"
             :structure-mode="structureMode"
             @close="potentialBrokenState = null"

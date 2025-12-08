@@ -122,6 +122,18 @@ class TrackService:
                     "release_date": track.album.release_date
                 }
 
+            # 3. Build Secondary Styles (non-primary styles suggested by users)
+            secondary_styles = [
+                {
+                    "style": s.dance_style,
+                    "effective_bpm": s.effective_bpm,
+                    "tempo_category": s.tempo_category,
+                    "confirmations": s.confirmation_count
+                }
+                for s in track.dance_styles 
+                if not s.is_primary
+            ]
+
             results.append({
                 "id": str(track.id),
                 "title": track.title,
@@ -133,6 +145,7 @@ class TrackService:
                 "tempo_category": final_category,
                 "style_confidence": final_confidence,
                 "style_confirmations": final_confirmations,
+                "secondary_styles": secondary_styles,
                 "swing_ratio": track.swing_ratio,
                 "articulation": track.articulation,
                 "bounciness": track.bounciness,

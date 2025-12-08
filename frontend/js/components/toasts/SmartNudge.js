@@ -3,11 +3,14 @@ export default {
     emits: ['edit'], 
     data() {
         return {
-            // States: 'hidden', 'verify', 'menu', 'fix-style', 'fix-tempo', 'success', 'bonus'
+            // States: 'hidden', 'verify', 'confirm-secondary', 'menu', 'fix-style', 'fix-tempo', 'success', 'bonus'
             step: 'hidden', 
             
             // Mode determines the intent: 'correction' (Fixing primary) or 'addition' (Adding secondary)
             mode: 'correction', 
+            
+            // For confirming secondary styles
+            pendingSecondary: null,
             
             correction: { style: '', tempo: 'ok' },
             isSubmitting: false,
@@ -24,6 +27,18 @@ export default {
             if (!this.track) return '';
             const labels = { 'Slow': 'Lugn', 'Medium': 'Lagom', 'Fast': 'Rask', 'Turbo': 'Ösigt' };
             return labels[this.track.tempo_category] || 'Lagom';
+        },
+        // Get tempo label for pending secondary style
+        secondaryTempoLabel() {
+            if (!this.pendingSecondary?.tempo_category) return '';
+            const labels = { 'Slow': 'lugn', 'Medium': 'lagom', 'Fast': 'rask', 'Turbo': 'ösig' };
+            return labels[this.pendingSecondary.tempo_category] || '';
+        },
+        // Get secondary styles that need confirmation (low confirmation count)
+        unconfirmedSecondary() {
+            if (!this.track?.secondary_styles) return [];
+            // Return styles with fewer than 3 confirmations
+            return this.track.secondary_styles.filter(s => s.confirmations < 3);
         },
         // Dynamic Color Classes based on Mode
         colorClasses() {
@@ -111,7 +126,7 @@ export default {
         },
 
         // --- SUBMISSION ---
-        async submit(payload, nextState = 'success') {
+        async submit(payload, nextState = null) {
             this.clearTimers(); // User is interacting
             this.isSubmitting = true;
             try {
@@ -129,12 +144,14 @@ export default {
                 
                 localStorage.setItem(`fb_${this.track.id}`, 'true');
                 
+                // Only change step if nextState is provided
                 if (nextState === 'bonus') {
                     this.step = 'bonus';
-                } else {
+                } else if (nextState === 'success') {
                     this.step = 'success';
                     setTimeout(() => { this.step = 'hidden'; }, 2500);
                 }
+                // If nextState is null, caller handles the next step
 
             } catch(e) {
                 console.error(e);
@@ -145,7 +162,35 @@ export default {
         },
         
         confirmVerify() { 
-            this.submit({ style: this.track.dance_style, tempo_correction: 'ok' }, 'bonus');
+            // First confirm primary, then check if there are secondary styles to confirm
+            this.submit({ style: this.track.dance_style, tempo_correction: 'ok' }).then(() => {
+                this.showSecondaryConfirm();
+            });
+        },
+        
+        // Show secondary style confirmation prompt
+        showSecondaryConfirm() {
+            if (this.unconfirmedSecondary.length > 0) {
+                this.pendingSecondary = this.unconfirmedSecondary[0];
+                this.step = 'confirm-secondary';
+            } else {
+                this.step = 'bonus';
+            }
+        },
+        
+        // Confirm a secondary style
+        async confirmSecondary() {
+            if (!this.pendingSecondary) return;
+            await this.submit({ 
+                style: this.pendingSecondary.style, 
+                tempo_correction: 'ok' 
+            }, 'success');
+        },
+        
+        // Reject secondary and move to bonus/hidden
+        rejectSecondary() {
+            this.pendingSecondary = null;
+            this.step = 'bonus';
         },
         
         submitFix() {
@@ -165,91 +210,107 @@ export default {
     >
         <div v-if="step !== 'hidden'" :key="step" class="w-full relative z-0 mb-2 shadow-xl rounded-xl overflow-hidden font-sans">
             
-            <div v-if="step === 'verify'" class="bg-indigo-600 p-3 pb-4 text-white flex justify-between items-center">
-                <div class="text-xs leading-tight">
+            <div v-if="step === 'verify'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+                <div class="text-sm md:text-xs leading-tight">
                     <p class="opacity-80">Stämmer detta?</p>
-                    <p class="font-bold">{{ track.dance_style }} • {{ tempoLabel }}</p>
+                    <p class="font-bold text-base md:text-sm">{{ track.dance_style }} • {{ tempoLabel }}</p>
                 </div>
-                <div class="flex gap-2">
-                    <button @click="startCorrection" class="bg-indigo-800 hover:bg-indigo-900 text-[10px] font-bold px-3 py-1.5 rounded transition-colors">
+                <div class="flex gap-3 md:gap-2">
+                    <button @click="startCorrection" class="bg-indigo-800 hover:bg-indigo-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">
                         Nej
                     </button>
-                    <button @click="confirmVerify" :disabled="isSubmitting" class="bg-white text-indigo-700 hover:bg-indigo-50 text-[10px] font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+                    <button @click="confirmVerify" :disabled="isSubmitting" class="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1">
                         <span>Ja</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-0 right-0 p-2 text-indigo-300 hover:text-white text-sm leading-none">×</button>
+                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-indigo-300 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
-            <div v-else-if="step === 'menu'" class="bg-gray-800 p-3 pb-4 text-white">
-                <div class="flex justify-between items-center mb-2">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Redigera</p>
-                    <button @click="step = 'hidden'" class="text-gray-400 hover:text-white text-xs">Stäng</button>
+            <div v-else-if="step === 'confirm-secondary'" class="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+                <div class="text-sm md:text-xs leading-tight">
+                    <p class="opacity-80">Kan man även dansa</p>
+                    <p class="font-bold text-base md:text-sm">{{ secondaryTempoLabel }} {{ pendingSecondary?.style }}?</p>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button @click="startCorrection" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded flex flex-col items-center">
+                <div class="flex gap-3 md:gap-2">
+                    <button @click="rejectSecondary" class="bg-amber-800 hover:bg-amber-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">
+                        Nej
+                    </button>
+                    <button @click="confirmSecondary" :disabled="isSubmitting" class="bg-white text-amber-700 hover:bg-amber-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1">
+                        <span>Ja!</span>
+                    </button>
+                </div>
+                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-amber-200 hover:text-white text-lg md:text-sm leading-none">×</button>
+            </div>
+
+            <div v-else-if="step === 'menu'" class="bg-gray-800 p-4 md:p-3 pb-5 md:pb-4 text-white">
+                <div class="flex justify-between items-center mb-3 md:mb-2">
+                    <p class="text-sm md:text-xs font-bold text-gray-400 uppercase">Redigera</p>
+                    <button @click="step = 'hidden'" class="text-gray-400 hover:text-white text-sm md:text-xs">Stäng</button>
+                </div>
+                <div class="grid grid-cols-2 gap-3 md:gap-2">
+                    <button @click="startCorrection" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm md:text-xs font-bold py-3 md:py-2 rounded flex flex-col items-center">
                         <span>Rätta Huvudstil</span>
-                        <span class="text-[9px] opacity-75 font-normal">Detta är fel</span>
+                        <span class="text-xs md:text-[9px] opacity-75 font-normal">Detta är fel</span>
                     </button>
-                    <button @click="startAddition" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold py-2 rounded flex flex-col items-center">
+                    <button @click="startAddition" class="bg-teal-600 hover:bg-teal-700 text-white text-sm md:text-xs font-bold py-3 md:py-2 rounded flex flex-col items-center">
                         <span>Lägg till Alt.</span>
-                        <span class="text-[9px] opacity-75 font-normal">Detta är också...</span>
+                        <span class="text-xs md:text-[9px] opacity-75 font-normal">Detta är också...</span>
                     </button>
                 </div>
             </div>
 
-            <div v-else-if="step === 'fix-style'" :class="[colorClasses.bg, 'p-3 pb-4 text-white flex justify-between items-center gap-2']">
+            <div v-else-if="step === 'fix-style'" :class="[colorClasses.bg, 'p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-3 md:gap-2']">
                 <div class="flex-1">
-                    <p class="text-[10px] opacity-80 uppercase font-bold mb-1">
+                    <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-2 md:mb-1">
                         {{ mode === 'addition' ? 'Lägg till stil:' : 'Korrekt dansstil:' }}
                     </p>
-                    <select v-model="correction.style" class="w-full text-xs text-gray-900 rounded p-1 text-black">
+                    <select v-model="correction.style" class="w-full text-sm md:text-xs text-gray-900 rounded p-2 md:p-1 text-black">
                         <option value="" disabled>Välj...</option>
                         <option v-for="s in availableStyles" :key="s" :value="s">{{ s }}</option>
                     </select>
                 </div>
                 <div class="flex items-end self-end">
-                    <button @click="step = 'fix-tempo'" class="bg-white hover:bg-gray-50 text-[10px] font-bold px-3 py-1.5 rounded transition-colors" :class="colorClasses.text">
+                    <button @click="step = 'fix-tempo'" class="bg-white hover:bg-gray-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors" :class="colorClasses.text">
                         Nästa →
                     </button>
                 </div>
-                <button @click="step = 'menu'" class="absolute top-1 right-2 text-xs" :class="colorClasses.textLight">Tillbaka</button>
+                <button @click="step = 'menu'" class="absolute top-2 md:top-1 right-3 md:right-2 text-sm md:text-xs" :class="colorClasses.textLight">Tillbaka</button>
             </div>
 
-            <div v-else-if="step === 'fix-tempo'" :class="[colorClasses.bgDark, 'p-3 pb-4 text-white']">
-                <div class="flex justify-between items-center mb-2">
-                    <p class="text-[10px] opacity-80 uppercase font-bold">
+            <div v-else-if="step === 'fix-tempo'" :class="[colorClasses.bgDark, 'p-4 md:p-3 pb-5 md:pb-4 text-white']">
+                <div class="flex justify-between items-center mb-3 md:mb-2">
+                    <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold">
                         Är {{ correction.style || 'dansen' }} {{ tempoLabel }}?
                     </p>
-                    <button @click="step = 'fix-style'" class="text-[10px] hover:text-white" :class="colorClasses.textLight">← Tillbaka</button>
+                    <button @click="step = 'fix-style'" class="text-xs md:text-[10px] hover:text-white" :class="colorClasses.textLight">← Tillbaka</button>
                 </div>
-                <div class="grid grid-cols-3 gap-2">
-                    <button @click="correction.tempo = 'half'; submitFix()" :class="[colorClasses.btn, 'border border-white/20 text-[10px] py-2 rounded leading-tight transition-colors']">Den är <br>långsammare</button>
-                    <button @click="correction.tempo = 'ok'; submitFix()" class="bg-white hover:bg-gray-50 font-bold text-[10px] py-2 rounded" :class="colorClasses.text">Ja, det är<br>rätt</button>
-                    <button @click="correction.tempo = 'double'; submitFix()" :class="[colorClasses.btn, 'border border-white/20 text-[10px] py-2 rounded leading-tight transition-colors']">Den är<br>snabbare</button>
+                <div class="grid grid-cols-3 gap-3 md:gap-2">
+                    <button @click="correction.tempo = 'half'; submitFix()" :class="[colorClasses.btn, 'border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors']">Den är <br>långsammare</button>
+                    <button @click="correction.tempo = 'ok'; submitFix()" class="bg-white hover:bg-gray-50 font-bold text-sm md:text-[10px] py-3 md:py-2 rounded" :class="colorClasses.text">Ja, det är<br>rätt</button>
+                    <button @click="correction.tempo = 'double'; submitFix()" :class="[colorClasses.btn, 'border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors']">Den är<br>snabbare</button>
                 </div>
             </div>
 
-            <div v-else-if="step === 'success'" class="bg-green-600 p-4 text-white flex justify-center items-center rounded-xl">
-                <div class="text-sm font-bold flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <div v-else-if="step === 'success'" class="bg-green-600 p-5 md:p-4 text-white flex justify-center items-center rounded-xl">
+                <div class="text-base md:text-sm font-bold flex items-center gap-2">
+                    <svg class="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     Tack för hjälpen!
                 </div>
             </div>
 
-            <div v-else-if="step === 'bonus'" class="bg-teal-600 p-3 pb-4 text-white flex justify-between items-center rounded-xl">
-                <div class="text-xs leading-tight">
+            <div v-else-if="step === 'bonus'" class="bg-teal-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
+                <div class="text-sm md:text-xs leading-tight">
                     <p class="font-bold opacity-90">Tack! Går det att<br>dansa något annat?</p>
                 </div>
-                <div class="flex gap-2">
-                    <button @click="step = 'hidden'" class="bg-teal-800 hover:bg-teal-900 text-[10px] font-bold px-3 py-1.5 rounded transition-colors">
+                <div class="flex gap-3 md:gap-2">
+                    <button @click="step = 'hidden'" class="bg-teal-800 hover:bg-teal-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">
                         Nej
                     </button>
-                    <button @click="startAddition" class="bg-white text-teal-700 hover:bg-teal-50 text-[10px] font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+                    <button @click="startAddition" class="bg-white text-teal-700 hover:bg-teal-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1">
                         <span>+ Lägg till</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-0 right-0 p-2 text-teal-200 hover:text-white text-sm leading-none">×</button>
+                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-teal-200 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
         </div>
