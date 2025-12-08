@@ -23,6 +23,11 @@ def get_tracks(
     style: str = Query(None),
     min_bpm: int = Query(None),
     max_bpm: int = Query(None),
+    search: str = Query(None, description="Search by track title"),
+    source: str = Query(None, description="Filter by source: 'spotify' or 'youtube'"),
+    vocals: str = Query(None, description="Filter vocals: 'instrumental' or 'vocals'"),
+    min_duration: int = Query(None, description="Minimum duration in seconds"),
+    max_duration: int = Query(None, description="Maximum duration in seconds"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -32,6 +37,11 @@ def get_tracks(
         style=style, 
         min_bpm=min_bpm, 
         max_bpm=max_bpm,
+        search=search,
+        source=source,
+        vocals=vocals,
+        min_duration=min_duration,
+        max_duration=max_duration,
         limit=limit,
         offset=offset
     )

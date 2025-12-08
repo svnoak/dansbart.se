@@ -1,11 +1,23 @@
 from sqlalchemy.orm import Session, joinedload
-from app.core.models import Track, TrackDanceStyle, TrackArtist, DanceMovementFeedback
+from app.core.models import Track, TrackDanceStyle, TrackArtist, DanceMovementFeedback, PlaybackLink
 
 class TrackService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_playable_tracks(self, style: str = None, min_bpm: int = None, max_bpm: int = None, limit: int = 20, offset: int = 0):
+    def get_playable_tracks(
+        self, 
+        style: str = None, 
+        min_bpm: int = None, 
+        max_bpm: int = None, 
+        search: str = None,
+        source: str = None,
+        vocals: str = None,
+        min_duration: int = None,
+        max_duration: int = None,
+        limit: int = 20, 
+        offset: int = 0
+    ):
         """
         Fetches tracks with pagination.
         - Filters out broken links.
@@ -26,6 +38,29 @@ class TrackService:
         
         if max_bpm:
             query = query.filter(TrackDanceStyle.effective_bpm <= max_bpm)
+        
+        # NEW: Search by title
+        if search:
+            query = query.filter(Track.title.ilike(f"%{search}%"))
+        
+        # NEW: Filter by source (spotify/youtube)
+        if source:
+            query = query.join(Track.playback_links).filter(
+                PlaybackLink.platform == source,
+                PlaybackLink.is_working == True
+            )
+        
+        # NEW: Filter by vocals
+        if vocals == 'instrumental':
+            query = query.filter(Track.has_vocals == False)
+        elif vocals == 'vocals':
+            query = query.filter(Track.has_vocals == True)
+        
+        # NEW: Filter by duration (convert seconds to ms)
+        if min_duration:
+            query = query.filter(Track.duration_ms >= min_duration * 1000)
+        if max_duration:
+            query = query.filter(Track.duration_ms <= max_duration * 1000)
 
         # 3. OPTIMIZE LOADING (CRITICAL UPDATE)
         query = query.options(

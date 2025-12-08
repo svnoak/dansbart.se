@@ -16,12 +16,17 @@
         </header>
 
         <filter-bar 
-            v-model="targetTempo"
-            v-model:filters="filters"
-            v-model:tempo-enabled="tempoEnabled"  :min="computedMin"
-            :max="computedMax"
-            :left-pct="getRangeLeftPct"
-            :width-pct="getRangeWidthPct"
+            v-model:style="filters.style"
+            v-model:search="filters.search"
+            v-model:source="filters.source"
+            v-model:vocals="filters.vocals"
+            v-model:min-duration="filters.minDuration"
+            v-model:max-duration="filters.maxDuration"
+            v-model:target-tempo="targetTempo"
+            v-model:tempo-enabled="tempoEnabled"
+            :computed-min="computedMin"
+            :computed-max="computedMax"
+            :styles="availableStyles"
         ></filter-bar>
 
         <div class="max-w-4xl mx-auto">

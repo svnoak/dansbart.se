@@ -9,7 +9,14 @@ export function useTracks() {
     const limit = 20;
     
     // State
-    const filters = ref({ style: '' }); 
+    const filters = ref({ 
+        style: '',
+        search: '',
+        source: '',      // '', 'spotify', 'youtube'
+        vocals: '',      // '', 'instrumental', 'vocals'
+        minDuration: null,
+        maxDuration: null
+    }); 
     const targetTempo = ref(130);
     const tempoEnabled = ref(false);
     const tempoWindow = 10;
@@ -43,6 +50,11 @@ export function useTracks() {
         try {
             const params = new URLSearchParams();
             if (filters.value.style) params.append('style', filters.value.style);
+            if (filters.value.search) params.append('search', filters.value.search);
+            if (filters.value.source) params.append('source', filters.value.source);
+            if (filters.value.vocals) params.append('vocals', filters.value.vocals);
+            if (filters.value.minDuration) params.append('min_duration', filters.value.minDuration);
+            if (filters.value.maxDuration) params.append('max_duration', filters.value.maxDuration);
             
             if (tempoEnabled.value) {
                 params.append('min_bpm', computedMin.value);
@@ -75,9 +87,24 @@ export function useTracks() {
 
     const loadMore = () => fetchTracks(true);
 
-    // Watchers: Re-fetch when Style, Tempo Value, OR Tempo Toggle changes
+    // Available dance styles (Swedish folk dance styles)
+    const availableStyles = ref([
+        'Polska', 'Vals', 'Schottis', 'Hambo', 'Mazurka', 
+        'Slängpolska', 'Engelska', 'Polka', 'Gånglåt', 'Brudmarsch'
+    ]);
+
+    // Watchers: Re-fetch when any filter changes
     let timeout;
-    watch([() => targetTempo.value, () => tempoEnabled.value, () => filters.value.style], () => {
+    watch([
+        () => targetTempo.value, 
+        () => tempoEnabled.value, 
+        () => filters.value.style,
+        () => filters.value.search,
+        () => filters.value.source,
+        () => filters.value.vocals,
+        () => filters.value.minDuration,
+        () => filters.value.maxDuration
+    ], () => {
         clearTimeout(timeout);
         timeout = setTimeout(() => fetchTracks(false), 400);
     });
@@ -88,6 +115,7 @@ export function useTracks() {
         targetTempo, tempoEnabled,
         computedMin, computedMax, 
         getRangeLeftPct, getRangeWidthPct, 
+        availableStyles,
         fetchTracks, loadMore
     };
 }
