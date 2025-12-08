@@ -74,7 +74,7 @@ export default {
                 <div class="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-xl shrink-0">🎵</div>
                 <div class="min-w-0">
                     <div class="font-bold truncate text-sm md:text-base">{{ currentTrack.title }}</div>
-                    <div class="text-[10px] text-gray-400 md:hidden">Tap to expand</div>
+                    <div class="text-[10px] text-gray-400 font-mono md:hidden">{{ fmtCurrent }} / {{ fmtDuration }}</div>
                     <div class="text-[10px] text-gray-400 font-mono hidden md:block" v-if="activeSource === 'youtube'">{{ fmtCurrent }} / {{ fmtDuration }}</div>
                     
                     <div class="hidden md:flex items-center gap-2 mt-1">

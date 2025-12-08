@@ -11,7 +11,8 @@ export default {
         'structureMode', 'activeSource', 
         'visualTime', 'duration', 
         'isExpanded', 'trackArtist', 'trackAlbum',
-        'brokenState', 'hasYt', 'hasSpot'
+        'brokenState', 'hasYt', 'hasSpot',
+        'fmtCurrent', 'fmtDuration'
     ],
     emits: [
         'close', 'set-source', 'cycle-version', 
@@ -91,7 +92,7 @@ export default {
                 </button>
             </div>
 
-            <div class="h-12 mb-4 relative w-full shrink-0 flex flex-col justify-end">
+            <div class="h-12 mb-2 relative w-full shrink-0 flex flex-col justify-end">
                 <!-- Spotify hint - sits above the progress bar, hides when full track plays -->
                 <div v-if="showSpotifyHint" class="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
                     <span class="text-[10px] text-gray-500 bg-green-50 px-3 py-1 rounded-full border border-green-200 whitespace-nowrap">
@@ -100,6 +101,12 @@ export default {
                 </div>
                 <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
             </div>
+            
+            <div class="flex justify-between text-xs text-gray-400 font-mono mb-4 shrink-0 px-1">
+                <span>{{ fmtCurrent }}</span>
+                <span>{{ fmtDuration }}</span>
+            </div>
+            
             <div class="shrink-0">
                 <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="true" :active-source="activeSource" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)"></player-controls>
             </div>

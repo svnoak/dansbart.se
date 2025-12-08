@@ -372,6 +372,8 @@ export default {
             :broken-state="potentialBrokenState"
             :has-yt="hasYt"
             :has-spot="hasSpot"
+            :fmt-current="fmtCurrent"
+            :fmt-duration="fmtDuration"
             @close="isExpanded = false"
             @set-source="setSource"
             @cycle-version="cycleVersion"

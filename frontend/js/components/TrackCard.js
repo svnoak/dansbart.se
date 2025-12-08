@@ -44,7 +44,7 @@ export default {
                 <span v-if="track.has_vocals" class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full flex items-center gap-1">🎤 Vocals</span>
                 <span v-else class="px-2 py-1 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full flex items-center gap-1">🎻 Instr.</span>
 
-                <span v-if="formattedDuration" class="px-2 py-1 text-gray-400 text-xs font-mono flex items-center gap-1 ml-auto sm:ml-0">🕒 {{ formattedDuration }}</span>
+                <span v-if="formattedDuration" class="px-2 py-1 text-gray-400 text-xs font-mono flex items-center border border-gray-100 bg-gray-50 rounded-full">{{ formattedDuration }}</span>
             </div>
             
             <h3 class="font-bold text-lg text-gray-900 leading-tight mb-1 truncate">{{ track.title }}</h3>
