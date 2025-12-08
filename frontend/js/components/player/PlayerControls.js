@@ -1,5 +1,5 @@
 export default {
-    props: ['isPlaying', 'isShuffled', 'repeatMode', 'hasSpotify', 'structureMode', 'fullMode'],
+    props: ['isPlaying', 'isShuffled', 'repeatMode', 'hasSpotify', 'structureMode', 'fullMode', 'activeSource'],
     emits: ['toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump'],
 
     computed: {
@@ -8,6 +8,9 @@ export default {
         },
         jumpLabel() {
             return this.structureMode !== 'none' ? '4 Bars' : '10 Seconds';
+        },
+        isSpotifyActive() {
+            return this.activeSource === 'spotify';
         }
     },
 
@@ -15,11 +18,12 @@ export default {
     <div class="flex items-center justify-center w-full" 
          :class="fullMode ? 'gap-4 justify-evenly' : 'gap-2 md:gap-4'">
         
+        <!-- Shuffle -->
         <button @click="$emit('shuffle')" 
-            class="group relative w-8 h-8 flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-colors" 
+            class="group relative w-8 h-8 flex items-center justify-center transition-colors" 
             :class="[
-                isShuffled ? 'text-indigo-600' : '',
-                fullMode ? 'flex' : 'hidden md:flex' 
+                isShuffled ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600',
+                fullMode ? 'flex' : 'hidden md:flex'
             ]"
             title="Shuffle">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -31,6 +35,7 @@ export default {
             </svg>
         </button>
 
+        <!-- Jump Back - Now works with Spotify IFrame API -->
         <button @click="$emit('jump', -1)" 
                 class="group relative w-10 h-10 items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors" 
                 :class="fullMode ? 'flex' : 'hidden md:flex'"
@@ -44,21 +49,31 @@ export default {
             </span>
         </button>
 
+        <!-- Previous Track -->
         <button @click="$emit('prev')" class="text-gray-800 hover:text-indigo-600 transition-colors" title="Previous Track">
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
 
+        <!-- Main Play Button -->
         <button @click="$emit('toggle-play')" 
-            class="bg-indigo-600 hover:bg-indigo-700 rounded-full text-white flex items-center justify-center shadow-lg transition-all active:scale-95"
-            :class="fullMode ? 'w-16 h-16' : 'w-12 h-12'">
-            <svg v-if="!isPlaying" :class="fullMode ? 'w-8 h-8' : 'w-6 h-6'" class="ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <svg v-else :class="fullMode ? 'w-8 h-8' : 'w-6 h-6'" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            class="rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95"
+            :class="[
+                fullMode ? 'w-16 h-16' : 'w-12 h-12',
+                isSpotifyActive ? 'bg-[#1DB954] hover:bg-[#1ed760]' : 'bg-indigo-600 hover:bg-indigo-700'
+            ]"
+            :title="isPlaying ? 'Pause' : 'Play'">
+            
+            <!-- Spotify branded play/pause when Spotify is active -->
+            <svg v-if="!isPlaying" :class="fullMode ? 'w-8 h-8' : 'w-6 h-6'" class="ml-1 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg v-else :class="fullMode ? 'w-8 h-8' : 'w-6 h-6'" class="text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
         </button>
 
+        <!-- Next Track -->
         <button @click="$emit('next')" class="text-gray-800 hover:text-indigo-600 transition-colors" title="Next Track">
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
 
+        <!-- Jump Forward - Now works with Spotify IFrame API -->
         <button @click="$emit('jump', 1)" 
                 class="group relative w-10 h-10 items-center justify-center text-gray-500 hover:text-indigo-600 transition-colors" 
                 :class="fullMode ? 'flex' : 'hidden md:flex'"
@@ -72,6 +87,7 @@ export default {
             </span>
         </button>
 
+        <!-- Repeat -->
         <button @click="$emit('toggle-repeat')" 
             class="group relative w-8 h-8 items-center justify-center transition-colors" 
             :class="[

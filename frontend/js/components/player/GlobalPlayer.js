@@ -1,4 +1,5 @@
 import YouTubeEngine from './YouTubeEngine.js';
+import SpotifyEngine from './SpotifyEngine.js';
 import StructureEditor from '../modals/StructureEditor.js';
 import BrokenLinkToast from '../toasts/BrokenLinkToast.js';
 import { usePlayer } from '../../player.js'; 
@@ -8,7 +9,8 @@ import PlayerDockedView from './PlayerDockedView.js';
 
 export default {
     components: { 
-        YouTubeEngine, 
+        YouTubeEngine,
+        SpotifyEngine,
         StructureEditor,
         BrokenLinkToast,
         PlayerMobileView,
@@ -67,6 +69,9 @@ export default {
             if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
                 val ? this.$refs.ytEngine.play() : this.$refs.ytEngine.pause();
             }
+            if (this.activeSource === 'spotify' && this.$refs.spotifyEngine) {
+                val ? this.$refs.spotifyEngine.resume() : this.$refs.spotifyEngine.pause();
+            }
             if (val) this.lastTick = performance.now();
         },
         activeSource(newVal, oldVal) {
@@ -115,6 +120,17 @@ export default {
     },
 
     computed: {
+        spotifyTrackId() {
+            if (!this.currentTrack?.playback_links) return null;
+            let link = this.currentTrack.playback_links.find(l => {
+                const val = l.deep_link || l;
+                return typeof val === 'string' && val.includes('spotify');
+            });
+            if (!link) return null;
+            const url = link.deep_link || link;
+            const match = url.match(/track\/([a-zA-Z0-9]+)/);
+            return match ? match[1] : null;
+        },
         spotifySrc() {
             if (!this.currentTrack?.playback_links) return '';
             let link = this.currentTrack.playback_links.find(l => {
@@ -242,6 +258,7 @@ export default {
         handleSeek(seconds) {
             this.visualTime = seconds; 
             if (this.activeSource === 'youtube' && this.$refs.ytEngine) this.$refs.ytEngine.seekTo(seconds);
+            if (this.activeSource === 'spotify' && this.$refs.spotifyEngine) this.$refs.spotifyEngine.seek(seconds);
         },
         handleTrackEnd() {
             if (this.showStructureEditor) { this.isPlaying = false; return; }
@@ -298,6 +315,13 @@ export default {
                     tag.src = "https://www.youtube.com/iframe_api";
                     document.head.appendChild(tag);
                 }
+            }
+        },
+        onSpotifyPlaybackUpdate({ isPaused, position, duration }) {
+            if (this.activeSource === 'spotify') {
+                this.isPlaying = !isPaused;
+                this.visualTime = position;
+                this.duration = duration;
             }
         },
         onYtStateChange(stateCode) {
@@ -386,7 +410,7 @@ export default {
                  (isExpanded && windowWidth < 768) ? 'z-[101] rounded-xl' : 'z-[60] rounded-lg'
              ]"
              :style="(isExpanded && windowWidth < 768) ? {
-                 top: '92px', 
+                 top: '120px', 
                  left: '1.5rem', 
                  width: 'calc(100% - 3rem)', 
                  height: 'auto', 
@@ -413,10 +437,34 @@ export default {
             <you-tube-engine ref="ytEngine" :video-id="currentVideoId" :active-source="activeSource" @state-change="onYtStateChange" @time-update="onTimeUpdate" @next="handleTrackEnd" @error="handlePlayerError"></you-tube-engine>
         </div>
         
-        <div v-if="activeSource === 'spotify'" 
-             class="fixed left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828] transition-all duration-300"
-             :style="{ bottom: (windowWidth >= 768 ? playerBottomOffset + 12 : (structureMode !== 'none' ? 128 : 96)) + 'px' }">
-            <iframe :src="spotifySrc" class="w-full h-full block" frameborder="0" scrolling="no" allow="autoplay; encrypted-media"></iframe>
+        <div class="fixed shadow-xl rounded-xl overflow-hidden border border-gray-700 bg-[#282828] transition-all duration-300"
+             :class="[
+                 activeSource === 'spotify' ? 'opacity-100 pointer-events-auto animate-fade-in' : 'opacity-0 pointer-events-none',
+                 (isExpanded && windowWidth < 768) ? 'z-[101]' : 'z-[60]'
+             ]"
+             :style="(isExpanded && windowWidth < 768) ? {
+                 top: '120px',
+                 left: '1.5rem', 
+                 width: 'calc(100% - 3rem)', 
+                 height: '82px',
+                 bottom: 'auto'
+             } : (windowWidth >= 768) ? {
+                 width: '400px', 
+                 height: '82px', 
+                 left: '16px', 
+                 bottom: (playerBottomOffset + 12) + 'px'
+             } : {
+                 width: '300px', 
+                 height: '82px', 
+                 left: '16px', 
+                 bottom: (structureMode !== 'none' ? 128 : 96) + 'px'
+             }">
+            <spotify-engine 
+                ref="spotifyEngine" 
+                :track-id="spotifyTrackId" 
+                :active-source="activeSource" 
+                @playback-update="onSpotifyPlaybackUpdate">
+            </spotify-engine>
         </div>
 
         <structure-editor :is-open="showStructureEditor" :track="currentTrack" :current-time="visualTime" :duration="duration" :is-playing="isPlaying" @close="showStructureEditor = false" @seek="handleSeek" @toggle-play="togglePlay"></structure-editor>

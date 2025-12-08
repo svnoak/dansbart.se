@@ -46,7 +46,10 @@ export default {
         </div>
 
         <div class="flex-1 flex flex-col px-6 overflow-y-auto min-h-0 pb-10">
-            <div class="w-full aspect-video bg-gray-50 rounded-xl mb-6 shadow-inner shrink-0 border border-gray-100"></div>
+            <!-- Placeholder for video/spotify embed that's positioned fixed above -->
+            <div class="w-full shrink-0 mb-6"
+                 :class="activeSource === 'spotify' ? 'h-[152px]' : 'aspect-video'">
+            </div>
 
             <div class="mb-2 shrink-0">
                 <h2 class="text-2xl font-extrabold text-gray-900 leading-tight mb-0.5">{{ currentTrack.title }}</h2>
@@ -79,10 +82,10 @@ export default {
             </div>
 
             <div class="h-12 mb-4 relative w-full shrink-0 flex items-end">
-                 <progress-bar :current-time="visualTime" :duration="duration" :disabled="activeSource !== 'youtube'" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
+                 <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
             </div>
             <div class="shrink-0">
-                <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="true" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)"></player-controls>
+                <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="true" :active-source="activeSource" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)"></player-controls>
             </div>
         </div>
     </div>

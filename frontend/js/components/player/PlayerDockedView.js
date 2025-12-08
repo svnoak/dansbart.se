@@ -44,7 +44,7 @@ export default {
         </div>
 
         <div class="hidden md:block relative w-full">
-            <progress-bar :current-time="visualTime" :duration="duration" :disabled="activeSource !== 'youtube'" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
+            <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
         </div>
         
         <div class="md:hidden w-full h-1 bg-gray-200">
@@ -73,7 +73,7 @@ export default {
              </div>
 
              <div class="flex justify-end md:justify-center w-1/3 md:w-1/3">
-                <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="false" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)"></player-controls>
+                <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="false" :active-source="activeSource" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)"></player-controls>
              </div>
              
              <div class="hidden md:flex w-1/3 justify-end items-center gap-2">
