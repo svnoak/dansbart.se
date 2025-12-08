@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
-from app.core.models import Track, TrackStyleVote, TrackDanceStyle, TrackStructureVersion, DanceMovementFeedback
+from app.core.models import Track, TrackStyleVote, TrackDanceStyle, TrackStructureVersion, DanceMovementFeedback, TrackFeelVote
 from app.core.music_theory import categorize_tempo
 import numpy as np
 import uuid
@@ -115,6 +115,36 @@ class FeedbackService:
             }
         
         return None
+
+    def confirm_secondary_style(self, track_id: str, style: str) -> dict | None:
+        """
+        Confirms a secondary style WITHOUT affecting the primary election.
+        This is used when users confirm "Can you also dance X?" - it should
+        NOT change the primary style, only increment confirmation count.
+        """
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track:
+            return None
+
+        # Find the secondary style row
+        style_row = self.db.query(TrackDanceStyle).filter(
+            TrackDanceStyle.track_id == track.id,
+            TrackDanceStyle.dance_style == style
+        ).first()
+
+        if not style_row:
+            return None  # Style doesn't exist, nothing to confirm
+
+        # Just increment confirmation count - don't touch is_primary or run election
+        style_row.confirmation_count += 1
+        style_row.is_user_confirmed = True
+        
+        self.db.commit()
+
+        return {
+            "style": style_row.dance_style,
+            "confirmations": style_row.confirmation_count
+        }
 
     def _elect_primary_style(self, track_id: str):
         """

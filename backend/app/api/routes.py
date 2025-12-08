@@ -73,6 +73,31 @@ def submit_track_feedback(
         "updates": updated_data
     }
 
+@router.post("/tracks/{track_id}/confirm-secondary")
+def confirm_secondary_style(
+    track_id: str,
+    feedback: FeedbackIn,
+    db: Session = Depends(get_db)
+):
+    """
+    Confirms a secondary style WITHOUT affecting primary election.
+    Used for "Can you also dance X?" confirmations.
+    """
+    service = FeedbackService(db)
+    result = service.confirm_secondary_style(
+        track_id=track_id,
+        style=feedback.style
+    )
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Track or style not found")
+
+    return {
+        "status": "success",
+        "message": "Secondary style confirmed.",
+        "updates": result
+    }
+
 @router.post("/tracks/{track_id}/movement")
 def submit_movement_vote(
     track_id: str,

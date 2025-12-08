@@ -181,10 +181,41 @@ export default {
         // Confirm a secondary style
         async confirmSecondary() {
             if (!this.pendingSecondary) return;
-            await this.submit({ 
-                style: this.pendingSecondary.style, 
-                tempo_correction: 'ok' 
-            }, 'success');
+            this.clearTimers();
+            this.isSubmitting = true;
+            
+            try {
+                // Use dedicated endpoint that doesn't affect primary election
+                const res = await fetch(`/api/tracks/${this.track.id}/confirm-secondary`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        style: this.pendingSecondary.style, 
+                        tempo_correction: 'ok' 
+                    })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    // Update the local secondary style confirmation count
+                    if (data.updates && this.track.secondary_styles) {
+                        const sec = this.track.secondary_styles.find(s => s.style === this.pendingSecondary.style);
+                        if (sec) {
+                            sec.confirmations = data.updates.confirmations;
+                        }
+                    }
+                }
+                
+                localStorage.setItem(`fb_${this.track.id}`, 'true');
+                this.step = 'success';
+                setTimeout(() => { this.step = 'hidden'; }, 2500);
+                
+            } catch(e) {
+                console.error(e);
+                this.step = 'hidden';
+            } finally {
+                this.isSubmitting = false;
+            }
         },
         
         // Reject secondary and move to bonus/hidden

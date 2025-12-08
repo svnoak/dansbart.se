@@ -80,19 +80,35 @@ class AnalysisService:
         primary_link = next((l for l in track.artist_links if l.role == 'primary'), None)
         if primary_link:
             artist_name = primary_link.artist.name
-        else:
+        elif track.artist_links:
             artist_name = track.artist_links[0].artist.name
 
         album_name = track.album.title if track.album else ""
         
-        # If we have a stored link, use it. Otherwise search by metadata.
-        query = existing_link.deep_link if existing_link else f"{track.title} {artist_name} topic audio"
-        
-        result = self.fetcher.fetch_track_audio(
-            track_id=str(track.id), 
-            query=query, 
-            expected_duration_ms=track.duration_ms 
-        )
+        # If we have a stored link, use it directly (skip search).
+        # Otherwise search by metadata.
+        if existing_link:
+            # Direct download - user provided this link, trust it
+            print(f"   📎 Using existing YouTube link: {existing_link.deep_link}")
+            result = self.fetcher.fetch_track_audio(
+                track_id=str(track.id), 
+                query="",  # Not needed for direct download
+                expected_duration_ms=track.duration_ms,
+                track_title=track.title,
+                artist_name=artist_name,
+                direct_video_id=existing_link.deep_link
+            )
+        else:
+            # Search YouTube for the best match
+            query = f"{artist_name} - {track.title}"
+            print(f"   🔍 Searching YouTube for: {query}")
+            result = self.fetcher.fetch_track_audio(
+                track_id=str(track.id), 
+                query=query, 
+                expected_duration_ms=track.duration_ms,
+                track_title=track.title,
+                artist_name=artist_name
+            )
         
         if not result:
             return False

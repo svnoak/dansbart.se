@@ -81,10 +81,7 @@ export default {
                 if (elapsed < 5) {
                     // Find the YouTube link that was playing
                     const track = this.currentTrack;
-                    const badLink = track?.playback_links?.find(l => {
-                        const val = l.deep_link || l;
-                        return typeof val === 'string' && !val.includes('spotify');
-                    });
+                    const badLink = track?.playback_links?.find(l => l.platform === 'youtube');
                     if (badLink) {
                         this.potentialBrokenState = { track, badLink };
                         // Auto-dismiss after 8 seconds
@@ -122,25 +119,29 @@ export default {
     computed: {
         spotifyTrackId() {
             if (!this.currentTrack?.playback_links) return null;
-            let link = this.currentTrack.playback_links.find(l => {
-                const val = l.deep_link || l;
-                return typeof val === 'string' && val.includes('spotify');
-            });
+            // Use platform field to find Spotify link
+            let link = this.currentTrack.playback_links.find(l => l.platform === 'spotify');
+            if (!link) {
+                // Fallback: check for old URL format
+                link = this.currentTrack.playback_links.find(l => {
+                    const val = l.deep_link || l;
+                    return typeof val === 'string' && val.includes('spotify');
+                });
+            }
             if (!link) return null;
-            const url = link.deep_link || link;
-            const match = url.match(/track\/([a-zA-Z0-9]+)/);
+            const val = link.deep_link || link;
+            // If it's already just an ID (no URL), return it directly
+            if (typeof val === 'string' && !val.includes('/')) {
+                return val;
+            }
+            // Otherwise extract from URL
+            const match = val.match(/track\/([a-zA-Z0-9]+)/);
             return match ? match[1] : null;
         },
         spotifySrc() {
-            if (!this.currentTrack?.playback_links) return '';
-            let link = this.currentTrack.playback_links.find(l => {
-                const val = l.deep_link || l;
-                return typeof val === 'string' && val.includes('spotify');
-            });
-            if (!link) return '';
-            const url = link.deep_link || link;
-            const match = url.match(/track\/([a-zA-Z0-9]+)/);
-            return match ? `https://open.spotify.com/embed/track/${match[1]}?utm_source=generator&theme=0&autoplay=1` : '';
+            const trackId = this.spotifyTrackId;
+            if (!trackId) return '';
+            return `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0&autoplay=1`;
         },
         hasYt() { return !!this.getYouTubeId(this.currentTrack); },
         hasSpot() { return !!this.getSpotifyId(this.currentTrack); },

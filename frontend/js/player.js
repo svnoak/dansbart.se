@@ -21,13 +21,24 @@ const isRestricted = ref(false);
 
 export function usePlayer() {
 
-    // --- HELPERS (Unchanged) ---
+    // --- HELPERS ---
     const getYouTubeId = (track) => {
         if (!track?.playback_links) return null;
         for (const linkObj of track.playback_links) {
+            // Use platform field if available
+            if (linkObj.platform === 'youtube') {
+                return linkObj.deep_link;
+            }
+            // Fallback for old format: check if it looks like a YouTube URL
             const val = linkObj.deep_link || linkObj;
-            const isUrl = typeof val === 'string' && /^https?:\/\//.test(val);
-            if (typeof val === 'string' && !isUrl && val.length > 5) return val;
+            if (typeof val === 'string' && val.includes('youtube.com')) {
+                const match = val.match(/[?&]v=([^&]+)/);
+                return match ? match[1] : null;
+            }
+            if (typeof val === 'string' && val.includes('youtu.be')) {
+                const match = val.match(/youtu\.be\/([^?]+)/);
+                return match ? match[1] : null;
+            }
         }
         return null;
     };

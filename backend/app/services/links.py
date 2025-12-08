@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
-from app.core.models import PlaybackLink
+from app.core.models import PlaybackLink, Track, AnalysisSource, TrackDanceStyle, TrackStructureVersion
 import yt_dlp
-from app.core.models import Track
 
 class LinkService:
     def __init__(self, db: Session):
@@ -10,6 +9,8 @@ class LinkService:
     def report_broken(self, link_id: str, reason: str) -> bool:
         """
         Flags a link as broken.
+        If reason is 'wrong_track', also clears all analysis data since it was
+        based on the wrong audio.
         Returns True if successful, False if link not found.
         """
         link = self.db.query(PlaybackLink).filter(PlaybackLink.id == link_id).first()
@@ -17,15 +18,56 @@ class LinkService:
         if not link:
             return False
         
+        track_id = link.track_id
+        
         # Disable the link so it stops showing up in the app
         link.is_working = False
         
-        # (Future: You could save the 'reason' to a separate LinkFeedback table here)
+        # If the link was for the wrong track, all analysis is invalid
+        if reason == "wrong_track":
+            self._clear_track_analysis(track_id)
+            print(f"🗑️ Cleared analysis for track {track_id} - wrong YouTube link")
         
         self.db.commit()
         
         # Logging for Docker output
         print(f"🔗 Link {link_id} reported broken. Reason: {reason}")
+        
+        return True
+
+    def _clear_track_analysis(self, track_id):
+        """
+        Removes all analysis data for a track when the source audio was wrong.
+        This includes: analysis sources, dance styles, structure versions, and
+        resets the track's cached analysis fields.
+        """
+        # 1. Delete analysis sources (the raw ML output)
+        self.db.query(AnalysisSource).filter(
+            AnalysisSource.track_id == track_id
+        ).delete(synchronize_session=False)
+        
+        # 2. Delete AI-generated dance style classifications (keep user-confirmed ones)
+        self.db.query(TrackDanceStyle).filter(
+            TrackDanceStyle.track_id == track_id,
+            TrackDanceStyle.is_user_confirmed == False
+        ).delete(synchronize_session=False)
+        
+        # 3. Delete AI structure versions (keep user-created ones)
+        self.db.query(TrackStructureVersion).filter(
+            TrackStructureVersion.track_id == track_id,
+            TrackStructureVersion.author_alias == "AI"
+        ).delete(synchronize_session=False)
+        
+        # 4. Reset the track's cached analysis fields
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if track:
+            track.bars = None
+            track.sections = None
+            track.section_labels = None
+            track.swing_ratio = None
+            track.articulation = None
+            track.bounciness = None
+            track.processing_status = "PENDING"  # Ready for re-analysis
         
         return True
     

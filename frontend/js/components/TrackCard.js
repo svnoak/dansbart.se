@@ -160,7 +160,11 @@ export default {
         getLink(type) {
             if (!this.track.playback_links) return null;
             return this.track.playback_links.find(l => {
-                // Ensure we handle both object and string formats safely
+                // Use the platform field if available
+                if (l.platform) {
+                    return l.platform === type;
+                }
+                // Fallback: check the deep_link URL for platform hints
                 const url = l.deep_link || (typeof l === 'string' ? l : null);
                 if (!url) return false;
                 return type === 'spotify' ? url.includes('spotify') : !url.includes('spotify');
