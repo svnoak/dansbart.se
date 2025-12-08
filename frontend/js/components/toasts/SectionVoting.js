@@ -1,9 +1,10 @@
 export default {
     props: ['track', 'activeVersion'], 
+    emits: ['open-structure-editor'],
     
     data() {
         return {
-            // States: 'hidden' | 'verify' | 'success'
+            // States: 'hidden' | 'verify' | 'ask-edit' | 'success'
             step: 'hidden', 
             isSubmitting: false,
             showDelayTimer: null,  // Timer to delay showing the nudge
@@ -108,21 +109,30 @@ export default {
             if (voteType === 'yes') {
                 // YES: Lock it globally. The user is happy with the structure.
                 localStorage.setItem(`structure_vote_v1_${this.track.id}`, 'true');
+                // Show "Thanks" feedback
+                this.step = 'success';
+                setTimeout(() => {
+                    this.step = 'hidden';
+                }, 2000);
             } else {
-                // NO: We do NOT set localStorage. 
-                // We just hide it for this session/view.
-                // If they reload or toggle versions, it will appear again.
+                // NO: Ask if they want to edit the sections
+                this.step = 'ask-edit';
             }
 
-            // 3. Show "Thanks" feedback
+            this.isSubmitting = false;
+        },
+
+        openEditor() {
+            this.$emit('open-structure-editor');
+            this.step = 'hidden';
+        },
+
+        declineEdit() {
+            // Just thank them and hide
             this.step = 'success';
-            
-            // 4. Hide after delay
             setTimeout(() => {
                 this.step = 'hidden';
             }, 2000);
-
-            this.isSubmitting = false;
         }
     },
 
@@ -156,6 +166,27 @@ export default {
                         class="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1"
                     >
                         <span>Ja</span>
+                    </button>
+                </div>
+            </div>
+
+            <div v-else-if="step === 'ask-edit'" class="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+                <div class="text-sm md:text-xs leading-tight">
+                    <p class="font-medium">Vill du rätta repriserna?</p>
+                </div>
+                <div class="flex gap-3 md:gap-2">
+                    <button 
+                        @click="declineEdit" 
+                        class="bg-amber-800 hover:bg-amber-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                    >
+                        Nej tack
+                    </button>
+                    <button 
+                        @click="openEditor" 
+                        class="bg-white text-amber-700 hover:bg-amber-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1"
+                    >
+                        <svg class="w-4 h-4 md:w-3 md:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <span>Ja, redigera</span>
                     </button>
                 </div>
             </div>

@@ -15,7 +15,8 @@ export default {
     emits: [
         'expand', 'set-source', 'cycle-version', 
         'toggle-structure-mode', 'seek', 
-        'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump'
+        'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump',
+        'open-structure-editor'
     ],
     components: { SmartNudge, SectionVoting, PlayerControls, ProgressBar },
 
@@ -44,7 +45,7 @@ export default {
         <div class="hidden md:flex fixed right-4 w-80 z-40 flex-col gap-2 transition-all duration-300"
              :style="{ bottom: nudgeBottomOffset + 'px' }">
             <smart-nudge :track="currentTrack" :is-playing="isPlaying"></smart-nudge>
-            <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]"></section-voting>
+            <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
         </div>
 
         <div class="hidden md:block relative w-full">
@@ -79,6 +80,10 @@ export default {
                     
                     <div class="hidden md:flex items-center gap-2 mt-1">
                         <button v-if="currentTrack.sections?.length" @click.stop="$emit('toggle-structure-mode')" class="text-[9px] font-bold uppercase border px-1.5 rounded" :class="structureMode!=='none'?'bg-indigo-100 text-indigo-700':'bg-white text-gray-400'">{{ structureButtonLabel }}</button>
+                        <button v-if="structureMode !== 'none'" @click.stop="$emit('open-structure-editor')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 flex items-center gap-1" title="Redigera struktur">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            Rätta
+                        </button>
                          <div v-if="availableVersions.length > 1 && structureMode !== 'none'" class="flex items-center bg-gray-50 rounded-full border px-1">
                             <button @click.stop="$emit('cycle-version', -1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold text-[10px]">‹</button>
                             <span class="text-[9px] font-mono font-bold text-gray-700 px-1">v{{ currentVersionIndex + 1 }}</span>

@@ -228,40 +228,44 @@ export default {
     },
 
     template: /*html*/`
-    <div v-if="isOpen" class="fixed inset-0 z-[80] flex items-center justify-center p-4">
+    <div v-if="isOpen" class="fixed inset-0 z-[110] flex items-center justify-center p-2 md:p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="attemptClose"></div>
         
-        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh]">
             
-            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shrink-0">
-                <h3 class="font-bold flex items-center gap-2">
+            <!-- Header - Mobile optimized -->
+            <div class="bg-indigo-600 p-3 md:p-4 text-white flex flex-col md:flex-row md:justify-between md:items-center gap-2 shrink-0">
+                <h3 class="font-bold flex items-center gap-2 text-sm md:text-base">
                     <span>✏️</span> Redigera Struktur
                 </h3>
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2 text-xs font-bold bg-indigo-800/50 px-3 py-1 rounded-full">
-                        <span>Zoom:</span>
-                        <input type="range" min="1" max="8" step="0.1" v-model.number="zoomLevel" class="w-24 accent-white cursor-pointer">
+                <div class="flex items-center justify-between md:justify-end gap-2 md:gap-4">
+                    <div class="flex items-center gap-2 text-[10px] md:text-xs font-bold bg-indigo-800/50 px-2 md:px-3 py-1 rounded-full">
+                        <span class="hidden md:inline">Zoom:</span>
+                        <span class="md:hidden">🔍</span>
+                        <input type="range" min="1" max="8" step="0.1" v-model.number="zoomLevel" class="w-16 md:w-24 accent-white cursor-pointer">
                         <span>{{ Math.round(zoomLevel * 100) }}%</span>
                     </div>
-                    <button @click="attemptClose" class="hover:bg-indigo-500 p-1 rounded text-white/80 hover:text-white">✕</button>
+                    <button @click="attemptClose" class="hover:bg-indigo-500 p-1.5 rounded text-white/80 hover:text-white text-lg">✕</button>
                 </div>
             </div>
 
-            <div class="p-6 overflow-y-auto flex-1">
+            <div class="p-3 md:p-6 overflow-y-auto flex-1">
                 
-                <div class="flex justify-between items-center mb-4 sticky top-0 bg-white z-30 py-2 border-b border-gray-100">
-                    <p class="text-sm text-gray-500">
-                        Markera block för att ändra. Dra i kanten för att justera (snappar mot takter).
+                <!-- Instructions & actions - stacked on mobile -->
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 md:mb-4 sticky top-0 bg-white z-30 py-2 border-b border-gray-100 gap-2">
+                    <p class="text-xs md:text-sm text-gray-500">
+                        <span class="hidden md:inline">Markera block för att ändra. Dra i kanten för att justera (snappar mot takter).</span>
+                        <span class="md:hidden">Tryck på block för att välja. Dra i kanten för att justera.</span>
                     </p>
                     <div class="flex gap-2">
-                        <button @click="undo" :disabled="historyStack.length === 0" class="text-xs font-bold px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40">↩ Ångra</button>
-                        <button @click="reset" :disabled="!isDirty" class="text-xs font-bold px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-40">Återställ</button>
+                        <button @click="undo" :disabled="historyStack.length === 0" class="text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40">↩ Ångra</button>
+                        <button @click="reset" :disabled="!isDirty" class="text-[10px] md:text-xs font-bold px-2 md:px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-40">Återställ</button>
                     </div>
                 </div>
 
-                <div class="w-full overflow-x-auto border border-gray-300 rounded-lg bg-gray-50 mb-6 relative scrollbar-thin" ref="timelineContainer">
+                <div class="w-full overflow-x-auto border border-gray-300 rounded-lg bg-gray-50 mb-4 md:mb-6 relative scrollbar-thin" ref="timelineContainer">
                     
-                    <div class="h-24 relative" :style="{ width: (zoomLevel * 100) + '%' }">
+                    <div class="h-16 md:h-24 relative" :style="{ width: (zoomLevel * 100) + '%' }">
                         
                         <div v-if="track.bars" class="absolute inset-0 w-full h-full pointer-events-none z-0">
                              <div v-for="(bar, i) in track.bars" :key="'grid-'+i"
@@ -305,7 +309,7 @@ export default {
                     </div>
                 </div>
 
-                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-6">
+                <div class="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-200 mb-4 md:mb-6">
                      <progress-bar 
                         :current-time="currentTime" :duration="duration" 
                         :disabled="false" :structure-mode="editorStructureMode" 
@@ -315,27 +319,41 @@ export default {
                         <span>{{ (currentTime/60).toFixed(0) }}:{{ ((currentTime%60).toFixed(0)).padStart(2,'0') }}</span>
                         <span>{{ (duration/60).toFixed(0) }}:{{ ((duration%60).toFixed(0)).padStart(2,'0') }}</span>
                     </div>
-                    <div class="flex items-center justify-center gap-4 mt-2">
-                        <button @click="skip(-5)" class="p-2 rounded-full hover:bg-gray-200 text-gray-600"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg></button>
-                        <button @click="$emit('toggle-play')" class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:scale-105 shadow-md">
-                            <svg v-if="!isPlaying" class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            <svg v-else class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    <div class="flex items-center justify-center gap-2 md:gap-4 mt-2">
+                        <button @click="skip(-5)" class="p-1.5 md:p-2 rounded-full hover:bg-gray-200 text-gray-600"><svg class="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg></button>
+                        <button @click="$emit('toggle-play')" class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:scale-105 shadow-md">
+                            <svg v-if="!isPlaying" class="w-5 h-5 md:w-6 md:h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <svg v-else class="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                         </button>
-                        <button @click="skip(5)" class="p-2 rounded-full hover:bg-gray-200 text-gray-600"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z"/></svg></button>
-                         <button @click="toggleBars" class="ml-4 text-xs border border-gray-300 px-3 py-1.5 rounded hover:bg-white bg-gray-100 transition-colors">{{ viewToggleLabel }}</button>
+                        <button @click="skip(5)" class="p-1.5 md:p-2 rounded-full hover:bg-gray-200 text-gray-600"><svg class="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z"/></svg></button>
+                         <button @click="toggleBars" class="ml-2 md:ml-4 text-[10px] md:text-xs border border-gray-300 px-2 md:px-3 py-1 md:py-1.5 rounded hover:bg-white bg-gray-100 transition-colors whitespace-nowrap">{{ viewToggleLabel }}</button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
-                    <button @click="cycleLabel" :disabled="!hasSelection" class="p-3 rounded bg-white border border-gray-200 hover:bg-gray-50 font-bold text-gray-700 disabled:opacity-50 shadow-sm flex flex-col items-center gap-1">🔤 Byt Namn</button>
-                    <button @click="splitSection" :disabled="selectedIndices.length !== 1" class="p-3 rounded bg-white border border-gray-200 hover:bg-gray-50 font-bold text-gray-700 disabled:opacity-50 shadow-sm flex flex-col items-center gap-1">✂️ Dela (1/2)</button>
-                    <button @click="mergeSelection" :disabled="!canMerge" class="p-3 rounded bg-white border border-gray-200 hover:bg-gray-50 font-bold text-gray-700 disabled:opacity-50 shadow-sm flex flex-col items-center gap-1">🔗 Slå ihop</button>
+                <!-- Action buttons - responsive grid -->
+                <div class="grid grid-cols-3 gap-2 md:gap-3">
+                    <button @click="cycleLabel" :disabled="!hasSelection" class="p-2 md:p-3 rounded bg-white border border-gray-200 hover:bg-gray-50 font-bold text-gray-700 disabled:opacity-50 shadow-sm flex flex-col items-center gap-1 text-xs md:text-sm">
+                        <span>🔤</span>
+                        <span class="hidden md:inline">Byt Namn</span>
+                        <span class="md:hidden">Namn</span>
+                    </button>
+                    <button @click="splitSection" :disabled="selectedIndices.length !== 1" class="p-2 md:p-3 rounded bg-white border border-gray-200 hover:bg-gray-50 font-bold text-gray-700 disabled:opacity-50 shadow-sm flex flex-col items-center gap-1 text-xs md:text-sm">
+                        <span>✂️</span>
+                        <span class="hidden md:inline">Dela (1/2)</span>
+                        <span class="md:hidden">Dela</span>
+                    </button>
+                    <button @click="mergeSelection" :disabled="!canMerge" class="p-2 md:p-3 rounded bg-white border border-gray-200 hover:bg-gray-50 font-bold text-gray-700 disabled:opacity-50 shadow-sm flex flex-col items-center gap-1 text-xs md:text-sm">
+                        <span>🔗</span>
+                        <span class="hidden md:inline">Slå ihop</span>
+                        <span class="md:hidden">Slå ihop</span>
+                    </button>
                 </div>
             </div>
             
-            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">
-                <button @click="attemptClose" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 font-medium">Avbryt</button>
-                <button @click="save" :disabled="isSubmitting || !isDirty" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">Spara Ändringar</button>
+            <!-- Footer - mobile optimized -->
+            <div class="p-3 md:p-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">
+                <button @click="attemptClose" class="px-3 md:px-4 py-2 text-xs md:text-sm text-gray-600 hover:text-gray-800 font-medium">Avbryt</button>
+                <button @click="save" :disabled="isSubmitting || !isDirty" class="px-4 md:px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm">Spara</button>
             </div>
         </div>
     </div>

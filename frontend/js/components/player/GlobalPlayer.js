@@ -387,6 +387,7 @@ export default {
             @jump="handleJump"
             @nudge-visibility="isNudgeVisible = $event"
             @dismiss-broken="potentialBrokenState = null"
+            @open-structure-editor="showStructureEditor = true"
         ></player-mobile-view>
 
         <player-docked-view
@@ -416,6 +417,7 @@ export default {
             @shuffle="toggleShuffle"
             @toggle-repeat="handleToggleRepeat"
             @jump="handleJump"
+            @open-structure-editor="showStructureEditor = true"
         ></player-docked-view>
 
         <div ref="videoContainer"

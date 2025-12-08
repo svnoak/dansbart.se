@@ -152,7 +152,12 @@ export default {
             if (this.track.dance_style === 'Unknown' || this.track.dance_style === 'Unclassified') {
                return 'Tempo?';
             }
-            const labels = { 'Slow': 'Lugn', 'Medium': 'Lagom', 'Fast': 'Rask', 'Turbo': 'Ösigt' };
+            // Use new tempo object if available
+            if (this.track.tempo && this.track.tempo.label) {
+                return this.track.tempo.label;
+            }
+            // Fallback to legacy tempo_category
+            const labels = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
             return labels[this.track.tempo_category] || 'Lagom';
         }
     },

@@ -17,11 +17,24 @@ export default {
             availableStyles: ["Hambo", "Polska", "Slängpolska", "Vals", "Schottis", "Snoa", "Polka", "Mazurka", "Engelska", "Gånglåt"],
             showDelayTimer: null,   // Timer to delay showing the nudge
             autoDismissTimer: null, // Timer to auto-dismiss if no interaction
-            playbackStartTime: null // Track when playback actually started
+            playbackStartTime: null, // Track when playback actually started
+            dropdownOpen: false     // Track if dropdown is open to prevent re-renders
         }
+    },
+    mounted() {
+        // Close dropdown when clicking outside
+        this.closeDropdownHandler = (e) => {
+            if (this.dropdownOpen && !e.target.closest('.relative')) {
+                this.dropdownOpen = false;
+            }
+        };
+        document.addEventListener('click', this.closeDropdownHandler);
     },
     beforeUnmount() {
         this.clearTimers();
+        if (this.closeDropdownHandler) {
+            document.removeEventListener('click', this.closeDropdownHandler);
+        }
     },
     computed: {
         // Check if track has a known style
@@ -31,17 +44,28 @@ export default {
         },
         // Check if track has tempo info
         hasTempo() {
-            return this.track?.tempo_category && this.track?.effective_bpm > 0;
+            return (this.track?.tempo || this.track?.tempo_category) && this.track?.effective_bpm > 0;
         },
         tempoLabel() {
             if (!this.track) return '';
-            const labels = { 'Slow': 'Lugn', 'Medium': 'Lagom', 'Fast': 'Rask', 'Turbo': 'Ösigt' };
+            // Use new tempo object if available
+            if (this.track.tempo?.label) {
+                return this.track.tempo.label;
+            }
+            // Fallback to legacy
+            const labels = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
             return labels[this.track.tempo_category] || '';
         },
         // Get tempo label for pending secondary style
         secondaryTempoLabel() {
-            if (!this.pendingSecondary?.tempo_category) return '';
-            const labels = { 'Slow': 'lugn', 'Medium': 'lagom', 'Fast': 'rask', 'Turbo': 'ösig' };
+            if (!this.pendingSecondary) return '';
+            // Use new tempo object if available
+            if (this.pendingSecondary.tempo?.label) {
+                return this.pendingSecondary.tempo.label.toLowerCase();
+            }
+            // Fallback to legacy
+            if (!this.pendingSecondary.tempo_category) return '';
+            const labels = { 'Slow': 'långsam', 'SlowMed': 'lugn', 'Medium': 'lagom', 'Fast': 'snabb', 'Turbo': 'väldigt snabb' };
             return labels[this.pendingSecondary.tempo_category] || '';
         },
         // Get secondary styles that need confirmation (low confirmation count)
@@ -72,11 +96,11 @@ export default {
         }
     },
     watch: {
-        track: {
+        'track.id': {
             immediate: true,
-            handler(newTrack, oldTrack) {
-                // When track changes, reset state but don't show nudge yet
-                if (newTrack?.id !== oldTrack?.id) {
+            handler(newId, oldId) {
+                // When track ID changes, reset state but don't show nudge yet
+                if (newId !== oldId) {
                     this.clearTimers();
                     this.step = 'hidden';
                     this.playbackStartTime = null;
@@ -85,34 +109,34 @@ export default {
                 }
             }
         },
-        isPlaying: {
-            immediate: true,
-            handler(playing) {
-                if (!this.track) return;
-                
-                const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
-                if (hasFeedback) {
-                    this.step = 'hidden';
-                    return;
-                }
+        isPlaying(playing) {
+            if (!this.track) return;
+            
+            // Don't process if we're already showing a step (user is interacting)
+            if (this.step !== 'hidden' && this.step !== 'verify') return;
+            
+            const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
+            if (hasFeedback) {
+                this.step = 'hidden';
+                return;
+            }
 
-                if (playing && !this.playbackStartTime) {
-                    // Playback just started - record time and start 7-second timer
-                    this.playbackStartTime = Date.now();
-                    this.clearTimers();
-                    
-                    const trackIdAtStart = this.track.id;
-                    this.showDelayTimer = setTimeout(() => {
-                        // Double-check we're still on the same track and still playing
-                        if (this.track?.id === trackIdAtStart && this.isPlaying) {
-                            this.determineInitialStep();
-                            this.startAutoDismiss();
-                        }
-                    }, 7000);
-                } else if (!playing && this.step === 'hidden') {
-                    // Playback paused before nudge appeared - clear timer
-                    this.clearTimers();
-                }
+            if (playing && !this.playbackStartTime) {
+                // Playback just started - record time and start 7-second timer
+                this.playbackStartTime = Date.now();
+                this.clearTimers();
+                
+                const trackIdAtStart = this.track.id;
+                this.showDelayTimer = setTimeout(() => {
+                    // Double-check we're still on the same track and still playing
+                    if (this.track?.id === trackIdAtStart && this.isPlaying) {
+                        this.determineInitialStep();
+                        this.startAutoDismiss();
+                    }
+                }, 7000);
+            } else if (!playing && this.step === 'hidden') {
+                // Playback paused before nudge appeared - clear timer
+                this.clearTimers();
             }
         }
     },
@@ -236,17 +260,18 @@ export default {
         
         // Submit tempo and complete the feedback
         submitTempoSelection(tempoCategory) {
-            // Map user-friendly names to backend categories
+            // Map user selection to backend tempo labels
             const categoryMap = {
-                'Slow': 'Slow',
-                'Medium': 'Medium', 
-                'Fast': 'Fast',
-                'Turbo': 'Turbo'
+                'Slow': 'Långsamt',
+                'SlowMed': 'Lugnt',
+                'Medium': 'Lagom', 
+                'Fast': 'Snabbt',
+                'Turbo': 'Väldigt snabbt'
             };
             this.submit({ 
                 style: this.correction.style, 
                 tempo_correction: 'ok',  // Default, won't affect if no BPM
-                tempo_category: categoryMap[tempoCategory] || 'Medium'
+                tempo_category: categoryMap[tempoCategory] || 'Lagom'
             }, 'success');
         },
         
@@ -313,17 +338,16 @@ export default {
     },
     template: /*html*/`
     <transition 
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 translate-y-4"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 translate-y-4"
-        mode="out-in"
+        enter-active-class="transition-opacity duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
     >
-        <div v-if="step !== 'hidden'" :key="step" class="w-full relative z-0 mb-2 shadow-xl rounded-xl overflow-hidden font-sans">
+        <div v-if="step !== 'hidden'" v-memo="[step, correction.style, mode, dropdownOpen, isSubmitting, pendingSecondary]" class="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans">
             
-            <div v-if="step === 'verify'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+            <div v-if="step === 'verify'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
                 <div class="text-sm md:text-xs leading-tight">
                     <p class="opacity-80">Stämmer detta?</p>
                     <p class="font-bold text-base md:text-sm">{{ track.dance_style }} • {{ tempoLabel }}</p>
@@ -339,7 +363,7 @@ export default {
             </div>
 
             <!-- Verify style only (no tempo known) -->
-            <div v-else-if="step === 'verify-style-only'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+            <div v-else-if="step === 'verify-style-only'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
                 <div class="text-sm md:text-xs leading-tight">
                     <p class="opacity-80">Är detta en</p>
                     <p class="font-bold text-base md:text-sm">{{ track.dance_style }}?</p>
@@ -355,18 +379,30 @@ export default {
             </div>
 
             <!-- Ask for style (no style known) -->
-            <div v-else-if="step === 'ask-style'" class="bg-purple-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-3 md:gap-2">
-                <div class="flex-1">
-                    <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-2 md:mb-1">
-                        Vad kan man dansa?
-                    </p>
-                    <select v-model="correction.style" class="w-full text-sm md:text-xs text-gray-900 rounded p-2 md:p-1">
-                        <option value="" disabled>Välj dansstil...</option>
-                        <option v-for="s in availableStyles" :key="s" :value="s">{{ s }}</option>
-                    </select>
+            <div v-else-if="step === 'ask-style'" class="bg-purple-600 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
+                <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
+                    Vad kan man dansa?
+                </p>
+                <!-- Custom dropdown -->
+                <div class="relative mb-3 md:mb-2">
+                    <button @click.stop="dropdownOpen = !dropdownOpen" 
+                        class="w-full bg-purple-700 hover:bg-purple-800 border border-purple-500 text-white text-left px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium flex justify-between items-center">
+                        <span>{{ correction.style || 'Välj dansstil...' }}</span>
+                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': dropdownOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div v-if="dropdownOpen" class="absolute z-[200] w-full mt-1 bg-white rounded-lg shadow-xl border border-purple-200 max-h-48 overflow-y-auto">
+                        <button v-for="s in availableStyles" :key="s" 
+                            @click.stop="correction.style = s; dropdownOpen = false"
+                            class="w-full text-left px-4 py-2.5 md:py-2 text-sm md:text-xs hover:bg-purple-100 transition-colors"
+                            :class="correction.style === s ? 'bg-purple-100 text-purple-800 font-bold' : 'text-gray-800'">
+                            {{ s }}
+                        </button>
+                    </div>
                 </div>
-                <div class="flex items-end self-end gap-2">
-                    <button @click="step = 'hidden'" class="bg-purple-800 hover:bg-purple-900 text-sm md:text-[10px] font-bold px-4 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">
+                <div class="flex justify-end gap-2">
+                    <button @click="step = 'hidden'; dropdownOpen = false" class="bg-purple-800 hover:bg-purple-900 text-sm md:text-[10px] font-bold px-4 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">
                         Vet ej
                     </button>
                     <button @click="submitStyleSelection" :disabled="!correction.style" class="bg-white hover:bg-gray-50 text-purple-700 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors disabled:opacity-50">
@@ -376,30 +412,33 @@ export default {
             </div>
 
             <!-- Ask for tempo -->
-            <div v-else-if="step === 'ask-tempo'" class="bg-purple-700 p-4 md:p-3 pb-5 md:pb-4 text-white">
+            <div v-else-if="step === 'ask-tempo'" class="bg-purple-700 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
                 <div class="flex justify-between items-center mb-3 md:mb-2">
                     <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold">
                         Hur snabb är {{ correction.style }}n?
                     </p>
                     <button @click="step = hasStyle ? 'verify-style-only' : 'ask-style'" class="text-xs md:text-[10px] text-purple-300 hover:text-white">← Tillbaka</button>
                 </div>
-                <div class="grid grid-cols-4 gap-2 md:gap-1">
+                <div class="grid grid-cols-5 gap-2 md:gap-1">
                     <button @click="submitTempoSelection('Slow')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
-                        Lugn
+                        Långsamt
+                    </button>
+                    <button @click="submitTempoSelection('SlowMed')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
+                        Lugnt
                     </button>
                     <button @click="submitTempoSelection('Medium')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
                         Lagom
                     </button>
                     <button @click="submitTempoSelection('Fast')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
-                        Rask
+                        Snabbt
                     </button>
                     <button @click="submitTempoSelection('Turbo')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
-                        Ösig
+                        V. snabbt
                     </button>
                 </div>
             </div>
 
-            <div v-else-if="step === 'confirm-secondary'" class="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+            <div v-else-if="step === 'confirm-secondary'" class="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
                 <div class="text-sm md:text-xs leading-tight">
                     <p class="opacity-80">Kan man även dansa</p>
                     <p class="font-bold text-base md:text-sm">{{ secondaryTempoLabel }} {{ pendingSecondary?.style }}?</p>
@@ -414,7 +453,7 @@ export default {
                 </div>
             </div>
 
-            <div v-else-if="step === 'menu'" class="bg-gray-800 p-4 md:p-3 pb-5 md:pb-4 text-white">
+            <div v-else-if="step === 'menu'" class="bg-gray-800 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
                 <div class="flex justify-between items-center mb-3 md:mb-2">
                     <p class="text-sm md:text-xs font-bold text-gray-400 uppercase">Redigera</p>
                     <button @click="step = 'hidden'" class="text-gray-400 hover:text-white text-sm md:text-xs">Stäng</button>
@@ -431,25 +470,37 @@ export default {
                 </div>
             </div>
 
-            <div v-else-if="step === 'fix-style'" :class="[colorClasses.bg, 'p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-3 md:gap-2']">
-                <div class="flex-1">
-                    <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-2 md:mb-1">
-                        {{ mode === 'addition' ? 'Lägg till stil:' : 'Korrekt dansstil:' }}
-                    </p>
-                    <select v-model="correction.style" class="w-full text-sm md:text-xs text-gray-900 rounded p-2 md:p-1 text-black">
-                        <option value="" disabled>Välj...</option>
-                        <option v-for="s in availableStyles" :key="s" :value="s">{{ s }}</option>
-                    </select>
+            <div v-else-if="step === 'fix-style'" :class="[colorClasses.bg, 'p-4 md:p-3 pb-5 md:pb-4 text-white relative rounded-xl']">
+                <button @click="step = 'menu'; dropdownOpen = false" class="absolute top-2 md:top-1 right-3 md:right-2 text-sm md:text-xs" :class="colorClasses.textLight">← Tillbaka</button>
+                <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
+                    {{ mode === 'addition' ? 'Lägg till stil:' : 'Korrekt dansstil:' }}
+                </p>
+                <!-- Custom dropdown -->
+                <div class="relative mb-3 md:mb-2">
+                    <button @click.stop="dropdownOpen = !dropdownOpen" 
+                        :class="[colorClasses.btn, 'w-full border border-white/20 text-white text-left px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium flex justify-between items-center']">
+                        <span>{{ correction.style || 'Välj dansstil...' }}</span>
+                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': dropdownOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div v-if="dropdownOpen" class="absolute z-[200] w-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto">
+                        <button v-for="s in availableStyles" :key="s" 
+                            @click.stop="correction.style = s; dropdownOpen = false"
+                            class="w-full text-left px-4 py-2.5 md:py-2 text-sm md:text-xs hover:bg-gray-100 transition-colors"
+                            :class="correction.style === s ? 'bg-indigo-100 text-indigo-800 font-bold' : 'text-gray-800'">
+                            {{ s }}
+                        </button>
+                    </div>
                 </div>
-                <div class="flex items-end self-end">
-                    <button @click="step = 'fix-tempo'" class="bg-white hover:bg-gray-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors" :class="colorClasses.text">
+                <div class="flex justify-end">
+                    <button @click="step = 'fix-tempo'; dropdownOpen = false" :disabled="!correction.style" class="bg-white hover:bg-gray-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors disabled:opacity-50" :class="colorClasses.text">
                         Nästa →
                     </button>
                 </div>
-                <button @click="step = 'menu'" class="absolute top-2 md:top-1 right-3 md:right-2 text-sm md:text-xs" :class="colorClasses.textLight">Tillbaka</button>
             </div>
 
-            <div v-else-if="step === 'fix-tempo'" :class="[colorClasses.bgDark, 'p-4 md:p-3 pb-5 md:pb-4 text-white']">
+            <div v-else-if="step === 'fix-tempo'" :class="[colorClasses.bgDark, 'p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl']">
                 <div class="flex justify-between items-center mb-3 md:mb-2">
                     <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold">
                         Är {{ correction.style || 'dansen' }} {{ tempoLabel }}?

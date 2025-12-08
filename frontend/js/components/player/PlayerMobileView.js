@@ -18,7 +18,7 @@ export default {
         'close', 'set-source', 'cycle-version', 
         'toggle-structure-mode', 'seek', 
         'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump',
-        'dismiss-broken'
+        'dismiss-broken', 'open-structure-editor'
     ],
     components: { SmartNudge, SectionVoting, BrokenLinkToast, PlayerControls, ProgressBar },
     
@@ -69,8 +69,8 @@ export default {
             <div class="flex-1 min-h-[20px]"></div>
 
             <div class="mb-4 shrink-0">
-                <smart-nudge :track="currentTrack" :is-playing="isPlaying" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
-                <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]"></section-voting>
+                <smart-nudge :key="'nudge-' + currentTrack.id" :track="currentTrack" :is-playing="isPlaying" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
+                <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
                 <broken-link-toast 
                     :broken-state="brokenState" 
                     :structure-mode="structureMode"
@@ -86,10 +86,16 @@ export default {
                     <button @click="$emit('cycle-version', 1)" class="w-6 h-full flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold">›</button>
                 </div>
                 <div v-else></div> 
-                <button @click="$emit('toggle-structure-mode')" class="flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8" :class="structureMode !== 'none' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-50 text-gray-500 border-gray-200'">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="structureButtonIcon" stroke-width="2"></svg>
-                    {{ structureButtonLabel }}
-                </button>
+                <div class="flex items-center gap-2">
+                    <button v-if="structureMode !== 'none'" @click="$emit('open-structure-editor')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" title="Redigera struktur">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Rätta
+                    </button>
+                    <button @click="$emit('toggle-structure-mode')" class="flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8" :class="structureMode !== 'none' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-50 text-gray-500 border-gray-200'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="structureButtonIcon" stroke-width="2"></svg>
+                        {{ structureButtonLabel }}
+                    </button>
+                </div>
             </div>
 
             <div class="h-12 mb-2 relative w-full shrink-0 flex flex-col justify-end">

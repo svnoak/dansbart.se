@@ -56,7 +56,7 @@ export default {
 
         <!-- Main Play Button -->
         <button @click="$emit('toggle-play')" 
-            class="rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95"
+            class="rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square"
             :class="[
                 fullMode ? 'w-16 h-16' : 'w-12 h-12',
                 isSpotifyActive ? 'bg-[#1DB954] hover:bg-[#1ed760]' : 'bg-indigo-600 hover:bg-indigo-700'
