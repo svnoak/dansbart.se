@@ -47,7 +47,8 @@ def submit_track_feedback(
     updated_data = service.process_feedback(
         track_id=track_id,
         style=feedback.style,
-        tempo_correction=feedback.tempo_correction
+        tempo_correction=feedback.tempo_correction,
+        tempo_category=feedback.tempo_category
     )
 
     if not updated_data:

@@ -13,9 +13,9 @@ export default {
     },
 
     template: /*html*/`
-    <div class="card bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-100 flex flex-row items-center justify-between gap-4 transition-all hover:shadow-md group">
+    <div class="card bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-100 flex flex-row items-center justify-between gap-3 sm:gap-4 transition-all hover:shadow-md group w-full max-w-full overflow-hidden">
         
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 overflow-hidden">
             
             <div class="flex flex-wrap items-center gap-2 mb-2">
                 

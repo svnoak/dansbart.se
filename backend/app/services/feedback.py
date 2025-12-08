@@ -13,12 +13,15 @@ class FeedbackService:
     #  PART 1: STYLE VOTING (Genre & Tempo)
     # =========================================================================
 
-    def process_feedback(self, track_id: str, style: str, tempo_correction: str) -> dict | None:
+    def process_feedback(self, track_id: str, style: str, tempo_correction: str, tempo_category: str | None = None) -> dict | None:
         """
         1. Records user input in TrackStyleVote.
         2. Purges unconfirmed AI guesses.
         3. Elects new Primary style based on vote counts.
         4. Returns the NEW Primary data for the frontend.
+        
+        Args:
+            tempo_category: Direct category ("Slow", "Medium", "Fast", "Turbo") when no BPM available
         """
         track = self.db.query(Track).filter(Track.id == track_id).first()
         if not track:
@@ -42,7 +45,12 @@ class FeedbackService:
         source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
         raw_bpm = source.raw_data.get('tempo_bpm', 0) if source else 0
         effective_bpm = int(raw_bpm * new_multiplier)
-        category = categorize_tempo(style, effective_bpm)
+        
+        # Use direct tempo_category if provided (for tracks without BPM), otherwise calculate
+        if tempo_category and tempo_category in ("Slow", "Medium", "Fast", "Turbo"):
+            category = tempo_category
+        else:
+            category = categorize_tempo(style, effective_bpm)
 
         # --- STEP 3: PURGE UNCONFIRMED AI GUESSES ---
         # If users say "It's a Waltz", delete the unconfirmed "Cha Cha" guesses

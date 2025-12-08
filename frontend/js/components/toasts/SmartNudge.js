@@ -1,9 +1,9 @@
 export default {
-    props: ['track'],
+    props: ['track', 'isPlaying'],
     emits: ['edit'], 
     data() {
         return {
-            // States: 'hidden', 'verify', 'confirm-secondary', 'menu', 'fix-style', 'fix-tempo', 'success', 'bonus'
+            // States: 'hidden', 'verify', 'verify-style-only', 'ask-style', 'ask-tempo', 'confirm-secondary', 'menu', 'fix-style', 'fix-tempo', 'success', 'bonus'
             step: 'hidden', 
             
             // Mode determines the intent: 'correction' (Fixing primary) or 'addition' (Adding secondary)
@@ -16,17 +16,27 @@ export default {
             isSubmitting: false,
             availableStyles: ["Hambo", "Polska", "Slängpolska", "Vals", "Schottis", "Snoa", "Polka", "Mazurka", "Engelska", "Gånglåt"],
             showDelayTimer: null,   // Timer to delay showing the nudge
-            autoDismissTimer: null  // Timer to auto-dismiss if no interaction
+            autoDismissTimer: null, // Timer to auto-dismiss if no interaction
+            playbackStartTime: null // Track when playback actually started
         }
     },
     beforeUnmount() {
         this.clearTimers();
     },
     computed: {
+        // Check if track has a known style
+        hasStyle() {
+            const style = this.track?.dance_style;
+            return style && style !== 'Unknown' && style !== 'Unclassified';
+        },
+        // Check if track has tempo info
+        hasTempo() {
+            return this.track?.tempo_category && this.track?.effective_bpm > 0;
+        },
         tempoLabel() {
             if (!this.track) return '';
             const labels = { 'Slow': 'Lugn', 'Medium': 'Lagom', 'Fast': 'Rask', 'Turbo': 'Ösigt' };
-            return labels[this.track.tempo_category] || 'Lagom';
+            return labels[this.track.tempo_category] || '';
         },
         // Get tempo label for pending secondary style
         secondaryTempoLabel() {
@@ -64,27 +74,44 @@ export default {
     watch: {
         track: {
             immediate: true,
-            handler(newTrack) {
-                // Clear any pending timers when track changes
-                this.clearTimers();
-                
-                if (newTrack) {
-                    const hasFeedback = localStorage.getItem(`fb_${newTrack.id}`);
-                    if (hasFeedback) {
-                        this.step = 'hidden';
-                    } else {
-                        // Delay showing the nudge by 7 seconds to let user settle in
-                        this.step = 'hidden';
-                        this.showDelayTimer = setTimeout(() => {
-                            // Double-check we're still on the same track
-                            if (this.track?.id === newTrack.id) {
-                                this.step = 'verify';
-                                this.startAutoDismiss();
-                            }
-                        }, 7000);
-                    }
-                    this.mode = 'correction'; // Default mode
+            handler(newTrack, oldTrack) {
+                // When track changes, reset state but don't show nudge yet
+                if (newTrack?.id !== oldTrack?.id) {
+                    this.clearTimers();
+                    this.step = 'hidden';
+                    this.playbackStartTime = null;
+                    this.mode = 'correction';
                     this.resetForm();
+                }
+            }
+        },
+        isPlaying: {
+            immediate: true,
+            handler(playing) {
+                if (!this.track) return;
+                
+                const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
+                if (hasFeedback) {
+                    this.step = 'hidden';
+                    return;
+                }
+
+                if (playing && !this.playbackStartTime) {
+                    // Playback just started - record time and start 7-second timer
+                    this.playbackStartTime = Date.now();
+                    this.clearTimers();
+                    
+                    const trackIdAtStart = this.track.id;
+                    this.showDelayTimer = setTimeout(() => {
+                        // Double-check we're still on the same track and still playing
+                        if (this.track?.id === trackIdAtStart && this.isPlaying) {
+                            this.determineInitialStep();
+                            this.startAutoDismiss();
+                        }
+                    }, 7000);
+                } else if (!playing && this.step === 'hidden') {
+                    // Playback paused before nudge appeared - clear timer
+                    this.clearTimers();
                 }
             }
         }
@@ -109,9 +136,26 @@ export default {
             }, 20000);
         },
         resetForm() {
-            this.correction.style = this.track.dance_style || "Polska";
+            this.correction.style = this.track?.dance_style || "";
             this.correction.tempo = 'ok';
         },
+        
+        // Determine what to ask based on available data
+        determineInitialStep() {
+            if (!this.hasStyle && !this.hasTempo) {
+                // No style, no tempo -> Ask what dance style
+                this.mode = 'correction';
+                this.correction.style = '';
+                this.step = 'ask-style';
+            } else if (this.hasStyle && !this.hasTempo) {
+                // Has style but no tempo -> Confirm style first
+                this.step = 'verify-style-only';
+            } else {
+                // Has both -> Normal verify flow
+                this.step = 'verify';
+            }
+        },
+        
         // --- NAVIGATION ---
         startCorrection() {
             this.clearTimers(); // User is interacting
@@ -162,10 +206,48 @@ export default {
         },
         
         confirmVerify() { 
-            // First confirm primary, then check if there are secondary styles to confirm
+            // Full verify (style + tempo) - confirm primary, then check secondaries
             this.submit({ style: this.track.dance_style, tempo_correction: 'ok' }).then(() => {
                 this.showSecondaryConfirm();
             });
+        },
+        
+        // Confirm style only, then ask for tempo
+        confirmStyleOnly() {
+            this.clearTimers();
+            this.correction.style = this.track.dance_style;
+            this.step = 'ask-tempo';
+        },
+        
+        // When user says style is wrong in style-only mode
+        rejectStyleOnly() {
+            this.clearTimers();
+            this.mode = 'correction';
+            this.correction.style = '';
+            this.step = 'ask-style';
+        },
+        
+        // Submit style selection and move to tempo
+        submitStyleSelection() {
+            if (!this.correction.style) return;
+            this.clearTimers();
+            this.step = 'ask-tempo';
+        },
+        
+        // Submit tempo and complete the feedback
+        submitTempoSelection(tempoCategory) {
+            // Map user-friendly names to backend categories
+            const categoryMap = {
+                'Slow': 'Slow',
+                'Medium': 'Medium', 
+                'Fast': 'Fast',
+                'Turbo': 'Turbo'
+            };
+            this.submit({ 
+                style: this.correction.style, 
+                tempo_correction: 'ok',  // Default, won't affect if no BPM
+                tempo_category: categoryMap[tempoCategory] || 'Medium'
+            }, 'success');
         },
         
         // Show secondary style confirmation prompt
@@ -255,6 +337,66 @@ export default {
                     </button>
                 </div>
                 <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-indigo-300 hover:text-white text-lg md:text-sm leading-none">×</button>
+            </div>
+
+            <!-- Verify style only (no tempo known) -->
+            <div v-else-if="step === 'verify-style-only'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">
+                <div class="text-sm md:text-xs leading-tight">
+                    <p class="opacity-80">Är detta en</p>
+                    <p class="font-bold text-base md:text-sm">{{ track.dance_style }}?</p>
+                </div>
+                <div class="flex gap-3 md:gap-2">
+                    <button @click="rejectStyleOnly" class="bg-indigo-800 hover:bg-indigo-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">
+                        Nej
+                    </button>
+                    <button @click="confirmStyleOnly" :disabled="isSubmitting" class="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1">
+                        <span>Ja</span>
+                    </button>
+                </div>
+                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-indigo-300 hover:text-white text-lg md:text-sm leading-none">×</button>
+            </div>
+
+            <!-- Ask for style (no style known) -->
+            <div v-else-if="step === 'ask-style'" class="bg-purple-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-3 md:gap-2">
+                <div class="flex-1">
+                    <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-2 md:mb-1">
+                        Vad kan man dansa?
+                    </p>
+                    <select v-model="correction.style" class="w-full text-sm md:text-xs text-gray-900 rounded p-2 md:p-1">
+                        <option value="" disabled>Välj dansstil...</option>
+                        <option v-for="s in availableStyles" :key="s" :value="s">{{ s }}</option>
+                    </select>
+                </div>
+                <div class="flex items-end self-end">
+                    <button @click="submitStyleSelection" :disabled="!correction.style" class="bg-white hover:bg-gray-50 text-purple-700 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors disabled:opacity-50">
+                        Nästa →
+                    </button>
+                </div>
+                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-purple-300 hover:text-white text-lg md:text-sm leading-none">×</button>
+            </div>
+
+            <!-- Ask for tempo -->
+            <div v-else-if="step === 'ask-tempo'" class="bg-purple-700 p-4 md:p-3 pb-5 md:pb-4 text-white">
+                <div class="flex justify-between items-center mb-3 md:mb-2">
+                    <p class="text-xs md:text-[10px] opacity-80 uppercase font-bold">
+                        Hur snabb är {{ correction.style }}n?
+                    </p>
+                    <button @click="step = hasStyle ? 'verify-style-only' : 'ask-style'" class="text-xs md:text-[10px] text-purple-300 hover:text-white">← Tillbaka</button>
+                </div>
+                <div class="grid grid-cols-4 gap-2 md:gap-1">
+                    <button @click="submitTempoSelection('Slow')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
+                        Lugn
+                    </button>
+                    <button @click="submitTempoSelection('Medium')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
+                        Lagom
+                    </button>
+                    <button @click="submitTempoSelection('Fast')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
+                        Rask
+                    </button>
+                    <button @click="submitTempoSelection('Turbo')" class="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors">
+                        Ösig
+                    </button>
+                </div>
             </div>
 
             <div v-else-if="step === 'confirm-secondary'" class="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center">

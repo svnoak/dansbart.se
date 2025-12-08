@@ -111,7 +111,9 @@ class AnalysisService:
             )
         
         if not result:
-            return False
+            # No audio available - try to infer style from track title
+            print(f"   ⚠️ No audio found, attempting title-based classification...")
+            return self._classify_from_title(track)
             
         file_path = result['file_path']
         youtube_id = result.get('youtube_id')
@@ -186,3 +188,73 @@ class AnalysisService:
                 is_working=True
             )
             self.db.add(link)
+
+    def _classify_from_title(self, track: Track) -> bool:
+        """
+        Fallback classification when no audio is available.
+        Attempts to infer dance style from the track title.
+        Returns True if a style was found, False otherwise.
+        """
+        title_lower = track.title.lower()
+        
+        # Map of keywords to dance styles (order matters - more specific first)
+        style_keywords = {
+            "slängpolska": "Slängpolska",
+            "slangpolska": "Slängpolska", 
+            "polska": "Polska",
+            "schottis": "Schottis",
+            "vals": "Vals",
+            "waltz": "Vals",
+            "hambo": "Hambo",
+            "polka": "Polka",
+            "mazurka": "Mazurka",
+            "snoa": "Snoa",
+            "gånglåt": "Gånglåt",
+            "ganglåt": "Gånglåt",
+            "ganglat": "Gånglåt",
+            "marsch": "Gånglåt",
+            "engelska": "Engelska",
+        }
+        
+        detected_style = None
+        for keyword, style in style_keywords.items():
+            if keyword in title_lower:
+                detected_style = style
+                break
+        
+        if not detected_style:
+            print(f"   ❌ Could not infer style from title: {track.title}")
+            return False
+        
+        print(f"   📝 Inferred style from title: {detected_style}")
+        
+        # Create a TrackDanceStyle with low confidence (since it's just from title)
+        from app.core.models import TrackDanceStyle
+        
+        # Check if style already exists
+        existing = self.db.query(TrackDanceStyle).filter(
+            TrackDanceStyle.track_id == track.id,
+            TrackDanceStyle.dance_style == detected_style
+        ).first()
+        
+        if not existing:
+            style_row = TrackDanceStyle(
+                track_id=track.id,
+                dance_style=detected_style,
+                is_primary=True,
+                confidence=0.5,  # Low confidence - title-based only
+                effective_bpm=0,  # Unknown without audio
+                tempo_category=None,
+                bpm_multiplier=1.0,
+                is_user_confirmed=False,
+                confirmation_count=0
+            )
+            self.db.add(style_row)
+        else:
+            # Update existing to be primary if it wasn't
+            existing.is_primary = True
+            if existing.confidence < 0.5:
+                existing.confidence = 0.5
+        
+        self.db.commit()
+        return True

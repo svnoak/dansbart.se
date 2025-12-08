@@ -242,7 +242,8 @@ export default {
         handleToggleRepeat() { this.cycleRepeatMode(); },
         startSmoothLoop() {
             const loop = (now) => {
-                if (this.isPlaying && this.activeSource === 'youtube' && this.duration > 0) {
+                // Smooth interpolation for both YouTube and Spotify
+                if (this.isPlaying && this.duration > 0) {
                     const delta = (now - this.lastTick) / 1000;
                     if (delta < 1.0) this.visualTime = Math.min(this.visualTime + delta, this.duration);
                 }
@@ -321,8 +322,15 @@ export default {
         onSpotifyPlaybackUpdate({ isPaused, position, duration }) {
             if (this.activeSource === 'spotify') {
                 this.isPlaying = !isPaused;
-                this.visualTime = position;
                 this.duration = duration;
+                // Sync position only if drift is significant (like YouTube)
+                if (Math.abs(this.visualTime - position) > 0.5) {
+                    this.visualTime = position;
+                }
+                // Reset lastTick when playback state changes for smooth interpolation
+                if (!isPaused) {
+                    this.lastTick = performance.now();
+                }
             }
         },
         onYtStateChange(stateCode) {
@@ -362,6 +370,8 @@ export default {
             :track-artist="trackArtist"
             :track-album="trackAlbum"
             :broken-state="potentialBrokenState"
+            :has-yt="hasYt"
+            :has-spot="hasSpot"
             @close="isExpanded = false"
             @set-source="setSource"
             @cycle-version="cycleVersion"

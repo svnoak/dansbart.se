@@ -11,7 +11,7 @@ export default {
         'structureMode', 'activeSource', 
         'visualTime', 'duration', 
         'isExpanded', 'trackArtist', 'trackAlbum',
-        'brokenState'
+        'brokenState', 'hasYt', 'hasSpot'
     ],
     emits: [
         'close', 'set-source', 'cycle-version', 
@@ -31,6 +31,10 @@ export default {
             if (this.structureMode === 'none') return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`; 
             if (this.structureMode === 'sections') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
             return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
+        },
+        // Show Spotify hint only when it's a preview (duration <= 30s)
+        showSpotifyHint() {
+            return this.activeSource === 'spotify' && this.duration <= 30;
         }
     },
 
@@ -42,9 +46,9 @@ export default {
             <button @click="$emit('close')" class="text-gray-500 p-2 -ml-2">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
-            <div class="flex bg-gray-100 rounded-lg p-1 gap-1">
-                <button @click="$emit('set-source', 'youtube')" class="px-3 py-1 text-[10px] font-bold uppercase rounded transition-all" :class="activeSource === 'youtube' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'">YouTube</button>
-                <button @click="$emit('set-source', 'spotify')" class="px-3 py-1 text-[10px] font-bold uppercase rounded transition-all" :class="activeSource === 'spotify' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-400'">Spotify</button>
+            <div v-if="hasYt || hasSpot" class="flex bg-gray-100 rounded-lg p-1 gap-1">
+                <button v-if="hasYt" @click="$emit('set-source', 'youtube')" class="px-3 py-1 text-[10px] font-bold uppercase rounded transition-all" :class="activeSource === 'youtube' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400'">YouTube</button>
+                <button v-if="hasSpot" @click="$emit('set-source', 'spotify')" class="px-3 py-1 text-[10px] font-bold uppercase rounded transition-all" :class="activeSource === 'spotify' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-400'">Spotify</button>
             </div>
         </div>
 
@@ -64,7 +68,7 @@ export default {
             <div class="flex-1 min-h-[20px]"></div>
 
             <div class="mb-4 shrink-0">
-                <smart-nudge :track="currentTrack" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
+                <smart-nudge :track="currentTrack" :is-playing="isPlaying" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
                 <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]"></section-voting>
                 <broken-link-toast 
                     :broken-state="brokenState" 
@@ -87,8 +91,14 @@ export default {
                 </button>
             </div>
 
-            <div class="h-12 mb-4 relative w-full shrink-0 flex items-end">
-                 <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
+            <div class="h-12 mb-4 relative w-full shrink-0 flex flex-col justify-end">
+                <!-- Spotify hint - sits above the progress bar, hides when full track plays -->
+                <div v-if="showSpotifyHint" class="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
+                    <span class="text-[10px] text-gray-500 bg-green-50 px-3 py-1 rounded-full border border-green-200 whitespace-nowrap">
+                        Klicka i Spotify-spelaren för hela låten
+                    </span>
+                </div>
+                <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
             </div>
             <div class="shrink-0">
                 <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="true" :active-source="activeSource" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)"></player-controls>

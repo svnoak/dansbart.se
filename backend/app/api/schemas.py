@@ -64,6 +64,7 @@ class LinkSubmission(BaseModel):
 class FeedbackIn(BaseModel):
     style: str  # e.g., "Hambo"
     tempo_correction: str # "ok", "half", "double"
+    tempo_category: str | None = None  # Direct category: "Slow", "Medium", "Fast", "Turbo"
 
 class StructureIn(BaseModel):
     bars: Optional[List[float]] = None
