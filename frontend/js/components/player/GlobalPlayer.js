@@ -1,5 +1,6 @@
 import YouTubeEngine from './YouTubeEngine.js';
 import StructureEditor from '../modals/StructureEditor.js';
+import BrokenLinkToast from '../toasts/BrokenLinkToast.js';
 import { usePlayer } from '../../player.js'; 
 
 import PlayerMobileView from './PlayerMobileView.js';
@@ -9,6 +10,7 @@ export default {
     components: { 
         YouTubeEngine, 
         StructureEditor,
+        BrokenLinkToast,
         PlayerMobileView,
         PlayerDockedView
     },
@@ -16,8 +18,6 @@ export default {
     setup() {
         return { ...usePlayer() };
     },
-    
-    emits: ['report-link'],
     
     data() {
         return {
@@ -38,7 +38,8 @@ export default {
             currentVersionIndex: 0,
             isFetchingVersions: false,
             isNudgeVisible: false,
-            ytPlayStartTime: null // Track when YouTube playback started
+            ytPlayStartTime: null, // Track when YouTube playback started
+            potentialBrokenState: null // For broken link toast
         }
     },
 
@@ -80,8 +81,13 @@ export default {
                         return typeof val === 'string' && !val.includes('spotify');
                     });
                     if (badLink) {
-                        this.$emit('report-link', { track, badLink });
-                        // Auto-dismiss after 8 seconds (handled in parent, but we can also set a timer here)
+                        this.potentialBrokenState = { track, badLink };
+                        // Auto-dismiss after 8 seconds
+                        setTimeout(() => {
+                            if (this.potentialBrokenState?.track.id === track.id) {
+                                this.potentialBrokenState = null;
+                            }
+                        }, 8000);
                     }
                 }
             }
@@ -124,6 +130,14 @@ export default {
         hasSpot() { return !!this.getSpotifyId(this.currentTrack); },
         fmtCurrent() { return this.formatTime(this.visualTime) },
         fmtDuration() { return this.formatTime(this.duration) },
+        
+        // Calculate the bottom offset for elements above the player
+        // Player bar: ~80px, Progress bar: 6px (or 32px with sections)
+        playerBottomOffset() {
+            const playerHeight = 80;
+            const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
+            return playerHeight + progressBarHeight;
+        },
         
         // --- UPDATED HELPERS FOR NEW SCHEMA ---
         trackArtist() {
@@ -249,12 +263,14 @@ export default {
         onDrag(e) {
             if (this.isExpanded) return;
             if (!this.isDraggingVideo) return;
+            // Don't allow dragging on desktop - video is fixed position
+            if (this.windowWidth >= 768) return;
             if (e.cancelable) e.preventDefault(); 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             let newLeft = clientX - this.dragOffset.x;
             let newBottom = (window.innerHeight - clientY) - this.dragOffset.y;
-            const videoWidth = this.windowWidth >= 768 ? 400 : 160;
+            const videoWidth = 160;
             const maxX = window.innerWidth - videoWidth - 16; 
             const maxY = window.innerHeight - 200;
             this.videoPos.x = Math.max(0, Math.min(newLeft, maxX));
@@ -364,7 +380,7 @@ export default {
         ></player-docked-view>
 
         <div ref="videoContainer"
-             class="fixed bg-black shadow-2xl transition-all duration-500 ease-in-out overflow-hidden border border-gray-700"
+             class="fixed bg-black shadow-2xl transition-all duration-300 ease-in-out overflow-hidden border border-gray-700"
              :class="[
                  activeSource === 'youtube' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
                  (isExpanded && windowWidth < 768) ? 'z-[101] rounded-xl' : 'z-[60] rounded-lg'
@@ -376,9 +392,14 @@ export default {
                  height: 'auto', 
                  aspectRatio: '16/9', 
                  bottom: 'auto'
+             } : (windowWidth >= 768) ? {
+                 width: '400px', 
+                 height: '225px', 
+                 left: '16px', 
+                 bottom: (playerBottomOffset + 12) + 'px'
              } : {
-                 width: windowWidth >= 768 ? '400px' : '160px', 
-                 height: windowWidth >= 768 ? '225px' : '90px', 
+                 width: '160px', 
+                 height: '90px', 
                  left: videoPos.x + 'px', 
                  bottom: (videoPos.y + (structureMode !== 'none' ? 32 : 0) + (isNudgeVisible ? 90 : 0)) + 'px'
              }"
@@ -392,11 +413,19 @@ export default {
             <you-tube-engine ref="ytEngine" :video-id="currentVideoId" :active-source="activeSource" @state-change="onYtStateChange" @time-update="onTimeUpdate" @next="handleTrackEnd" @error="handlePlayerError"></you-tube-engine>
         </div>
         
-        <div v-if="activeSource === 'spotify'" class="fixed left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828] transition-all duration-300" :class="structureMode !== 'none' ? 'bottom-32' : 'bottom-24'">
+        <div v-if="activeSource === 'spotify'" 
+             class="fixed left-4 w-80 h-20 shadow-xl z-[60] rounded-lg overflow-hidden border border-gray-200 animate-fade-in bg-[#282828] transition-all duration-300"
+             :style="{ bottom: (windowWidth >= 768 ? playerBottomOffset + 12 : (structureMode !== 'none' ? 128 : 96)) + 'px' }">
             <iframe :src="spotifySrc" class="w-full h-full block" frameborder="0" scrolling="no" allow="autoplay; encrypted-media"></iframe>
         </div>
 
         <structure-editor :is-open="showStructureEditor" :track="currentTrack" :current-time="visualTime" :duration="duration" :is-playing="isPlaying" @close="showStructureEditor = false" @seek="handleSeek" @toggle-play="togglePlay"></structure-editor>
+
+        <broken-link-toast
+            :broken-state="potentialBrokenState"
+            :structure-mode="structureMode"
+            @close="potentialBrokenState = null"
+        ></broken-link-toast>
 
     </div>
     `

@@ -24,6 +24,12 @@ export default {
             if (this.structureMode === 'sections') return 'Visa takter';
             if (this.structureMode === 'bars') return 'Dölj';
             return 'Visa repriser';
+        },
+        // Calculate the bottom offset for elements above the player
+        nudgeBottomOffset() {
+            const playerHeight = 80;
+            const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
+            return playerHeight + progressBarHeight + 12; // 12px margin
         }
     },
 
@@ -31,7 +37,8 @@ export default {
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col transition-all duration-300"
          :class="isExpanded ? 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto' : 'opacity-100'">
          
-        <div class="hidden md:flex absolute bottom-full right-4 mb-7 w-80 z-40 flex-col gap-2">
+        <div class="hidden md:flex fixed right-4 w-80 z-40 flex-col gap-2 transition-all duration-300"
+             :style="{ bottom: nudgeBottomOffset + 'px' }">
             <smart-nudge :track="currentTrack"></smart-nudge>
             <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]"></section-voting>
         </div>

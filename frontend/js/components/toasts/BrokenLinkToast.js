@@ -1,11 +1,22 @@
 import { toRaw } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
 
 export default {
-    props: ['brokenState'], // Expects { track, badLink } or null
+    props: {
+        brokenState: { type: Object, default: null }, // Expects { track, badLink } or null
+        structureMode: { type: String, default: 'none' }
+    },
     emits: ['close'],
     data() {
         return {
             view: 'ask' // 'ask' or 'success'
+        }
+    },
+    computed: {
+        // Calculate the bottom offset for desktop positioning
+        bottomOffset() {
+            const playerHeight = 80;
+            const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
+            return playerHeight + progressBarHeight + 12; // 12px margin
         }
     },
     watch: {
@@ -46,7 +57,9 @@ export default {
         leave-to-class="opacity-0"
         mode="out-in"
     >
-        <div v-if="brokenState" :key="view" class="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 z-[100] max-w-md w-full bg-gray-900 text-white shadow-2xl rounded-lg p-4 border border-gray-700 font-sans">
+        <div v-if="brokenState" :key="view" 
+             class="fixed left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-4 z-[100] max-w-md w-full bg-gray-900 text-white shadow-2xl rounded-lg p-4 border border-gray-700 font-sans transition-all duration-300"
+             :style="{ bottom: bottomOffset + 'px' }">
             
             <div v-if="view === 'ask'" class="flex flex-col sm:flex-row items-center gap-4">
                 <div class="flex items-center gap-3 w-full sm:w-auto">

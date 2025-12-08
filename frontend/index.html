@@ -32,7 +32,7 @@
                     :key="track.id" 
                     :track="track"
                     :current-track="currentTrack"
-                    :is-spotify-mode="useSpotifyFallback"
+                    :is-spotify-mode="activeSource === 'spotify'"
                     :is-playing="isPlaying"
                     @play="handlePlay"
                     @stop="togglePlay"
@@ -41,14 +41,7 @@
             </div>
         </div>
 
-        <global-player
-            @report-link="handlePotentialBrokenLink"
-        ></global-player>
-
-        <broken-link-toast
-        :broken-state="potentialBrokenState"
-        @close="potentialBrokenState = null"
-    ></broken-link-toast>
+        <global-player></global-player>
     </div>
 
     <script type="module" src="./js/app.js"></script>
