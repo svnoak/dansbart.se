@@ -5,11 +5,12 @@ class TrackService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_playable_tracks(self, style: str = None, min_bpm: int = None, max_bpm: int = None):
+    def get_playable_tracks(self, style: str = None, min_bpm: int = None, max_bpm: int = None, limit: int = 20, offset: int = 0):
         """
-        Fetches tracks.
+        Fetches tracks with pagination.
         - Filters out broken links.
         - Includes 'Unclassified' tracks if no specific style filter is applied.
+        - Returns dict with 'items', 'total', 'limit', 'offset'
         """
         
         # 1. BASE QUERY
@@ -40,7 +41,11 @@ class TrackService:
             joinedload(Track.artist_links).joinedload(TrackArtist.artist)
         ).distinct()
 
-        tracks = query.all()
+        # Get total count before pagination
+        total_count = query.count()
+
+        # Apply pagination
+        tracks = query.offset(offset).limit(limit).all()
 
         # Gather all unique styles currently visible in this list
         visible_styles = set()
@@ -143,7 +148,13 @@ class TrackService:
                 ]
             })
 
-        return results
+        return {
+            "items": results,
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "has_more": offset + len(results) < total_count
+        }
     
     def _get_global_feels(self, styles: list[str]) -> dict:
         """

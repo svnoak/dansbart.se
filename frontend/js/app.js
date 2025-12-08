@@ -1,4 +1,4 @@
-import { createApp, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+import { createApp, onMounted, onUnmounted, ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
 import { useTracks } from './tracks.js';
 import { usePlayer } from './player.js';
 
@@ -20,6 +20,9 @@ const app = createApp({
         const playerLogic = usePlayer();
         const { isPlaying, togglePlay } = playerLogic;
 
+        const scrollTrigger = ref(null);
+        let observer = null;
+
         const handlePlay = (track, sourcePreference = null) => {
             const list = trackLogic.tracks.value;
             const index = list.findIndex(t => t.id === track.id);
@@ -31,13 +34,34 @@ const app = createApp({
 
         onMounted(() => {
             trackLogic.fetchTracks();
+
+            // Set up Intersection Observer for infinite scroll
+            observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !trackLogic.loading.value && !trackLogic.loadingMore.value) {
+                    trackLogic.loadMore();
+                }
+            }, { rootMargin: '100px' });
+
+            // Watch for the trigger element
+            const checkTrigger = setInterval(() => {
+                const el = document.querySelector('[data-scroll-trigger]');
+                if (el) {
+                    observer.observe(el);
+                    clearInterval(checkTrigger);
+                }
+            }, 100);
+        });
+
+        onUnmounted(() => {
+            if (observer) observer.disconnect();
         });
 
         return { 
             ...trackLogic, 
             ...playerLogic,
             handlePlay,
-            togglePlay
+            togglePlay,
+            scrollTrigger
         };
     }
 });

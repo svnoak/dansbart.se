@@ -3,6 +3,10 @@ import { ref, computed, watch } from 'https://unpkg.com/vue@3/dist/vue.esm-brows
 export function useTracks() {
     const tracks = ref([]);
     const loading = ref(false);
+    const loadingMore = ref(false);
+    const hasMore = ref(true);
+    const offset = ref(0);
+    const limit = 20;
     
     // State
     const filters = ref({ style: '' }); 
@@ -26,8 +30,16 @@ export function useTracks() {
     });
 
     // API Logic
-    const fetchTracks = async () => {
-        loading.value = true;
+    const fetchTracks = async (append = false) => {
+        if (append) {
+            if (loadingMore.value || !hasMore.value) return;
+            loadingMore.value = true;
+        } else {
+            loading.value = true;
+            offset.value = 0;
+            tracks.value = [];
+        }
+
         try {
             const params = new URLSearchParams();
             if (filters.value.style) params.append('style', filters.value.style);
@@ -37,28 +49,45 @@ export function useTracks() {
                 params.append('max_bpm', computedMax.value);
             }
 
+            params.append('limit', limit);
+            params.append('offset', offset.value);
+
             const response = await fetch(`/api/tracks?${params.toString()}`);
             if (!response.ok) throw new Error('Network error');
-            tracks.value = await response.json();
+            
+            const data = await response.json();
+            
+            if (append) {
+                tracks.value = [...tracks.value, ...data.items];
+            } else {
+                tracks.value = data.items;
+            }
+            
+            hasMore.value = data.has_more;
+            offset.value += data.items.length;
         } catch (error) {
             console.error("Error fetching tracks:", error);
         } finally {
             loading.value = false;
+            loadingMore.value = false;
         }
     };
+
+    const loadMore = () => fetchTracks(true);
 
     // Watchers: Re-fetch when Style, Tempo Value, OR Tempo Toggle changes
     let timeout;
     watch([() => targetTempo.value, () => tempoEnabled.value, () => filters.value.style], () => {
         clearTimeout(timeout);
-        timeout = setTimeout(fetchTracks, 400);
+        timeout = setTimeout(() => fetchTracks(false), 400);
     });
 
     return {
-        tracks, loading, filters, 
+        tracks, loading, loadingMore, hasMore,
+        filters, 
         targetTempo, tempoEnabled,
         computedMin, computedMax, 
         getRangeLeftPct, getRangeWidthPct, 
-        fetchTracks
+        fetchTracks, loadMore
     };
 }

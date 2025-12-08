@@ -18,18 +18,22 @@ from app.services.classification import ClassificationService
 
 router = APIRouter()
 
-@router.get("/tracks", response_model=list[TrackOut])
+@router.get("/tracks")
 def get_tracks(
     style: str = Query(None),
     min_bpm: int = Query(None),
     max_bpm: int = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
     service = TrackService(db)
     return service.get_playable_tracks(
         style=style, 
         min_bpm=min_bpm, 
-        max_bpm=max_bpm
+        max_bpm=max_bpm,
+        limit=limit,
+        offset=offset
     )
 
 @router.post("/tracks/{track_id}/feedback")
