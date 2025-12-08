@@ -81,22 +81,25 @@ class StyleClassifier:
             return {
                 "style": meta, 
                 "confidence": 0.98, 
-                "reason": f"Metadata match: '{meta}'"
+                "reason": f"Metadata match: '{meta}'",
+                "source": "metadata"
             }
         
         # --- 2. THE BRAIN: AI Suggestion ---
         # Check if the neural network recognizes the texture/rhythm fingerprint
         embedding = analysis.get("embedding")
         if embedding:
-            ml_style = self.head.predict(embedding)
+            ml_style, ml_confidence = self.head.predict(embedding)
             if ml_style != "Unknown":
                 return {
                     "style": ml_style,
-                    "confidence": 0.85, 
-                    "reason": "AI Groove Fingerprint"
+                    "confidence": ml_confidence,  # Real probability from model
+                    "reason": "AI Groove Fingerprint",
+                    "source": "ml"
                 }
 
         # --- 3. FALLBACK: Heuristics (Math + Structure) ---
+        # These are educated guesses - confidence reflects uncertainty
         
         meter = analysis.get("meter", "4/4")
         swing = analysis.get("swing_ratio", 1.0)
@@ -127,61 +130,64 @@ class StyleClassifier:
             if 15.0 <= val <= 17.0: return True # 16 bars (A+A)
             if 30.0 <= val <= 34.0: return True # 32 bars
             return False
+        
+        # Helper: Build heuristic result with honest confidence
+        # Heuristics max out at 0.50 to indicate they're guesses
+        def heuristic_result(style, base_confidence, reason, bonus=0.0):
+            # Cap heuristic confidence at 0.50 (50%) - these are guesses
+            conf = min(0.50, base_confidence + bonus)
+            return {
+                "style": style, 
+                "confidence": conf, 
+                "reason": f"[Heuristic] {reason}",
+                "source": "heuristic"
+            }
 
         # === TERNARY METER (3/4) ===
         if "3/" in meter:
             # Hambo Logic: Long 1st beat + Square Structure
             if ratios[0] > 0.40:
-                confidence = 0.70
-                reason = "Rhythm: Long 1st Beat"
-                
-                if is_square(avg_bars):
-                    confidence += 0.15
-                    reason += f" + Square Structure ({int(avg_bars)} bars)"
-                
-                return {"style": "Hambo", "confidence": confidence, "reason": reason}
+                bonus = 0.10 if is_square(avg_bars) else 0.0
+                reason = "Long 1st Beat" + (f" + Square ({int(avg_bars)} bars)" if is_square(avg_bars) else "")
+                return heuristic_result("Hambo", 0.40, reason, bonus)
             
             # Vals Logic: Even beats
             if abs(ratios[0] - 0.33) < 0.05 and abs(ratios[1] - 0.33) < 0.05:
-                return {"style": "Vals", "confidence": 0.60, "reason": "Rhythm: Even Beat lengths"}
+                return heuristic_result("Vals", 0.35, "Even Beat lengths")
 
             # Slängpolska Logic: Smooth
             if punchiness < 0.1: 
-                return {"style": "Slängpolska", "confidence": 0.65, "reason": "Texture: Smooth/Flowing"}
+                return heuristic_result("Slängpolska", 0.35, "Smooth/Flowing Texture")
 
             # Polska Logic: Generic/Asymmetric (Often NOT square)
-            # We default to "Unknown" now, but if we had to guess, lack of squareness implies Polska over Hambo.
             return {
                 "style": "Unknown", 
                 "confidence": 0.0, 
-                "reason": "Undetermined 3/4 Rhythm"
+                "reason": "Undetermined 3/4 Rhythm",
+                "source": "heuristic"
             }
 
         # === BINARY METER (2/4 or 4/4) ===
         else:
             # Schottis Logic: High Swing + Square Structure
             if swing > 1.25:
-                confidence = 0.75
-                reason = f"High Swing ({swing:.2f})"
-                
-                if is_square(avg_bars):
-                    confidence += 0.10
-                    reason += f" + Square Structure"
-                    
-                return {"style": "Schottis", "confidence": confidence, "reason": reason}
+                bonus = 0.10 if is_square(avg_bars) else 0.0
+                reason = f"High Swing ({swing:.2f})" + (" + Square" if is_square(avg_bars) else "")
+                return heuristic_result("Schottis", 0.40, reason, bonus)
             
             # Snoa Logic: Strict Tempo Range
             if 80 < bpm < 115:
-                return {"style": "Snoa", "confidence": 0.60, "reason": "Walking Tempo"}
+                return heuristic_result("Snoa", 0.35, f"Walking Tempo ({int(bpm)} BPM)")
             
             # Polka Logic: Fast Tempo
             elif bpm >= 115:
-                return {"style": "Polka", "confidence": 0.55, "reason": "Fast Tempo"}
+                return heuristic_result("Polka", 0.30, f"Fast Tempo ({int(bpm)} BPM)")
             
             return {
                 "style": "Unknown", 
                 "confidence": 0.0, 
-                "reason": "Undetermined Binary Rhythm"
+                "reason": "Undetermined Binary Rhythm",
+                "source": "heuristic"
             }
 
     def _get_secondary_styles(self, primary, raw_bpm, analysis):

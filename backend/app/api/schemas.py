@@ -8,10 +8,16 @@ class PlaybackLinkOut(BaseModel):
     platform: str
     deep_link: str
 
+class TempoOut(BaseModel):
+    level: int      # 1-5 (for filtering/sorting)
+    label: str      # "Långsamt", "Lugnt", "Lagom", "Snabbt", "Väldigt snabbt"
+    relative: str   # "slower", "typical", "faster" (vs typical for this dance)
+
 class SecondaryStyleOut(BaseModel):
     style: str
     effective_bpm: int
     tempo_category: Optional[str] = None
+    tempo: Optional[TempoOut] = None
     confirmations: int = 0
 
 class AlbumOut(BaseModel):
@@ -47,7 +53,8 @@ class TrackOut(BaseModel):
     style_confirmations: int = 0
     secondary_styles: List[SecondaryStyleOut] = []
     effective_bpm: int
-    tempo_category: str | None
+    tempo_category: str | None  # Legacy - keep for backwards compatibility
+    tempo: Optional[TempoOut] = None  # New: structured tempo data
     duration: int | None = None
     bars: List[float] | None = None
     sections: List[float] | None = None

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from app.core.models import Track, TrackDanceStyle, TrackArtist, DanceMovementFeedback, PlaybackLink
+from app.core.music_theory import get_tempo_description
 
 class TrackService:
     def __init__(self, db: Session):
@@ -10,6 +11,8 @@ class TrackService:
         style: str = None, 
         min_bpm: int = None, 
         max_bpm: int = None, 
+        min_tempo: int = None,
+        max_tempo: int = None,
         search: str = None,
         source: str = None,
         vocals: str = None,
@@ -76,8 +79,9 @@ class TrackService:
             joinedload(Track.artist_links).joinedload(TrackArtist.artist)
         ).distinct()
 
-        # Get total count before pagination
-        total_count = query.count()
+        # Get total count before pagination (will be adjusted if energy filtering)
+        # Note: Energy filtering happens post-query since it depends on style+bpm calculation
+        base_total = query.count()
 
         # Apply pagination
         tracks = query.offset(offset).limit(limit).all()
@@ -93,6 +97,7 @@ class TrackService:
         style_feel_map = self._get_global_feels(list(visible_styles))
 
         results = []
+        filtered_count = 0  # Track how many we filter out
 
         for track in tracks:
             # --- A. FILTER BROKEN LINKS ---
@@ -163,11 +168,25 @@ class TrackService:
                     "style": s.dance_style,
                     "effective_bpm": s.effective_bpm,
                     "tempo_category": s.tempo_category,
+                    "tempo": get_tempo_description(s.dance_style, s.effective_bpm),
                     "confirmations": s.confirmation_count
                 }
                 for s in track.dance_styles 
                 if not s.is_primary
             ]
+
+            # 4. Get tempo description for primary style
+            tempo_data = get_tempo_description(final_style, final_bpm) if final_bpm else None
+
+            # --- E. TEMPO LEVEL FILTER (post-query since it depends on style+bpm) ---
+            if tempo_data and (min_tempo or max_tempo):
+                track_tempo_level = tempo_data["level"]
+                if min_tempo and track_tempo_level < min_tempo:
+                    filtered_count += 1
+                    continue
+                if max_tempo and track_tempo_level > max_tempo:
+                    filtered_count += 1
+                    continue
 
             results.append({
                 "id": str(track.id),
@@ -178,6 +197,7 @@ class TrackService:
                 "feel_tags": final_tags,
                 "effective_bpm": final_bpm,
                 "tempo_category": final_category,
+                "tempo": tempo_data,
                 "style_confidence": final_confidence,
                 "style_confirmations": final_confirmations,
                 "secondary_styles": secondary_styles,
@@ -195,6 +215,9 @@ class TrackService:
                     for l in valid_links
                 ]
             })
+
+        # Adjust total for tempo filtering (approximate - not exact for pagination)
+        total_count = base_total - filtered_count if (min_tempo or max_tempo) else base_total
 
         return {
             "items": results,

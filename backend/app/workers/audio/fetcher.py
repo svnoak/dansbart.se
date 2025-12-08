@@ -4,12 +4,14 @@ import re
 import yt_dlp
 import logging
 import difflib # Used for title similarity scoring
+from mutagen.mp3 import MP3
 
 class AudioFetcher:
     def __init__(self, temp_dir="./temp_audio"):
         self.temp_dir = temp_dir
         os.makedirs(self.temp_dir, exist_ok=True)
         self.logger = logging.getLogger(__name__)
+        self._expected_duration_ms = None  # Store for post-download verification
     
     def _normalize_title(self, title: str) -> str:
         """
@@ -48,6 +50,7 @@ class AudioFetcher:
         # Store these for use in matching
         self._track_title = track_title
         self._artist_name = artist_name
+        self._expected_duration_ms = expected_duration_ms
 
         # Download Options
         dl_opts = {
@@ -74,11 +77,21 @@ class AudioFetcher:
                     youtube_title = info.get('title')
                 
                 expected_file = f"{self.temp_dir}/{track_id}.mp3"
+                
+                # Verify downloaded audio
+                verification = self._verify_downloaded_audio(expected_file)
+                if not verification["valid"]:
+                    self.logger.warning(f"⚠️ Direct download verification failed: {verification['reason']}")
+                    # For direct links (user-provided), we still return it but log the warning
+                    # User explicitly chose this link, so trust their judgment
+                
                 if os.path.exists(expected_file):
                     return {
                         "file_path": expected_file,
                         "youtube_id": youtube_id,
-                        "youtube_title": youtube_title
+                        "youtube_title": youtube_title,
+                        "verified": verification["valid"],
+                        "actual_duration_ms": verification["actual_duration_ms"]
                     }
                 return None
 
@@ -124,13 +137,26 @@ class AudioFetcher:
                 # Download using the verified webpage URL
                 ydl.download([webpage_url])
 
-            # --- STEP D: RETURN RESULT ---
+            # --- STEP D: VERIFY & RETURN RESULT ---
             expected_file = f"{self.temp_dir}/{track_id}.mp3"
+            
             if os.path.exists(expected_file):
+                # Post-download verification
+                verification = self._verify_downloaded_audio(expected_file)
+                
+                if not verification["valid"]:
+                    self.logger.warning(f"⚠️ Post-download verification failed: {verification['reason']}")
+                    # Clean up the bad file
+                    self.cleanup(track_id)
+                    return None
+                
+                self.logger.info(f"✅ Audio verified: {verification['reason']}")
                 return {
                     "file_path": expected_file,
                     "youtube_id": youtube_id,
-                    "youtube_title": youtube_title
+                    "youtube_title": youtube_title,
+                    "verified": True,
+                    "actual_duration_ms": verification["actual_duration_ms"]
                 }
                 
         except Exception as e:
@@ -290,3 +316,45 @@ class AudioFetcher:
                 os.remove(f)
             except OSError:
                 pass
+
+    def _verify_downloaded_audio(self, file_path: str) -> dict:
+        """
+        Verifies the downloaded audio file:
+        1. File exists and is readable
+        2. Duration matches expected (within tolerance)
+        
+        Returns: {"valid": bool, "actual_duration_ms": int, "reason": str}
+        """
+        if not os.path.exists(file_path):
+            return {"valid": False, "actual_duration_ms": 0, "reason": "File not found"}
+        
+        try:
+            audio = MP3(file_path)
+            actual_duration_ms = int(audio.info.length * 1000)
+            
+            # If no expected duration, just verify file is valid
+            if not self._expected_duration_ms:
+                return {"valid": True, "actual_duration_ms": actual_duration_ms, "reason": "No expected duration to compare"}
+            
+            # Calculate difference
+            diff_ms = abs(actual_duration_ms - self._expected_duration_ms)
+            diff_seconds = diff_ms / 1000
+            
+            # Allow 10 second tolerance (tighter than search filter)
+            # This catches cases where search matched but actual audio differs
+            if diff_seconds <= 10:
+                return {
+                    "valid": True, 
+                    "actual_duration_ms": actual_duration_ms, 
+                    "reason": f"Duration match (diff: {diff_seconds:.1f}s)"
+                }
+            else:
+                return {
+                    "valid": False, 
+                    "actual_duration_ms": actual_duration_ms, 
+                    "reason": f"Duration mismatch: expected {self._expected_duration_ms/1000:.0f}s, got {actual_duration_ms/1000:.0f}s (diff: {diff_seconds:.1f}s)"
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Audio verification failed: {e}")
+            return {"valid": False, "actual_duration_ms": 0, "reason": f"Verification error: {e}"}

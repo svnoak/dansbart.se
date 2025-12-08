@@ -12,10 +12,15 @@ class ClassificationHead:
     It learns to map Embeddings -> Folk Styles based on user feedback.
     """
     
+    # Increment this when changing feature vector composition
+    FEATURE_VERSION = 1
+    EXPECTED_FEATURE_COUNT = 209  # MusiCNN(200) + folk(6) + swing(1) + layout(2)
+    
     def __init__(self, model_dir: str = "models"):
         self.model_path = os.path.join(model_dir, "custom_style_head.pkl")
         self.scaler = None
         self.model = None
+        self.model_version = None
         self._load()
 
     def _load(self):
@@ -23,16 +28,26 @@ class ClassificationHead:
             data = joblib.load(self.model_path)
             self.model = data['model']
             self.scaler = data['scaler']
-            print("🧠 Classification Head loaded.")
+            self.model_version = data.get('version', 0)
+            
+            # Version mismatch check
+            if self.model_version != self.FEATURE_VERSION:
+                print(f"⚠️ Model version mismatch! Model: v{self.model_version}, Expected: v{self.FEATURE_VERSION}")
+                print("   Clearing model - will need retraining.")
+                self.model = None
+                self.scaler = None
+            else:
+                print("🧠 Classification Head loaded.")
         else:
             print("🌱 New Classification Head initialized (Waiting for training data).")
 
-    def predict(self, embedding: list) -> str:
+    def predict(self, embedding: list) -> tuple[str, float]:
         """
-        Returns the predicted style string (e.g., 'Hambo') or 'Unknown'.
+        Returns (style_string, confidence) tuple.
+        E.g., ('Hambo', 0.85) or ('Unknown', 0.0)
         """
         if self.model is None or self.scaler is None:
-            return "Unknown"
+            return ("Unknown", 0.0)
         
         try:
             # --- SAFETY CHECK FOR HYBRID UPDATE ---
@@ -41,23 +56,25 @@ class ClassificationHead:
             if len(embedding) > expected_features:
                 embedding = embedding[:expected_features]
             elif len(embedding) < expected_features:
-                 return "Unknown"
+                 return ("Unknown", 0.0)
 
             # 1. Normalize
             scaled_features = self.scaler.transform([embedding])
             
             # 2. Predict
             probs = self.model.predict_proba(scaled_features)
-            max_prob = np.max(probs)
+            max_prob = float(np.max(probs))
             
             if max_prob < 0.4: 
-                return "Unknown"
+                return ("Unknown", max_prob)
                 
             prediction_idx = np.argmax(probs)
-            return self.model.classes_[prediction_idx]
+            style = self.model.classes_[prediction_idx]
+            return (style, max_prob)
         except Exception as e:
             print(f"⚠️ Head prediction failed: {e}")
-            return "Unknown"
+            return ("Unknown", 0.0)
+    
     def train(self, embeddings: list, labels: list):
         """
         Retrains the head using the provided Golden Dataset.
@@ -81,5 +98,9 @@ class ClassificationHead:
         self.model.fit(X_scaled, y)
 
         # 3. Save
-        joblib.dump({'model': self.model, 'scaler': self.scaler}, self.model_path)
+        joblib.dump({
+            'model': self.model, 
+            'scaler': self.scaler,
+            'version': self.FEATURE_VERSION
+        }, self.model_path)
         print("✅ Classification Head saved to disk.")

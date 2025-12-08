@@ -104,12 +104,12 @@ class AudioAnalyzer:
                 layout_stats
             ])
             
-            predicted_style = self.head.predict(full_vector)
+            predicted_style, ml_confidence = self.head.predict(full_vector)
 
             # --- 7. DEEP STRUCTURE ANALYSIS --- 
             # Now we run the unstable heavy structure analysis, 
             # but we use the predicted style (which is now smarter) to guide it.
-            print(f"   [ANALYSIS] Structure analysis (Hint: {predicted_style})...")
+            print(f"   [ANALYSIS] Structure analysis (Hint: {predicted_style}, conf: {ml_confidence:.2f})...")
             
             try:
                 sections = self.structure_extractor.extract_segments(
