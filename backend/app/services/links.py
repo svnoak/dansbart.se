@@ -67,7 +67,7 @@ class LinkService:
             track.swing_ratio = None
             track.articulation = None
             track.bounciness = None
-            track.processing_status = "PENDING"  # Ready for re-analysis
+            track.processing_status = "FAILED"
         
         return True
     
