@@ -150,14 +150,13 @@ class SpotifyIngestor:
                 db_track.duration_ms = duration_ms
                 self.db.commit()
 
-        # Link Spotify URL
-        external_urls = sp_track.get('external_urls', {})
-        spotify_url = external_urls.get('spotify')
-        if spotify_url:
+        # Link Spotify ID (extract from URL or use track ID directly)
+        spotify_id = sp_track.get('id')  # Spotify track ID is directly available
+        if spotify_id:
             self.repo.add_playback_link(
                 track_id=db_track.id, 
                 platform="spotify", 
-                url=spotify_url
+                url=spotify_id  # Store just the ID, not the full URL
             )
 
         return db_track

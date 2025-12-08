@@ -32,20 +32,14 @@ export function usePlayer() {
         return null;
     };
 
-    const getSpotifyUrl = (track) => {
+    const getSpotifyId = (track) => {
         if (!track?.playback_links) return null;
         for (const linkObj of track.playback_links) {
-            const val = linkObj.deep_link || linkObj;
-            if (typeof val === 'string' && val.includes('spotify')) return val;
+            if (linkObj.platform === 'spotify') {
+                return linkObj.deep_link;
+            }
         }
         return null;
-    };
-
-    const getSpotifyId = (track) => {
-        const url = getSpotifyUrl(track);
-        if (!url) return null;
-        const match = url.match(/track\/([a-zA-Z0-9]+)/);
-        return match ? match[1] : null;
     };
 
     // --- ACTIONS ---
