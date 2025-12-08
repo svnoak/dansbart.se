@@ -129,10 +129,10 @@ export default {
                  class="h-3 w-3 bg-indigo-600 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity">
             </div>
             
-            <div v-if="isDragging && structureMode === 'bars'"
-                 class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-indigo-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                Takt {{ currentBarIndex }}
-                <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-indigo-800"></div>
+            <!-- Always show bar number bubble when in bars mode -->
+            <div v-if="structureMode === 'bars'"
+                 class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-indigo-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                {{ currentBarIndex }}
             </div>
 
         </div>

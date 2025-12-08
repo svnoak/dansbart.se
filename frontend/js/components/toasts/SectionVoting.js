@@ -158,7 +158,6 @@ export default {
                         <span>Ja</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-indigo-300 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
             <div v-else-if="step === 'success'" class="bg-green-600 p-5 md:p-4 text-white flex justify-center items-center">

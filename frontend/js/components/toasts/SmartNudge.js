@@ -336,7 +336,6 @@ export default {
                         <span>Ja</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-indigo-300 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
             <!-- Verify style only (no tempo known) -->
@@ -353,7 +352,6 @@ export default {
                         <span>Ja</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-indigo-300 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
             <!-- Ask for style (no style known) -->
@@ -367,12 +365,14 @@ export default {
                         <option v-for="s in availableStyles" :key="s" :value="s">{{ s }}</option>
                     </select>
                 </div>
-                <div class="flex items-end self-end">
+                <div class="flex items-end self-end gap-2">
+                    <button @click="step = 'hidden'" class="bg-purple-800 hover:bg-purple-900 text-sm md:text-[10px] font-bold px-4 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">
+                        Vet ej
+                    </button>
                     <button @click="submitStyleSelection" :disabled="!correction.style" class="bg-white hover:bg-gray-50 text-purple-700 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors disabled:opacity-50">
                         Nästa →
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-purple-300 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
             <!-- Ask for tempo -->
@@ -412,7 +412,6 @@ export default {
                         <span>Ja!</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-amber-200 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
             <div v-else-if="step === 'menu'" class="bg-gray-800 p-4 md:p-3 pb-5 md:pb-4 text-white">
@@ -483,7 +482,6 @@ export default {
                         <span>+ Lägg till</span>
                     </button>
                 </div>
-                <button @click="step = 'hidden'" class="absolute top-1 right-1 p-2 text-teal-200 hover:text-white text-lg md:text-sm leading-none">×</button>
             </div>
 
         </div>
