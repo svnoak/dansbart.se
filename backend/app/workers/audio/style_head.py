@@ -13,8 +13,8 @@ class ClassificationHead:
     """
     
     # Increment this when changing feature vector composition
-    FEATURE_VERSION = 1
-    EXPECTED_FEATURE_COUNT = 209  # MusiCNN(200) + folk(6) + swing(1) + layout(2)
+    FEATURE_VERSION = 2
+    EXPECTED_FEATURE_COUNT = 211  # MusiCNN(200) + folk(8) + swing(1) + layout(2)
     
     def __init__(self, model_dir: str = "models"):
         self.model_path = os.path.join(model_dir, "custom_style_head.pkl")

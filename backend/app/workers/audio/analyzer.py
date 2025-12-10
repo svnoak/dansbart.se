@@ -79,7 +79,7 @@ class AudioAnalyzer:
             # --- 3. RHYTHM ANALYSIS ---
             # Call method on the instance, NOT the class
             print(f"   [ANALYSIS] Doing rythm analysis...")
-            act, beat_times, beat_info = self.rhythm_extractor.analyze_beats(file_path, metadata_context)
+            act, beat_times, beat_info, ternary_confidence = self.rhythm_extractor.analyze_beats(file_path, metadata_context)
             folk_features = self.rhythm_extractor.extract_folk_features(beat_times, act)
             bars = self.rhythm_extractor.get_bars(beat_info)
 
@@ -132,6 +132,10 @@ class AudioAnalyzer:
             # --- 7. RETURN METRICS ---
             print(f"   [ANALYSIS] Returning metrics...")
             raw_bpm = folk_features[0]
+            
+            # Extract Polska/Hambo signature scores (indices 6 and 7)
+            polska_score = folk_features[6] if len(folk_features) > 6 else 0.0
+            hambo_score = folk_features[7] if len(folk_features) > 7 else 0.0
 
             return {
                 "ml_suggested_style": predicted_style,
@@ -144,6 +148,9 @@ class AudioAnalyzer:
                 "bounciness": feel_data['bounciness'],
                 "avg_beat_ratios": [self._to_float(x) for x in folk_features[3:6]],
                 "punchiness": self._to_float(folk_features[2]),
+                "polska_score": self._to_float(polska_score),
+                "hambo_score": self._to_float(hambo_score),
+                "ternary_confidence": self._to_float(ternary_confidence),
                 "meter": f"{int(np.max(beat_info[:,1])) if len(beat_info) > 0 else 0}/4",
                 "bars": [self._to_float(b) for b in bars],
                 "sections": [self._to_float(s) for s in sections],

@@ -1,9 +1,19 @@
-# Use generic Nginx
 FROM nginx:alpine
 
-# Copy our custom Nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom Nginx config
+COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
 
-# Copy static files to the Nginx html folder
-# (Note: In dev, we will override this with a volume map)
+# Copy static files
 COPY . /usr/share/nginx/html
+
+# Remove unnecessary files
+RUN rm -f /usr/share/nginx/html/nginx.conf \
+          /usr/share/nginx/html/nginx.prod.conf \
+          /usr/share/nginx/html/Dockerfile \
+          /usr/share/nginx/html/.gitignore
+
+# Set correct permissions
+RUN chmod -R 755 /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

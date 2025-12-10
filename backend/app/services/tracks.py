@@ -9,6 +9,7 @@ class TrackService:
     def get_playable_tracks(
         self, 
         style: str = None, 
+        #user_confirmed: bool = False,
         min_bpm: int = None, 
         max_bpm: int = None, 
         min_tempo: int = None,
@@ -35,6 +36,9 @@ class TrackService:
         # 2. APPLY FILTERS
         if style:
             query = query.filter(TrackDanceStyle.dance_style.ilike(style))
+
+        #if user_confirmed:
+        #    query = query.filter(TrackDanceStyle.is_user_confirmed == True)
         
         if min_bpm:
             query = query.filter(TrackDanceStyle.effective_bpm >= min_bpm)
@@ -42,39 +46,38 @@ class TrackService:
         if max_bpm:
             query = query.filter(TrackDanceStyle.effective_bpm <= max_bpm)
         
-        # NEW: Search by title
+        # Search by title
         if search:
             query = query.filter(Track.title.ilike(f"%{search}%"))
         
-        # NEW: Filter by source (spotify/youtube)
+        # Filter by source (spotify/youtube)
         if source:
             query = query.join(Track.playback_links).filter(
                 PlaybackLink.platform == source,
                 PlaybackLink.is_working == True
             )
         
-        # NEW: Filter by vocals
+        # Filter by vocals
         if vocals == 'instrumental':
             query = query.filter(Track.has_vocals == False)
         elif vocals == 'vocals':
             query = query.filter(Track.has_vocals == True)
         
-        # NEW: Filter by duration (convert seconds to ms)
+        # Filter by duration
         if min_duration:
             query = query.filter(Track.duration_ms >= min_duration * 1000)
         if max_duration:
             query = query.filter(Track.duration_ms <= max_duration * 1000)
 
-        # 3. OPTIMIZE LOADING (CRITICAL UPDATE)
         query = query.options(
             joinedload(Track.playback_links),
             joinedload(Track.dance_styles),
             joinedload(Track.structure_versions),
             
-            # NEW: Eager load the Album
+            # Eager load the Album
             joinedload(Track.album),
             
-            # NEW: Eager load the Bridge Table -> Then the Artist
+            # Eager load the Bridge Table -> Then the Artist
             # This ensures track.artist_links[0].artist is already loaded
             joinedload(Track.artist_links).joinedload(TrackArtist.artist)
         ).distinct()
@@ -124,16 +127,18 @@ class TrackService:
                 final_category = matched_style.tempo_category
                 final_confidence = matched_style.confidence
                 final_confirmations = matched_style.confirmation_count
+                final_verifications = matched_style.is_user_confirmed
             else:
                 final_style = "Unclassified"
                 final_bpm = 0
                 final_category = "Unknown"
                 final_confidence = 0.0
                 final_confirmations = 0
+                final_verifications = False
 
             # --- D. FORMAT OUTPUT ---            
             sorted_links = sorted(
-                track.artist_links, 
+                track.artist_links,
                 key=lambda x: 0 if x.role == 'primary' else 1
             )
 
@@ -194,6 +199,7 @@ class TrackService:
                 "artists": artist_list,
                 "album": album_data,
                 "dance_style": final_style,
+                #"is_user_confirmed": final_verifications,
                 "feel_tags": final_tags,
                 "effective_bpm": final_bpm,
                 "tempo_category": final_category,
@@ -218,6 +224,10 @@ class TrackService:
 
         # Adjust total for tempo filtering (approximate - not exact for pagination)
         total_count = base_total - filtered_count if (min_tempo or max_tempo) else base_total
+
+        #results.sort(key=lambda x: not x["is_user_confirmed"])
+        #results.sort(key=lambda x: not x["style_confirmations"])
+        #results.sort(key=lambda x: not x["style_confidence"])
 
         return {
             "items": results,

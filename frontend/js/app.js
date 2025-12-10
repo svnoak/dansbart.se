@@ -1,4 +1,4 @@
-import { createApp, onMounted, onUnmounted, ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+import { createApp, onMounted, onUnmounted, ref } from 'https://cdn.jsdelivr.net/npm/vue@3.4.21/+esm';
 import { useTracks } from './tracks.js';
 import { usePlayer } from './player.js';
 

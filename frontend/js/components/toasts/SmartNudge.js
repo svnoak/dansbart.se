@@ -99,7 +99,7 @@ export default {
         'track.id': {
             immediate: true,
             handler(newId, oldId) {
-                // When track ID changes, reset state but don't show nudge yet
+                console.log('Track changed:', { newId, oldId, isPlaying: this.isPlaying });
                 if (newId !== oldId) {
                     this.clearTimers();
                     this.step = 'hidden';
@@ -109,34 +109,59 @@ export default {
                 }
             }
         },
-        isPlaying(playing) {
-            if (!this.track) return;
-            
-            // Don't process if we're already showing a step (user is interacting)
-            if (this.step !== 'hidden' && this.step !== 'verify') return;
-            
-            const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
-            if (hasFeedback) {
-                this.step = 'hidden';
-                return;
-            }
-
-            if (playing && !this.playbackStartTime) {
-                // Playback just started - record time and start 7-second timer
-                this.playbackStartTime = Date.now();
-                this.clearTimers();
+        isPlaying: {
+            immediate: true, // ← ADD THIS!
+            handler(playing, oldPlaying) {
+                console.log('isPlaying watcher fired:', { 
+                    playing, 
+                    oldPlaying,
+                    track: this.track?.id,
+                    step: this.step,
+                    playbackStartTime: this.playbackStartTime,
+                    hasFeedback: localStorage.getItem(`fb_${this.track?.id}`)
+                });
                 
-                const trackIdAtStart = this.track.id;
-                this.showDelayTimer = setTimeout(() => {
-                    // Double-check we're still on the same track and still playing
-                    if (this.track?.id === trackIdAtStart && this.isPlaying) {
-                        this.determineInitialStep();
-                        this.startAutoDismiss();
-                    }
-                }, 7000);
-            } else if (!playing && this.step === 'hidden') {
-                // Playback paused before nudge appeared - clear timer
-                this.clearTimers();
+                if (!this.track) {
+                    console.log('No track, returning');
+                    return;
+                }
+                
+                // Don't process if we're already showing a step (user is interacting)
+                if (this.step !== 'hidden' && this.step !== 'verify') {
+                    console.log('Step not hidden/verify, returning');
+                    return;
+                }
+                
+                const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
+                if (hasFeedback) {
+                    console.log('Already has feedback, hiding');
+                    this.step = 'hidden';
+                    return;
+                }
+
+                if (playing && !this.playbackStartTime) {
+                    console.log("✅ Starting nudge timer for track:", this.track.id);
+                    this.playbackStartTime = Date.now();
+                    this.clearTimers();
+                    
+                    const trackIdAtStart = this.track.id;
+                    this.showDelayTimer = setTimeout(() => {
+                        console.log('Timer fired! Checking conditions:', {
+                            currentTrackId: this.track?.id,
+                            trackIdAtStart,
+                            isPlaying: this.isPlaying,
+                            match: this.track?.id === trackIdAtStart
+                        });
+                        if (this.track?.id === trackIdAtStart && this.isPlaying) {
+                            console.log('✅ Showing nudge!');
+                            this.determineInitialStep();
+                            this.startAutoDismiss();
+                        }
+                    }, 7000);
+                } else if (!playing && this.step === 'hidden') {
+                    console.log('Playback paused, clearing timers');
+                    this.clearTimers();
+                }
             }
         }
     },

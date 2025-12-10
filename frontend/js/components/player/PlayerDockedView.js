@@ -45,7 +45,7 @@ export default {
         <div class="hidden md:flex fixed right-4 w-80 z-40 flex-col gap-2 transition-all duration-300"
              :style="{ bottom: nudgeBottomOffset + 'px' }">
             <smart-nudge :track="currentTrack" :is-playing="isPlaying"></smart-nudge>
-            <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
+            <section-voting v-if="structureMode == 'sections'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
         </div>
 
         <div class="hidden md:block relative w-full">

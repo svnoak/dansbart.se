@@ -38,12 +38,14 @@ class SpotifyIngestor:
             else:
                 results = None
         
-        print(f"✅ Ingestion complete. {len(processed_ids)} tracks ready for analysis.")
+        print(f"✅ Ingestion complete. {len(processed_ids)} tracks queued for analysis.")
         return processed_ids
 
     def ingest_tracks_from_list(self, track_items: list) -> list[str]:
-        """Returns list of track IDs saved"""
-        saved_ids = []
+        """Returns list of track IDs that need analysis (PENDING status only)"""
+        pending_ids = []
+        skipped_count = 0
+        
         for track in track_items:
             if not track or track.get('is_local'): continue
             
@@ -51,10 +53,18 @@ class SpotifyIngestor:
                 # _process_single_track now returns the DB object
                 db_track = self._process_single_track(track)
                 if db_track:
-                    saved_ids.append(str(db_track.id))
+                    # Only queue for analysis if not already processed
+                    if db_track.processing_status == "PENDING":
+                        pending_ids.append(str(db_track.id))
+                    else:
+                        skipped_count += 1
             except Exception as e:
                 print(f"⚠️ Error: {e}")
-        return saved_ids
+        
+        if skipped_count > 0:
+            print(f"   ⏭️ Skipped {skipped_count} tracks (already processed)")
+        
+        return pending_ids
 
     # --- NEW: Full Discography Ingestion ---
     def ingest_artist_albums(self, artist_id: str):
@@ -93,14 +103,14 @@ class SpotifyIngestor:
                     else:
                         album_tracks_results = None
                 
-                # Batch save this album
-                count = self.ingest_tracks_from_list(tracks_to_save)
-                total_tracks += count
+                # Batch save this album - returns only PENDING tracks
+                pending_count = len(self.ingest_tracks_from_list(tracks_to_save))
+                total_tracks += pending_count
                 
             except Exception as e:
                 print(f"⚠️ Error processing album '{album['name']}': {e}")
 
-        print(f"⬇️ Ingested {total_tracks} tracks from full discography.")
+        print(f"⬇️ Ingested discography. {total_tracks} new tracks queued for analysis.")
     # ---------------------------------------
 
     def _process_single_track(self, sp_track: dict):

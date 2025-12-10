@@ -21,6 +21,7 @@ router = APIRouter()
 @router.get("/tracks")
 def get_tracks(
     style: str = Query(None),
+    #user_confirmed: bool = Query(False, description="Filter by tracks with verified dancestyle only"),
     min_bpm: int = Query(None),
     max_bpm: int = Query(None),
     min_tempo: int = Query(None, ge=1, le=5, description="Minimum tempo level (1=Långsamt, 5=Väldigt snabbt)"),
@@ -37,6 +38,7 @@ def get_tracks(
     service = TrackService(db)
     return service.get_playable_tracks(
         style=style, 
+        #user_confirmed=user_confirmed,
         min_bpm=min_bpm, 
         max_bpm=max_bpm,
         min_tempo=min_tempo,

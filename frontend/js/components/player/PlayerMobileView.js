@@ -70,7 +70,7 @@ export default {
 
             <div class="mb-4 shrink-0">
                 <smart-nudge :key="'nudge-' + currentTrack.id" :track="currentTrack" :is-playing="isPlaying" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
-                <section-voting v-if="structureMode !== 'none'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
+                <section-voting v-if="structureMode == 'sections'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
                 <broken-link-toast 
                     :broken-state="brokenState" 
                     :structure-mode="structureMode"
@@ -80,12 +80,15 @@ export default {
             </div>
 
             <div class="flex justify-between items-end mb-2 shrink-0">
+                <!--
                 <div v-if="availableVersions.length > 1" class="flex items-center bg-gray-100 rounded-full border border-gray-200 px-2 py-1 h-8">
                     <button @click="$emit('cycle-version', -1)" class="w-6 h-full flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold">‹</button>
                     <span class="text-xs font-mono font-bold text-gray-700 px-2 pt-0.5">v.{{ currentVersionIndex + 1 }}</span>
                     <button @click="$emit('cycle-version', 1)" class="w-6 h-full flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold">›</button>
                 </div>
-                <div v-else></div> 
+                <div v-else></div>
+                -->
+                <div></div>
                 <div class="flex items-center gap-2">
                     <button v-if="structureMode !== 'none'" @click="$emit('open-structure-editor')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" title="Redigera struktur">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>

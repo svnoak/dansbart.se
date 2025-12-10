@@ -108,7 +108,7 @@ export default {
     </div>
     `,
     computed: {
-        // --- NEW: Helper for Artist Display ---
+        // --- Helper for Artist Display ---
         artistDisplayString() {
             if (!this.track.artists || this.track.artists.length === 0) return 'Okänd artist';
             
