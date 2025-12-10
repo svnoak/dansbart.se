@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     SPOTIPY_CLIENT_ID: str
     SPOTIPY_CLIENT_SECRET: str
 
+    # Admin
+    ADMIN_PASSWORD: str
+
     @computed_field
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
         return PostgresDsn.build(

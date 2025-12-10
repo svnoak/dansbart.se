@@ -1,16 +1,28 @@
+# Stage 1: Build the frontend
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source files
+COPY . .
+
+# Build for production
+RUN npm run build
+
+# Stage 2: Serve with Nginx
 FROM nginx:alpine
 
 # Copy custom Nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy static files
-COPY . /usr/share/nginx/html
-
-# Remove unnecessary files
-RUN rm -f /usr/share/nginx/html/nginx.conf \
-          /usr/share/nginx/html/nginx.prod.conf \
-          /usr/share/nginx/html/Dockerfile \
-          /usr/share/nginx/html/.gitignore
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Set correct permissions
 RUN chmod -R 755 /usr/share/nginx/html

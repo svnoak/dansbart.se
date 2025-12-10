@@ -1,28 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db
+from app.core.config import settings
 from app.services.pipeline import PipelineService
 from pydantic import BaseModel
 from app.services.feedback import FeedbackService
-from app.core.models import Track, TrackDanceStyle, TrackArtist
+from app.core.models import Track, TrackArtist
 from app.workers.tasks import analyze_track_task
 from app.services.classification import ClassificationService
-import os
 
 router = APIRouter()
 
-# Simple security
-ADMIN_SECRET = "my-super-secret-password-123"
-
 def verify_admin(x_admin_token: str = Header(None)):
-    #ADMIN_SECRET = os.getenv("ADMIN_PASSWORD")
-    
-
-    if not ADMIN_SECRET:
+    """Verify admin token from request header against configured password."""
+    if not settings.ADMIN_PASSWORD:
         # This logs an error on the server side so you know config is missing
-        print("CRITICAL ERROR: ADMIN_PASSWORD is not set!") 
+        print("CRITICAL ERROR: ADMIN_PASSWORD is not set in environment!")
         raise HTTPException(status_code=500, detail="Server misconfiguration")
-    if x_admin_token != ADMIN_SECRET:
+    if x_admin_token != settings.ADMIN_PASSWORD:
         raise HTTPException(status_code=403, detail="Not authorized")
     return True
 
@@ -31,13 +26,10 @@ class IngestRequest(BaseModel):
 
 @router.post("/ingest")
 def trigger_ingest(
-    req: IngestRequest, 
-    x_admin_token: str = Header(None),
+    req: IngestRequest,
+    _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
-    if x_admin_token != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     pipeline = PipelineService(db)
     return pipeline.ingest_and_process_playlist(req.playlist_id)
 
@@ -47,14 +39,12 @@ def get_all_tracks_admin(
     status: str = Query(None, description="Filter by status: PENDING, PROCESSING, DONE, FAILED"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    x_admin_token: str = Header(None),
+    _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
     """
     Admin endpoint to list all tracks with their status.
     """
-    if x_admin_token != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     query = db.query(Track).options(
         joinedload(Track.dance_styles),
@@ -96,15 +86,13 @@ def get_all_tracks_admin(
 @router.post("/tracks/{track_id}/reanalyze")
 def trigger_reanalysis(
     track_id: str,
-    x_admin_token: str = Header(None),
+    _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
     """
     Forces a complete re-analysis of a track.
     Resets status to PENDING and queues for analysis.
     """
-    if x_admin_token != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     track = db.query(Track).filter(Track.id == track_id).first()
     if not track:
@@ -126,15 +114,13 @@ def trigger_reanalysis(
 @router.post("/tracks/{track_id}/reclassify")
 def trigger_reclassification(
     track_id: str,
-    x_admin_token: str = Header(None),
+    _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
     """
     Re-runs only the classification (no audio re-download/analysis).
     Useful when classification logic has been updated.
     """
-    if x_admin_token != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     track = db.query(Track).options(
         joinedload(Track.analysis_sources),
@@ -168,14 +154,12 @@ def trigger_reclassification(
 
 @router.post("/reclassify-all")
 def trigger_reclassify_all(
-    x_admin_token: str = Header(None),
+    _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
     """
     Re-runs classification on ALL tracks (useful after updating classification logic).
     """
-    if x_admin_token != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     classifier = ClassificationService(db)
     classifier.reclassify_library()
@@ -188,7 +172,8 @@ def trigger_reclassify_all(
 
 @router.post("/tracks/{track_id}/structure/reset")
 def reset_track_structure_endpoint(
-    track_id: str, 
+    track_id: str,
+    _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
     service = FeedbackService(db)

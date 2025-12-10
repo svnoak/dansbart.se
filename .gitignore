@@ -159,6 +159,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# Deployment environment files (keep examples)
+!.env.production.example
+!.env.beta.example
+
 # Spyder project settings
 .spyderproject
 .spyproject
