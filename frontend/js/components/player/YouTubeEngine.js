@@ -1,7 +1,14 @@
+import { useConsent } from '../../consent.js';
+
 export default {
-    props: ['videoId', 'activeSource'], 
+    props: ['videoId', 'activeSource'],
     emits: ['ready', 'state-change', 'error', 'time-update', 'next'],
-    
+
+    setup() {
+        const { consentStatus } = useConsent();
+        return { consentStatus };
+    },
+
     template: `
     <div class="w-full h-full">
         <div id="hidden-yt-player" class="w-full h-full"></div>
@@ -11,16 +18,24 @@ export default {
     data() {
         return {
             ytPlayer: null,
-            timer: null
+            timer: null,
+            apiInitialized: false
         }
     },
 
     mounted() {
-        this.initAPI();
+        // Only initialize API if consent is granted
+        if (this.consentStatus === 'granted') {
+            this.initAPI();
+        }
+
+        // Listen for consent changes
+        window.addEventListener('consent-changed', this.onConsentChanged);
     },
 
     beforeUnmount() {
         this.stopTimer();
+        window.removeEventListener('consent-changed', this.onConsentChanged);
     },
 
     watch: {
@@ -43,7 +58,17 @@ export default {
     },
 
     methods: {
+        onConsentChanged(event) {
+            if (event.detail.status === 'granted' && !this.apiInitialized) {
+                this.initAPI();
+            }
+        },
         initAPI() {
+            // Only load if consent is granted
+            if (this.consentStatus !== 'granted') return;
+
+            this.apiInitialized = true;
+
             if (window.YT && window.YT.Player) {
                 this.createPlayer();
             } else {

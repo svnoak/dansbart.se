@@ -1,6 +1,13 @@
+import { useConsent } from '../../consent.js';
+
 export default {
     props: ['trackId', 'activeSource'],
     emits: ['ready', 'playback-update', 'error'],
+
+    setup() {
+        const { consentStatus } = useConsent();
+        return { consentStatus };
+    },
 
     template: `
     <div class="w-full h-full">
@@ -13,16 +20,24 @@ export default {
             controller: null,
             apiReady: false,
             currentTrackId: null,
-            isReady: false
+            isReady: false,
+            apiInitialized: false
         }
     },
 
     mounted() {
-        this.initAPI();
+        // Only initialize API if consent is granted
+        if (this.consentStatus === 'granted') {
+            this.initAPI();
+        }
+
+        // Listen for consent changes
+        window.addEventListener('consent-changed', this.onConsentChanged);
     },
 
     beforeUnmount() {
         this.destroyController();
+        window.removeEventListener('consent-changed', this.onConsentChanged);
     },
 
     watch: {
@@ -49,7 +64,17 @@ export default {
     },
 
     methods: {
+        onConsentChanged(event) {
+            if (event.detail.status === 'granted' && !this.apiInitialized) {
+                this.initAPI();
+            }
+        },
         initAPI() {
+            // Only load if consent is granted
+            if (this.consentStatus !== 'granted') return;
+
+            this.apiInitialized = true;
+
             // Check if already loaded
             if (window.SpotifyIframeApi) {
                 this.apiReady = true;

@@ -5,15 +5,19 @@ import { usePlayer } from './player.js';
 // Components
 import TrackCard from './components/TrackCard.js';
 import FilterBar from './components/FilterBar.js';
-import GlobalPlayer from './components/player/GlobalPlayer.js'; 
+import GlobalPlayer from './components/player/GlobalPlayer.js';
 import StatsDashboard from './components/StatsDashboard.js';
+import Header from './components/Header.js';
+import CookieConsent from './components/CookieConsent.js';
 
 const app = createApp({
     components: {
         'track-card': TrackCard,
         'filter-bar': FilterBar,
         'global-player': GlobalPlayer,
-        'stats-dashboard': StatsDashboard
+        'stats-dashboard': StatsDashboard,
+        'site-header': Header,
+        'cookie-consent': CookieConsent
     },
     setup() {
         const trackLogic = useTracks();

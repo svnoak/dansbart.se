@@ -2,13 +2,14 @@ import YouTubeEngine from './YouTubeEngine.js';
 import SpotifyEngine from './SpotifyEngine.js';
 import StructureEditor from '../modals/StructureEditor.js';
 import BrokenLinkToast from '../toasts/BrokenLinkToast.js';
-import { usePlayer } from '../../player.js'; 
+import { usePlayer } from '../../player.js';
+import { useConsent } from '../../consent.js';
 
 import PlayerMobileView from './PlayerMobileView.js';
 import PlayerDockedView from './PlayerDockedView.js';
 
 export default {
-    components: { 
+    components: {
         YouTubeEngine,
         SpotifyEngine,
         StructureEditor,
@@ -16,9 +17,14 @@ export default {
         PlayerMobileView,
         PlayerDockedView
     },
-    
+
     setup() {
-        return { ...usePlayer() };
+        const { consentStatus, revokeConsent } = useConsent();
+        return {
+            consentStatus,
+            revokeConsent,
+            ...usePlayer()
+        };
     },
     
     data() {
@@ -46,7 +52,14 @@ export default {
     },
 
     mounted() {
-        this.initYouTube();
+        // Only initialize YouTube if consent is already granted
+        if (this.consentStatus === 'granted') {
+            this.initYouTube();
+        }
+
+        // Listen for consent changes
+        window.addEventListener('consent-changed', this.onConsentChanged);
+
         this.startSmoothLoop();
         window.addEventListener('mousemove', this.onDrag);
         window.addEventListener('mouseup', this.stopDrag);
@@ -57,6 +70,7 @@ export default {
 
     beforeUnmount() {
         if (this.rafId) cancelAnimationFrame(this.rafId);
+        window.removeEventListener('consent-changed', this.onConsentChanged);
         window.removeEventListener('mousemove', this.onDrag);
         window.removeEventListener('mouseup', this.stopDrag);
         window.removeEventListener('touchmove', this.onDrag);
@@ -307,8 +321,20 @@ export default {
             const sc = Math.floor(s % 60);
             return `${m}:${sc < 10 ? '0' : ''}${sc}`;
         },
+        onConsentChanged(event) {
+            if (event.detail.status === 'granted') {
+                // Initialize YouTube when consent is granted
+                this.initYouTube();
+            }
+        },
+        openCookieSettings() {
+            this.revokeConsent();
+        },
         initYouTube() {
-            if (window.YT && window.YT.Player) { } 
+            // Only load if consent is granted
+            if (this.consentStatus !== 'granted') return;
+
+            if (window.YT && window.YT.Player) { }
             else {
                 window.onYouTubeIframeAPIReady = () => {};
                 if (!document.getElementById('yt-api-script')) {
