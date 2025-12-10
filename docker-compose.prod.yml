@@ -1,7 +1,7 @@
 # Production deployment using GitHub Container Registry images
 services:
   backend:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/dansbart-backend:production
+    image: ghcr.io/svnoak/dansbart-backend:production
     platform: linux/amd64
     env_file:
       - .env.production
@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/dansbart-frontend:production
+    image: ghcr.io/svnoak/dansbart-frontend:production
     ports:
       - "80:80"
       - "443:443"
@@ -39,7 +39,7 @@ services:
     #   - /etc/letsencrypt:/etc/letsencrypt:ro
 
   worker:
-    image: ghcr.io/YOUR_GITHUB_USERNAME/dansbart-worker:production
+    image: ghcr.io/svnoak/dansbart-worker:production
     platform: linux/amd64
     env_file:
       - .env.production

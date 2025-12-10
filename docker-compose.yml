@@ -12,7 +12,7 @@ services:
     ports:
       - "8000:8000"
     # This keeps the container running so we can exec commands into it
-    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - CUDA_VISIBLE_DEVICES=-1 # Disable GPU usage
       - CELERY_BROKER_URL=redis://redis:6379/0 
