@@ -9,11 +9,12 @@ export function useTracks() {
     const limit = 20;
     
     // State
-    const filters = ref({ 
+    const filters = ref({
         style: '',
         search: '',
         source: '',      // '', 'spotify', 'youtube'
         vocals: '',      // '', 'instrumental', 'vocals'
+        styleConfirmed: false,
         minDuration: null,
         maxDuration: null
     }); 
@@ -53,9 +54,10 @@ export function useTracks() {
             if (filters.value.search) params.append('search', filters.value.search);
             if (filters.value.source) params.append('source', filters.value.source);
             if (filters.value.vocals) params.append('vocals', filters.value.vocals);
+            if (filters.value.styleConfirmed) params.append('style_confirmed', filters.value.styleConfirmed);
             if (filters.value.minDuration) params.append('min_duration', filters.value.minDuration);
             if (filters.value.maxDuration) params.append('max_duration', filters.value.maxDuration);
-            
+
             if (tempoEnabled.value) {
                 params.append('min_bpm', computedMin.value);
                 params.append('max_bpm', computedMax.value);
@@ -96,12 +98,13 @@ export function useTracks() {
     // Watchers: Re-fetch when any filter changes
     let timeout;
     watch([
-        () => targetTempo.value, 
-        () => tempoEnabled.value, 
+        () => targetTempo.value,
+        () => tempoEnabled.value,
         () => filters.value.style,
         () => filters.value.search,
         () => filters.value.source,
         () => filters.value.vocals,
+        () => filters.value.styleConfirmed,
         () => filters.value.minDuration,
         () => filters.value.maxDuration
     ], () => {

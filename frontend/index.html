@@ -31,11 +31,12 @@
             <stats-dashboard></stats-dashboard>
         </header>
 
-        <filter-bar 
+        <filter-bar
             v-model:style="filters.style"
             v-model:search="filters.search"
             v-model:source="filters.source"
             v-model:vocals="filters.vocals"
+            v-model:style-confirmed="filters.styleConfirmed"
             v-model:min-duration="filters.minDuration"
             v-model:max-duration="filters.maxDuration"
             v-model:target-tempo="targetTempo"

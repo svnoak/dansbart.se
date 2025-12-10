@@ -9,7 +9,7 @@ class TrackService:
     def get_playable_tracks(
         self, 
         style: str = None, 
-        #user_confirmed: bool = False,
+        style_confirmed: bool = False,
         min_bpm: int = None, 
         max_bpm: int = None, 
         min_tempo: int = None,
@@ -36,9 +36,14 @@ class TrackService:
         # 2. APPLY FILTERS
         if style:
             query = query.filter(TrackDanceStyle.dance_style.ilike(style))
-
-        #if user_confirmed:
-        #    query = query.filter(TrackDanceStyle.is_user_confirmed == True)
+            if style_confirmed:
+                # When filtering by specific style, only show tracks where THAT style has high confidence
+                query = query.filter(TrackDanceStyle.confidence >= 0.98)
+        else:
+            if style_confirmed:
+                # When no style filter, only show tracks that have at least ONE style with high confidence
+                # This requires the joined TrackDanceStyle to have confidence >= 0.98
+                query = query.filter(TrackDanceStyle.confidence >= 0.98)
         
         if min_bpm:
             query = query.filter(TrackDanceStyle.effective_bpm >= min_bpm)
@@ -228,6 +233,7 @@ class TrackService:
         results.sort(key=lambda x: not x["is_user_confirmed"])
         results.sort(key=lambda x: not x["style_confirmations"])
         results.sort(key=lambda x: not x["style_confidence"])
+        
 
         return {
             "items": results,

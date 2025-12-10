@@ -1,4 +1,4 @@
-import { createApp, onMounted, onUnmounted, ref } from 'vue';
+import { createApp, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTracks } from './tracks.js';
 import { usePlayer } from './player.js';
 
@@ -26,16 +26,19 @@ const app = createApp({
         const handlePlay = (track, sourcePreference = null) => {
             const list = trackLogic.tracks.value;
             const index = list.findIndex(t => t.id === track.id);
-            
+
             if (index !== -1) {
                 playerLogic.playContext(list, index, sourcePreference);
             }
         };
 
-        onMounted(() => {
-            trackLogic.fetchTracks();
+        const setupScrollObserver = () => {
+            // Disconnect existing observer if any
+            if (observer) {
+                observer.disconnect();
+            }
 
-            // Set up Intersection Observer for infinite scroll
+            // Create new observer
             observer = new IntersectionObserver((entries) => {
                 if (entries[0].isIntersecting && !trackLogic.loading.value && !trackLogic.loadingMore.value) {
                     trackLogic.loadMore();
@@ -50,6 +53,19 @@ const app = createApp({
                     clearInterval(checkTrigger);
                 }
             }, 100);
+        };
+
+        onMounted(() => {
+            trackLogic.fetchTracks();
+            setupScrollObserver();
+
+            // Re-setup observer whenever tracks are reset (filters change)
+            watch(() => trackLogic.tracks.value.length, (newLen, oldLen) => {
+                // If tracks were reset (length became 0 or jumped back), re-setup observer
+                if (newLen === 0 || (oldLen > newLen && newLen <= 20)) {
+                    setTimeout(setupScrollObserver, 100);
+                }
+            });
         });
 
         onUnmounted(() => {

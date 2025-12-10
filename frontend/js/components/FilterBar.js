@@ -1,6 +1,6 @@
 export default {
   name: 'FilterBar',
-  template: `
+  template: /*html*/`
     <div class="mb-6 max-w-4xl mx-auto">
       <!-- Mobile View -->
       <div class="md:hidden">
@@ -85,6 +85,18 @@ export default {
                 >
                   🎤 Sång
                 </button>
+              </div>
+
+            </div>
+
+            <!-- User Confirmed Filter -->
+            <div>
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-medium text-gray-600">Bekräftad dansstil</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="localStyleConfirmed" @change="$emit('update:styleConfirmed', localStyleConfirmed)" class="sr-only peer">
+                  <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
               </div>
             </div>
 
@@ -232,6 +244,15 @@ export default {
               </button>
             </div>
           </div>
+
+          <!-- User Confirmed Filter -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">Bekräftad dansstil:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" v-model="localStyleConfirmed" @change="$emit('update:styleConfirmed', localStyleConfirmed)" class="sr-only peer">
+              <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
         </div>
 
         <!-- Discovery Filters (hidden when searching) -->
@@ -316,7 +337,12 @@ export default {
             {{ localVocals === 'instrumental' ? 'Instrumental' : 'Med sång' }}
             <button @click="clearVocals" class="hover:text-blue-900">×</button>
           </span>
-          
+
+          <span v-if="localStyleConfirmed" class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+            Bekräftad dansstil
+            <button @click="clearstyleConfirmed" class="hover:text-blue-900">×</button>
+          </span>
+
           <span v-if="localStyle" class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
             {{ localStyle }}
             <button @click="clearStyle" class="hover:text-blue-900">×</button>
@@ -348,6 +374,7 @@ export default {
     search: { type: String, default: '' },
     source: { type: String, default: '' },
     vocals: { type: String, default: '' },
+    styleConfirmed: { type: Boolean, default: false },
     minDuration: { type: Number, default: null },
     maxDuration: { type: Number, default: null },
     targetTempo: { type: Number, default: 130 },
@@ -355,7 +382,7 @@ export default {
     computedMin: { type: Number, default: 120 },
     computedMax: { type: Number, default: 140 }
   },
-  emits: ['update:style', 'update:search', 'update:source', 'update:vocals', 'update:minDuration', 'update:maxDuration', 'update:targetTempo', 'update:tempoEnabled'],
+  emits: ['update:style', 'update:search', 'update:source', 'update:vocals', 'update:styleConfirmed', 'update:minDuration', 'update:maxDuration', 'update:targetTempo', 'update:tempoEnabled'],
   data() {
     return {
       isExpanded: false,
@@ -363,6 +390,7 @@ export default {
       localSearch: this.search,
       localSource: this.source,
       localVocals: this.vocals,
+      localStyleConfirmed: this.styleConfirmed,
       localDuration: this.getDurationPreset(),
       localTargetTempo: this.targetTempo,
       localTempoEnabled: this.tempoEnabled,
@@ -375,6 +403,7 @@ export default {
       if (this.localSearch) count++;
       if (this.localSource) count++;
       if (this.localVocals) count++;
+      if (this.localStyleConfirmed) count++;
       if (this.localStyle) count++;
       if (this.localDuration) count++;
       if (this.localTempoEnabled) count++;
@@ -405,6 +434,7 @@ export default {
     search(val) { this.localSearch = val; },
     source(val) { this.localSource = val; },
     vocals(val) { this.localVocals = val; },
+    styleConfirmed(val) { this.localStyleConfirmed = val; },
     targetTempo(val) { this.localTargetTempo = val; },
     tempoEnabled(val) { this.localTempoEnabled = val; },
     minDuration() { this.localDuration = this.getDurationPreset(); },
@@ -467,6 +497,10 @@ export default {
       this.localVocals = '';
       this.$emit('update:vocals', '');
     },
+    clearstyleConfirmed() {
+      this.localStyleConfirmed = false;
+      this.$emit('update:styleConfirmed', false);
+    },
     clearStyle() {
       this.localStyle = '';
       this.$emit('update:style', '');
@@ -484,6 +518,7 @@ export default {
       this.clearSearch();
       this.clearSource();
       this.clearVocals();
+      this.clearstyleConfirmed();
       this.clearStyle();
       this.clearDuration();
       this.clearTempo();
