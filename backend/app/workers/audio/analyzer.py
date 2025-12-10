@@ -9,6 +9,7 @@ from .extractors.swing import calculate_swing_ratio
 from .extractors.feel import analyze_feel
 from .extractors.structure import StructureExtractor
 from .extractors.section_labeler import ABSectionLabeler
+from .folk_authenticity import FolkAuthenticityDetector
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_BACKBONE = os.path.join(BASE_DIR, "models", "msd-musicnn-1.pb")
@@ -19,7 +20,8 @@ class AudioAnalyzer:
         self.rhythm_extractor = RhythmExtractor()
         self.structure_extractor = StructureExtractor()
         self.head = ClassificationHead()
-        
+        self.folk_detector = FolkAuthenticityDetector(manual_review_threshold=0.6)
+
         try:
             self.tf_embeddings = es.TensorflowPredictMusiCNN(
                 graphFilename=MODEL_BACKBONE,
@@ -106,7 +108,22 @@ class AudioAnalyzer:
             
             predicted_style, ml_confidence = self.head.predict(full_vector)
 
-            # --- 7. DEEP STRUCTURE ANALYSIS --- 
+            # --- 7. FOLK AUTHENTICITY DETECTION ---
+            print(f"   [ANALYSIS] Checking folk authenticity...")
+            rms_value = layout_stats[0]
+            zcr_value = layout_stats[1]
+            folk_auth_result = self.folk_detector.analyze(
+                rms_value=rms_value,
+                zcr_value=zcr_value,
+                swing_ratio=swing_ratio,
+                articulation=feel_data['articulation'],
+                bounciness=feel_data['bounciness'],
+                voice_probability=vocal_data['confidence'],
+                is_likely_instrumental=vocal_data['is_instrumental'],
+                embedding=avg_embedding
+            )
+
+            # --- 8. DEEP STRUCTURE ANALYSIS --- 
             # Now we run the unstable heavy structure analysis, 
             # but we use the predicted style (which is now smarter) to guide it.
             print(f"   [ANALYSIS] Structure analysis (Hint: {predicted_style}, conf: {ml_confidence:.2f})...")
@@ -154,7 +171,11 @@ class AudioAnalyzer:
                 "meter": f"{int(np.max(beat_info[:,1])) if len(beat_info) > 0 else 0}/4",
                 "bars": [self._to_float(b) for b in bars],
                 "sections": [self._to_float(s) for s in sections],
-                "section_labels": section_labels
+                "section_labels": section_labels,
+                "folk_authenticity_score": folk_auth_result['folk_authenticity_score'],
+                "requires_manual_review": folk_auth_result['requires_manual_review'],
+                "folk_authenticity_breakdown": folk_auth_result['confidence_breakdown'],
+                "folk_authenticity_interpretation": folk_auth_result['interpretation']
             }
 
         except Exception as e:

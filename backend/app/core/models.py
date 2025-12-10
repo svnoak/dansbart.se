@@ -26,6 +26,11 @@ class Track(Base):
     swing_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     articulation: Mapped[float | None] = mapped_column(Float, nullable=True)
     bounciness: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Music Genre Classification (separate from dance style)
+    # Values: 'traditional_folk', 'modern_folk', 'folk_pop', 'contemporary', 'unknown'
+    music_genre: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    genre_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     
     # Logic Relationships
     analysis_sources = relationship("AnalysisSource", back_populates="track")
@@ -204,3 +209,28 @@ class TrackFeelVote(Base):
     feel_tag: Mapped[str] = mapped_column(String, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     track = relationship("Track", back_populates="feel_votes")
+
+class ArtistCrawlLog(Base):
+    """
+    Tracks which artists have been crawled by the discovery spider to avoid duplicates.
+    """
+    __tablename__ = "artist_crawl_logs"
+    __table_args__ = (
+        UniqueConstraint('spotify_artist_id', name='unique_spotify_artist_crawl'),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    spotify_artist_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    artist_name: Mapped[str] = mapped_column(String, nullable=False)
+
+    # Crawl metadata
+    crawled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    tracks_found: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String, default="success")  # success, failed, skipped
+
+    # Genre classification info
+    detected_genres: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    music_genre_classification: Mapped[str | None] = mapped_column(String, nullable=True)  # traditional_folk, modern_folk, etc.
+
+    # Why was this artist crawled?
+    discovery_source: Mapped[str | None] = mapped_column(String, nullable=True)  # 'spider', 'manual', 'seed'

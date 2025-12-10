@@ -45,10 +45,15 @@
                         class="px-4 py-2 rounded-t font-medium">
                     ➕ Ingest Playlist
                 </button>
-                <button @click="activeTab = 'bulk'" 
+                <button @click="activeTab = 'bulk'"
                         :class="activeTab === 'bulk' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
                         class="px-4 py-2 rounded-t font-medium">
                     ⚡ Bulk Actions
+                </button>
+                <button @click="activeTab = 'spider'"
+                        :class="activeTab === 'spider' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-4 py-2 rounded-t font-medium">
+                    🕸️ Discovery Spider
                 </button>
                 <button @click="logout" class="ml-auto text-gray-400 hover:text-white text-sm">
                     🚪 Logout
@@ -156,12 +161,27 @@
 
             <!-- Ingest Tab -->
             <div v-if="activeTab === 'ingest'" class="bg-gray-800 p-6 rounded-lg border border-gray-700 max-w-md">
-                <h2 class="font-bold mb-4">Ingest Spotify Playlist</h2>
-                
+                <h2 class="font-bold mb-4">Ingest Spotify Content</h2>
+
                 <div class="mb-4">
-                    <label class="block text-xs uppercase text-gray-500 mb-1">Playlist ID</label>
-                    <input v-model="playlistId" placeholder="e.g. 37i9dQZF1DX..." 
+                    <label class="block text-xs uppercase text-gray-500 mb-1">Resource Type</label>
+                    <select v-model="resourceType"
+                            class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                        <option value="playlist">🎵 Playlist</option>
+                        <option value="album">💿 Album</option>
+                        <option value="artist">🎤 Artist (Full Discography)</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs uppercase text-gray-500 mb-1">
+                        {{ resourceType === 'playlist' ? 'Playlist ID' : resourceType === 'album' ? 'Album ID' : 'Artist ID' }}
+                    </label>
+                    <input v-model="resourceId" :placeholder="getPlaceholder()"
                            class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ getHelpText() }}
+                    </p>
                 </div>
 
                 <button @click="runIngest" :disabled="loading"
@@ -195,6 +215,151 @@
                 <p v-if="bulkMessage" class="mt-4 text-sm" :class="bulkError ? 'text-red-400' : 'text-green-400'">
                     {{ bulkMessage }}
                 </p>
+            </div>
+
+            <!-- Spider Tab -->
+            <div v-if="activeTab === 'spider'" class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <h2 class="font-bold mb-6">🕸️ Discovery Spider</h2>
+
+                <!-- Spider Control Panel -->
+                <div class="mb-6 p-4 bg-gray-900 rounded border border-gray-700 max-w-2xl">
+                    <h3 class="font-medium mb-3">Automatic Discovery Settings</h3>
+                    <p class="text-sm text-gray-400 mb-4">
+                        The spider discovers new folk music from Spotify automatically.
+                        It filters by genre, tracks crawled artists to avoid duplicates, and classifies music as traditional/modern folk.
+                    </p>
+
+                    <div class="mb-4">
+                        <label class="block text-xs uppercase text-gray-500 mb-1">Discovery Mode</label>
+                        <select v-model="spiderSettings.mode"
+                                class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
+                            <option value="search">🔍 Search Mode (Discover New Artists)</option>
+                            <option value="backfill">🔄 Backfill Mode (Complete Existing Artists)</option>
+                            <option value="related">🕸️ Related Artists Mode</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {{ spiderSettings.mode === 'search'
+                                ? 'Searches Spotify directly for folk artists - works without seeds'
+                                : spiderSettings.mode === 'backfill'
+                                ? 'Gets complete discographies for artists already in your library'
+                                : 'Uses related artists from your library - requires existing tracks' }}
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div v-if="spiderSettings.mode === 'related'">
+                            <label class="block text-xs uppercase text-gray-500 mb-1">Seed Attempts</label>
+                            <input v-model.number="spiderSettings.seed_limit" type="number" min="1" max="20"
+                                   class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
+                            <p class="text-xs text-gray-500 mt-1">How many seed artists to try</p>
+                        </div>
+                        <div :class="spiderSettings.mode === 'search' ? 'col-span-2' : ''">
+                            <label class="block text-xs uppercase text-gray-500 mb-1">Max Discoveries</label>
+                            <input v-model.number="spiderSettings.max_discoveries" type="number" min="1" max="50"
+                                   class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
+                            <p class="text-xs text-gray-500 mt-1">Maximum new artists per crawl</p>
+                        </div>
+                    </div>
+
+                    <button @click="runSpider" :disabled="spiderLoading"
+                            class="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 py-3 rounded font-bold">
+                        {{ spiderLoading ? '🕷️ Crawling...' : '🚀 Start Discovery Crawl' }}
+                    </button>
+
+                    <!-- Task Status Display -->
+                    <div v-if="taskStatus && spiderLoading" class="mt-3 p-3 bg-gray-800 rounded border border-gray-600">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400">Task Status:</span>
+                            <span :class="{
+                                'text-yellow-400': taskStatus.state === 'PENDING',
+                                'text-blue-400': taskStatus.state === 'STARTED',
+                                'text-green-400': taskStatus.state === 'SUCCESS',
+                                'text-red-400': taskStatus.state === 'FAILURE'
+                            }" class="font-medium">
+                                {{ taskStatus.state }}
+                            </span>
+                        </div>
+                        <div v-if="currentTaskId" class="text-xs text-gray-500 mt-1">
+                            Task ID: {{ currentTaskId }}
+                        </div>
+                    </div>
+
+                    <p v-if="spiderMessage" class="mt-4 text-sm" :class="spiderError ? 'text-red-400' : 'text-green-400'">
+                        {{ spiderMessage }}
+                    </p>
+                </div>
+
+                <!-- Spider Statistics -->
+                <div v-if="spiderStats" class="mb-6 p-4 bg-gray-900 rounded border border-gray-700 max-w-2xl">
+                    <h3 class="font-medium mb-3">Overall Statistics</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-400">Total Artists Crawled:</span>
+                            <span class="ml-2 font-bold">{{ spiderStats.total_artists_crawled }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Total Tracks Found:</span>
+                            <span class="ml-2 font-bold">{{ spiderStats.total_tracks_found }}</span>
+                        </div>
+                    </div>
+                    <div v-if="spiderStats.by_genre && Object.keys(spiderStats.by_genre).length > 0" class="mt-3">
+                        <span class="text-gray-400 text-sm">By Genre:</span>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <span v-for="(count, genre) in spiderStats.by_genre" :key="genre"
+                                  class="px-2 py-1 bg-gray-800 rounded text-xs">
+                                {{ genre }}: {{ count }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crawl History -->
+                <div class="bg-gray-900 rounded border border-gray-700">
+                    <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                        <h3 class="font-medium">Recent Crawls</h3>
+                        <button @click="loadSpiderHistory" class="text-sm text-gray-400 hover:text-white">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="text-xs uppercase text-gray-500 border-b border-gray-700">
+                                <tr>
+                                    <th class="py-2 px-4">Artist</th>
+                                    <th class="py-2 px-4">Tracks</th>
+                                    <th class="py-2 px-4">Genre</th>
+                                    <th class="py-2 px-4">Spotify Genres</th>
+                                    <th class="py-2 px-4">Crawled</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="log in crawlHistory" :key="log.id"
+                                    class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                                    <td class="py-2 px-4 max-w-xs truncate">{{ log.artist_name }}</td>
+                                    <td class="py-2 px-4 text-gray-400">{{ log.tracks_found }}</td>
+                                    <td class="py-2 px-4">
+                                        <span v-if="log.music_genre"
+                                              class="px-2 py-1 bg-indigo-600/30 text-indigo-400 rounded text-xs">
+                                            {{ log.music_genre.replace('_', ' ') }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4 text-xs text-gray-500 max-w-xs truncate">
+                                        {{ log.detected_genres?.join(', ') || '-' }}
+                                    </td>
+                                    <td class="py-2 px-4 text-xs text-gray-500">
+                                        {{ formatDate(log.crawled_at) }}
+                                    </td>
+                                </tr>
+                                <tr v-if="crawlHistory.length === 0">
+                                    <td colspan="5" class="py-8 text-center text-gray-500">
+                                        No crawl history yet. Run your first spider crawl above!
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -232,7 +397,8 @@
                 const offset = ref(0);
                 
                 // Ingest
-                const playlistId = ref('');
+                const resourceId = ref('');
+                const resourceType = ref('playlist');
                 const loading = ref(false);
                 const message = ref('');
                 const isError = ref(false);
@@ -241,7 +407,21 @@
                 const bulkLoading = ref(false);
                 const bulkMessage = ref('');
                 const bulkError = ref(false);
-                
+
+                // Spider
+                const spiderSettings = ref({
+                    seed_limit: 5,
+                    max_discoveries: 10,
+                    mode: 'search'  // default to search mode
+                });
+                const spiderLoading = ref(false);
+                const spiderMessage = ref('');
+                const spiderError = ref(false);
+                const spiderStats = ref(null);
+                const crawlHistory = ref([]);
+                const currentTaskId = ref(null);
+                const taskStatus = ref(null);
+
                 // Toasts
                 const toasts = ref([]);
                 let toastId = 0;
@@ -257,17 +437,19 @@
                 const authenticate = async () => {
                     loading.value = true;
                     authError.value = '';
-                    
+
                     try {
                         const res = await fetch('/api/admin/tracks?limit=1', {
                             headers: { 'x-admin-token': token.value }
                         });
-                        
+
                         if (!res.ok) throw new Error('Invalid token');
-                        
+
                         localStorage.setItem('admin_token', token.value);
                         authenticated.value = true;
                         loadTracks();
+                        loadSpiderStats();
+                        loadSpiderHistory();
                     } catch (e) {
                         authError.value = 'Authentication failed. Check your token.';
                     } finally {
@@ -366,6 +548,24 @@
                     }
                 };
 
+                const getPlaceholder = () => {
+                    const placeholders = {
+                        'playlist': 'e.g. 37i9dQZF1DX...',
+                        'album': 'e.g. 6vV5UrXcfyQD1wu4Qo2I9K',
+                        'artist': 'e.g. 0TnOYISbd1XYRBk9myaseg'
+                    };
+                    return placeholders[resourceType.value] || '';
+                };
+
+                const getHelpText = () => {
+                    const helpTexts = {
+                        'playlist': 'Find the ID in the Spotify playlist URL',
+                        'album': 'Find the ID in the Spotify album URL',
+                        'artist': 'Find the ID in the Spotify artist URL (ingests entire discography)'
+                    };
+                    return helpTexts[resourceType.value] || '';
+                };
+
                 const runIngest = async () => {
                     loading.value = true;
                     message.value = '';
@@ -377,15 +577,18 @@
                                 'Content-Type': 'application/json',
                                 'x-admin-token': token.value
                             },
-                            body: JSON.stringify({ playlist_id: playlistId.value })
+                            body: JSON.stringify({
+                                resource_id: resourceId.value,
+                                resource_type: resourceType.value
+                            })
                         });
 
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.detail || 'Failed');
-                        
+
                         isError.value = false;
                         message.value = `Success: ${data.message}`;
-                        playlistId.value = '';
+                        resourceId.value = '';
                         loadTracks();
                     } catch (e) {
                         isError.value = true;
@@ -407,7 +610,7 @@
 
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.detail || 'Failed');
-                        
+
                         bulkError.value = false;
                         bulkMessage.value = data.message;
                         loadTracks();
@@ -417,6 +620,123 @@
                     } finally {
                         bulkLoading.value = false;
                     }
+                };
+
+                // Spider Functions
+                const runSpider = async () => {
+                    spiderLoading.value = true;
+                    spiderMessage.value = '';
+                    taskStatus.value = null;
+
+                    try {
+                        const res = await fetch('/api/admin/spider/crawl', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-admin-token': token.value
+                            },
+                            body: JSON.stringify(spiderSettings.value)
+                        });
+
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.detail || 'Failed');
+
+                        spiderError.value = false;
+                        currentTaskId.value = data.task_id;
+                        spiderMessage.value = `${data.message} - Task ID: ${data.task_id}`;
+
+                        // Start polling for task status
+                        pollTaskStatus(data.task_id);
+                    } catch (e) {
+                        spiderError.value = true;
+                        spiderMessage.value = e.message;
+                        spiderLoading.value = false;
+                    }
+                };
+
+                let pollInterval = null;
+                const pollTaskStatus = async (taskId) => {
+                    // Clear any existing polling
+                    if (pollInterval) clearInterval(pollInterval);
+
+                    const checkStatus = async () => {
+                        try {
+                            const res = await fetch(`/api/admin/spider/task/${taskId}`, {
+                                headers: { 'x-admin-token': token.value }
+                            });
+
+                            if (!res.ok) throw new Error('Failed to check task status');
+
+                            const data = await res.json();
+                            taskStatus.value = data;
+
+                            // Update message with current state
+                            if (data.state === 'PENDING') {
+                                spiderMessage.value = `Task queued (ID: ${taskId})...`;
+                            } else if (data.state === 'STARTED') {
+                                spiderMessage.value = `🕷️ Spider is crawling... (ID: ${taskId})`;
+                            } else if (data.state === 'SUCCESS') {
+                                // Task completed successfully
+                                clearInterval(pollInterval);
+                                spiderLoading.value = false;
+                                const stats = data.result;
+                                spiderMessage.value = `✅ Crawl complete! Found ${stats.artists_crawled} new artists, ${stats.tracks_found} tracks.`;
+
+                                // Reload data
+                                loadSpiderStats();
+                                loadSpiderHistory();
+                                loadTracks();
+                            } else if (data.state === 'FAILURE') {
+                                // Task failed
+                                clearInterval(pollInterval);
+                                spiderLoading.value = false;
+                                spiderError.value = true;
+                                spiderMessage.value = `❌ Crawl failed: ${data.error}`;
+                            }
+                        } catch (e) {
+                            console.error('Polling error:', e);
+                        }
+                    };
+
+                    // Check immediately
+                    await checkStatus();
+
+                    // Then poll every 2 seconds
+                    pollInterval = setInterval(checkStatus, 2000);
+                };
+
+                const loadSpiderStats = async () => {
+                    try {
+                        const res = await fetch('/api/admin/spider/stats', {
+                            headers: { 'x-admin-token': token.value }
+                        });
+
+                        if (!res.ok) return;
+
+                        spiderStats.value = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load spider stats:', e);
+                    }
+                };
+
+                const loadSpiderHistory = async () => {
+                    try {
+                        const res = await fetch('/api/admin/spider/history?limit=50', {
+                            headers: { 'x-admin-token': token.value }
+                        });
+
+                        if (!res.ok) return;
+
+                        const data = await res.json();
+                        crawlHistory.value = data.items;
+                    } catch (e) {
+                        console.error('Failed to load spider history:', e);
+                    }
+                };
+
+                const formatDate = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
                 };
 
                 const statusClass = (status) => ({
@@ -456,9 +776,15 @@
                     loadTracks, debouncedSearch, prevPage, nextPage,
                     reanalyze, reclassify,
                     // Ingest
-                    playlistId, loading, message, isError, runIngest,
+                    resourceId, resourceType, loading, message, isError, runIngest,
+                    getPlaceholder, getHelpText,
                     // Bulk
                     bulkLoading, bulkMessage, bulkError, reclassifyAll,
+                    // Spider
+                    spiderSettings, spiderLoading, spiderMessage, spiderError,
+                    spiderStats, crawlHistory, currentTaskId, taskStatus,
+                    runSpider, loadSpiderStats, loadSpiderHistory,
+                    formatDate,
                     // Helpers
                     statusClass, statusIcon, confidenceClass,
                     // Toasts
