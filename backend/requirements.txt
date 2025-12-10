@@ -18,4 +18,5 @@ music21                 # Music theory and notation analysis
 mutagen                 # Audio file metadata/duration verification
 alembic                 # Database migrations
 celery                  # 
-redis                   #
+redis                   #'
+mutagen

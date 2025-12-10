@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
 # Copy custom Nginx config
-COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy static files
 COPY . /usr/share/nginx/html

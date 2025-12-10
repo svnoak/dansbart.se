@@ -199,7 +199,7 @@ class TrackService:
                 "artists": artist_list,
                 "album": album_data,
                 "dance_style": final_style,
-                #"is_user_confirmed": final_verifications,
+                "is_user_confirmed": final_verifications,
                 "feel_tags": final_tags,
                 "effective_bpm": final_bpm,
                 "tempo_category": final_category,
@@ -225,9 +225,9 @@ class TrackService:
         # Adjust total for tempo filtering (approximate - not exact for pagination)
         total_count = base_total - filtered_count if (min_tempo or max_tempo) else base_total
 
-        #results.sort(key=lambda x: not x["is_user_confirmed"])
-        #results.sort(key=lambda x: not x["style_confirmations"])
-        #results.sort(key=lambda x: not x["style_confidence"])
+        results.sort(key=lambda x: not x["is_user_confirmed"])
+        results.sort(key=lambda x: not x["style_confirmations"])
+        results.sort(key=lambda x: not x["style_confidence"])
 
         return {
             "items": results,

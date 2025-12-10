@@ -1,4 +1,4 @@
-import { createApp, onMounted, onUnmounted, ref } from 'https://cdn.jsdelivr.net/npm/vue@3.4.21/+esm';
+import { createApp, onMounted, onUnmounted, ref } from 'vue';
 import { useTracks } from './tracks.js';
 import { usePlayer } from './player.js';
 
@@ -65,5 +65,7 @@ const app = createApp({
         };
     }
 });
+
+app.config.devtools = true;
 
 app.mount('#app');
