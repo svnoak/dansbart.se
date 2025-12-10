@@ -15,7 +15,7 @@ export default defineConfig({
         terms: resolve(__dirname, 'terms.html')
       }
     },
-    minify: 'terser',
+    minify: 'esbuild',
     sourcemap: false
   },
   resolve: {
