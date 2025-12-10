@@ -1,12 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from app.core.database import get_db
 from app.core.config import settings
 from app.services.pipeline import PipelineService
 from pydantic import BaseModel
 from app.services.feedback import FeedbackService
-from app.core.models import Track, TrackArtist
-from app.workers.tasks import analyze_track_task
+from app.core.models import Track, TrackArtist, ArtistCrawlLog
+from app.workers.tasks import (
+    analyze_track_task,
+    spider_crawl_related_task,
+    spider_crawl_search_task,
+    spider_backfill_task
+)
 from app.services.classification import ClassificationService
 
 router = APIRouter()
@@ -22,7 +28,8 @@ def verify_admin(x_admin_token: str = Header(None)):
     return True
 
 class IngestRequest(BaseModel):
-    playlist_id: str
+    resource_id: str
+    resource_type: str = "playlist"  # playlist, album, or artist
 
 @router.post("/ingest")
 def trigger_ingest(
@@ -30,8 +37,13 @@ def trigger_ingest(
     _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
+    # Validate resource_type
+    valid_types = ["playlist", "album", "artist"]
+    if req.resource_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"Invalid resource_type. Must be one of: {', '.join(valid_types)}")
+
     pipeline = PipelineService(db)
-    return pipeline.ingest_and_process_playlist(req.playlist_id)
+    return pipeline.ingest_and_process(req.resource_id, req.resource_type)
 
 @router.get("/tracks")
 def get_all_tracks_admin(
@@ -178,12 +190,173 @@ def reset_track_structure_endpoint(
 ):
     service = FeedbackService(db)
     result = service.reset_track_structure(track_id)
-    
+
     if not result:
         raise HTTPException(status_code=404, detail="Track or AI source not found")
-    
+
     return {
-        "status": "success", 
+        "status": "success",
         "message": "Structure reset to AI defaults.",
         "updates": result
+    }
+
+
+# ===== DISCOVERY SPIDER ENDPOINTS =====
+
+class SpiderRequest(BaseModel):
+    seed_limit: int = 5
+    max_discoveries: int = 10
+    mode: str = "related"  # "related", "search", or "backfill"
+
+@router.post("/spider/crawl")
+def trigger_spider_crawl(
+    req: SpiderRequest = SpiderRequest(),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger the discovery spider to crawl for new folk artists (runs async in background).
+
+    Modes:
+    - "search": Search Spotify directly for folk artists (no seeds required, recommended)
+    - "backfill": Complete discographies for artists already in database
+    - "related": Use related artists from existing tracks (requires seeds)
+
+    The spider will:
+    1. Find folk artists using the selected mode
+    2. Filter by genre using classification
+    3. Ingest full discographies with automatic genre tagging
+    4. Track crawled artists to avoid duplicates
+
+    Returns immediately with a task_id to check status later.
+    """
+
+    # Queue the appropriate async task based on mode
+    if req.mode == "search":
+        task = spider_crawl_search_task.delay(
+            max_discoveries=req.max_discoveries
+        )
+    elif req.mode == "backfill":
+        task = spider_backfill_task.delay(
+            max_artists=req.max_discoveries
+        )
+    else:  # default to "related"
+        task = spider_crawl_related_task.delay(
+            seed_limit=req.seed_limit,
+            max_discoveries=req.max_discoveries
+        )
+
+    return {
+        "status": "queued",
+        "message": f"Spider crawl queued in background ({req.mode} mode)",
+        "task_id": task.id,
+        "mode": req.mode,
+        "parameters": {
+            "seed_limit": req.seed_limit if req.mode == "related" else None,
+            "max_discoveries": req.max_discoveries
+        }
+    }
+
+@router.get("/spider/task/{task_id}")
+def get_spider_task_status(
+    task_id: str,
+    _: bool = Depends(verify_admin)
+):
+    """
+    Check the status of a spider crawl task.
+
+    Returns:
+    - state: PENDING, STARTED, SUCCESS, FAILURE, RETRY
+    - result: Task result if completed (stats dict)
+    - info: Additional info about the task state
+    """
+    from app.core.celery_app import celery_app
+
+    result = celery_app.AsyncResult(task_id)
+
+    response = {
+        "task_id": task_id,
+        "state": result.state,
+        "ready": result.ready(),
+        "successful": result.successful() if result.ready() else None
+    }
+
+    if result.ready():
+        if result.successful():
+            response["result"] = result.result
+        else:
+            response["error"] = str(result.info)
+    else:
+        # Task is still running or pending
+        response["info"] = result.info
+
+    return response
+
+
+@router.get("/spider/history")
+def get_crawl_history(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get history of spider crawls.
+    """
+
+    query = db.query(ArtistCrawlLog)
+    total = query.count()
+
+    logs = query.order_by(ArtistCrawlLog.crawled_at.desc()).offset(offset).limit(limit).all()
+
+    results = []
+    for log in logs:
+        results.append({
+            "id": str(log.id),
+            "artist_name": log.artist_name,
+            "spotify_id": log.spotify_artist_id,
+            "tracks_found": log.tracks_found,
+            "music_genre": log.music_genre_classification,
+            "detected_genres": log.detected_genres,
+            "status": log.status,
+            "discovery_source": log.discovery_source,
+            "crawled_at": log.crawled_at.isoformat()
+        })
+
+    return {
+        "items": results,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+@router.get("/spider/stats")
+def get_spider_stats(
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get overall spider statistics.
+    """
+
+    total_crawled = db.query(ArtistCrawlLog).count()
+    total_tracks = db.query(ArtistCrawlLog).with_entities(
+        func.sum(ArtistCrawlLog.tracks_found)
+    ).scalar() or 0
+
+    by_genre = db.query(
+        ArtistCrawlLog.music_genre_classification,
+        func.count(ArtistCrawlLog.id)
+    ).group_by(ArtistCrawlLog.music_genre_classification).all()
+
+    by_status = db.query(
+        ArtistCrawlLog.status,
+        func.count(ArtistCrawlLog.id)
+    ).group_by(ArtistCrawlLog.status).all()
+
+    return {
+        "total_artists_crawled": total_crawled,
+        "total_tracks_found": int(total_tracks),
+        "by_genre": {genre: count for genre, count in by_genre if genre},
+        "by_status": {status: count for status, count in by_status}
     }
