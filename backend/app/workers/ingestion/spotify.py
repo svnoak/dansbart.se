@@ -1,4 +1,5 @@
 import os
+import time
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from sqlalchemy.orm import Session
@@ -45,12 +46,12 @@ class SpotifyIngestor:
         """Returns list of track IDs that need analysis (PENDING status only)"""
         pending_ids = []
         skipped_count = 0
-        
+
         for track in track_items:
             if not track or track.get('is_local'): continue
-            
+
             try:
-                # _process_single_track now returns the DB object
+                # _process_single_track now returns the DB object (or None if failed)
                 db_track = self._process_single_track(track)
                 if db_track:
                     # Only queue for analysis if not already processed
@@ -59,68 +60,122 @@ class SpotifyIngestor:
                     else:
                         skipped_count += 1
             except Exception as e:
-                print(f"⚠️ Error: {e}")
-        
+                print(f"⚠️ Error processing track: {e}")
+
         if skipped_count > 0:
             print(f"   ⏭️ Skipped {skipped_count} tracks (already processed)")
-        
+
         return pending_ids
+
+    # --- NEW: Album Ingestion ---
+    def ingest_album(self, album_id: str):
+        """Ingest all tracks from a single album"""
+        print(f"💿 Fetching album: {album_id}")
+
+        try:
+            # Get album details
+            album = self.sp.album(album_id)
+            album_name = album.get('name', 'Unknown')
+            print(f"   Album: {album_name}")
+
+            # Get all tracks from the album
+            tracks_to_save = []
+            album_tracks_results = self.sp.album_tracks(album_id)
+
+            while album_tracks_results:
+                for track in album_tracks_results['items']:
+                    # Inject album object so _process_single_track can read album info
+                    track['album'] = album
+                    tracks_to_save.append(track)
+
+                if album_tracks_results['next']:
+                    album_tracks_results = self.sp.next(album_tracks_results)
+                else:
+                    album_tracks_results = None
+
+            # Process all tracks
+            pending_ids = self.ingest_tracks_from_list(tracks_to_save)
+            print(f"✅ Album ingestion complete. {len(pending_ids)} tracks queued for analysis.")
+            return pending_ids
+
+        except Exception as e:
+            print(f"❌ Error ingesting album: {e}")
+            return []
 
     # --- NEW: Full Discography Ingestion ---
     def ingest_artist_albums(self, artist_id: str):
         print(f"📦 Fetching discography for artist...")
-        
+
         # 1. Get all albums (Albums + Singles)
         albums = []
         # limit=50 is max per page
         results = self.sp.artist_albums(artist_id, album_type='album,single', country='SE', limit=50)
-        
+
         while results:
             albums.extend(results['items'])
             if results['next']:
                 results = self.sp.next(results)
             else:
                 results = None
-                
+
         print(f"   Found {len(albums)} releases. Fetching tracks...")
 
         # 2. Loop through every album to get tracks
-        total_tracks = 0
-        for album in albums:
+        # Note: spotipy handles rate limit retries automatically using Retry-After header
+        all_pending_ids = []
+        for idx, album in enumerate(albums):
             try:
+                # Gentle pacing: Small delay every 10 albums to spread load over 30s window
+                if idx > 0 and idx % 10 == 0:
+                    time.sleep(1.0)  # 1 second pause every 10 albums
+
                 album_tracks_results = self.sp.album_tracks(album['id'])
-                
+
                 tracks_to_save = []
                 while album_tracks_results:
                     for track in album_tracks_results['items']:
                         # CRITICAL: The album_tracks endpoint does NOT return the album object inside the track.
                         # We must manually inject it so _process_single_track can read 'album_name'.
-                        track['album'] = album 
+                        track['album'] = album
                         tracks_to_save.append(track)
-                        
+
                     if album_tracks_results['next']:
                         album_tracks_results = self.sp.next(album_tracks_results)
                     else:
                         album_tracks_results = None
-                
-                # Batch save this album - returns only PENDING tracks
-                pending_count = len(self.ingest_tracks_from_list(tracks_to_save))
-                total_tracks += pending_count
-                
+
+                # Batch save this album - returns only PENDING track IDs
+                pending_ids = self.ingest_tracks_from_list(tracks_to_save)
+                all_pending_ids.extend(pending_ids)
+
             except Exception as e:
                 print(f"⚠️ Error processing album '{album['name']}': {e}")
 
-        print(f"⬇️ Ingested discography. {total_tracks} new tracks queued for analysis.")
+        print(f"⬇️ Ingested discography. {len(all_pending_ids)} new tracks queued for analysis.")
+        return all_pending_ids
     # ---------------------------------------
 
     def _process_single_track(self, sp_track: dict):
+        import hashlib
+
         external_ids = sp_track.get('external_ids', {})
         isrc = external_ids.get('isrc')
         title = sp_track.get('name')
-        duration_ms = sp_track.get('duration_ms') 
-        
+        duration_ms = sp_track.get('duration_ms')
+
+        # If no ISRC, generate a fallback identifier from track metadata
         if not isrc:
-            return
+            # Create a stable hash from: track name + first artist + album + duration
+            album_obj = sp_track.get('album', {})
+            album_name = album_obj.get('name', '')
+            artists = sp_track.get('artists', [])
+            first_artist = artists[0]['name'] if artists else ''
+
+            # Normalize and create hash
+            hash_input = f"{title}|{first_artist}|{album_name}|{duration_ms}".lower()
+            hash_digest = hashlib.md5(hash_input.encode()).hexdigest()
+            isrc = f"FALLBACK-{hash_digest[:12]}"  # Use first 12 chars of MD5
+            print(f"   ⚠️  No ISRC for '{title}' - using fallback: {isrc}")
 
         # --- 1. EXTRACT RICH DATA ---
         

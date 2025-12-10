@@ -1,99 +1,432 @@
 import random
+import time
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.workers.ingestion.spotify import SpotifyIngestor
 from app.repository.track import TrackRepository
-from app.core.models import Track
+from app.core.models import Track, ArtistCrawlLog
+from app.services.genre_classifier import GenreClassifier
+from app.workers.tasks import analyze_track_task
 
-# The "Gatekeeper" Whitelist
-# An artist MUST have at least one of these genres (or partial match) to be crawled.
-VALID_GENRES = [
-    "swedish folk", "nordic folk", "scandinavian folk", "spelmanslag", 
-    "nyckelharpa", "folkmusik", "polska", "svensk folkmusik", "fiddle",
-    "dalarna", "hälsingland", "uppland", "västerbotten"
-]
 
 class DiscoverySpider:
+    """
+    Enhanced Discovery Spider with:
+    - Genre classification
+    - Crawl tracking (no duplicate crawls)
+    - Multi-signal folk detection
+    - Statistics tracking
+    """
+
     def __init__(self, db: Session):
         self.db = db
         self.ingestor = SpotifyIngestor(db)
         self.repo = TrackRepository(db)
+        self.genre_classifier = GenreClassifier(db)
         # Reuse the Spotify client from the ingestor to share connection/auth
-        self.sp = self.ingestor.sp 
+        self.sp = self.ingestor.sp
 
-    def crawl_related_artists(self, seed_limit=1):
+        # Statistics
+        self.stats = {
+            'artists_evaluated': 0,
+            'artists_passed_gatekeeper': 0,
+            'artists_already_crawled': 0,
+            'artists_crawled': 0,
+            'tracks_found': 0
+        }
+
+    def crawl_related_artists(self, seed_limit=5, max_discoveries=10):
         """
-        1. Pick a random artist from our DB.
+        1. Pick random artists from our DB as seeds.
         2. Ask Spotify for 'Related Artists'.
-        3. Filter for Folk genres.
-        4. Ingest their FULL discography.
+        3. Filter for Folk genres using GenreClassifier.
+        4. Check if already crawled (ArtistCrawlLog).
+        5. Ingest their FULL discography with genre classification.
+
+        Args:
+            seed_limit: Number of seed artists to try
+            max_discoveries: Maximum new artists to crawl per session
         """
         print("🕸️  Spider waking up...")
-        
+        print(f"   Settings: {seed_limit} seeds, max {max_discoveries} discoveries")
+
         # Get all tracks to find potential seeds
         db_tracks = self.db.query(Track).all()
-        
+
         if not db_tracks:
             print("❌ No seeds found! You must ingest at least one playlist first.")
-            return
+            return self.stats
+
+        discovered_count = 0
 
         # Try 'seed_limit' times to find a valid artist chain
-        for _ in range(seed_limit):
-            seed_track = random.choice(db_tracks)
-            self._process_seed(seed_track)
+        for attempt in range(seed_limit):
+            if discovered_count >= max_discoveries:
+                print(f"✅ Reached max discoveries limit ({max_discoveries})")
+                break
 
-    def _process_seed(self, db_track):
+            print(f"\n🌱 Seed attempt {attempt + 1}/{seed_limit}")
+            seed_track = random.choice(db_tracks)
+
+            new_discoveries = self._process_seed(seed_track, max_discoveries - discovered_count)
+            discovered_count += new_discoveries
+
+        # Print final statistics
+        print("\n" + "="*60)
+        print("🕸️  Spider Session Complete")
+        print("="*60)
+        print(f"Artists Evaluated:        {self.stats['artists_evaluated']}")
+        print(f"Passed Gatekeeper:        {self.stats['artists_passed_gatekeeper']}")
+        print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
+        print(f"New Artists Crawled:      {self.stats['artists_crawled']}")
+        print(f"Total Tracks Found:       {self.stats['tracks_found']}")
+        print("="*60)
+
+        return self.stats
+
+    def crawl_by_search(self, max_discoveries=10):
+        """
+        Alternative crawl method: Search Spotify directly for folk artists/albums.
+        Does not require seeds from the database.
+
+        This method searches for folk-related keywords and ingests discovered artists.
+        """
+        print("🔍  Spider using Search Mode...")
+        print(f"   Max discoveries: {max_discoveries}")
+
+        # Folk-related search queries
+        search_queries = [
+            "Swedish folk music",
+            "spelmanslag",
+            "folkmusik",
+            "nyckelharpa",
+            "polska music",
+            "nordic folk",
+            "scandinavian folk",
+            "svensk folkmusik",
+            "riksspelman",
+            "traditional folk sweden"
+        ]
+
+        discovered_count = 0
+
+        for query in search_queries:
+            if discovered_count >= max_discoveries:
+                print(f"✅ Reached max discoveries limit ({max_discoveries})")
+                break
+
+            print(f"\n🔎 Searching: '{query}'")
+
+            try:
+                # Search for artists
+                results = self.sp.search(q=query, type='artist', limit=20)
+
+                if not results.get('artists', {}).get('items'):
+                    print(f"   No results for '{query}'")
+                    continue
+
+                for artist in results['artists']['items']:
+                    if discovered_count >= max_discoveries:
+                        break
+
+                    if self._evaluate_and_ingest(artist):
+                        discovered_count += 1
+
+            except Exception as e:
+                print(f"⚠️  Search error for '{query}': {e}")
+
+        # Print final statistics
+        print("\n" + "="*60)
+        print("🔍  Search Spider Session Complete")
+        print("="*60)
+        print(f"Artists Evaluated:        {self.stats['artists_evaluated']}")
+        print(f"Passed Gatekeeper:        {self.stats['artists_passed_gatekeeper']}")
+        print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
+        print(f"New Artists Crawled:      {self.stats['artists_crawled']}")
+        print(f"Total Tracks Found:       {self.stats['tracks_found']}")
+        print("="*60)
+
+        return self.stats
+
+    def backfill_existing_artists(self, max_artists=20):
+        """
+        Backfill method: Find all artists we have tracks for and ingest their complete discographies.
+        This ensures we have ALL albums and tracks from artists already in our library.
+        """
+        print("🔄  Spider using Backfill Mode...")
+        print(f"   Max artists to backfill: {max_artists}")
+
+        from app.core.models import Artist
+
+        # Get all artists in our database that have a Spotify ID
+        artists = self.db.query(Artist).filter(
+            Artist.spotify_id.isnot(None)
+        ).limit(max_artists * 2).all()  # Get more than needed to account for already-crawled
+
+        if not artists:
+            print("❌ No artists found in database with Spotify IDs!")
+            return self.stats
+
+        print(f"   Found {len(artists)} artists in database")
+
+        backfilled_count = 0
+
+        for artist in artists:
+            if backfilled_count >= max_artists:
+                print(f"✅ Reached max backfill limit ({max_artists})")
+                break
+
+            artist_id = artist.spotify_id
+            artist_name = artist.name
+
+            # Check if already crawled
+            existing_log = self.db.query(ArtistCrawlLog).filter(
+                ArtistCrawlLog.spotify_artist_id == artist_id
+            ).first()
+
+            if existing_log:
+                self.stats['artists_already_crawled'] += 1
+                print(f"   ⏭️  Skipping {artist_name} (already crawled on {existing_log.crawled_at.date()})")
+                continue
+
+            print(f"\n   🔄 Backfilling: {artist_name}")
+
+            try:
+                # Get artist details from Spotify for genre info
+                sp_artist = self.sp.artist(artist_id)
+                genres = sp_artist.get('genres', [])
+
+                # Classify the artist's genre
+                music_genre, confidence = self.genre_classifier.classify_artist_genre(
+                    artist_name, genres, None
+                )
+
+                print(f"      Genre: {music_genre} ({confidence:.2f} confidence)")
+                print(f"      Spotify genres: {genres}")
+
+                # Ingest full discography
+                track_ids = self.ingestor.ingest_artist_albums(artist_id)
+
+                # Queue tracks for analysis
+                if track_ids:
+                    print(f"      ⚙️  Scheduling {len(track_ids)} tracks for analysis...")
+                    for tid in track_ids:
+                        analyze_track_task.delay(tid)
+
+                # Log the backfill
+                crawl_log = ArtistCrawlLog(
+                    spotify_artist_id=artist_id,
+                    artist_name=artist_name,
+                    tracks_found=len(track_ids) if isinstance(track_ids, list) else track_ids,
+                    status='success',
+                    detected_genres=genres,
+                    music_genre_classification=music_genre,
+                    discovery_source='backfill'
+                )
+
+                self.db.add(crawl_log)
+                self.db.commit()
+
+                # Update track genres for this artist
+                tracks_updated = self.genre_classifier.classify_all_tracks_for_artist(artist_id)
+                if tracks_updated > 0:
+                    print(f"      🏷️  Tagged {tracks_updated} tracks as '{music_genre}'")
+
+                self.stats['artists_crawled'] += 1
+                self.stats['tracks_found'] += len(track_ids) if isinstance(track_ids, list) else track_ids
+                backfilled_count += 1
+
+            except Exception as e:
+                print(f"      ❌ Error backfilling {artist_name}: {e}")
+
+                # Log the failure
+                try:
+                    crawl_log = ArtistCrawlLog(
+                        spotify_artist_id=artist_id,
+                        artist_name=artist_name,
+                        tracks_found=0,
+                        status='failed',
+                        detected_genres=[],
+                        music_genre_classification='unknown',
+                        discovery_source='backfill'
+                    )
+                    self.db.add(crawl_log)
+                    self.db.commit()
+                except:
+                    self.db.rollback()
+
+        # Print final statistics
+        print("\n" + "="*60)
+        print("🔄  Backfill Spider Session Complete")
+        print("="*60)
+        print(f"Artists Processed:         {backfilled_count}")
+        print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
+        print(f"Total Tracks Found:        {self.stats['tracks_found']}")
+        print("="*60)
+
+        return self.stats
+
+    def _process_seed(self, db_track, max_to_crawl):
+        """
+        Process a seed track to discover related artists.
+        Returns count of new artists discovered.
+        """
         # Find a valid Spotify link for this track to get the Artist ID
         playback_link = next((l for l in db_track.playback_links if l.platform == 'spotify'), None)
-        
+
         if not playback_link:
-            return
+            print(f"      ⚠️  No Spotify link for '{db_track.title}'")
+            return 0
 
         try:
             # Fetch track details from Spotify API
-            # We need this because our DB currently stores Artist Name, not Artist ID.
             sp_track = self.sp.track(playback_link.deep_link)
-            
+
             if not sp_track or not sp_track['artists']:
-                return
+                print(f"      ⚠️  No artist data for '{db_track.title}'")
+                return 0
 
             artist_id = sp_track['artists'][0]['id']
             artist_name = sp_track['artists'][0]['name']
-            
-            print(f"🕷️  Seeding from artist: {artist_name}")
-            
+
+            print(f"   🕷️  Seeding from: {artist_name}")
+
             # Get Related Artists (The "Social Graph")
-            related = self.sp.artist_related_artists(artist_id)
-            
-            found_count = 0
+            try:
+                related = self.sp.artist_related_artists(artist_id)
+            except Exception as e:
+                # Some artists don't have related artists data
+                if 'Not Found' in str(e) or '404' in str(e):
+                    print(f"      ⚠️  No related artists data available for {artist_name}")
+                    return 0
+                raise  # Re-raise unexpected errors
+
+            if not related.get('artists'):
+                print(f"      ⚠️  No related artists found for {artist_name}")
+                return 0
+
+            discovered_count = 0
             for artist in related['artists']:
+                if discovered_count >= max_to_crawl:
+                    break
+
                 if self._evaluate_and_ingest(artist):
-                    found_count += 1
-            
-            if found_count == 0:
-                print(f"   (No new valid folk artists found related to {artist_name})")
-                
+                    discovered_count += 1
+
+            if discovered_count == 0:
+                print(f"      (No new folk artists discovered)")
+
+            return discovered_count
+
         except Exception as e:
             print(f"⚠️  Spider error processing seed '{db_track.title}': {e}")
+            return 0
 
     def _evaluate_and_ingest(self, artist_obj):
         """
-        Checks if an artist is 'Folk Enough'. 
-        If yes, triggers full album ingestion.
+        Enhanced evaluation with:
+        1. Folk genre gatekeeper check
+        2. Deduplication via ArtistCrawlLog
+        3. Genre classification
+        4. Full discography ingestion
+
+        Returns True if artist was newly crawled.
         """
+        artist_id = artist_obj['id']
         name = artist_obj['name']
         genres = artist_obj.get('genres', [])
-        
-        # THE GATEKEEPER CHECK
-        # Returns True if any valid genre string appears inside any of the artist's genres
-        is_folk = any(g for g in genres if any(valid in g.lower() for valid in VALID_GENRES))
-        
-        if is_folk:
-            print(f"🎯 Found Folk Artist: {name} (Genres: {genres})")
-            
-            # --- THE CRITICAL UPDATE ---
-            # We now call the full album ingestor instead of just top tracks
-            self.ingestor.ingest_artist_albums(artist_obj['id'])
-            # ---------------------------
+
+        self.stats['artists_evaluated'] += 1
+
+        # STEP 1: GATEKEEPER - Is this a folk artist?
+        is_folk = self.genre_classifier.is_folk_artist(genres, name)
+
+        if not is_folk:
+            return False
+
+        self.stats['artists_passed_gatekeeper'] += 1
+
+        # STEP 2: DEDUPLICATION - Have we crawled this artist before?
+        existing_log = self.db.query(ArtistCrawlLog).filter(
+            ArtistCrawlLog.spotify_artist_id == artist_id
+        ).first()
+
+        if existing_log:
+            self.stats['artists_already_crawled'] += 1
+            print(f"      ⏭️  Skipping {name} (already crawled on {existing_log.crawled_at.date()})")
+            return False
+
+        # STEP 3: GENRE CLASSIFICATION
+        music_genre, confidence = self.genre_classifier.classify_artist_genre(
+            name, genres, None
+        )
+
+        print(f"      🎯 New Folk Artist: {name}")
+        print(f"         Genres: {genres}")
+        print(f"         Classified as: {music_genre} ({confidence:.2f} confidence)")
+
+        # STEP 4: INGEST FULL DISCOGRAPHY
+        # Note: spotipy has built-in retry logic with exponential backoff
+        # Light delay just to spread requests nicely over time
+        time.sleep(0.5)  # 500ms delay between artists
+
+        try:
+            track_ids = self.ingestor.ingest_artist_albums(artist_id)
+
+            # Queue tracks for analysis
+            if track_ids:
+                print(f"         ⚙️  Scheduling {len(track_ids)} tracks for analysis...")
+                for tid in track_ids:
+                    analyze_track_task.delay(tid)
+
+            # STEP 5: LOG THE CRAWL
+            crawl_log = ArtistCrawlLog(
+                spotify_artist_id=artist_id,
+                artist_name=name,
+                tracks_found=len(track_ids) if isinstance(track_ids, list) else track_ids,
+                status='success',
+                detected_genres=genres,
+                music_genre_classification=music_genre,
+                discovery_source='spider'
+            )
+
+            self.db.add(crawl_log)
+            self.db.commit()
+
+            # STEP 6: UPDATE TRACK GENRES
+            # All tracks from this artist should inherit the artist's genre
+            tracks_updated = self.genre_classifier.classify_all_tracks_for_artist(artist_id)
+            if tracks_updated > 0:
+                print(f"         🏷️  Tagged {tracks_updated} tracks as '{music_genre}'")
+
+            self.stats['artists_crawled'] += 1
+            self.stats['tracks_found'] += len(track_ids) if isinstance(track_ids, list) else track_ids
+
             return True
-        
-        return False
+
+        except IntegrityError:
+            # Race condition - another process crawled this artist
+            self.db.rollback()
+            self.stats['artists_already_crawled'] += 1
+            return False
+
+        except Exception as e:
+            print(f"         ❌ Error ingesting {name}: {e}")
+
+            # Log the failure
+            try:
+                crawl_log = ArtistCrawlLog(
+                    spotify_artist_id=artist_id,
+                    artist_name=name,
+                    tracks_found=0,
+                    status='failed',
+                    detected_genres=genres,
+                    music_genre_classification=music_genre,
+                    discovery_source='spider'
+                )
+                self.db.add(crawl_log)
+                self.db.commit()
+            except:
+                self.db.rollback()
+
+            return False
