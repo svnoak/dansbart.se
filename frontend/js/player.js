@@ -1,11 +1,13 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import { useConsent } from './consent.js';
 
 // GLOBAL STATE
 const queue = ref([]);           
 const currentIndex = ref(-1);    
 const isPlaying = ref(false);    
 const isShuffled = ref(false);   
-const repeatMode = ref('none'); 
+const repeatMode = ref('none');
+const { consentStatus } = useConsent();
 
 const activeSource = ref('youtube'); 
 
@@ -20,6 +22,15 @@ const currentVideoId = ref(null);
 const isRestricted = ref(false);
 
 export function usePlayer() {
+
+    watch(consentStatus, async (newStatus) => {
+        if (newStatus === 'granted' && currentTrack.value) {
+            await nextTick();
+
+            console.log('Consent granted, retrying playback...');
+            loadCurrentTrack();
+        }
+    });
 
     // --- HELPERS ---
     const getYouTubeId = (track) => {
@@ -56,30 +67,39 @@ export function usePlayer() {
     // --- ACTIONS ---
 
     const loadCurrentTrack = () => {
+        if (typeof consentStatus !== 'undefined' && (consentStatus.value === null || consentStatus.value === 'denied')) {
+            window.dispatchEvent(new Event('show-consent-banner'));
+            return;
+        }
+
         const track = currentTrack.value;
         if (!track) return;
 
         isRestricted.value = false;
         isPlaying.value = true;
 
+        // Reset video ID before setting a new one
+        currentVideoId.value = null;
+
         const ytId = getYouTubeId(track);
         const spotId = getSpotifyId(track);
 
-        // LOGIC: Try to stick to the active source, otherwise fallback
         if (activeSource.value === 'youtube') {
             if (ytId) {
-                currentVideoId.value = ytId;
+                setTimeout(() => {
+                    currentVideoId.value = ytId;
+                }, 300);
             } else if (spotId) {
-                activeSource.value = 'spotify'; // Fallback
+                activeSource.value = 'spotify';
             } else {
-                nextTrack(); // Dead track
+                nextTrack();
             }
         } 
         else if (activeSource.value === 'spotify') {
             if (spotId) {
-                currentVideoId.value = null; // Clear YT
+                currentVideoId.value = null;
             } else if (ytId) {
-                activeSource.value = 'youtube'; // Fallback
+                activeSource.value = 'youtube';
                 currentVideoId.value = ytId;
             } else {
                 nextTrack();
@@ -87,7 +107,7 @@ export function usePlayer() {
         }
     };
 
-    // New: Explicitly switch source
+    // Explicitly switch source
     const setSource = (source) => {
         if (source === 'spotify' && !getSpotifyId(currentTrack.value)) return;
         if (source === 'youtube' && !getYouTubeId(currentTrack.value)) return;
@@ -123,7 +143,19 @@ export function usePlayer() {
     };
 
     // Standard Controls
-    const togglePlay = () => isPlaying.value = !isPlaying.value;
+    const togglePlay = () => {
+        if (isPlaying.value) {
+            isPlaying.value = false;
+            return;
+        }
+
+        if (consentStatus.value !== 'granted') {
+            loadCurrentTrack();
+            return;
+        }
+
+        isPlaying.value = true;
+    };
     
     const nextTrack = () => {
         if (queue.value.length === 0) return;

@@ -35,19 +35,19 @@
             </div>
 
             <filter-bar
-            v-model:style="filters.style"
-            v-model:search="filters.search"
-            v-model:source="filters.source"
-            v-model:vocals="filters.vocals"
-            v-model:style-confirmed="filters.styleConfirmed"
-            v-model:min-duration="filters.minDuration"
-            v-model:max-duration="filters.maxDuration"
-            v-model:target-tempo="targetTempo"
-            v-model:tempo-enabled="tempoEnabled"
-            :computed-min="computedMin"
-            :computed-max="computedMax"
-            :styles="availableStyles"
-        ></filter-bar>
+                v-model:style="filters.style"
+                v-model:search="filters.search"
+                v-model:source="filters.source"
+                v-model:vocals="filters.vocals"
+                v-model:style-confirmed="filters.styleConfirmed"
+                v-model:min-duration="filters.minDuration"
+                v-model:max-duration="filters.maxDuration"
+                v-model:target-tempo="targetTempo"
+                v-model:tempo-enabled="tempoEnabled"
+                :computed-min="computedMin"
+                :computed-max="computedMax"
+                :styles="availableStyles"
+            ></filter-bar>
 
         <div class="max-w-4xl mx-auto">
             <div v-if="loading" class="text-center py-12">Loading...</div>

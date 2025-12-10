@@ -238,6 +238,11 @@ export default {
             }
         },
         handleJump(direction) {
+            if (this.consentStatus !== 'granted') {
+                window.dispatchEvent(new Event('show-consent-banner'));
+                return;
+            }
+
             if (this.structureMode !== 'none' && this.currentTrack?.bars?.length > 0) {
                 const bars = this.currentTrack.bars;
                 let nextBarIdx = bars.findIndex(b => b > this.visualTime);
@@ -272,6 +277,11 @@ export default {
             if (Math.abs(this.visualTime - this.realTime) > 0.5) this.visualTime = this.realTime;
         },
         handleSeek(seconds) {
+            if (this.consentStatus !== 'granted') {
+                window.dispatchEvent(new Event('show-consent-banner'));
+                return;
+            }
+
             this.visualTime = seconds; 
             if (this.activeSource === 'youtube' && this.$refs.ytEngine) this.$refs.ytEngine.seekTo(seconds);
             if (this.activeSource === 'spotify' && this.$refs.spotifyEngine) this.$refs.spotifyEngine.seek(seconds);
