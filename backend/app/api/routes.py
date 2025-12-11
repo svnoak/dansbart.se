@@ -6,15 +6,12 @@ from app.api.schemas import (
     StructureVersionOut, VoteIn, MovementVoteIn
 )
 from app.core.models import TrackStructureVersion
-from app.workers.tasks import analyze_track_task
 
 # Services
 from app.services.tracks import TrackService
 from app.services.feedback import FeedbackService
 from app.services.links import LinkService
 from app.services.stats import StatsService
-from app.services.training import TrainingService
-from app.services.classification import ClassificationService
 
 router = APIRouter()
 
@@ -70,8 +67,11 @@ def submit_track_feedback(
     if not updated_data:
         raise HTTPException(status_code=404, detail="Track not found")
 
-    # Trigger Background Learning
+    # Trigger Background Learning (lazy import to avoid loading worker deps)
     def run_learning_loop():
+        from app.services.training import TrainingService
+        from app.services.classification import ClassificationService
+
         bg_db = SessionLocal()
         try:
             trainer = TrainingService(bg_db) # Use bg_db here
@@ -149,10 +149,11 @@ def submit_link(
     
     if not result['success']:
         raise HTTPException(status_code=400, detail=result['message'])
-    
-    # Trigger Re-analysis task
+
+    # Trigger Re-analysis task (lazy import to avoid loading heavy deps)
+    from app.workers.tasks import analyze_track_task
     analyze_track_task.delay(track_id)
-    
+
     return result
 
 @router.patch("/links/{link_id}/report")

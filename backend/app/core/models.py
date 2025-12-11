@@ -239,3 +239,27 @@ class ArtistCrawlLog(Base):
 
     # Why was this artist crawled?
     discovery_source: Mapped[str | None] = mapped_column(String, nullable=True)  # 'spider', 'manual', 'seed'
+
+class RejectionLog(Base):
+    """
+    Tracks rejected artists, albums, and tracks to prevent re-ingestion.
+    Acts as a blocklist for the spider and manual ingestion.
+    """
+    __tablename__ = "rejection_logs"
+    __table_args__ = (
+        UniqueConstraint('spotify_id', 'entity_type', name='unique_rejection'),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # What was rejected?
+    entity_type: Mapped[str] = mapped_column(String, nullable=False, index=True)  # 'artist', 'album', 'track'
+    spotify_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    entity_name: Mapped[str] = mapped_column(String, nullable=False)
+
+    # Why was it rejected?
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    rejected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Additional context
+    additional_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # Store genre, artist info, etc.

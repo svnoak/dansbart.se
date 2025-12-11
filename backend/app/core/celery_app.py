@@ -4,15 +4,28 @@ from celery import Celery
 # Get Redis URL from env or default to localhost (for local testing)
 BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 
+# Determine which task modules to include based on worker type
+# Set WORKER_TYPE env var in docker-compose.yml: "audio" or "light"
+WORKER_TYPE = os.getenv("WORKER_TYPE", "all")
+
+if WORKER_TYPE == "audio":
+    # Audio worker: only load audio tasks
+    task_includes = ["app.workers.tasks_audio"]
+elif WORKER_TYPE == "light":
+    # Light worker: only load light tasks
+    task_includes = ["app.workers.tasks_light"]
+else:
+    # API/Default: load all tasks (for task enqueueing)
+    task_includes = [
+        "app.workers.tasks_audio",
+        "app.workers.tasks_light",
+    ]
+
 celery_app = Celery(
     "dansbart_worker",
     broker=BROKER_URL,
     backend=BROKER_URL,
-    include=[
-        "app.workers.tasks",        # For backwards compatibility
-        "app.workers.tasks_audio",  # Heavy ML tasks
-        "app.workers.tasks_light",  # Light I/O tasks
-    ]
+    include=task_includes
 )
 
 celery_app.conf.update(

@@ -1,7 +1,4 @@
 from sqlalchemy.orm import Session
-from app.workers.ingestion.spotify import SpotifyIngestor
-from app.services.analysis import AnalysisService
-from app.workers.tasks import analyze_track_task
 
 class PipelineService:
     def __init__(self, db: Session):
@@ -13,6 +10,10 @@ class PipelineService:
         1. Ingest (Blocking, creates DB rows).
         2. Schedule Analysis for every track found.
         """
+        # Lazy imports to avoid loading worker dependencies in API
+        from app.workers.ingestion.spotify import SpotifyIngestor
+        from app.workers.tasks import analyze_track_task
+
         # 1. INGEST (Synchronous)
         ingestor = SpotifyIngestor(self.db)
 

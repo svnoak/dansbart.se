@@ -21,12 +21,19 @@ RUN pip install --no-cache-dir --upgrade pip
 COPY requirements.workers.txt requirements.common.txt ./
 RUN pip install --no-cache-dir -r requirements.workers.txt
 
-# 4. Copy Application Code
-COPY . .
+# 4. Create non-root user for running Celery
+RUN useradd -m -u 1000 celeryuser && \
+    chown -R celeryuser:celeryuser /app
 
-# 5. Copy and set up entrypoint script (for DB migrations)
+# 5. Copy Application Code
+COPY --chown=celeryuser:celeryuser . .
+
+# 6. Copy and set up entrypoint script (for DB migrations)
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
+
+# Switch to non-root user
+USER celeryuser
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 

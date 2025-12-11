@@ -51,6 +51,7 @@ services:
     env_file:
       - .env
     environment:
+      - WORKER_TYPE=audio
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - CUDA_VISIBLE_DEVICES=-1
@@ -70,6 +71,7 @@ services:
     env_file:
       - .env
     environment:
+      - WORKER_TYPE=light
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:

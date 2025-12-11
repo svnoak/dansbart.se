@@ -1,35 +1,45 @@
 <!-- Admin Panel (loaded after authentication) -->
 <div id="admin-panel-root">
             <!-- Tab Navigation -->
-            <div class="flex gap-2 mb-6 border-b border-gray-700 pb-2">
-                <button @click="activeTab = 'tracks'" 
+            <div class="flex flex-wrap gap-1 sm:gap-2 mb-4 sm:mb-6 border-b border-gray-700 pb-2">
+                <button @click="activeTab = 'tracks'"
                         :class="activeTab === 'tracks' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
-                        class="px-4 py-2 rounded-t font-medium">
-                    📋 Track Manager
+                        class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium">
+                    <span class="hidden sm:inline">📋 Track Manager</span>
+                    <span class="sm:hidden">📋</span>
                 </button>
-                <button @click="activeTab = 'ingest'" 
+                <button @click="activeTab = 'ingest'"
                         :class="activeTab === 'ingest' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
-                        class="px-4 py-2 rounded-t font-medium">
-                    ➕ Ingest Playlist
+                        class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium">
+                    <span class="hidden sm:inline">➕ Ingest</span>
+                    <span class="sm:hidden">➕</span>
                 </button>
                 <button @click="activeTab = 'bulk'"
                         :class="activeTab === 'bulk' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
-                        class="px-4 py-2 rounded-t font-medium">
-                    ⚡ Bulk Actions
+                        class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium">
+                    <span class="hidden sm:inline">⚡ Bulk</span>
+                    <span class="sm:hidden">⚡</span>
                 </button>
                 <button @click="activeTab = 'spider'"
                         :class="activeTab === 'spider' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
-                        class="px-4 py-2 rounded-t font-medium">
-                    🕸️ Discovery Spider
+                        class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium">
+                    <span class="hidden sm:inline">🕸️ Spider</span>
+                    <span class="sm:hidden">🕸️</span>
                 </button>
-                <button @click="handleLogout" class="ml-auto text-gray-400 hover:text-white text-sm">
-                    🚪 Logout
+                <button @click="activeTab = 'pending'"
+                        :class="activeTab === 'pending' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium">
+                    <span class="hidden sm:inline">🗑️ Reject</span>
+                    <span class="sm:hidden">🗑️</span>
+                </button>
+                <button @click="handleLogout" class="ml-auto text-gray-400 hover:text-white text-xs sm:text-sm px-2 sm:px-3">
+                    🚪 <span class="hidden sm:inline">Logout</span>
                 </button>
             </div>
 
             <!-- Track Manager Tab -->
-            <div v-if="activeTab === 'tracks'" class="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <div class="flex gap-4 mb-4">
+            <div v-if="activeTab === 'tracks'" class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
                     <div class="flex-1">
                         <input v-model="searchQuery" @input="debouncedSearch" placeholder="Search tracks..."
                                class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
@@ -149,7 +159,7 @@
             </div>
 
             <!-- Ingest Tab -->
-            <div v-if="activeTab === 'ingest'" class="bg-gray-800 p-6 rounded-lg border border-gray-700 max-w-md">
+            <div v-if="activeTab === 'ingest'" class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700 max-w-md">
                 <h2 class="font-bold mb-4">Ingest Spotify Content</h2>
 
                 <div class="mb-4">
@@ -184,7 +194,7 @@
             </div>
 
             <!-- Bulk Actions Tab -->
-            <div v-if="activeTab === 'bulk'" class="bg-gray-800 p-6 rounded-lg border border-gray-700 max-w-md">
+            <div v-if="activeTab === 'bulk'" class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700 max-w-md">
                 <h2 class="font-bold mb-4">⚡ Bulk Actions</h2>
                 
                 <div class="space-y-4">
@@ -207,7 +217,7 @@
             </div>
 
             <!-- Spider Tab -->
-            <div v-if="activeTab === 'spider'" class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <div v-if="activeTab === 'spider'" class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
                 <h2 class="font-bold mb-6">🕸️ Discovery Spider</h2>
 
                 <!-- Spider Control Panel -->
@@ -353,10 +363,168 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Review & Reject Tab -->
+            <div v-if="activeTab === 'pending'" class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
+                <h2 class="font-bold mb-6">🗑️ Review & Reject Pending Items</h2>
+
+                <!-- Sub-tabs for Artists, Albums, and Blocklist -->
+                <div class="flex gap-2 mb-4 border-b border-gray-700 pb-2">
+                    <button @click="rejectView = 'artists'"
+                            :class="rejectView === 'artists' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                            class="px-3 py-1 rounded text-sm font-medium">
+                        👤 Pending Artists
+                    </button>
+                    <button @click="rejectView = 'albums'"
+                            :class="rejectView === 'albums' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                            class="px-3 py-1 rounded text-sm font-medium">
+                        💿 Pending Albums
+                    </button>
+                    <button @click="rejectView = 'blocklist'"
+                            :class="rejectView === 'blocklist' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                            class="px-3 py-1 rounded text-sm font-medium">
+                        🚫 Rejection Blocklist
+                    </button>
+                </div>
+
+                <!-- Pending Artists View -->
+                <div v-if="rejectView === 'artists'">
+                    <p class="text-sm text-gray-400 mb-4">
+                        Artists with pending tracks. Rejecting an artist will delete their pending tracks and blocklist them.
+                        Already analyzed tracks will be kept.
+                    </p>
+
+                    <div v-if="pendingArtists.length === 0" class="text-gray-500 text-center py-8">
+                        No pending artists found
+                    </div>
+
+                    <div v-else class="space-y-3">
+                        <div v-for="artist in pendingArtists" :key="artist.id"
+                             class="p-3 sm:p-4 bg-gray-900 rounded border border-gray-700 flex items-center gap-3 sm:gap-4">
+                            <img v-if="artist.image_url" :src="artist.image_url"
+                                 class="w-12 h-12 sm:w-16 sm:h-16 rounded object-cover" :alt="artist.name">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-sm sm:text-base truncate">{{ artist.name }}</div>
+                                <div class="text-xs sm:text-sm text-gray-400">
+                                    {{ artist.pending_tracks }} pending
+                                    <span v-if="artist.analyzed_tracks > 0" class="text-yellow-400 block sm:inline">
+                                        ({{ artist.analyzed_tracks }} analyzed kept)
+                                    </span>
+                                </div>
+                            </div>
+                            <button @click="rejectArtist(artist.id)"
+                                    class="px-2 sm:px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs sm:text-sm whitespace-nowrap">
+                                🗑️ <span class="hidden sm:inline">Reject</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="pendingArtists.length > 0" class="mt-4 text-center">
+                        <button @click="loadPendingArtists"
+                                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pending Albums View -->
+                <div v-if="rejectView === 'albums'">
+                    <p class="text-sm text-gray-400 mb-4">
+                        Albums with pending tracks. Rejecting an album will delete its pending tracks.
+                    </p>
+
+                    <div v-if="pendingAlbums.length === 0" class="text-gray-500 text-center py-8">
+                        No pending albums found
+                    </div>
+
+                    <div v-else class="space-y-3">
+                        <div v-for="album in pendingAlbums" :key="album.id"
+                             class="p-3 sm:p-4 bg-gray-900 rounded border border-gray-700 flex items-center gap-3 sm:gap-4">
+                            <img v-if="album.cover_image_url" :src="album.cover_image_url"
+                                 class="w-12 h-12 sm:w-16 sm:h-16 rounded object-cover" :alt="album.title">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-sm sm:text-base truncate">{{ album.title }}</div>
+                                <div class="text-xs sm:text-sm text-gray-400 truncate">
+                                    {{ album.artist_name }}
+                                    <span v-if="album.all_artists && album.all_artists.length > 1">
+                                        & {{ album.all_artists.length - 1 }} more
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    {{ album.pending_tracks }} pending / {{ album.total_tracks }} total
+                                </div>
+                            </div>
+                            <button @click="rejectAlbum(album.id)"
+                                    class="px-2 sm:px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs sm:text-sm whitespace-nowrap">
+                                🗑️ <span class="hidden sm:inline">Reject</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="pendingAlbums.length > 0" class="mt-4 text-center">
+                        <button @click="loadPendingAlbums"
+                                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Rejection Blocklist View -->
+                <div v-if="rejectView === 'blocklist'">
+                    <p class="text-sm text-gray-400 mb-4">
+                        Items that have been rejected and blocklisted from re-ingestion.
+                    </p>
+
+                    <div class="mb-3">
+                        <select v-model="blocklistFilter" @change="loadBlocklist"
+                                class="bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm">
+                            <option value="">All Types</option>
+                            <option value="artist">👤 Artists</option>
+                            <option value="track">🎵 Tracks</option>
+                            <option value="album">💿 Albums</option>
+                        </select>
+                    </div>
+
+                    <div v-if="blocklist.length === 0" class="text-gray-500 text-center py-8">
+                        No rejected items
+                    </div>
+
+                    <div v-else class="space-y-2">
+                        <div v-for="item in blocklist" :key="item.id"
+                             class="p-3 bg-gray-900 rounded border border-gray-700 flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs bg-gray-700 px-2 py-0.5 rounded">{{ item.entity_type }}</span>
+                                    <span class="font-medium">{{ item.entity_name }}</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    Reason: {{ item.reason || 'Not specified' }} •
+                                    {{ formatDate(item.rejected_at) }}
+                                </div>
+                            </div>
+                            <button @click="removeFromBlocklist(item.id)"
+                                    class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                                ✓ Unblock
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="blocklist.length > 0" class="mt-4 text-center">
+                        <button @click="loadBlocklist"
+                                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <p v-if="rejectMessage" class="mt-4 text-sm" :class="rejectError ? 'text-red-400' : 'text-green-400'">
+                    {{ rejectMessage }}
+                </p>
+            </div>
         </div>
 
         <!-- Toast Notifications -->
-        <div class="fixed bottom-4 right-4 space-y-2">
+        <div class="fixed bottom-4 right-4 space-y-2 z-50">
             <transition-group name="fade">
                 <div v-for="toast in toasts" :key="toast.id"
                      :class="toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'"
@@ -366,17 +534,6 @@
             </transition-group>
         </div>
     </div>
-</div>
-
-<!-- Toast Notifications -->
-<div class="fixed bottom-4 right-4 space-y-2">
-    <transition-group name="fade">
-        <div v-for="toast in toasts" :key="toast.id"
-             :class="toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'"
-             class="px-4 py-2 rounded shadow-lg text-sm max-w-sm">
-            {{ toast.message }}
-        </div>
-    </transition-group>
 </div>
 
 <style>
@@ -431,10 +588,19 @@ window.initAdminPanel = function(adminToken) {
                 const currentTaskId = ref(null);
                 const taskStatus = ref(null);
 
+                // Rejection/Pending Review
+                const rejectView = ref('artists');  // 'artists', 'albums', 'blocklist'
+                const pendingArtists = ref([]);
+                const pendingAlbums = ref([]);
+                const blocklist = ref([]);
+                const blocklistFilter = ref('');
+                const rejectMessage = ref('');
+                const rejectError = ref(false);
+
                 // Toasts
                 const toasts = ref([]);
                 let toastId = 0;
-                
+
                 const showToast = (message, type = 'success') => {
                     const id = toastId++;
                     toasts.value.push({ id, message, type });
@@ -788,6 +954,159 @@ window.initAdminPanel = function(adminToken) {
                     'text-red-400': conf < 0.4
                 });
 
+                // === REJECTION / PENDING REVIEW FUNCTIONS ===
+
+                const loadPendingArtists = async () => {
+                    try {
+                        const res = await fetch('/api/admin/pending/artists?limit=100', {
+                            headers: { 'x-admin-token': token.value }
+                        });
+
+                        if (!res.ok) throw new Error('Failed to load pending artists');
+
+                        const data = await res.json();
+                        pendingArtists.value = data.items;
+                        rejectMessage.value = '';
+                    } catch (e) {
+                        console.error('Failed to load pending artists:', e);
+                        rejectMessage.value = 'Failed to load pending artists';
+                        rejectError.value = true;
+                    }
+                };
+
+                const loadPendingAlbums = async () => {
+                    try {
+                        const res = await fetch('/api/admin/pending/albums?limit=100', {
+                            headers: { 'x-admin-token': token.value }
+                        });
+
+                        if (!res.ok) throw new Error('Failed to load pending albums');
+
+                        const data = await res.json();
+                        pendingAlbums.value = data.items;
+                        rejectMessage.value = '';
+                    } catch (e) {
+                        console.error('Failed to load pending albums:', e);
+                        rejectMessage.value = 'Failed to load pending albums';
+                        rejectError.value = true;
+                    }
+                };
+
+                const loadBlocklist = async () => {
+                    try {
+                        const params = new URLSearchParams({ limit: '100' });
+                        if (blocklistFilter.value) {
+                            params.append('entity_type', blocklistFilter.value);
+                        }
+
+                        const res = await fetch(`/api/admin/rejections?${params}`, {
+                            headers: { 'x-admin-token': token.value }
+                        });
+
+                        if (!res.ok) throw new Error('Failed to load blocklist');
+
+                        const data = await res.json();
+                        blocklist.value = data.items;
+                        rejectMessage.value = '';
+                    } catch (e) {
+                        console.error('Failed to load blocklist:', e);
+                        rejectMessage.value = 'Failed to load blocklist';
+                        rejectError.value = true;
+                    }
+                };
+
+                const rejectArtist = async (artistId) => {
+                    if (!confirm('Are you sure you want to reject this artist? This will delete all pending tracks and blocklist the artist.')) {
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch(`/api/admin/artists/${artistId}/reject`, {
+                            method: 'POST',
+                            headers: {
+                                'x-admin-token': token.value,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ reason: 'Not relevant' })
+                        });
+
+                        if (!res.ok) throw new Error('Failed to reject artist');
+
+                        const data = await res.json();
+                        rejectMessage.value = data.message;
+                        rejectError.value = false;
+                        showToast(data.message, 'success');
+
+                        // Reload the list
+                        await loadPendingArtists();
+                    } catch (e) {
+                        console.error('Failed to reject artist:', e);
+                        rejectMessage.value = 'Failed to reject artist';
+                        rejectError.value = true;
+                        showToast('Failed to reject artist', 'error');
+                    }
+                };
+
+                const rejectAlbum = async (albumId) => {
+                    if (!confirm('Are you sure you want to reject this album? This will delete all pending tracks.')) {
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch(`/api/admin/albums/${albumId}/reject`, {
+                            method: 'POST',
+                            headers: {
+                                'x-admin-token': token.value,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ reason: 'Not relevant' })
+                        });
+
+                        if (!res.ok) throw new Error('Failed to reject album');
+
+                        const data = await res.json();
+                        rejectMessage.value = data.message;
+                        rejectError.value = false;
+                        showToast(data.message, 'success');
+
+                        // Reload the list
+                        await loadPendingAlbums();
+                    } catch (e) {
+                        console.error('Failed to reject album:', e);
+                        rejectMessage.value = 'Failed to reject album';
+                        rejectError.value = true;
+                        showToast('Failed to reject album', 'error');
+                    }
+                };
+
+                const removeFromBlocklist = async (rejectionId) => {
+                    if (!confirm('Remove this item from the blocklist? It can be re-ingested in the future.')) {
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch(`/api/admin/rejections/${rejectionId}`, {
+                            method: 'DELETE',
+                            headers: { 'x-admin-token': token.value }
+                        });
+
+                        if (!res.ok) throw new Error('Failed to remove from blocklist');
+
+                        const data = await res.json();
+                        rejectMessage.value = data.message;
+                        rejectError.value = false;
+                        showToast(data.message, 'success');
+
+                        // Reload the list
+                        await loadBlocklist();
+                    } catch (e) {
+                        console.error('Failed to remove from blocklist:', e);
+                        rejectMessage.value = 'Failed to remove from blocklist';
+                        rejectError.value = true;
+                        showToast('Failed to remove from blocklist', 'error');
+                    }
+                };
+
                 const handleLogout = () => {
                     if (window.adminLogout) {
                         window.adminLogout();
@@ -799,6 +1118,32 @@ window.initAdminPanel = function(adminToken) {
                     loadTracks();
                     loadSpiderStats();
                     loadSpiderHistory();
+                });
+
+                // Watch for tab changes to auto-load rejection data
+                const { watch } = Vue;
+                watch(activeTab, (newTab) => {
+                    if (newTab === 'pending') {
+                        if (rejectView.value === 'artists') {
+                            loadPendingArtists();
+                        } else if (rejectView.value === 'albums') {
+                            loadPendingAlbums();
+                        } else if (rejectView.value === 'blocklist') {
+                            loadBlocklist();
+                        }
+                    }
+                });
+
+                watch(rejectView, (newView) => {
+                    if (activeTab.value === 'pending') {
+                        if (newView === 'artists') {
+                            loadPendingArtists();
+                        } else if (newView === 'albums') {
+                            loadPendingAlbums();
+                        } else if (newView === 'blocklist') {
+                            loadBlocklist();
+                        }
+                    }
                 });
 
                 return {
@@ -819,6 +1164,11 @@ window.initAdminPanel = function(adminToken) {
                     spiderStats, crawlHistory, currentTaskId, taskStatus,
                     runSpider, loadSpiderStats, loadSpiderHistory,
                     formatDate,
+                    // Rejection/Pending Review
+                    rejectView, pendingArtists, pendingAlbums, blocklist, blocklistFilter,
+                    rejectMessage, rejectError,
+                    loadPendingArtists, loadPendingAlbums, loadBlocklist,
+                    rejectArtist, rejectAlbum, removeFromBlocklist,
                     // Helpers
                     statusClass, statusIcon, confidenceClass,
                     // Toasts

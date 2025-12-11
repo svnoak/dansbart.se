@@ -24,6 +24,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Copy admin panel files directly (not part of build process)
+COPY admin-panel.html /usr/share/nginx/html/
+
 # Set correct permissions
 RUN chmod -R 755 /usr/share/nginx/html
 

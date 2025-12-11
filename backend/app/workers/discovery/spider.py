@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.workers.ingestion.spotify import SpotifyIngestor
 from app.repository.track import TrackRepository
-from app.core.models import Track, ArtistCrawlLog
+from app.core.models import Track, ArtistCrawlLog, RejectionLog
 from app.services.genre_classifier import GenreClassifier
 from app.workers.tasks import analyze_track_task
 
@@ -31,6 +31,7 @@ class DiscoverySpider:
             'artists_evaluated': 0,
             'artists_passed_gatekeeper': 0,
             'artists_already_crawled': 0,
+            'artists_rejected': 0,
             'artists_crawled': 0,
             'tracks_found': 0
         }
@@ -113,11 +114,12 @@ class DiscoverySpider:
         print("\n" + "="*60)
         print("🔍  Search Spider Session Complete")
         print("="*60)
-        print(f"Artists Evaluated:        {self.stats['artists_evaluated']}")
-        print(f"Passed Gatekeeper:        {self.stats['artists_passed_gatekeeper']}")
+        print(f"Artists Evaluated:         {self.stats['artists_evaluated']}")
+        print(f"Rejected (Blocklisted):    {self.stats['artists_rejected']}")
+        print(f"Passed Gatekeeper:         {self.stats['artists_passed_gatekeeper']}")
         print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
-        print(f"New Artists Crawled:      {self.stats['artists_crawled']}")
-        print(f"Total Tracks Found:       {self.stats['tracks_found']}")
+        print(f"New Artists Crawled:       {self.stats['artists_crawled']}")
+        print(f"Total Tracks Found:        {self.stats['tracks_found']}")
         print("="*60)
 
         return self.stats
@@ -250,6 +252,7 @@ class DiscoverySpider:
         print(f"Artists Processed:         {backfilled_count}")
         if discover_from_albums and discovered_from_albums > 0:
             print(f"Discovered from Albums:    {discovered_from_albums}")
+        print(f"Rejected (Blocklisted):    {self.stats['artists_rejected']}")
         print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
         print(f"Total Tracks Found:        {self.stats['tracks_found']}")
         print("="*60)
@@ -414,10 +417,11 @@ class DiscoverySpider:
     def _evaluate_and_ingest(self, artist_obj):
         """
         Enhanced evaluation with:
-        1. Folk genre gatekeeper check
-        2. Deduplication via ArtistCrawlLog
-        3. Genre classification
-        4. Full discography ingestion
+        1. Rejection blocklist check
+        2. Folk genre gatekeeper check
+        3. Deduplication via ArtistCrawlLog
+        4. Genre classification
+        5. Full discography ingestion
 
         Returns True if artist was newly crawled.
         """
@@ -427,7 +431,18 @@ class DiscoverySpider:
 
         self.stats['artists_evaluated'] += 1
 
-        # STEP 1: GATEKEEPER - Is this a folk artist?
+        # STEP 1: REJECTION CHECK - Is this artist on the blocklist?
+        rejected = self.db.query(RejectionLog).filter(
+            RejectionLog.spotify_id == artist_id,
+            RejectionLog.entity_type == 'artist'
+        ).first()
+
+        if rejected:
+            self.stats['artists_rejected'] += 1
+            print(f"      🚫 Skipping {name} (on rejection blocklist: {rejected.reason})")
+            return False
+
+        # STEP 2: GATEKEEPER - Is this a folk artist?
         is_folk = self.genre_classifier.is_folk_artist(genres, name)
 
         if not is_folk:
@@ -435,7 +450,7 @@ class DiscoverySpider:
 
         self.stats['artists_passed_gatekeeper'] += 1
 
-        # STEP 2: DEDUPLICATION - Have we crawled this artist before?
+        # STEP 3: DEDUPLICATION - Have we crawled this artist before?
         existing_log = self.db.query(ArtistCrawlLog).filter(
             ArtistCrawlLog.spotify_artist_id == artist_id
         ).first()

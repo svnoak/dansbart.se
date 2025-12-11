@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from app.core.models import Track, TrackStyleVote, TrackDanceStyle, TrackStructureVersion, DanceMovementFeedback, TrackFeelVote
 from app.core.music_theory import categorize_tempo
-import numpy as np
 import uuid
 
 class FeedbackService:
@@ -311,13 +310,21 @@ class FeedbackService:
     def _linearize_bars(self, raw_taps: list[float], duration_ms: int) -> list[float]:
         """
         Takes messy human taps and returns a mathematically perfect grid.
+        Uses simple linear regression (least squares fit) without numpy.
         """
         if not raw_taps or len(raw_taps) < 2:
             return raw_taps
 
-        x = np.arange(len(raw_taps))
-        y = np.array(raw_taps)
-        m, c = np.polyfit(x, y, 1)
+        # Simple linear regression: y = mx + c
+        n = len(raw_taps)
+        sum_x = sum(range(n))
+        sum_y = sum(raw_taps)
+        sum_xy = sum(i * raw_taps[i] for i in range(n))
+        sum_x2 = sum(i * i for i in range(n))
+
+        # Calculate slope (m) and intercept (c)
+        m = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+        c = (sum_y - m * sum_x) / n
 
         duration_sec = (duration_ms or 0) / 1000
         if duration_sec == 0: duration_sec = raw_taps[-1] + 10
@@ -328,7 +335,7 @@ class FeedbackService:
             if current >= 0:
                 new_bars.append(round(current, 3))
             current += m
-            
+
         return new_bars
     
 
