@@ -1,0 +1,48 @@
+# ====================================================
+# AUDIO WORKER DOCKERFILE
+# Heavy ML models for audio analysis & classification
+# ====================================================
+
+FROM python:3.10-slim
+
+# 1. Install System Dependencies for Audio Processing & ML
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libsndfile1 \
+    ffmpeg \
+    g++ \
+    gcc \
+    git \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Set work directory
+WORKDIR /app
+
+# 3. Environment Config for CPU-Only MLOps
+# Prevents TensorFlow/Essentia from looking for GPU
+ENV CUDA_VISIBLE_DEVICES="-1"
+ENV TF_CPP_MIN_LOG_LEVEL="2"
+
+# 4. Install Python Dependencies
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install build dependencies first (needed for madmom compilation)
+RUN pip install --no-cache-dir numpy Cython
+
+# Install audio worker requirements
+COPY requirements.audio.txt requirements.common.txt ./
+RUN pip install --no-cache-dir -r requirements.audio.txt
+
+# 5. Copy Application Code
+COPY . .
+
+# 6. Copy and set up entrypoint script (for DB migrations)
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Default: Run Celery worker for audio tasks
+# Task routing will ensure only audio tasks are processed
+CMD ["celery", "-A", "app.core.celery_app", "worker", "--loglevel=info", "--pool=solo", "-Q", "audio"]

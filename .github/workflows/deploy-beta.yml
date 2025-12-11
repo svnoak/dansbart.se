@@ -49,6 +49,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/${{ matrix.service == 'backend' && 'Dockerfile.api' || 'Dockerfile' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -56,11 +57,19 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache,mode=max
           platforms: linux/amd64
 
-  build-and-push-worker:
+  build-and-push-workers:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      matrix:
+        worker:
+          - name: audio-worker
+            dockerfile: Dockerfile.audio
+          - name: light-worker
+            dockerfile: Dockerfile.workers
 
     steps:
       - name: Checkout code
@@ -80,25 +89,26 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-worker
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker.name }}
           tags: |
             type=raw,value=beta
             type=sha,prefix=beta-
             type=ref,event=branch
 
-      - name: Build and push Worker image
+      - name: Build and push ${{ matrix.worker.name }} image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
+          file: ./backend/${{ matrix.worker.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-worker:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-worker:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker.name }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker.name }}:buildcache,mode=max
           platforms: linux/amd64
 
   deploy:
-    needs: [build-and-push, build-and-push-worker]
+    needs: [build-and-push, build-and-push-workers]
     runs-on: ubuntu-latest
 
     steps:
@@ -107,7 +117,8 @@ jobs:
           echo "🧪 Beta images built and pushed successfully!"
           echo "Frontend: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:beta"
           echo "Backend: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:beta"
-          echo "Worker: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-worker:beta"
+          echo "Audio Worker: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-audio-worker:beta"
+          echo "Light Worker: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker:beta"
 
       # Add your beta deployment steps here
       # Example: SSH into beta server and pull new images

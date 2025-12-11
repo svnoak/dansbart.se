@@ -1,0 +1,35 @@
+# ====================================================
+# LIGHT WORKERS DOCKERFILE
+# Discovery, ingestion, backfill (no ML models)
+# ====================================================
+
+FROM python:3.10-slim
+
+# 1. Install Minimal System Dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Set work directory
+WORKDIR /app
+
+# 3. Install Python Dependencies
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install light worker requirements
+COPY requirements.workers.txt requirements.common.txt ./
+RUN pip install --no-cache-dir -r requirements.workers.txt
+
+# 4. Copy Application Code
+COPY . .
+
+# 5. Copy and set up entrypoint script (for DB migrations)
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Default: Run Celery worker for light tasks (discovery, ingestion)
+# Task routing will ensure only light tasks are processed
+CMD ["celery", "-A", "app.core.celery_app", "worker", "--loglevel=info", "--pool=solo", "-Q", "light"]

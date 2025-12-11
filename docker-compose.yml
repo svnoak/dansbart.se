@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.api
     platform: linux/amd64
     volumes:
       - ./backend:/app  # Syncs your local folder to Docker (Live Code Editing)
@@ -14,8 +16,7 @@ services:
     # This keeps the container running so we can exec commands into it
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
-      - CUDA_VISIBLE_DEVICES=-1 # Disable GPU usage
-      - CELERY_BROKER_URL=redis://redis:6379/0 
+      - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   db:
@@ -41,10 +42,13 @@ services:
     depends_on:
       - backend
 
-  worker:
-    build: ./backend
+  # Audio Worker (Heavy ML models)
+  worker-audio:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.audio
     platform: linux/amd64
-    command: celery -A app.core.celery_app worker --loglevel=info --pool=solo
+    command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio
     volumes:
       - ./backend:/app
     env_file:
@@ -52,12 +56,31 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - CUDA_VISIBLE_DEVICES=-1 
+      - CUDA_VISIBLE_DEVICES=-1
     depends_on:
       - db
       - redis
     shm_size: '2gb'
     mem_limit: '4g'
+
+  # Light Worker (Discovery, Ingestion, No ML)
+  worker-light:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.workers
+    platform: linux/amd64
+    command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q light
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    mem_limit: '1g'
 
 volumes:
   postgres_data:

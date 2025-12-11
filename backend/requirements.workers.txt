@@ -1,0 +1,15 @@
+# ====================================================
+# LIGHT WORKERS DEPENDENCIES
+# Discovery, ingestion, backfill (no ML models)
+# ====================================================
+
+-r requirements.common.txt
+
+# External API Clients
+spotipy                   # Spotify API client (for discovery/ingestion)
+
+# Web Scraping
+bs4                       # HTML parsing (for FolkWiki scraping)
+
+# Music Theory (lightweight, for metadata parsing)
+music21                   # Music theory and notation analysis

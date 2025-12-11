@@ -1,0 +1,19 @@
+# ====================================================
+# COMMON DEPENDENCIES
+# Shared by API, Audio Worker, and Light Workers
+# ====================================================
+
+# Core Framework & Database
+fastapi>=0.109.0          # Web framework (used by API for routes, workers for models)
+sqlalchemy>=2.0.0         # ORM (Database access)
+psycopg2-binary           # PostgreSQL adapter
+pydantic-settings         # Environment variable management
+python-dotenv             # .env file loading
+alembic                   # Database migrations
+
+# Task Queue
+celery                    # Distributed task queue
+redis                     # Message broker & result backend
+
+# Utilities
+typer                     # CLI builder (for manage.py)

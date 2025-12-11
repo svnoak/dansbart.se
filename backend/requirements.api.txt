@@ -1,0 +1,9 @@
+# ====================================================
+# API-ONLY DEPENDENCIES
+# Backend FastAPI server (no ML models)
+# ====================================================
+
+-r requirements.common.txt
+
+# Web Server
+uvicorn[standard]         # ASGI server for FastAPI

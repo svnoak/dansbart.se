@@ -1,0 +1,21 @@
+# ====================================================
+# AUDIO WORKER DEPENDENCIES
+# Heavy ML models for audio analysis & classification
+# ====================================================
+
+-r requirements.common.txt
+
+# Audio Analysis & Feature Extraction (HEAVY)
+librosa                   # Audio feature extraction & analysis
+essentia-tensorflow       # Audio fingerprinting & MusiCNN embeddings
+Cython                    # Required for compiling madmom
+git+https://github.com/CPJKU/madmom.git  # Beat tracking & onset detection
+scipy                     # Scientific computing for audio processing
+numpy                     # Numerical operations
+
+# Audio File Handling
+yt-dlp                    # YouTube audio downloader
+mutagen                   # Audio metadata & duration verification
+
+# Music Theory (used by StyleClassifier)
+music21                   # Music theory and notation analysis

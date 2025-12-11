@@ -44,8 +44,9 @@ services:
       caddy.reverse_proxy: "{{upstreams 80}}"
     restart: unless-stopped
 
-  worker:
-    image: ghcr.io/svnoak/dansbart-worker:production
+  # Audio Worker (Heavy ML models)
+  worker-audio:
+    image: ghcr.io/svnoak/dansbart-audio-worker:production
     platform: linux/amd64
     env_file:
       - .env
@@ -60,6 +61,23 @@ services:
       - default
     shm_size: '2gb'
     mem_limit: '4g'
+    restart: unless-stopped
+
+  # Light Worker (Discovery, Ingestion, No ML)
+  worker-light:
+    image: ghcr.io/svnoak/dansbart-light-worker:production
+    platform: linux/amd64
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - default
+    mem_limit: '1g'
     restart: unless-stopped
 
 networks:
