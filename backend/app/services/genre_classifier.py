@@ -211,52 +211,65 @@ class GenreClassifier:
         """
         Strict check if an artist is Swedish/Nordic folk music.
 
-        Accepts:
-        - Artists with Nordic/Swedish folk genres
-        - Artists with traditional folk keywords in name (spelmanslag, etc.)
-        - Artists with Nordic+folk combination
+        Since Spotify genres are broad and often lack country-specific tags,
+        we rely heavily on:
+        1. Traditional Swedish/Nordic keywords in artist names
+        2. Explicit Swedish/Nordic folk genre tags
+        3. REJECT generic "folk" without strong Swedish/Nordic signals
 
-        Rejects:
-        - Generic "folk" without Nordic/Swedish markers
-        - Folk from other regions (Irish folk, American folk, etc.)
-        - Folk-adjacent genres (indie folk, folk pop, folk rock) without Nordic markers
+        This prevents crawling Irish folk, American folk, indie folk, etc.
         """
 
-        # Check name for traditional Swedish/Nordic folk indicators
         name_lower = artist_name.lower()
+
+        # PRIORITY 1: Traditional Swedish/Nordic keywords in name = INSTANT ACCEPT
+        # These are strong signals (spelmanslag, riksspelman, etc.)
         if any(kw in name_lower for kw in self.TRADITIONAL_KEYWORDS):
             return True
 
-        # Check genres with strict filtering
+        # PRIORITY 2: Explicit Swedish/Nordic folk genres = ACCEPT
+        for genre in spotify_genres:
+            genre_lower = genre.lower()
+            if any(trad in genre_lower for trad in self.TRADITIONAL_GENRES):
+                return True
+
+        # PRIORITY 3: Check if artist name itself suggests Nordic origin
+        # (Swedish/Nordic place names, Nordic words, etc.)
+        nordic_name_indicators = [
+            'svensk', 'nordic', 'scandinavian', 'stockholm', 'göteborg',
+            'malmö', 'uppsala', 'dalarna', 'värmland', 'hälsingland',
+            'norway', 'copenhagen', 'helsinki', 'reykjavik'
+        ]
+        has_nordic_name = any(indicator in name_lower for indicator in nordic_name_indicators)
+
+        # PRIORITY 4: Genre analysis with strict requirements
         has_folk_genre = False
-        has_nordic_marker = False
-        has_traditional_folk = False
+        has_nordic_genre = False
+        has_bad_genre = False
 
         for genre in spotify_genres:
             genre_lower = genre.lower()
 
-            # Direct match: Traditional Nordic/Swedish folk genres
-            if any(trad in genre_lower for trad in self.TRADITIONAL_GENRES):
-                return True
-
-            # Check for Nordic markers
+            # Check for Nordic markers in genre
             if any(nordic in genre_lower for nordic in self.NORDIC_KEYWORDS):
-                has_nordic_marker = True
+                has_nordic_genre = True
 
-            # Check for folk-related terms
-            if 'folk' in genre_lower or 'polska' in genre_lower or 'spelmanslag' in genre_lower:
+            # Check for folk markers
+            if 'folk' in genre_lower or 'polska' in genre_lower:
                 has_folk_genre = True
 
-            # Reject folk-adjacent genres that are too pop/modern
-            if any(x in genre_lower for x in ['indie folk', 'folk pop', 'folk rock',
-                                               'alt-folk', 'anti-folk', 'freak folk',
-                                               'stomp and holler', 'folk punk']):
-                # Only accept these if they have Nordic markers
-                if not has_nordic_marker:
-                    continue
+            # Reject these genres outright (too pop/modern/wrong region)
+            if any(bad in genre_lower for bad in [
+                'indie folk', 'folk pop', 'folk rock', 'folk punk',
+                'alt-folk', 'anti-folk', 'freak folk', 'stomp and holler',
+                'american folk', 'irish folk', 'celtic', 'bluegrass',
+                'americana', 'country'
+            ]):
+                has_bad_genre = True
 
-        # Accept if both folk AND nordic markers present
-        if has_folk_genre and has_nordic_marker:
+        # ACCEPT if: (Nordic name OR Nordic genre) AND folk genre AND NO bad genres
+        if has_folk_genre and (has_nordic_name or has_nordic_genre) and not has_bad_genre:
             return True
 
+        # REJECT everything else - better to be conservative
         return False

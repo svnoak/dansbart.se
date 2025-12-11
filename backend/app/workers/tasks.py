@@ -42,32 +42,33 @@ def analyze_track_task(track_id: str):
 @celery_app.task(acks_late=True, time_limit=3600)
 def spider_crawl_related_task(seed_limit: int = 5, max_discoveries: int = 10):
     """
-    Background task for crawling related artists.
+    DEPRECATED: Use spider_backfill_task instead.
+
+    Related artists crawl tends to drift away from Swedish/Nordic folk.
+    This task now redirects to backfill_existing_artists() for better control.
 
     Args:
-        seed_limit: Number of seed artists to try
-        max_discoveries: Maximum new artists to crawl
+        seed_limit: Ignored (kept for backwards compatibility)
+        max_discoveries: Used as max_artists for backfill
 
     Returns:
         dict: Statistics about the crawl
     """
-    print(f"🕷️ WORKER: Starting related artist crawl (seeds={seed_limit}, max={max_discoveries})")
+    print(f"⚠️  WORKER: spider_crawl_related_task is DEPRECATED")
+    print(f"   Redirecting to backfill mode with max_artists={max_discoveries}")
 
     from app.workers.discovery.spider import DiscoverySpider
 
     db = SessionLocal()
     try:
         spider = DiscoverySpider(db)
-        stats = spider.crawl_related_artists(
-            seed_limit=seed_limit,
-            max_discoveries=max_discoveries
-        )
+        stats = spider.backfill_existing_artists(max_artists=max_discoveries)
 
-        print(f"✅ WORKER: Spider crawl complete - {stats['artists_crawled']} artists, {stats['tracks_found']} tracks")
+        print(f"✅ WORKER: Backfill complete - {stats['artists_crawled']} artists, {stats['tracks_found']} tracks")
         return stats
     except Exception as e:
         db.rollback()
-        print(f"❌ WORKER: Spider crawl failed - {e}")
+        print(f"❌ WORKER: Backfill failed - {e}")
         raise
     finally:
         db.close()
@@ -104,24 +105,28 @@ def spider_crawl_search_task(max_discoveries: int = 10):
 
 
 @celery_app.task(acks_late=True, time_limit=3600)
-def spider_backfill_task(max_artists: int = 20):
+def spider_backfill_task(max_artists: int = 20, discover_from_albums: bool = True):
     """
     Background task for backfilling existing artists' discographies.
 
     Args:
         max_artists: Maximum artists to backfill
+        discover_from_albums: If True, also discover new artists from compilation/collaborative albums
 
     Returns:
         dict: Statistics about the backfill
     """
-    print(f"🔄 WORKER: Starting backfill (max={max_artists})")
+    print(f"🔄 WORKER: Starting backfill (max={max_artists}, discover_from_albums={discover_from_albums})")
 
     from app.workers.discovery.spider import DiscoverySpider
 
     db = SessionLocal()
     try:
         spider = DiscoverySpider(db)
-        stats = spider.backfill_existing_artists(max_artists=max_artists)
+        stats = spider.backfill_existing_artists(
+            max_artists=max_artists,
+            discover_from_albums=discover_from_albums
+        )
 
         print(f"✅ WORKER: Backfill complete - {stats['artists_crawled']} artists, {stats['tracks_found']} tracks")
         return stats

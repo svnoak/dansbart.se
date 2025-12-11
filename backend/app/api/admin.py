@@ -204,9 +204,10 @@ def reset_track_structure_endpoint(
 # ===== DISCOVERY SPIDER ENDPOINTS =====
 
 class SpiderRequest(BaseModel):
-    seed_limit: int = 5
+    seed_limit: int = 5  # Deprecated, kept for backwards compatibility
     max_discoveries: int = 10
-    mode: str = "related"  # "related", "search", or "backfill"
+    mode: str = "backfill"  # "backfill" (recommended) or "search"
+    discover_from_albums: bool = True  # For backfill mode: also discover artists from albums
 
 @router.post("/spider/crawl")
 def trigger_spider_crawl(
@@ -215,16 +216,23 @@ def trigger_spider_crawl(
     db: Session = Depends(get_db)
 ):
     """
-    Trigger the discovery spider to crawl for new folk artists (runs async in background).
+    Trigger the discovery spider to crawl for Swedish/Nordic folk music (runs async in background).
 
     Modes:
-    - "search": Search Spotify directly for folk artists (no seeds required, recommended)
-    - "backfill": Complete discographies for artists already in database
-    - "related": Use related artists from existing tracks (requires seeds)
+    - "backfill": Complete discographies for artists already in database (RECOMMENDED)
+      - Safer: only expands existing vetted artists
+      - Focuses on completing your current collection
+      - Optional: Also discovers new artists from compilation/collaborative albums (discover_from_albums=True)
+    - "search": Discover new Swedish folk artists via targeted search queries
+      - Uses Swedish-specific keywords (spelmanslag, svensk folkmusik, etc.)
+      - More likely to find authentic Swedish/Nordic folk
+
+    DEPRECATED:
+    - "related": Related artists crawl (DISABLED - tends to drift to non-Swedish folk)
 
     The spider will:
-    1. Find folk artists using the selected mode
-    2. Filter by genre using classification
+    1. Find Swedish/Nordic folk artists using the selected mode
+    2. Apply strict genre filtering (rejects non-Nordic folk)
     3. Ingest full discographies with automatic genre tagging
     4. Track crawled artists to avoid duplicates
 
@@ -238,12 +246,20 @@ def trigger_spider_crawl(
         )
     elif req.mode == "backfill":
         task = spider_backfill_task.delay(
-            max_artists=req.max_discoveries
+            max_artists=req.max_discoveries,
+            discover_from_albums=req.discover_from_albums
         )
-    else:  # default to "related"
+    elif req.mode == "related":
+        # Related mode is deprecated but kept for backwards compatibility
+        # It now redirects to backfill mode
         task = spider_crawl_related_task.delay(
             seed_limit=req.seed_limit,
             max_discoveries=req.max_discoveries
+        )
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid mode '{req.mode}'. Use 'backfill' or 'search'."
         )
 
     return {

@@ -223,26 +223,25 @@
 
                 <!-- Spider Control Panel -->
                 <div class="mb-6 p-4 bg-gray-900 rounded border border-gray-700 max-w-2xl">
-                    <h3 class="font-medium mb-3">Automatic Discovery Settings</h3>
+                    <h3 class="font-medium mb-3">Swedish/Nordic Folk Discovery</h3>
                     <p class="text-sm text-gray-400 mb-4">
-                        The spider discovers new folk music from Spotify automatically.
-                        It filters by genre, tracks crawled artists to avoid duplicates, and classifies music as traditional/modern folk.
+                        The spider discovers Swedish and Nordic folk music from Spotify automatically.
+                        It applies strict filtering to reject non-Nordic folk (Irish, American, indie folk, etc.),
+                        tracks crawled artists to avoid duplicates, and classifies music as traditional/modern folk.
                     </p>
 
                     <div class="mb-4">
                         <label class="block text-xs uppercase text-gray-500 mb-1">Discovery Mode</label>
                         <select v-model="spiderSettings.mode"
                                 class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
+                            <option value="backfill">🔄 Backfill Mode (RECOMMENDED)</option>
                             <option value="search">🔍 Search Mode (Discover New Artists)</option>
-                            <option value="backfill">🔄 Backfill Mode (Complete Existing Artists)</option>
-                            <option value="related">🕸️ Related Artists Mode</option>
                         </select>
                         <p class="text-xs text-gray-500 mt-1">
-                            {{ spiderSettings.mode === 'search'
-                                ? 'Searches Spotify directly for folk artists - works without seeds'
-                                : spiderSettings.mode === 'backfill'
-                                ? 'Gets complete discographies for artists already in your library'
-                                : 'Uses related artists from your library - requires existing tracks' }}
+                            {{ spiderSettings.mode === 'backfill'
+                                ? '✅ RECOMMENDED: Gets complete discographies for Swedish/Nordic artists already in your library'
+                                : spiderSettings.mode === 'search'
+                                ? 'Searches Spotify for Swedish folk artists using targeted keywords (spelmanslag, svensk folkmusik, etc.)'}}
                         </p>
                     </div>
 
@@ -259,6 +258,19 @@
                                    class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
                             <p class="text-xs text-gray-500 mt-1">Maximum new artists per crawl</p>
                         </div>
+                    </div>
+
+                    <div v-if="spiderSettings.mode === 'backfill'" class="mb-4 p-3 bg-gray-800 rounded border border-gray-700">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input v-model="spiderSettings.discover_from_albums" type="checkbox"
+                                   class="w-4 h-4 bg-gray-800 border border-gray-600 rounded">
+                            <span class="text-sm font-medium">
+                                📀 Discover artists from compilation/collaborative albums
+                            </span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1 ml-6">
+                            Also finds new Swedish/Nordic folk artists from albums featuring existing artists
+                        </p>
                     </div>
 
                     <button @click="runSpider" :disabled="spiderLoading"
@@ -412,7 +424,8 @@
                 const spiderSettings = ref({
                     seed_limit: 5,
                     max_discoveries: 10,
-                    mode: 'search'  // default to search mode
+                    mode: 'backfill',  // default to backfill mode (recommended)
+                    discover_from_albums: true  // enabled by default for backfill mode
                 });
                 const spiderLoading = ref(false);
                 const spiderMessage = ref('');

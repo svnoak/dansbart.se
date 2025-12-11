@@ -37,50 +37,24 @@ class DiscoverySpider:
 
     def crawl_related_artists(self, seed_limit=5, max_discoveries=10):
         """
+        DISABLED: Related artists crawl tends to drift away from Swedish/Nordic folk.
+
+        This method would:
         1. Pick random artists from our DB as seeds.
         2. Ask Spotify for 'Related Artists'.
         3. Filter for Folk genres using GenreClassifier.
         4. Check if already crawled (ArtistCrawlLog).
         5. Ingest their FULL discography with genre classification.
 
-        Args:
-            seed_limit: Number of seed artists to try
-            max_discoveries: Maximum new artists to crawl per session
+        Use crawl_by_search() or backfill_existing_artists() instead for better control.
         """
-        print("🕸️  Spider waking up...")
-        print(f"   Settings: {seed_limit} seeds, max {max_discoveries} discoveries")
-
-        # Get all tracks to find potential seeds
-        db_tracks = self.db.query(Track).all()
-
-        if not db_tracks:
-            print("❌ No seeds found! You must ingest at least one playlist first.")
-            return self.stats
-
-        discovered_count = 0
-
-        # Try 'seed_limit' times to find a valid artist chain
-        for attempt in range(seed_limit):
-            if discovered_count >= max_discoveries:
-                print(f"✅ Reached max discoveries limit ({max_discoveries})")
-                break
-
-            print(f"\n🌱 Seed attempt {attempt + 1}/{seed_limit}")
-            seed_track = random.choice(db_tracks)
-
-            new_discoveries = self._process_seed(seed_track, max_discoveries - discovered_count)
-            discovered_count += new_discoveries
-
-        # Print final statistics
-        print("\n" + "="*60)
-        print("🕸️  Spider Session Complete")
-        print("="*60)
-        print(f"Artists Evaluated:        {self.stats['artists_evaluated']}")
-        print(f"Passed Gatekeeper:        {self.stats['artists_passed_gatekeeper']}")
-        print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
-        print(f"New Artists Crawled:      {self.stats['artists_crawled']}")
-        print(f"Total Tracks Found:       {self.stats['tracks_found']}")
-        print("="*60)
+        print("⚠️  Related Artists Crawl is DISABLED")
+        print("   This method tends to drift away from Swedish/Nordic folk music.")
+        print("   Use crawl_by_search() or backfill_existing_artists() instead.")
+        print("")
+        print("   Recommended:")
+        print("   - spider.backfill_existing_artists() - Complete discographies of existing artists")
+        print("   - spider.crawl_by_search() - Discover new Swedish folk artists via search")
 
         return self.stats
 
@@ -148,13 +122,18 @@ class DiscoverySpider:
 
         return self.stats
 
-    def backfill_existing_artists(self, max_artists=20):
+    def backfill_existing_artists(self, max_artists=20, discover_from_albums=True):
         """
         Backfill method: Find all artists we have tracks for and ingest their complete discographies.
         This ensures we have ALL albums and tracks from artists already in our library.
+
+        Args:
+            max_artists: Maximum number of artists to backfill
+            discover_from_albums: If True, also discover new artists from compilation/collaborative albums
         """
         print("🔄  Spider using Backfill Mode...")
         print(f"   Max artists to backfill: {max_artists}")
+        print(f"   Discover from albums: {'Yes' if discover_from_albums else 'No'}")
 
         from app.core.models import Artist
 
@@ -255,16 +234,126 @@ class DiscoverySpider:
                 except:
                     self.db.rollback()
 
+        # PHASE 2: Discover new artists from albums (if enabled)
+        discovered_from_albums = 0
+        if discover_from_albums:
+            print("\n" + "="*60)
+            print("📀 Phase 2: Discovering Artists from Albums")
+            print("="*60)
+            discovered_from_albums = self._discover_artists_from_albums(max_artists - backfilled_count)
+            print(f"   Found {discovered_from_albums} new artists from compilation/collaborative albums")
+
         # Print final statistics
         print("\n" + "="*60)
         print("🔄  Backfill Spider Session Complete")
         print("="*60)
         print(f"Artists Processed:         {backfilled_count}")
+        if discover_from_albums and discovered_from_albums > 0:
+            print(f"Discovered from Albums:    {discovered_from_albums}")
         print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
         print(f"Total Tracks Found:        {self.stats['tracks_found']}")
         print("="*60)
 
         return self.stats
+
+    def _discover_artists_from_albums(self, max_to_discover):
+        """
+        Discover new Swedish/Nordic folk artists from albums in our database.
+
+        Strategy: Look at albums featuring our existing artists and discover
+        other artists on those albums (compilations, collaborations, etc.)
+
+        This is great for finding similar artists since if they're on the same
+        compilation or collaborative album, they're likely the same genre.
+        """
+        from app.core.models import Album, Track, TrackArtist, Artist
+
+        if max_to_discover <= 0:
+            print("   ⚠️  Max discoveries limit reached, skipping album discovery")
+            return 0
+
+        discovered_count = 0
+
+        # Get all albums in our database that have Spotify IDs (from track metadata)
+        # We'll get unique album IDs from our tracks
+        album_spotify_ids = set()
+
+        # Query tracks with albums
+        tracks_with_albums = self.db.query(Track).filter(
+            Track.album_id.isnot(None)
+        ).join(Album).limit(100).all()
+
+        for track in tracks_with_albums:
+            # Get Spotify link to extract album ID
+            spotify_link = next((l for l in track.playback_links if l.platform == 'spotify'), None)
+            if not spotify_link:
+                continue
+
+            try:
+                # Get track from Spotify to get album ID
+                sp_track = self.sp.track(spotify_link.deep_link)
+                if sp_track and sp_track.get('album') and sp_track['album'].get('id'):
+                    album_spotify_ids.add(sp_track['album']['id'])
+            except:
+                continue
+
+        print(f"   Found {len(album_spotify_ids)} unique albums to check for new artists")
+
+        # Now check each album for new artists
+        for album_id in list(album_spotify_ids)[:50]:  # Limit to 50 albums to avoid rate limiting
+            if discovered_count >= max_to_discover:
+                break
+
+            try:
+                # Get album details from Spotify
+                album = self.sp.album(album_id)
+
+                if not album or not album.get('tracks'):
+                    continue
+
+                # Look at all artists on this album
+                album_artists = set()
+                for track in album['tracks']['items']:
+                    for artist in track.get('artists', []):
+                        if artist.get('id'):
+                            album_artists.add(artist['id'])
+
+                # For each artist on the album, check if they're new and Swedish/Nordic folk
+                for artist_id in album_artists:
+                    if discovered_count >= max_to_discover:
+                        break
+
+                    # Skip if already crawled
+                    existing_log = self.db.query(ArtistCrawlLog).filter(
+                        ArtistCrawlLog.spotify_artist_id == artist_id
+                    ).first()
+
+                    if existing_log:
+                        continue
+
+                    # Skip if already in our database
+                    existing_artist = self.db.query(Artist).filter(
+                        Artist.spotify_id == artist_id
+                    ).first()
+
+                    if existing_artist:
+                        continue
+
+                    # Get artist details and check if Swedish/Nordic folk
+                    try:
+                        sp_artist = self.sp.artist(artist_id)
+                        if self._evaluate_and_ingest(sp_artist):
+                            discovered_count += 1
+                            print(f"      📀 Discovered from album: {album.get('name', 'Unknown')}")
+                    except Exception as e:
+                        print(f"      ⚠️  Error checking artist {artist_id}: {e}")
+                        continue
+
+            except Exception as e:
+                print(f"      ⚠️  Error checking album {album_id}: {e}")
+                continue
+
+        return discovered_count
 
     def _process_seed(self, db_track, max_to_crawl):
         """
