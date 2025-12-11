@@ -35,7 +35,7 @@ export default {
             lastTick: 0,
             rafId: null,
             ytPlayer: null,
-            videoPos: { x: 16, y: 96 }, 
+            videoPos: { x: 16, y: 96 },
             isDraggingVideo: false,
             dragOffset: { x: 0, y: 0 },
             structureMode: 'none',
@@ -47,7 +47,8 @@ export default {
             isFetchingVersions: false,
             isNudgeVisible: false,
             ytPlayStartTime: null, // Track when YouTube playback started
-            potentialBrokenState: null // For broken link toast
+            potentialBrokenState: null, // For broken link toast
+            isLoadingVideo: false // Track when we're loading a new video
         }
     },
 
@@ -80,7 +81,9 @@ export default {
 
     watch: {
         isPlaying(val) {
-            if (this.activeSource === 'youtube' && this.$refs.ytEngine) {
+            // Only send play/pause commands if we're not loading a new video
+            // (loadVideoById autoplays, so we don't need to call play())
+            if (this.activeSource === 'youtube' && this.$refs.ytEngine && !this.isLoadingVideo) {
                 val ? this.$refs.ytEngine.play() : this.$refs.ytEngine.pause();
             }
             if (this.activeSource === 'spotify' && this.$refs.spotifyEngine) {
@@ -121,11 +124,17 @@ export default {
         },
         'currentTrack.id': {
             immediate: true,
-            handler(newId) { 
+            handler(newId) {
                 if (newId) {
                     this.fetchVersions(newId);
                     this.ytPlayStartTime = null; // Reset on track change
                 }
+            }
+        },
+        currentVideoId(newId, oldId) {
+            // When video ID changes, we're loading a new video
+            if (newId && newId !== oldId) {
+                this.isLoadingVideo = true;
             }
         }
     },
@@ -370,15 +379,19 @@ export default {
             }
         },
         onYtStateChange(stateCode) {
-            if (stateCode === 1) { 
-                this.isPlaying = true; 
+            if (stateCode === 1) {
+                this.isPlaying = true;
                 this.lastTick = performance.now();
+                this.isLoadingVideo = false; // Video has started playing
                 // Track when YouTube playback actually started (for broken link detection)
                 if (!this.ytPlayStartTime) {
                     this.ytPlayStartTime = Date.now();
                 }
             }
-            if (stateCode === 2) this.isPlaying = false;
+            // Only set isPlaying to false if we're not loading a new video
+            if (stateCode === 2 && !this.isLoadingVideo) {
+                this.isPlaying = false;
+            }
             if (stateCode === 0) this.handleTrackEnd();
         },
         handlePlayerError(e) {

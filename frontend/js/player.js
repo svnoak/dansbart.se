@@ -78,23 +78,18 @@ export function usePlayer() {
         isRestricted.value = false;
         isPlaying.value = true;
 
-        // Reset video ID before setting a new one
-        currentVideoId.value = null;
-
         const ytId = getYouTubeId(track);
         const spotId = getSpotifyId(track);
 
         if (activeSource.value === 'youtube') {
             if (ytId) {
-                setTimeout(() => {
-                    currentVideoId.value = ytId;
-                }, 300);
+                currentVideoId.value = ytId;
             } else if (spotId) {
                 activeSource.value = 'spotify';
             } else {
                 nextTrack();
             }
-        } 
+        }
         else if (activeSource.value === 'spotify') {
             if (spotId) {
                 currentVideoId.value = null;
