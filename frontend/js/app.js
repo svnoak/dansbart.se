@@ -2,6 +2,9 @@ import { createApp, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTracks } from './tracks.js';
 import { usePlayer } from './player.js';
 
+// Import styles
+import './main.css';
+
 // Components
 import TrackCard from './components/TrackCard.js';
 import FilterBar from './components/FilterBar.js';

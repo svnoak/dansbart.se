@@ -4,7 +4,7 @@ services:
     image: ghcr.io/svnoak/dansbart-backend:production
     platform: linux/amd64
     env_file:
-      - .env.production
+      - .env
     depends_on:
       - db
       - redis
@@ -34,15 +34,13 @@ services:
 
   frontend:
     image: ghcr.io/svnoak/dansbart-frontend:production
-    expose:
-      - "80"
     depends_on:
       - backend
     networks:
       - default
       - caddy_net
     labels:
-      caddy: "dansbart.se"
+      caddy: beta.dansbart.se
       caddy.reverse_proxy: "{{upstreams 80}}"
     restart: unless-stopped
 
@@ -50,7 +48,7 @@ services:
     image: ghcr.io/svnoak/dansbart-worker:production
     platform: linux/amd64
     env_file:
-      - .env.production
+      - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
