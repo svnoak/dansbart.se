@@ -4,21 +4,23 @@ export default {
     data() {
         return {
             // States: 'hidden', 'verify', 'verify-style-only', 'ask-style', 'ask-tempo', 'confirm-secondary', 'menu', 'fix-style', 'fix-tempo', 'success', 'bonus'
-            step: 'hidden', 
-            
+            step: 'hidden',
+
             // Mode determines the intent: 'correction' (Fixing primary) or 'addition' (Adding secondary)
-            mode: 'correction', 
-            
+            mode: 'correction',
+
             // For confirming secondary styles
             pendingSecondary: null,
-            
+
             correction: { style: '', tempo: 'ok' },
             isSubmitting: false,
             availableStyles: ["Hambo", "Polska", "Slängpolska", "Vals", "Schottis", "Snoa", "Polka", "Mazurka", "Engelska", "Gånglåt"],
             showDelayTimer: null,   // Timer to delay showing the nudge
             autoDismissTimer: null, // Timer to auto-dismiss if no interaction
             playbackStartTime: null, // Track when playback actually started
-            dropdownOpen: false     // Track if dropdown is open to prevent re-renders
+            dropdownOpen: false,    // Track if dropdown is open to prevent re-renders
+            openUpward: false,      // Track if dropdown should open upward
+            dropdownStyle: {}       // Dynamic positioning for dropdown
         }
     },
     mounted() {
@@ -359,6 +361,50 @@ export default {
         submitFix() {
             // For manual fixes/additions, we just show success and close
             this.submit({ style: this.correction.style, tempo_correction: this.correction.tempo }, 'success');
+        },
+
+        // Toggle dropdown with screen awareness
+        toggleDropdown(event) {
+            const wasOpen = this.dropdownOpen;
+            this.dropdownOpen = !this.dropdownOpen;
+
+            if (!this.dropdownOpen) {
+                // Reset when closing
+                this.openUpward = false;
+                this.dropdownStyle = {};
+            } else if (!wasOpen) {
+                // Calculate direction when opening
+                this.$nextTick(() => {
+                    const button = event.currentTarget;
+                    const buttonRect = button.getBoundingClientRect();
+                    const dropdownHeight = 192; // max-h-48 = 12rem = 192px
+                    const viewportHeight = window.innerHeight;
+                    const spaceBelow = viewportHeight - buttonRect.bottom;
+                    const spaceAbove = buttonRect.top;
+
+                    console.log('Dropdown position calc:', {
+                        buttonTop: buttonRect.top,
+                        buttonBottom: buttonRect.bottom,
+                        viewportHeight,
+                        spaceBelow,
+                        spaceAbove,
+                        dropdownHeight,
+                        shouldOpenUpward: spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+                    });
+
+                    // Open upward if there's not enough space below but more space above
+                    this.openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+
+                    // Use fixed positioning to avoid clipping by overflow containers
+                    this.dropdownStyle = {
+                        position: 'fixed',
+                        left: `${buttonRect.left}px`,
+                        width: `${buttonRect.width}px`,
+                        top: this.openUpward ? 'auto' : `${buttonRect.bottom}px`,
+                        bottom: this.openUpward ? `${viewportHeight - buttonRect.top}px` : 'auto'
+                    };
+                });
+            }
         }
     },
     template: /*html*/`
@@ -410,15 +456,16 @@ export default {
                 </p>
                 <!-- Custom dropdown -->
                 <div class="relative mb-3 md:mb-2">
-                    <button @click.stop="dropdownOpen = !dropdownOpen" 
+                    <button @click.stop="toggleDropdown"
                         class="w-full bg-purple-700 hover:bg-purple-800 border border-purple-500 text-white text-left px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium flex justify-between items-center">
                         <span>{{ correction.style || 'Välj dansstil...' }}</span>
                         <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': dropdownOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
-                    <div v-if="dropdownOpen" class="absolute z-[200] w-full mt-1 bg-white rounded-lg shadow-xl border border-purple-200 max-h-48 overflow-y-auto">
-                        <button v-for="s in availableStyles" :key="s" 
+                    <div v-if="dropdownOpen" class="z-[200] bg-white rounded-lg shadow-xl border border-purple-200 max-h-48 overflow-y-auto"
+                         :style="dropdownStyle">
+                        <button v-for="s in availableStyles" :key="s"
                             @click.stop="correction.style = s; dropdownOpen = false"
                             class="w-full text-left px-4 py-2.5 md:py-2 text-sm md:text-xs hover:bg-purple-100 transition-colors"
                             :class="correction.style === s ? 'bg-purple-100 text-purple-800 font-bold' : 'text-gray-800'">
@@ -502,15 +549,16 @@ export default {
                 </p>
                 <!-- Custom dropdown -->
                 <div class="relative mb-3 md:mb-2">
-                    <button @click.stop="dropdownOpen = !dropdownOpen" 
+                    <button @click.stop="toggleDropdown"
                         :class="[colorClasses.btn, 'w-full border border-white/20 text-white text-left px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium flex justify-between items-center']">
                         <span>{{ correction.style || 'Välj dansstil...' }}</span>
                         <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': dropdownOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
-                    <div v-if="dropdownOpen" class="absolute z-[200] w-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto">
-                        <button v-for="s in availableStyles" :key="s" 
+                    <div v-if="dropdownOpen" class="z-[200] bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto"
+                         :style="dropdownStyle">
+                        <button v-for="s in availableStyles" :key="s"
                             @click.stop="correction.style = s; dropdownOpen = false"
                             class="w-full text-left px-4 py-2.5 md:py-2 text-sm md:text-xs hover:bg-gray-100 transition-colors"
                             :class="correction.style === s ? 'bg-indigo-100 text-indigo-800 font-bold' : 'text-gray-800'">

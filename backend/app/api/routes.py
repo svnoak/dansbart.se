@@ -247,4 +247,43 @@ def report_version(version_id: str, db: Session = Depends(get_db)):
     """
     service = FeedbackService(db)
     service.report_structure(version_id)
-    return {"status": "success", "message": "Report received"}
+
+@router.post("/tracks/{track_id}/flag")
+def flag_track(track_id: str, reason: str = "not_folk_music", db: Session = Depends(get_db)):
+    """
+    Flag a track as not being folk music.
+    This will hide it from the main feed until reviewed by an admin.
+    """
+    from app.core.models import Track
+    from datetime import datetime
+
+    track = db.query(Track).filter(Track.id == track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track not found")
+
+    # Flag the track
+    track.is_flagged = True
+    track.flagged_at = datetime.now()
+    track.flag_reason = reason
+    db.commit()
+
+    return {"status": "success", "message": "Track flagged successfully"}
+
+@router.delete("/tracks/{track_id}/flag")
+def unflag_track(track_id: str, db: Session = Depends(get_db)):
+    """
+    Remove flag from a track (admin override).
+    """
+    from app.core.models import Track
+
+    track = db.query(Track).filter(Track.id == track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track not found")
+
+    # Unflag the track
+    track.is_flagged = False
+    track.flagged_at = None
+    track.flag_reason = None
+    db.commit()
+
+    return {"status": "success", "message": "Track unflagged successfully"}

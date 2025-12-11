@@ -1,0 +1,366 @@
+        <div v-else>
+            <!-- Tab Navigation -->
+            <div class="flex gap-2 mb-6 border-b border-gray-700 pb-2">
+                <button @click="activeTab = 'tracks'" 
+                        :class="activeTab === 'tracks' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-4 py-2 rounded-t font-medium">
+                    📋 Track Manager
+                </button>
+                <button @click="activeTab = 'ingest'" 
+                        :class="activeTab === 'ingest' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-4 py-2 rounded-t font-medium">
+                    ➕ Ingest Playlist
+                </button>
+                <button @click="activeTab = 'bulk'"
+                        :class="activeTab === 'bulk' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-4 py-2 rounded-t font-medium">
+                    ⚡ Bulk Actions
+                </button>
+                <button @click="activeTab = 'spider'"
+                        :class="activeTab === 'spider' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-4 py-2 rounded-t font-medium">
+                    🕸️ Discovery Spider
+                </button>
+                <button @click="logout" class="ml-auto text-gray-400 hover:text-white text-sm">
+                    🚪 Logout
+                </button>
+            </div>
+
+            <!-- Track Manager Tab -->
+            <div v-if="activeTab === 'tracks'" class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <div class="flex gap-4 mb-4">
+                    <div class="flex-1">
+                        <input v-model="searchQuery" @input="debouncedSearch" placeholder="Search tracks..."
+                               class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                    </div>
+                    <select v-model="statusFilter" @change="loadTracks"
+                            class="bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                        <option value="">All Status</option>
+                        <option value="PENDING">⏳ Pending</option>
+                        <option value="PROCESSING">🔄 Processing</option>
+                        <option value="DONE">✅ Done</option>
+                        <option value="FAILED">❌ Failed</option>
+                    </select>
+                    <select v-model="flaggedFilter" @change="loadTracks"
+                            class="bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                        <option value="">All Tracks</option>
+                        <option value="true">🚩 Flagged Only</option>
+                        <option value="false">✅ Not Flagged</option>
+                    </select>
+                    <button @click="loadTracks" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <!-- Stats -->
+                <div class="flex gap-4 mb-4 text-sm text-gray-400">
+                    <span>Total: {{ totalTracks }}</span>
+                    <span>Showing: {{ tracks.length }}</span>
+                </div>
+
+                <!-- Track Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-xs uppercase text-gray-500 border-b border-gray-700">
+                            <tr>
+                                <th class="py-2 px-2">Title</th>
+                                <th class="py-2 px-2">Artist</th>
+                                <th class="py-2 px-2">Status</th>
+                                <th class="py-2 px-2">Style</th>
+                                <th class="py-2 px-2">Confidence</th>
+                                <th class="py-2 px-2">Flagged</th>
+                                <th class="py-2 px-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="track in tracks" :key="track.id" 
+                                class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                                <td class="py-2 px-2 max-w-xs truncate" :title="track.title">
+                                    {{ track.title }}
+                                </td>
+                                <td class="py-2 px-2 text-gray-400 text-sm max-w-xs truncate">
+                                    {{ track.artists?.join(', ') || '-' }}
+                                </td>
+                                <td class="py-2 px-2">
+                                    <span :class="statusClass(track.status)" class="px-2 py-1 rounded text-xs font-medium">
+                                        {{ statusIcon(track.status) }} {{ track.status }}
+                                    </span>
+                                </td>
+                                <td class="py-2 px-2">
+                                    {{ track.dance_style || '-' }}
+                                </td>
+                                <td class="py-2 px-2 text-sm">
+                                    <span v-if="track.confidence" :class="confidenceClass(track.confidence)">
+                                        {{ (track.confidence * 100).toFixed(0) }}%
+                                    </span>
+                                    <span v-else class="text-gray-500">-</span>
+                                </td>
+                                <td class="py-2 px-2">
+                                    <span v-if="track.is_flagged"
+                                          class="px-2 py-1 rounded text-xs font-medium bg-amber-600/20 text-amber-400 border border-amber-600/30"
+                                          :title="'Flagged: ' + (track.flag_reason || 'not_folk_music')">
+                                        🚩 Flagged
+                                    </span>
+                                    <span v-else class="text-gray-500 text-xs">-</span>
+                                </td>
+                                <td class="py-2 px-2">
+                                    <div class="flex gap-1">
+                                        <button @click="reanalyze(track)"
+                                                :disabled="track.loading"
+                                                class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-2 py-1 rounded text-xs"
+                                                title="Full re-analysis (download + analyze)">
+                                            {{ track.loading ? '...' : '🔄' }}
+                                        </button>
+                                        <button @click="reclassify(track)"
+                                                :disabled="track.loading || track.status !== 'DONE'"
+                                                class="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-2 py-1 rounded text-xs"
+                                                title="Re-classify only (no re-download)">
+                                            🏷️
+                                        </button>
+                                        <button v-if="track.is_flagged"
+                                                @click="unflagTrack(track)"
+                                                :disabled="track.loading"
+                                                class="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 px-2 py-1 rounded text-xs"
+                                                title="Remove flag (admin override)">
+                                            {{ track.loading ? '...' : '✓' }}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex justify-between items-center mt-4">
+                    <button @click="prevPage" :disabled="offset === 0" 
+                            class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 px-4 py-2 rounded">
+                        ← Previous
+                    </button>
+                    <span class="text-gray-400">
+                        Page {{ Math.floor(offset / limit) + 1 }} of {{ Math.ceil(totalTracks / limit) }}
+                    </span>
+                    <button @click="nextPage" :disabled="offset + limit >= totalTracks"
+                            class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 px-4 py-2 rounded">
+                        Next →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ingest Tab -->
+            <div v-if="activeTab === 'ingest'" class="bg-gray-800 p-6 rounded-lg border border-gray-700 max-w-md">
+                <h2 class="font-bold mb-4">Ingest Spotify Content</h2>
+
+                <div class="mb-4">
+                    <label class="block text-xs uppercase text-gray-500 mb-1">Resource Type</label>
+                    <select v-model="resourceType"
+                            class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                        <option value="playlist">🎵 Playlist</option>
+                        <option value="album">💿 Album</option>
+                        <option value="artist">🎤 Artist (Full Discography)</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs uppercase text-gray-500 mb-1">
+                        {{ resourceType === 'playlist' ? 'Playlist ID' : resourceType === 'album' ? 'Album ID' : 'Artist ID' }}
+                    </label>
+                    <input v-model="resourceId" :placeholder="getPlaceholder()"
+                           class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ getHelpText() }}
+                    </p>
+                </div>
+
+                <button @click="runIngest" :disabled="loading"
+                        class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 py-2 rounded font-bold">
+                    {{ loading ? 'Processing...' : 'Start Pipeline' }}
+                </button>
+
+                <p v-if="message" class="mt-4 text-sm" :class="isError ? 'text-red-400' : 'text-green-400'">
+                    {{ message }}
+                </p>
+            </div>
+
+            <!-- Bulk Actions Tab -->
+            <div v-if="activeTab === 'bulk'" class="bg-gray-800 p-6 rounded-lg border border-gray-700 max-w-md">
+                <h2 class="font-bold mb-4">⚡ Bulk Actions</h2>
+                
+                <div class="space-y-4">
+                    <div class="p-4 bg-gray-900 rounded border border-gray-700">
+                        <h3 class="font-medium mb-2">🏷️ Reclassify All Tracks</h3>
+                        <p class="text-sm text-gray-400 mb-3">
+                            Re-runs classification logic on all analyzed tracks. 
+                            Useful after updating the classifier.
+                        </p>
+                        <button @click="reclassifyAll" :disabled="bulkLoading"
+                                class="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-4 py-2 rounded font-medium">
+                            {{ bulkLoading ? 'Running...' : 'Reclassify Library' }}
+                        </button>
+                    </div>
+                </div>
+
+                <p v-if="bulkMessage" class="mt-4 text-sm" :class="bulkError ? 'text-red-400' : 'text-green-400'">
+                    {{ bulkMessage }}
+                </p>
+            </div>
+
+            <!-- Spider Tab -->
+            <div v-if="activeTab === 'spider'" class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <h2 class="font-bold mb-6">🕸️ Discovery Spider</h2>
+
+                <!-- Spider Control Panel -->
+                <div class="mb-6 p-4 bg-gray-900 rounded border border-gray-700 max-w-2xl">
+                    <h3 class="font-medium mb-3">Swedish/Nordic Folk Discovery</h3>
+                    <p class="text-sm text-gray-400 mb-4">
+                        The spider discovers Swedish and Nordic folk music from Spotify automatically.
+                        It applies strict filtering to reject non-Nordic folk (Irish, American, indie folk, etc.),
+                        tracks crawled artists to avoid duplicates, and classifies music as traditional/modern folk.
+                    </p>
+
+                    <div class="mb-4">
+                        <label class="block text-xs uppercase text-gray-500 mb-1">Discovery Mode</label>
+                        <select v-model="spiderSettings.mode"
+                                class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
+                            <option value="backfill">🔄 Backfill Mode (RECOMMENDED)</option>
+                            <option value="search">🔍 Search Mode (Discover New Artists)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {{ spiderSettings.mode === 'backfill'
+                                ? '✅ RECOMMENDED: Gets complete discographies for Swedish/Nordic artists already in your library'
+                                : 'Searches Spotify for Swedish folk artists using targeted keywords (spelmanslag, svensk folkmusik, etc.)' }}
+                        </p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs uppercase text-gray-500 mb-1">Max Discoveries</label>
+                        <input v-model.number="spiderSettings.max_discoveries" type="number" min="1" max="50"
+                               class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white">
+                        <p class="text-xs text-gray-500 mt-1">Maximum new artists per crawl</p>
+                    </div>
+
+                    <div v-if="spiderSettings.mode === 'backfill'" class="mb-4 p-3 bg-gray-800 rounded border border-gray-700">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input v-model="spiderSettings.discover_from_albums" type="checkbox"
+                                   class="w-4 h-4 bg-gray-800 border border-gray-600 rounded">
+                            <span class="text-sm font-medium">
+                                📀 Discover artists from compilation/collaborative albums
+                            </span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1 ml-6">
+                            Also finds new Swedish/Nordic folk artists from albums featuring existing artists
+                        </p>
+                    </div>
+
+                    <button @click="runSpider" :disabled="spiderLoading"
+                            class="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 py-3 rounded font-bold">
+                        {{ spiderLoading ? '🕷️ Crawling...' : '🚀 Start Discovery Crawl' }}
+                    </button>
+
+                    <!-- Task Status Display -->
+                    <div v-if="taskStatus && spiderLoading" class="mt-3 p-3 bg-gray-800 rounded border border-gray-600">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400">Task Status:</span>
+                            <span :class="{
+                                'text-yellow-400': taskStatus.state === 'PENDING',
+                                'text-blue-400': taskStatus.state === 'STARTED',
+                                'text-green-400': taskStatus.state === 'SUCCESS',
+                                'text-red-400': taskStatus.state === 'FAILURE'
+                            }" class="font-medium">
+                                {{ taskStatus.state }}
+                            </span>
+                        </div>
+                        <div v-if="currentTaskId" class="text-xs text-gray-500 mt-1">
+                            Task ID: {{ currentTaskId }}
+                        </div>
+                    </div>
+
+                    <p v-if="spiderMessage" class="mt-4 text-sm" :class="spiderError ? 'text-red-400' : 'text-green-400'">
+                        {{ spiderMessage }}
+                    </p>
+                </div>
+
+                <!-- Spider Statistics -->
+                <div v-if="spiderStats" class="mb-6 p-4 bg-gray-900 rounded border border-gray-700 max-w-2xl">
+                    <h3 class="font-medium mb-3">Overall Statistics</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-400">Total Artists Crawled:</span>
+                            <span class="ml-2 font-bold">{{ spiderStats.total_artists_crawled }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Total Tracks Found:</span>
+                            <span class="ml-2 font-bold">{{ spiderStats.total_tracks_found }}</span>
+                        </div>
+                    </div>
+                    <div v-if="spiderStats.by_genre && Object.keys(spiderStats.by_genre).length > 0" class="mt-3">
+                        <span class="text-gray-400 text-sm">By Genre:</span>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <span v-for="(count, genre) in spiderStats.by_genre" :key="genre"
+                                  class="px-2 py-1 bg-gray-800 rounded text-xs">
+                                {{ genre }}: {{ count }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crawl History -->
+                <div class="bg-gray-900 rounded border border-gray-700">
+                    <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                        <h3 class="font-medium">Recent Crawls</h3>
+                        <button @click="loadSpiderHistory" class="text-sm text-gray-400 hover:text-white">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="text-xs uppercase text-gray-500 border-b border-gray-700">
+                                <tr>
+                                    <th class="py-2 px-4">Artist</th>
+                                    <th class="py-2 px-4">Tracks</th>
+                                    <th class="py-2 px-4">Genre</th>
+                                    <th class="py-2 px-4">Spotify Genres</th>
+                                    <th class="py-2 px-4">Crawled</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="log in crawlHistory" :key="log.id"
+                                    class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                                    <td class="py-2 px-4 max-w-xs truncate">{{ log.artist_name }}</td>
+                                    <td class="py-2 px-4 text-gray-400">{{ log.tracks_found }}</td>
+                                    <td class="py-2 px-4">
+                                        <span v-if="log.music_genre"
+                                              class="px-2 py-1 bg-indigo-600/30 text-indigo-400 rounded text-xs">
+                                            {{ log.music_genre.replace('_', ' ') }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4 text-xs text-gray-500 max-w-xs truncate">
+                                        {{ log.detected_genres?.join(', ') || '-' }}
+                                    </td>
+                                    <td class="py-2 px-4 text-xs text-gray-500">
+                                        {{ formatDate(log.crawled_at) }}
+                                    </td>
+                                </tr>
+                                <tr v-if="crawlHistory.length === 0">
+                                    <td colspan="5" class="py-8 text-center text-gray-500">
+                                        No crawl history yet. Run your first spider crawl above!
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="fixed bottom-4 right-4 space-y-2">
+            <transition-group name="fade">
+                <div v-for="toast in toasts" :key="toast.id"
+                     :class="toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'"
+                     class="px-4 py-2 rounded shadow-lg text-sm max-w-sm">
+                    {{ toast.message }}
+                </div>
+            </transition-group>
+        </div>

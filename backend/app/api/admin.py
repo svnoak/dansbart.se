@@ -49,6 +49,7 @@ def trigger_ingest(
 def get_all_tracks_admin(
     search: str = Query(None),
     status: str = Query(None, description="Filter by status: PENDING, PROCESSING, DONE, FAILED"),
+    flagged: bool = Query(None, description="Filter by flagged status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     _: bool = Depends(verify_admin),
@@ -57,17 +58,20 @@ def get_all_tracks_admin(
     """
     Admin endpoint to list all tracks with their status.
     """
-    
+
     query = db.query(Track).options(
         joinedload(Track.dance_styles),
         joinedload(Track.artist_links).joinedload(TrackArtist.artist)
     )
-    
+
     if search:
         query = query.filter(Track.title.ilike(f"%{search}%"))
-    
+
     if status:
         query = query.filter(Track.processing_status == status)
+
+    if flagged is not None:
+        query = query.filter(Track.is_flagged == flagged)
     
     total = query.count()
     tracks = query.order_by(Track.created_at.desc()).offset(offset).limit(limit).all()
@@ -84,7 +88,10 @@ def get_all_tracks_admin(
             "status": track.processing_status,
             "dance_style": primary_style.dance_style if primary_style else None,
             "confidence": primary_style.confidence if primary_style else None,
-            "created_at": track.created_at.isoformat() if track.created_at else None
+            "created_at": track.created_at.isoformat() if track.created_at else None,
+            "is_flagged": track.is_flagged,
+            "flagged_at": track.flagged_at.isoformat() if track.flagged_at else None,
+            "flag_reason": track.flag_reason
         })
     
     return {
@@ -204,7 +211,6 @@ def reset_track_structure_endpoint(
 # ===== DISCOVERY SPIDER ENDPOINTS =====
 
 class SpiderRequest(BaseModel):
-    seed_limit: int = 5  # Deprecated, kept for backwards compatibility
     max_discoveries: int = 10
     mode: str = "backfill"  # "backfill" (recommended) or "search"
     discover_from_albums: bool = True  # For backfill mode: also discover artists from albums
@@ -227,9 +233,6 @@ def trigger_spider_crawl(
       - Uses Swedish-specific keywords (spelmanslag, svensk folkmusik, etc.)
       - More likely to find authentic Swedish/Nordic folk
 
-    DEPRECATED:
-    - "related": Related artists crawl (DISABLED - tends to drift to non-Swedish folk)
-
     The spider will:
     1. Find Swedish/Nordic folk artists using the selected mode
     2. Apply strict genre filtering (rejects non-Nordic folk)
@@ -249,13 +252,6 @@ def trigger_spider_crawl(
             max_artists=req.max_discoveries,
             discover_from_albums=req.discover_from_albums
         )
-    elif req.mode == "related":
-        # Related mode is deprecated but kept for backwards compatibility
-        # It now redirects to backfill mode
-        task = spider_crawl_related_task.delay(
-            seed_limit=req.seed_limit,
-            max_discoveries=req.max_discoveries
-        )
     else:
         raise HTTPException(
             status_code=400,
@@ -268,8 +264,8 @@ def trigger_spider_crawl(
         "task_id": task.id,
         "mode": req.mode,
         "parameters": {
-            "seed_limit": req.seed_limit if req.mode == "related" else None,
-            "max_discoveries": req.max_discoveries
+            "max_discoveries": req.max_discoveries,
+            "discover_from_albums": req.discover_from_albums if req.mode == "backfill" else None
         }
     }
 

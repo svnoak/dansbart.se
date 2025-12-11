@@ -33,6 +33,9 @@ class TrackService:
         query = self.db.query(Track).outerjoin(Track.dance_styles)
         query = query.filter(Track.processing_status.in_(['DONE', 'FAILED']))
 
+        # Filter out flagged tracks from main feed
+        query = query.filter(Track.is_flagged == False)
+
         # 2. APPLY FILTERS
         if style:
             query = query.filter(TrackDanceStyle.dance_style.ilike(style))

@@ -1,15 +1,18 @@
 import AddLinkModal from "./modals/AddLinkModal.js";
+import FlagTrackModal from "./modals/FlagTrackModal.js";
 import SparklesIcon from "../icons/SparklesIcon.js";
+import FlagIcon from "../icons/FlagIcon.js";
 
 export default {
-    props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'], 
-    emits: ['play', 'stop', 'refresh'], 
-    components: { AddLinkModal, SparklesIcon },
+    props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
+    emits: ['play', 'stop', 'refresh'],
+    components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
     
-    data() { 
+    data() {
         return {
-            showLinkModal: false
-        } 
+            showLinkModal: false,
+            showFlagModal: false
+        }
     },
 
     template: /*html*/`
@@ -79,6 +82,11 @@ export default {
                 <button v-if="!hasYouTube" @click="showLinkModal = true" class="text-xs text-gray-400 hover:text-red-500 border border-transparent hover:border-red-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1">
                     <span>+ Lägg till länk</span>
                 </button>
+
+                <button @click="showFlagModal = true" class="text-xs text-gray-400 hover:text-amber-600 border border-transparent hover:border-amber-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1">
+                    <flag-icon class="w-3 h-3" />
+                    <span>Rapportera</span>
+                </button>
             </div>
         </div>
 
@@ -99,12 +107,19 @@ export default {
             </button>
         </div>
 
-        <add-link-modal 
-            :is-open="showLinkModal" 
-            :track="track" 
+        <add-link-modal
+            :is-open="showLinkModal"
+            :track="track"
             @close="showLinkModal = false"
             @refresh="$emit('refresh')"
         ></add-link-modal>
+
+        <flag-track-modal
+            :is-open="showFlagModal"
+            :track="track"
+            @close="showFlagModal = false"
+            @refresh="$emit('refresh')"
+        ></flag-track-modal>
     </div>
     `,
     computed: {
@@ -177,7 +192,7 @@ export default {
         },
         playPrimary() {
             if (this.isCurrent && this.isPlaying) {
-                this.$emit('stop'); 
+                this.$emit('stop');
             } else if (this.isCurrent && !this.isPlaying) {
                 this.$emit('play', this.track, this.primarySource);
             } else if (this.primarySource) {

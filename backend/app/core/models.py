@@ -31,7 +31,12 @@ class Track(Base):
     # Values: 'traditional_folk', 'modern_folk', 'folk_pop', 'contemporary', 'unknown'
     music_genre: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     genre_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
-    
+
+    # User Flagging System (for reporting non-folk tracks)
+    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false', index=True)
+    flagged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    flag_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
     # Logic Relationships
     analysis_sources = relationship("AnalysisSource", back_populates="track")
     playback_links = relationship("PlaybackLink", back_populates="track")
