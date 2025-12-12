@@ -1,9 +1,4 @@
 import os
-import joblib
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import StandardScaler
 
 class ClassificationHead:
     """
@@ -24,6 +19,8 @@ class ClassificationHead:
         self._load()
 
     def _load(self):
+        import joblib
+
         if os.path.exists(self.model_path):
             data = joblib.load(self.model_path)
             self.model = data['model']
@@ -46,6 +43,8 @@ class ClassificationHead:
         Returns (style_string, confidence) tuple.
         E.g., ('Hambo', 0.85) or ('Unknown', 0.0)
         """
+        import numpy as np
+
         if self.model is None or self.scaler is None:
             return ("Unknown", 0.0)
         
@@ -79,6 +78,11 @@ class ClassificationHead:
         """
         Retrains the head using the provided Golden Dataset.
         """
+        import joblib
+        import numpy as np
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.preprocessing import StandardScaler
+
         if not embeddings or not labels:
             print("⚠️ No data to train on.")
             return

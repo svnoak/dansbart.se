@@ -1,15 +1,9 @@
-import numpy as np
-import essentia.standard as es
 import traceback
 import os
-from .style_head import ClassificationHead
-from .extractors.rhythm import RhythmExtractor
 from .extractors.vocal import analyze_vocal_presence
 from .extractors.swing import calculate_swing_ratio
 from .extractors.feel import analyze_feel
-from .extractors.structure import StructureExtractor
 from .extractors.section_labeler import ABSectionLabeler
-from .folk_authenticity import FolkAuthenticityDetector
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_BACKBONE = os.path.join(BASE_DIR, "models", "msd-musicnn-1.pb")
@@ -17,6 +11,12 @@ MODEL_BACKBONE = os.path.join(BASE_DIR, "models", "msd-musicnn-1.pb")
 class AudioAnalyzer:
     def __init__(self):
         print("🧠 Loading Analysis Models...")
+        from .extractors.rhythm import RhythmExtractor
+        from .extractors.structure import StructureExtractor
+        from .style_head import ClassificationHead
+        from .folk_authenticity import FolkAuthenticityDetector
+        import essentia.standard as es
+        
         self.rhythm_extractor = RhythmExtractor()
         self.structure_extractor = StructureExtractor()
         self.head = ClassificationHead()
@@ -33,12 +33,14 @@ class AudioAnalyzer:
             self.tf_embeddings = None
 
 
-    def _extract_lightweight_features(self, audio: np.array) -> list:
+    def _extract_lightweight_features(self, audio) -> list:
         """
         Extracts robust, crash-proof structural proxies.
         These help the classifier distinguish between 'busy' styles (Polska) 
         and 'sparse' styles (Waltz) without running the full segmentation logic.
         """
+        import essentia.standard as es
+
         try:
             # 1. Dynamics (Standard Deviation of RMS amplitude)
             # High deviation = lots of pauses/dynamic changes (Live Folk)
@@ -62,6 +64,9 @@ class AudioAnalyzer:
             return [0.0, 0.0]
 
     def analyze_file(self, file_path: str, metadata_context: str = "") -> dict:
+        import essentia.standard as es
+        import numpy as np
+
         try:
             # --- 1. LOAD AUDIO & TEXTURE ---
             print(f"   [ANALYSIS] Load audio and texture...")
@@ -189,6 +194,8 @@ class AudioAnalyzer:
         Lightweight pass: Re-runs ONLY the structure segmentation 
         using a confirmed style hint (e.g., 'Hambo').
         """
+        import essentia.standard as es
+
         try:
             print(f"   [ANALYSIS] Refining structure with hint: {new_style_hint}...")
             

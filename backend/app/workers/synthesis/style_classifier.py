@@ -1,7 +1,5 @@
 from app.core.models import Track
-from app.workers.audio.style_head import ClassificationHead
-from app.core.music_theory import categorize_tempo, TEMPO_RANGES
-import numpy as np
+from app.core.music_theory import categorize_tempo
 
 class StyleClassifier:
     """
@@ -43,6 +41,7 @@ class StyleClassifier:
     # ====================================================
 
     def __init__(self):
+        from app.workers.audio.style_head import ClassificationHead
         # Load the Brain (AI Model)
         self.head = ClassificationHead()
 
@@ -77,6 +76,8 @@ class StyleClassifier:
         """
         Decides the main style.
         """
+
+        import numpy as np
         
         # --- 1. GOD RULE: Metadata ---
         # If the artist calls it a Hambo, it is a Hambo.

@@ -1,14 +1,11 @@
-import numpy as np
-import librosa
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.cluster import AgglomerativeClustering
-
 class ABSectionLabeler:
     def __init__(self, sr=16000, n_mfcc=13):
         self.sr = sr
         self.n_mfcc = n_mfcc
 
     def _extract_fingerprint(self, audio):
+        import numpy as np
+        import librosa
         # Handle empty or too short audio chunk
         if len(audio) < 512: return np.zeros(26)
         
@@ -20,6 +17,9 @@ class ABSectionLabeler:
         return fp
 
     def label_sections(self, audio, sections):
+        from sklearn.metrics.pairwise import cosine_similarity
+        from sklearn.cluster import AgglomerativeClustering
+
         # --- SAFETY CHECK 1: Not enough sections to cluster ---
         if not sections or len(sections) < 2:
             return ["A"] * len(sections) if sections else []

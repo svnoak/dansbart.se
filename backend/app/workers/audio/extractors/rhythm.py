@@ -1,7 +1,3 @@
-import numpy as np
-import madmom
-import madmom.features.downbeats
-
 METER_HINTS = {
     # Ternary (3/4)
     "hambo": 3, "hamburska": 3, "polska": 3, "pols": 3, 
@@ -53,6 +49,9 @@ TERNARY_PROFILES = {
 
 class RhythmExtractor:
     def __init__(self):
+        import numpy as np
+        import madmom
+        import madmom.features.downbeats
         self.proc_beat = madmom.features.downbeats.RNNDownBeatProcessor()
 
     def get_meter_hint(self, text: str):
@@ -67,6 +66,9 @@ class RhythmExtractor:
         Runs Madmom to get the raw activation matrix and beat times.
         Also calculates ternary confidence to detect Polska misclassified as binary.
         """
+        import madmom
+        import madmom.features.downbeats
+
         act = self.proc_beat(file_path)
         beats_hint = self.get_meter_hint(metadata_context)
         
@@ -94,6 +96,8 @@ class RhythmExtractor:
         
         Returns a confidence score 0.0-1.0 for ternary meter.
         """
+        import numpy as np
+
         if len(beat_times) < 12:
             return 0.5  # Not enough data
         
@@ -163,6 +167,8 @@ class RhythmExtractor:
         
         The last two features are signature scores for distinguishing Polska vs Hambo.
         """
+        import numpy as np
+
         if len(beat_times) < 12: 
             return [0.0] * 8
 
@@ -234,6 +240,8 @@ class RhythmExtractor:
         2. Micro-timing variance (Polska is more "loose", Hambo more "tight")
         3. Activation patterns (Hambo has strong downbeat accent)
         """
+        import numpy as np
+
         r1, r2, r3 = ratios
         
         # --- MICRO-TIMING ANALYSIS ---

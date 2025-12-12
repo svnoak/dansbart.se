@@ -1,8 +1,8 @@
-import numpy as np
-import essentia.standard as es
+
 
 class StructureExtractor:
     def __init__(self):
+        import essentia.standard as es
         self.w = es.Windowing(type='hann')
         self.spectrum = es.Spectrum()
         self.eqloudness = es.EqualLoudness()
@@ -34,6 +34,8 @@ class StructureExtractor:
         """
         Calculates sections based on bar count (8, 12, 16, 32).
         """
+        import numpy as np
+
         if not bars or len(bars) < 4: return [0.0]
         total_bars = len(bars)
         
@@ -56,6 +58,9 @@ class StructureExtractor:
         """
         Uses Essentia SBic to find texture changes.
         """
+        import essentia.standard as es
+        import numpy as np
+
         mfccs = []
         for frame in es.FrameGenerator(audio, frameSize=2048, hopSize=1024, startFromZero=True):
             spec = self.spectrum(self.w(frame))

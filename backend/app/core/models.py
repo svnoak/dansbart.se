@@ -296,3 +296,44 @@ class PendingArtistApproval(Base):
 
     # Additional context
     additional_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+class TrackPlayback(Base):
+    """
+    Records every time a track is played.
+    Used for analytics: popular tracks, platform preferences, usage patterns.
+    """
+    __tablename__ = "track_playbacks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"), index=True, nullable=False)
+
+    # Playback details
+    platform: Mapped[str] = mapped_column(String, nullable=False)  # 'youtube', 'spotify'
+    played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Session tracking (optional, for grouping user behavior)
+    session_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+
+    track = relationship("Track")
+
+class UserInteraction(Base):
+    """
+    Tracks user interactions with the UI for analytics and funnel analysis.
+    Examples: nudge shown, modal opened, button clicked, etc.
+    """
+    __tablename__ = "user_interactions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("tracks.id"), nullable=True, index=True)
+
+    # Event classification
+    event_type: Mapped[str] = mapped_column(String, index=True, nullable=False)  # 'nudge_shown', 'modal_opened', etc.
+    event_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # Flexible JSON for additional context
+
+    # Timing
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Session tracking
+    session_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+
+    track = relationship("Track")

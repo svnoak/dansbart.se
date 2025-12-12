@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
 from app.api.schemas import (
-    TrackOut, LinkSubmission, FeedbackIn, StructureIn, 
-    StructureVersionOut, VoteIn, MovementVoteIn
+    TrackOut, LinkSubmission, FeedbackIn, StructureIn,
+    StructureVersionOut, VoteIn, MovementVoteIn,
+    PlaybackTrackingIn, InteractionTrackingIn
 )
 from app.core.models import TrackStructureVersion
 

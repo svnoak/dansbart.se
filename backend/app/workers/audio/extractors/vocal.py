@@ -1,10 +1,10 @@
-import essentia.standard as es
-import numpy as np
-
 def analyze_vocal_presence(audio):
     """
     Robust heuristic to detect vocals.
     """
+    import essentia.standard as es
+    import numpy as np
+    
     run_melodia = es.PredominantPitchMelodia(frameSize=2048, hopSize=128)
     pitch, confidence = run_melodia(audio)
 

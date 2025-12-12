@@ -13,9 +13,6 @@ Traditional folk music typically has:
 - Natural vocal qualities (if present)
 """
 
-import numpy as np
-
-
 class FolkAuthenticityDetector:
     """
     Detects whether audio has characteristics of traditional folk music
@@ -40,7 +37,7 @@ class FolkAuthenticityDetector:
         bounciness: float,
         voice_probability: float,
         is_likely_instrumental: bool,
-        embedding: np.ndarray
+        embedding
     ) -> dict:
         """
         Analyze audio features to determine folk authenticity.
@@ -207,7 +204,7 @@ class FolkAuthenticityDetector:
         else:
             return 0.5  # Uncertain
 
-    def _score_production(self, embedding: np.ndarray) -> float:
+    def _score_production(self, embedding) -> float:
         """
         Score based on MusiCNN embedding characteristics.
         Traditional folk: More variance in mid-range frequencies, natural energy distribution

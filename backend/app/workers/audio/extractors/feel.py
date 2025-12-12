@@ -1,10 +1,10 @@
-import numpy as np
-import essentia.standard as es
-
-def analyze_feel(audio: np.array, beat_times: np.array, swing: float) -> dict:
+def analyze_feel(audio, beat_times, swing: float) -> dict:
         """
         Determines the textural character: 'Smooth', 'Bouncy', 'Driving', 'Stumpy'.
         """
+        import numpy as np
+        import essentia.standard as es
+
         try:
             # 1. Calculate 'Staccato Factor'
             # We look at the energy dip between beats.

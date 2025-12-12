@@ -18,3 +18,4 @@ redis                     # Message broker & result backend
 # Utilities
 typer                     # CLI builder (for manage.py)
 yt-dlp                    # YouTube URL validation (used by LinkService)
+spotipy                   # Spotify API client (for discovery/ingestion)

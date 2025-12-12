@@ -1,13 +1,13 @@
-import os
 import time
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
 from sqlalchemy.orm import Session
 from app.repository.track import TrackRepository
 from app.core.config import settings
 
 class SpotifyIngestor:
     def __init__(self, db: Session):
+        import spotipy
+        from spotipy.oauth2 import SpotifyClientCredentials
+
         self.db = db
         self.repo = TrackRepository(db)
         

@@ -1,11 +1,11 @@
-import librosa
-import numpy as np
-
 def calculate_swing_ratio(file_path, beat_times):
     """
     Calculates sub-beat swing using Librosa onsets.
     Samples from multiple segments of the track for better accuracy.
     """
+    import librosa
+    import numpy as np
+
     # Get full duration first
     duration = librosa.get_duration(path=file_path)
     

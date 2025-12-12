@@ -3,8 +3,7 @@ import glob
 import re
 import yt_dlp
 import logging
-import difflib # Used for title similarity scoring
-from mutagen.mp3 import MP3
+import difflib
 
 class AudioFetcher:
     def __init__(self, temp_dir="./temp_audio"):
@@ -329,6 +328,8 @@ class AudioFetcher:
             return {"valid": False, "actual_duration_ms": 0, "reason": "File not found"}
         
         try:
+            from mutagen.mp3 import MP3
+
             audio = MP3(file_path)
             actual_duration_ms = int(audio.info.length * 1000)
             

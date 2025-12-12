@@ -97,3 +97,13 @@ class StructureVersionOut(BaseModel):
 class MovementVoteIn(BaseModel):
     dance_style: str  # The context (e.g., "Polska")
     tags: list[str]   # The tags selected (e.g., ["Sviktande", "Tungt"])
+
+class PlaybackTrackingIn(BaseModel):
+    platform: str  # 'youtube' or 'spotify'
+    session_id: Optional[str] = None
+
+class InteractionTrackingIn(BaseModel):
+    event_type: str  # 'nudge_shown', 'modal_opened', etc.
+    track_id: Optional[str] = None
+    event_data: Optional[dict] = None
+    session_id: Optional[str] = None
