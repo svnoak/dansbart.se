@@ -7,6 +7,7 @@ import IngestTab from './features/ingest/IngestTab.js';
 import BulkTab from './features/bulk/BulkTab.js';
 import SpiderTab from './features/spider/SpiderTab.js';
 import ApprovalsTab from './features/approvals/ApprovalsTab.js';
+import AnalyticsTab from './features/analytics/AnalyticsTab.js';
 import Toast from './shared/components/Toast.js';
 
 export default {
@@ -16,6 +17,7 @@ export default {
         'bulk-tab': BulkTab,
         'spider-tab': SpiderTab,
         'approvals-tab': ApprovalsTab,
+        'analytics-tab': AnalyticsTab,
         'toast-container': Toast
     },
     emits: ['logout'],
@@ -67,6 +69,12 @@ export default {
                         class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium transition-colors">
                     <span class="hidden sm:inline">✅ Approvals</span>
                     <span class="sm:hidden">✅</span>
+                </button>
+                <button @click="activeTab = 'analytics'"
+                        :class="activeTab === 'analytics' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium transition-colors">
+                    <span class="hidden sm:inline">📊 Analytics</span>
+                    <span class="sm:hidden">📊</span>
                 </button>
 
                 <button @click="logout" class="ml-auto text-gray-400 hover:text-white text-xs sm:text-sm px-2 sm:px-3 transition-colors">

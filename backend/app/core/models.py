@@ -312,6 +312,10 @@ class TrackPlayback(Base):
     platform: Mapped[str] = mapped_column(String, nullable=False)  # 'youtube', 'spotify'
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
+    # Listen duration tracking
+    duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)  # How long was actually listened
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)  # Did they listen past the threshold (e.g., 30 seconds)
+
     # Session tracking (optional, for grouping user behavior)
     session_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
@@ -338,3 +342,26 @@ class UserInteraction(Base):
     session_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
     track = relationship("Track")
+
+class VisitorSession(Base):
+    """
+    Tracks visitor sessions for analytics.
+    Helps identify unique vs returning visitors and visit patterns.
+    """
+    __tablename__ = "visitor_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+
+    # Session metadata
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), index=True)
+
+    # Browser/device fingerprinting (optional, privacy-friendly)
+    user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Is this a returning visitor? (based on localStorage presence)
+    is_returning: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Total interaction count
+    page_views: Mapped[int] = mapped_column(Integer, default=1)

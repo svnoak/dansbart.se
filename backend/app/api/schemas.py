@@ -101,9 +101,16 @@ class MovementVoteIn(BaseModel):
 class PlaybackTrackingIn(BaseModel):
     platform: str  # 'youtube' or 'spotify'
     session_id: Optional[str] = None
+    duration_seconds: Optional[int] = None  # How many seconds were actually listened
+    completed: bool = False  # Whether the track was played past the threshold
 
 class InteractionTrackingIn(BaseModel):
     event_type: str  # 'nudge_shown', 'modal_opened', etc.
     track_id: Optional[str] = None
     event_data: Optional[dict] = None
     session_id: Optional[str] = None
+
+class VisitorSessionIn(BaseModel):
+    session_id: str
+    user_agent: Optional[str] = None
+    is_returning: bool = False

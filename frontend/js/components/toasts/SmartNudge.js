@@ -1,6 +1,8 @@
+import { trackInteraction, AnalyticsEvents } from '../../analytics.js';
+
 export default {
     props: ['track', 'isPlaying'],
-    emits: ['edit'], 
+    emits: ['edit'],
     data() {
         return {
             // States: 'hidden', 'verify', 'verify-style-only', 'ask-style', 'ask-tempo', 'confirm-secondary', 'menu', 'fix-style', 'fix-tempo', 'success', 'bonus'
@@ -182,6 +184,10 @@ export default {
             // Auto-dismiss after 20 seconds if no interaction
             this.autoDismissTimer = setTimeout(() => {
                 if (this.step === 'verify') {
+                    // Track abandonment
+                    trackInteraction(AnalyticsEvents.NUDGE_DISMISSED, this.track?.id, {
+                        reason: 'auto_timeout'
+                    });
                     this.step = 'hidden';
                 }
             }, 20000);
@@ -193,6 +199,12 @@ export default {
         
         // Determine what to ask based on available data
         determineInitialStep() {
+            // Track that nudge was shown
+            trackInteraction(AnalyticsEvents.NUDGE_SHOWN, this.track?.id, {
+                has_style: this.hasStyle,
+                has_tempo: this.hasTempo
+            });
+
             if (!this.hasStyle && !this.hasTempo) {
                 // No style, no tempo -> Ask what dance style
                 this.mode = 'correction';
@@ -238,7 +250,14 @@ export default {
                 }
                 
                 localStorage.setItem(`fb_${this.track.id}`, 'true');
-                
+
+                // Track successful feedback submission
+                trackInteraction(AnalyticsEvents.NUDGE_FEEDBACK_SUBMITTED, this.track.id, {
+                    style: payload.style,
+                    tempo_correction: payload.tempo_correction,
+                    mode: this.mode
+                });
+
                 // Only change step if nextState is provided
                 if (nextState === 'bonus') {
                     this.step = 'bonus';

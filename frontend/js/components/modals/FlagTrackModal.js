@@ -1,5 +1,6 @@
 import { toRaw } from 'vue';
-import FlagIcon from '../../icons/FlagIcon.js'; // Ensure extension matches your setup
+import FlagIcon from '../../icons/FlagIcon.js';
+import { trackInteraction, AnalyticsEvents } from '../../analytics.js';
 
 export default {
     props: ['track', 'isOpen'],
@@ -19,6 +20,8 @@ export default {
                 this.view = 'menu';
                 this.error = null;
                 this.isSubmitting = false;
+                // Track modal opened
+                trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_OPENED, this.track?.id);
             }
         }
     },
@@ -41,7 +44,8 @@ export default {
                 if (!response.ok) {
                     const data = await response.json();
                     throw new Error(data.detail || "Kunde inte rapportera");
-                } 
+                }
+                trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, { reason: 'not_folk_music' });
                 this.finish("Rapporterad som ej folkmusik");
             } catch (e) {
                 this.error = e.message || "Nätverksfel";
@@ -58,6 +62,8 @@ export default {
             this.isSubmitting = true;
             try {
                 await fetch(`/api/links/${link.id}/report?reason=${reason}`, { method: 'PATCH' });
+                const eventType = reason === 'wrong_track' ? AnalyticsEvents.LINK_REPORTED_WRONG_TRACK : AnalyticsEvents.LINK_REPORTED_BROKEN;
+                trackInteraction(eventType, this.track.id, { link_id: link.id });
                 const msg = reason === 'wrong_track' ? 'Rapporterad: Fel låt' : 'Rapporterad: Trasig länk';
                 this.finish(msg);
             } catch (e) {

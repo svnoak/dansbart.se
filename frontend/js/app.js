@@ -1,6 +1,7 @@
 import { createApp, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTracks } from './tracks.js';
 import { usePlayer } from './player.js';
+import { trackSession } from './analytics.js';
 
 // Import styles
 import './main.css';
@@ -65,6 +66,9 @@ const app = createApp({
         onMounted(() => {
             trackLogic.fetchTracks();
             setupScrollObserver();
+
+            // Track session for analytics
+            trackSession();
 
             // Re-setup observer whenever tracks are reset (filters change)
             watch(() => trackLogic.tracks.value.length, (newLen, oldLen) => {

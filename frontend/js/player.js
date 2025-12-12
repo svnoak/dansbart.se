@@ -1,5 +1,6 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { useConsent } from './consent.js';
+import { createPlaybackTracker } from './analytics.js';
 
 // GLOBAL STATE
 const queue = ref([]);           
@@ -18,8 +19,9 @@ const currentTrack = computed(() => {
     return null;
 });
 
-const currentVideoId = ref(null); 
+const currentVideoId = ref(null);
 const isRestricted = ref(false);
+const playbackTracker = ref(null); // Analytics tracker for current playback
 
 export function usePlayer() {
 
@@ -75,30 +77,50 @@ export function usePlayer() {
         const track = currentTrack.value;
         if (!track) return;
 
+        // End previous tracking if exists
+        if (playbackTracker.value) {
+            playbackTracker.value.end();
+            playbackTracker.value = null;
+        }
+
         isRestricted.value = false;
         isPlaying.value = true;
 
         const ytId = getYouTubeId(track);
         const spotId = getSpotifyId(track);
 
+        let selectedPlatform = null;
+
         if (activeSource.value === 'youtube') {
             if (ytId) {
                 currentVideoId.value = ytId;
+                selectedPlatform = 'youtube';
             } else if (spotId) {
                 activeSource.value = 'spotify';
+                selectedPlatform = 'spotify';
             } else {
                 nextTrack();
+                return;
             }
         }
         else if (activeSource.value === 'spotify') {
             if (spotId) {
                 currentVideoId.value = null;
+                selectedPlatform = 'spotify';
             } else if (ytId) {
                 activeSource.value = 'youtube';
                 currentVideoId.value = ytId;
+                selectedPlatform = 'youtube';
             } else {
                 nextTrack();
+                return;
             }
+        }
+
+        // Create new playback tracker
+        if (selectedPlatform && track.id) {
+            playbackTracker.value = createPlaybackTracker(track.id, selectedPlatform);
+            playbackTracker.value.start();
         }
     };
 
@@ -141,6 +163,10 @@ export function usePlayer() {
     const togglePlay = () => {
         if (isPlaying.value) {
             isPlaying.value = false;
+            // Pause tracking
+            if (playbackTracker.value) {
+                playbackTracker.value.pause();
+            }
             return;
         }
 
@@ -150,6 +176,10 @@ export function usePlayer() {
         }
 
         isPlaying.value = true;
+        // Resume tracking
+        if (playbackTracker.value) {
+            playbackTracker.value.start();
+        }
     };
     
     const nextTrack = () => {

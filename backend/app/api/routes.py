@@ -4,7 +4,7 @@ from app.core.database import get_db, SessionLocal
 from app.api.schemas import (
     TrackOut, LinkSubmission, FeedbackIn, StructureIn,
     StructureVersionOut, VoteIn, MovementVoteIn,
-    PlaybackTrackingIn, InteractionTrackingIn
+    PlaybackTrackingIn, InteractionTrackingIn, VisitorSessionIn
 )
 from app.core.models import TrackStructureVersion
 
@@ -13,6 +13,7 @@ from app.services.tracks import TrackService
 from app.services.feedback import FeedbackService
 from app.services.links import LinkService
 from app.services.stats import StatsService
+from app.services.analytics import AnalyticsService
 
 router = APIRouter()
 
@@ -289,3 +290,60 @@ def unflag_track(track_id: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"status": "success", "message": "Track unflagged successfully"}
+
+# ========== ANALYTICS ENDPOINTS ==========
+
+@router.post("/analytics/track/playback/{track_id}")
+def record_track_playback(
+    track_id: str,
+    playback: PlaybackTrackingIn,
+    db: Session = Depends(get_db)
+):
+    """
+    Record a track playback event with listen duration.
+    """
+    AnalyticsService.record_playback(
+        db=db,
+        track_id=track_id,
+        platform=playback.platform,
+        session_id=playback.session_id,
+        duration_seconds=playback.duration_seconds,
+        completed=playback.completed
+    )
+    return {"status": "success"}
+
+@router.post("/analytics/track/interaction")
+def record_interaction(
+    interaction: InteractionTrackingIn,
+    db: Session = Depends(get_db)
+):
+    """
+    Record a user interaction event (nudge shown, modal opened, etc.).
+    """
+    AnalyticsService.record_interaction(
+        db=db,
+        event_type=interaction.event_type,
+        track_id=interaction.track_id,
+        event_data=interaction.event_data,
+        session_id=interaction.session_id
+    )
+    return {"status": "success"}
+
+@router.post("/analytics/session")
+def track_session(
+    session: VisitorSessionIn,
+    db: Session = Depends(get_db)
+):
+    """
+    Track or update a visitor session.
+    """
+    AnalyticsService.track_visitor_session(
+        db=db,
+        session_id=session.session_id,
+        user_agent=session.user_agent,
+        is_returning=session.is_returning
+    )
+    return {"status": "success"}
+
+# Analytics GET endpoints moved to /api/admin/analytics/* for security
+# Only POST endpoints (tracking) remain public
