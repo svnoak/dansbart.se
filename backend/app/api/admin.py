@@ -42,12 +42,13 @@ def reset_crawl_data(
     """
     DANGER: Nuclear option.
     1. Flushes Redis cache.
-    2. Deletes ALL ArtistCrawlLogs.
-    3. Deletes ALL RejectionLogs.
-    4. Deletes ALL tracks with status 'PENDING' (and their related data).
+    2. Deletes ALL ArtistCrawlLogs & RejectionLogs.
+    3. Deletes ALL tracks with status 'PENDING' (and children).
+    4. Deletes Orphan Albums (0 tracks).
+    5. Deletes Orphan Artists (0 tracks).
     """
     try:
-        # 1. Clear Redis
+        # --- STEP 1: Clear Redis ---
         try:
             r = redis.from_url(settings.REDIS_URL) 
             r.flushdb()
@@ -55,43 +56,66 @@ def reset_crawl_data(
         except Exception as e:
             print(f"Warning: Could not flush Redis: {e}")
 
-        # 2. Clear Logs
+        # --- STEP 2: Clear Logs ---
         db.query(ArtistCrawlLog).delete()
         db.query(RejectionLog).delete()
         
-        # 3. Find Pending Tracks
+        # --- STEP 3: Delete Pending Tracks ---
         pending_tracks = db.query(Track).filter(Track.processing_status == "PENDING").all()
         pending_track_ids = [t.id for t in pending_tracks]
         
         if pending_track_ids:
-            print(f"Deleting {len(pending_track_ids)} pending tracks and children...")
+            print(f"Deleting {len(pending_track_ids)} pending tracks...")
             
-            # --- MANUALLY DELETE ALL CHILDREN FIRST ---
-            # SQLAlchemy bulk deletes do not trigger cascades, so we must do this explicitly.
-            
-            # 1. Core Relations
+            # Manually delete children (Foreign Keys don't always cascade)
             db.query(TrackArtist).filter(TrackArtist.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
             db.query(PlaybackLink).filter(PlaybackLink.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
             db.query(AnalysisSource).filter(AnalysisSource.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
-            
-            # 2. Dance/Style Relations
             db.query(TrackDanceStyle).filter(TrackDanceStyle.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
             db.query(TrackStyleVote).filter(TrackStyleVote.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
             db.query(TrackFeelVote).filter(TrackFeelVote.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
             db.query(TrackStructureVersion).filter(TrackStructureVersion.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
             
-            # 3. Analytics Relations (just in case any exist for pending tracks)
-            db.query(TrackPlayback).filter(TrackPlayback.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
-            db.query(UserInteraction).filter(UserInteraction.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            # Safeguard against missing tables
+            try:
+                db.query(TrackPlayback).filter(TrackPlayback.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            except ProgrammingError:
+                db.rollback() 
             
-            # --- NOW DELETE THE PARENT TRACKS ---
-            db.query(Track).filter(Track.id.in_(pending_track_ids)).delete(synchronize_session=False)
+            try:
+                db.query(UserInteraction).filter(UserInteraction.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            except ProgrammingError:
+                db.rollback()
 
+            # Delete the tracks
+            db.query(Track).filter(Track.id.in_(pending_track_ids)).delete(synchronize_session=False)
+            
+            # Commit tracking deletion before finding orphans
+            db.commit()
+
+        # --- STEP 4: Delete Orphan Albums (Albums with 0 tracks) ---
+        # Subquery: Find all album IDs that ARE currently used by a track
+        active_album_ids = db.query(Track.album_id).filter(Track.album_id.isnot(None)).distinct()
+        
+        # Delete albums NOT in that list
+        deleted_albums = db.query(Album).filter(Album.id.notin_(active_album_ids)).delete(synchronize_session=False)
+        print(f"Deleted {deleted_albums} orphan albums.")
+        db.commit() # Commit so artists can be freed up
+
+        # --- STEP 5: Delete Orphan Artists (Artists with 0 tracks) ---
+        # Subquery: Find all artist IDs that ARE currently linked to a track
+        active_artist_ids = db.query(TrackArtist.artist_id).distinct()
+        
+        # Delete artists NOT in that list
+        # Note: We already deleted orphan albums, so we don't need to worry about album foreign keys
+        deleted_artists = db.query(Artist).filter(Artist.id.notin_(active_artist_ids)).delete(synchronize_session=False)
+        print(f"Deleted {deleted_artists} orphan artists.")
+        
         db.commit()
 
         return {
             "status": "success", 
-            "message": f"System scrubbed. Deleted {len(pending_track_ids)} pending tracks, cleared crawl logs, rejection lists, and flushed Redis."
+            "message": f"Scrub complete. Deleted {len(pending_track_ids)} pending tracks, {deleted_albums} orphan albums, and {deleted_artists} orphan artists."
         }
 
     except Exception as e:
