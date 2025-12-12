@@ -1,15 +1,21 @@
 from sqlalchemy.orm import Session
 from app.core.models import Album, Track, TrackArtist, Artist, PlaybackLink
+from app.repository.album import AlbumRepository
+from app.repository.track import TrackRepository
 from .admin_query_helpers import build_paginated_response, ALBUM_EAGER_LOAD
 from .admin_tracks import AdminTrackService
 
 
 class AdminAlbumService:
-    """Service for album-specific admin operations."""
+    """Service for album-specific admin operations (using repositories)."""
 
     def __init__(self, db: Session):
         self.db = db
+        # Keep old service for backwards compatibility
         self.track_service = AdminTrackService(db)
+        # New repositories
+        self.album_repo = AlbumRepository(db)
+        self.track_repo = TrackRepository(db)
 
     def get_albums_paginated(
         self,

@@ -1,12 +1,19 @@
+"""
+Admin Artist Service - Refactored to use Repository Pattern
+
+This is the refactored version using ArtistRepository, TrackRepository, and RejectionRepository.
+Benefits:
+- Centralized query logic in repositories
+- Improved query optimization through batch operations
+- Better separation of concerns
+- Easier to test and maintain
+"""
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case
-from app.core.models import Artist, Track, TrackArtist, PlaybackLink
 from app.repository.artist import ArtistRepository
 from app.repository.track import TrackRepository
 from app.repository.rejection import RejectionRepository
+from app.core.models import Track, PlaybackLink
 from .admin_query_helpers import build_paginated_response
-from .admin_rejections import AdminRejectionService
-from .admin_tracks import AdminTrackService
 
 
 class AdminArtistService:
@@ -14,24 +21,14 @@ class AdminArtistService:
 
     def __init__(self, db: Session):
         self.db = db
-        # Keep old services for backwards compatibility during migration
-        self.rejection_service = AdminRejectionService(db)
-        self.track_service = AdminTrackService(db)
-        # New repositories
         self.artist_repo = ArtistRepository(db)
         self.track_repo = TrackRepository(db)
         self.rejection_repo = RejectionRepository(db)
 
     def get_artist_isolation_info(self, artist_id: str) -> dict:
         """
-        Optimized check if an artist is isolated or shares content.
-        Now delegated to ArtistRepository for better organization.
-
-        Args:
-            artist_id: Artist ID to check
-
-        Returns:
-            Dict with isolation info
+        Get isolation info for an artist.
+        Delegates to ArtistRepository's optimized implementation.
         """
         import uuid
         return self.artist_repo.get_isolation_info(uuid.UUID(artist_id))
@@ -46,53 +43,68 @@ class AdminArtistService:
         """
         Get paginated list of artists with filtering.
 
-        Args:
-            search: Search by name
-            isolated: Filter by isolation status ('true' or 'false')
-            limit: Items per page
-            offset: Pagination offset
-
-        Returns:
-            Paginated response with artist list
+        NOTE: The 'isolated' filter is kept for backwards compatibility
+        but requires in-memory filtering (expensive operation).
+        Consider using separate endpoints for isolated vs all artists.
         """
-        query = self.db.query(Artist)
+        import uuid
 
-        if search:
-            query = query.filter(Artist.name.ilike(f"%{search}%"))
-
-        # If filtering by isolation, we need to process all artists
+        # If filtering by isolation, we need special handling
         if isolated is not None:
             filter_isolated = isolated.lower() == 'true'
-            all_artists = query.order_by(Artist.name).all()
 
-            # Filter by isolation status
+            # Get all artists first (with search if provided)
+            if search:
+                all_artists, _ = self.artist_repo.search_by_name(search, limit=10000, offset=0)
+            else:
+                all_artists, _ = self.artist_repo.paginate(limit=10000, offset=0, order_by=self.artist_repo.model.name)
+
+            # Filter by isolation status in memory
             filtered_artists = []
             for artist in all_artists:
                 # Hide verified artists when showing isolated list
                 if filter_isolated and artist.is_verified:
                     continue
 
-                isolation_info = self.get_artist_isolation_info(str(artist.id))
+                isolation_info = self.artist_repo.get_isolation_info(artist.id)
                 if isolation_info["is_isolated"] == filter_isolated:
                     filtered_artists.append(artist)
 
             total = len(filtered_artists)
             artists = filtered_artists[offset:offset + limit]
+
+            # Convert to UUIDs for batch operations
+            artist_uuids = [artist.id for artist in artists]
+
         else:
-            # Optimize when no isolation filter
-            total = query.count()
-            artists = query.order_by(Artist.name).offset(offset).limit(limit).all()
+            # Optimized path without isolation filtering
+            artists_dicts, total = self.artist_repo.get_artists_with_stats(
+                search=search,
+                limit=limit,
+                offset=offset
+            )
 
-        # Get track stats in batch
-        artist_ids = [str(a.id) for a in artists]
-        stats_map = self.track_service.get_track_stats('artist', artist_ids)
+            # Get isolation info for each artist
+            for artist_dict in artists_dicts:
+                isolation_info = self.artist_repo.get_isolation_info(uuid.UUID(artist_dict['id']))
+                artist_dict.update({
+                    "is_isolated": isolation_info["is_isolated"],
+                    "shared_with_artists": isolation_info["shared_with_artists"],
+                    "shared_tracks": isolation_info["shared_tracks"],
+                    "shared_albums": isolation_info["shared_albums"]
+                })
 
-        # Format results
+            return build_paginated_response(artists_dicts, total, limit, offset)
+
+        # Build response for isolation-filtered results
+        artist_uuids = [artist.id for artist in artists]
+        stats_map = self.artist_repo.get_track_stats_batch(artist_uuids)
+
         items = []
         for artist in artists:
             artist_id_str = str(artist.id)
             stats = stats_map.get(artist_id_str, {'total': 0, 'done': 0, 'pending': 0})
-            isolation_info = self.get_artist_isolation_info(artist_id_str)
+            isolation_info = self.artist_repo.get_isolation_info(artist.id)
 
             items.append({
                 "id": artist_id_str,
@@ -119,52 +131,27 @@ class AdminArtistService:
     ) -> dict:
         """
         Get artists with pending tracks.
-
-        Args:
-            search: Search by name
-            limit: Items per page
-            offset: Pagination offset
-
-        Returns:
-            Paginated response with pending artist list
+        Uses optimized repository method.
         """
-        query = self.db.query(Artist).join(TrackArtist).join(Track).filter(
-            Track.processing_status == "PENDING"
-        ).distinct()
+        import uuid
 
-        if search:
-            query = query.filter(Artist.name.ilike(f"%{search}%"))
+        artists_dicts, total = self.artist_repo.get_pending_artists(
+            search=search,
+            limit=limit,
+            offset=offset
+        )
 
-        total = query.count()
-        artists = query.order_by(Artist.name).offset(offset).limit(limit).all()
-
-        # Get track stats
-        artist_ids = [str(a.id) for a in artists]
-        stats_map = self.track_service.get_track_stats('artist', artist_ids)
-
-        # Format results
-        items = []
-        for artist in artists:
-            artist_id_str = str(artist.id)
-            stats = stats_map.get(artist_id_str, {'total': 0, 'done': 0, 'pending': 0})
-            isolation_info = self.get_artist_isolation_info(artist_id_str)
-
-            items.append({
-                "id": artist_id_str,
-                "name": artist.name,
-                "spotify_id": artist.spotify_id,
-                "image_url": artist.image_url,
-                "pending_tracks": stats['pending'],
-                "analyzed_tracks": stats['done'],
-                "total_tracks": stats['total'],
-                "warning": "Analyzed tracks will be kept" if stats['done'] > 0 else None,
+        # Add isolation info
+        for artist_dict in artists_dicts:
+            isolation_info = self.artist_repo.get_isolation_info(uuid.UUID(artist_dict['id']))
+            artist_dict.update({
                 "is_isolated": isolation_info["is_isolated"],
                 "shared_with_artists": isolation_info["shared_with_artists"],
                 "shared_tracks": isolation_info["shared_tracks"],
                 "shared_albums": isolation_info["shared_albums"]
             })
 
-        return build_paginated_response(items, total, limit, offset)
+        return build_paginated_response(artists_dicts, total, limit, offset)
 
     def reject_artist(
         self,
@@ -174,16 +161,13 @@ class AdminArtistService:
     ) -> dict:
         """
         Reject an artist and delete pending tracks.
-
-        Args:
-            artist_id: Artist ID to reject
-            reason: Reason for rejection
-            dry_run: If True, preview without making changes
-
-        Returns:
-            Status dict with operation results
+        Uses repositories for cleaner separation.
         """
-        artist = self.db.query(Artist).filter(Artist.id == artist_id).first()
+        import uuid
+
+        artist_uuid = uuid.UUID(artist_id)
+        artist = self.artist_repo.get_by_id(artist_uuid)
+
         if not artist:
             raise ValueError("Artist not found")
 
@@ -191,23 +175,12 @@ class AdminArtistService:
         spotify_id = artist.spotify_id
 
         # Get isolation info
-        isolation_info = self.get_artist_isolation_info(artist_id)
+        isolation_info = self.artist_repo.get_isolation_info(artist_uuid)
 
         # Get pending and analyzed tracks
-        pending_tracks = self.db.query(Track).join(TrackArtist).filter(
-            TrackArtist.artist_id == artist_id,
-            Track.processing_status == "PENDING"
-        ).all()
-
-        analyzed_tracks = self.db.query(Track).join(TrackArtist).filter(
-            TrackArtist.artist_id == artist_id,
-            Track.processing_status == "DONE"
-        ).all()
-
-        remaining_tracks_count = self.db.query(Track).join(TrackArtist).filter(
-            TrackArtist.artist_id == artist_id,
-            Track.processing_status != "PENDING"
-        ).count()
+        pending_tracks = self.artist_repo.get_pending_tracks(artist_uuid)
+        analyzed_tracks = self.artist_repo.get_analyzed_tracks(artist_uuid)
+        remaining_tracks_count = self.artist_repo.count_non_pending_tracks(artist_uuid)
 
         # Dry run preview
         if dry_run:
@@ -239,25 +212,23 @@ class AdminArtistService:
 
         # Add to rejection log
         if spotify_id:
-            self.rejection_service.add_to_blocklist(
+            self.rejection_repo.add_to_blocklist(
                 entity_type='artist',
                 spotify_id=spotify_id,
                 name=artist_name,
                 reason=reason
             )
 
-        # Delete pending tracks
-        for track in pending_tracks:
-            self.db.query(PlaybackLink).filter(
-                PlaybackLink.track_id == track.id
-            ).delete()
-            self.db.delete(track)
+        # Delete pending tracks (with cascade)
+        pending_track_ids = [t.id for t in pending_tracks]
+        if pending_track_ids:
+            self.track_repo.delete_with_cascade(pending_track_ids)
 
         # Delete artist if no remaining tracks
         if remaining_tracks_count == 0:
-            self.db.delete(artist)
+            self.artist_repo.delete(artist)
 
-        self.db.flush()
+        self.artist_repo.commit()
 
         return {
             "status": "success",
@@ -271,22 +242,17 @@ class AdminArtistService:
     def approve_artist(self, artist_id: str) -> dict:
         """
         Approve an artist by queuing pending tracks for analysis.
-
-        Args:
-            artist_id: Artist ID to approve
-
-        Returns:
-            Status dict with operation results
         """
-        artist = self.db.query(Artist).filter(Artist.id == artist_id).first()
+        import uuid
+
+        artist_uuid = uuid.UUID(artist_id)
+        artist = self.artist_repo.get_by_id(artist_uuid)
+
         if not artist:
             raise ValueError("Artist not found")
 
         # Get pending tracks
-        pending_tracks = self.db.query(Track).join(TrackArtist).filter(
-            TrackArtist.artist_id == artist_id,
-            Track.processing_status == "PENDING"
-        ).all()
+        pending_tracks = self.artist_repo.get_pending_tracks(artist_uuid)
 
         if not pending_tracks:
             return {
@@ -309,31 +275,26 @@ class AdminArtistService:
     def bulk_approve_artists(self, artist_ids: list[str]) -> dict:
         """
         Approve multiple artists at once.
-
-        Args:
-            artist_ids: List of artist IDs
-
-        Returns:
-            Status dict with operation results
+        Uses repository for optimized bulk operations.
         """
+        import uuid
+
+        artist_uuids = [uuid.UUID(aid) for aid in artist_ids]
+        artists = self.artist_repo.get_by_ids(artist_uuids)
+
         success_count = 0
         total_tracks_queued = 0
         errors = 0
-
-        artists = self.db.query(Artist).filter(Artist.id.in_(artist_ids)).all()
 
         from app.workers.tasks import analyze_track_task
 
         for artist in artists:
             try:
-                # Mark as verified
-                artist.is_verified = True
+                # Mark as verified using repository
+                self.artist_repo.verify_artist(artist.id)
 
                 # Queue pending tracks
-                pending_tracks = self.db.query(Track).join(TrackArtist).filter(
-                    TrackArtist.artist_id == artist.id,
-                    Track.processing_status == "PENDING"
-                ).all()
+                pending_tracks = self.artist_repo.get_pending_tracks(artist.id)
 
                 for track in pending_tracks:
                     analyze_track_task.delay(str(track.id))
@@ -345,7 +306,7 @@ class AdminArtistService:
                 print(f"Error approving {artist.id}: {e}")
                 errors += 1
 
-        self.db.flush()
+        self.artist_repo.commit()
 
         return {
             "status": "success",
@@ -358,24 +319,21 @@ class AdminArtistService:
     def bulk_reject_artists(self, artist_ids: list[str], reason: str) -> dict:
         """
         Reject multiple artists at once.
-
-        Args:
-            artist_ids: List of artist IDs
-            reason: Reason for rejection
-
-        Returns:
-            Status dict with operation results
+        Uses repositories for cleaner separation.
         """
+        import uuid
+
+        artist_uuids = [uuid.UUID(aid) for aid in artist_ids]
+        artists = self.artist_repo.get_by_ids(artist_uuids)
+
         success_count = 0
         errors = 0
-
-        artists = self.db.query(Artist).filter(Artist.id.in_(artist_ids)).all()
 
         for artist in artists:
             try:
                 # Add to blocklist
                 if artist.spotify_id:
-                    self.rejection_service.add_to_blocklist(
+                    self.rejection_repo.add_to_blocklist(
                         entity_type='artist',
                         spotify_id=artist.spotify_id,
                         name=artist.name,
@@ -383,25 +341,17 @@ class AdminArtistService:
                     )
 
                 # Delete pending tracks
-                pending_tracks = self.db.query(Track).join(TrackArtist).filter(
-                    TrackArtist.artist_id == artist.id,
-                    Track.processing_status == "PENDING"
-                ).all()
+                pending_tracks = self.artist_repo.get_pending_tracks(artist.id)
+                pending_track_ids = [t.id for t in pending_tracks]
 
-                for track in pending_tracks:
-                    self.db.query(PlaybackLink).filter(
-                        PlaybackLink.track_id == track.id
-                    ).delete()
-                    self.db.delete(track)
+                if pending_track_ids:
+                    self.track_repo.delete_with_cascade(pending_track_ids)
 
                 # Delete artist if no tracks left
-                remaining_tracks = self.db.query(Track).join(TrackArtist).filter(
-                    TrackArtist.artist_id == artist.id,
-                    Track.processing_status != "PENDING"
-                ).count()
+                remaining_tracks = self.artist_repo.count_non_pending_tracks(artist.id)
 
                 if remaining_tracks == 0:
-                    self.db.delete(artist)
+                    self.artist_repo.delete(artist)
 
                 success_count += 1
 
@@ -409,7 +359,7 @@ class AdminArtistService:
                 print(f"Error rejecting {artist.id}: {e}")
                 errors += 1
 
-        self.db.flush()
+        self.artist_repo.commit()
 
         return {
             "status": "success",
