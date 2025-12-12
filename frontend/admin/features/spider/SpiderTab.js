@@ -3,6 +3,7 @@
  * Interface for spider discovery crawling with task status polling
  */
 
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useSpiderApi } from './api.js';
@@ -15,7 +16,6 @@ export default {
         SpiderHistory
     },
     setup() {
-        const { ref, onMounted, onUnmounted } = Vue;
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
         const spiderApi = useSpiderApi(adminToken);

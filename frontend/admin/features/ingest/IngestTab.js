@@ -3,13 +3,13 @@
  * Interface for ingesting Spotify content (playlists, albums, artists)
  */
 
+import { ref } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useIngestApi } from './api.js';
 
 export default {
     setup() {
-        const { ref } = Vue;
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
         const ingestApi = useIngestApi(adminToken);

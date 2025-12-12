@@ -5,76 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dansbart Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        /* This handles the smooth switching between login and panel */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.1s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+    </style>
 </head>
 <body class="bg-gray-900 text-white p-2 sm:p-4 md:p-8">
-    <div id="app" class="max-w-6xl mx-auto">
-        <h1 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">🤖 Dansbart Admin Console</h1>
-
-        <!-- Login Section -->
-        <div class="max-w-md mx-auto">
-            <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h2 class="font-bold mb-4">🔐 Authentication</h2>
-                <div class="mb-4">
-                    <label class="block text-xs uppercase text-gray-500 mb-1">Admin Token</label>
-                    <input v-model="token" type="password" @keyup.enter="authenticate"
-                           class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white">
-                </div>
-                <button @click="authenticate" :disabled="loading"
-                        class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 py-2 rounded font-bold">
-                    {{ loading ? 'Verifying...' : 'Login' }}
-                </button>
-                <p v-if="authError" class="mt-2 text-red-400 text-sm">{{ authError }}</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const { createApp, ref, onMounted } = Vue;
-
-        createApp({
-            setup() {
-                const token = ref(localStorage.getItem('admin_token') || '');
-                const authError = ref('');
-                const loading = ref(false);
-
-                const authenticate = async () => {
-                    loading.value = true;
-                    authError.value = '';
-
-                    try {
-                        const res = await fetch('/api/admin/tracks?limit=1', {
-                            headers: { 'x-admin-token': token.value }
-                        });
-
-                        if (!res.ok) throw new Error('Invalid token');
-
-                        localStorage.setItem('admin_token', token.value);
-
-                        // Redirect to admin panel
-                        window.location.href = '/admin/panel.html';
-                    } catch (e) {
-                        authError.value = 'Authentication failed. Check your token.';
-                    } finally {
-                        loading.value = false;
-                    }
-                };
-
-                // Auto-login if token exists
-                onMounted(() => {
-                    if (token.value) {
-                        authenticate();
-                    }
-                });
-
-                return {
-                    token,
-                    authError,
-                    loading,
-                    authenticate
-                };
-            }
-        }).mount('#app');
-    </script>
+    <div id="app"></div>
+    <script type="module" src="./main.js"></script>
 </body>
 </html>

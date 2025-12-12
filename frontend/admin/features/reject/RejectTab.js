@@ -3,6 +3,7 @@
  * Interface for reviewing and rejecting pending artists/albums and managing blocklist
  */
 
+import { ref, watch } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useRejectApi } from './api.js';
@@ -13,7 +14,6 @@ export default {
         RejectionModal
     },
     setup() {
-        const { ref, watch } = Vue;
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
         const rejectApi = useRejectApi(adminToken);

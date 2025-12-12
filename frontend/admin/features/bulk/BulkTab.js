@@ -3,13 +3,13 @@
  * Interface for bulk operations on tracks
  */
 
+import { ref } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useBulkApi } from './api.js';
 
 export default {
     setup() {
-        const { ref } = Vue;
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
         const bulkApi = useBulkApi(adminToken);

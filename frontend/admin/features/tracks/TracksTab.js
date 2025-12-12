@@ -6,11 +6,10 @@
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useTracksApi } from './api.js';
+import { ref, onMounted, onUnmounted } from 'vue';
 
 export default {
     setup() {
-        const { createApp } = Vue;
-        const { ref, onMounted, onUnmounted } = Vue;
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
         const tracksApi = useTracksApi(adminToken);

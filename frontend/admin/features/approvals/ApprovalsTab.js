@@ -3,13 +3,13 @@
  * Interface for approving/rejecting pending artists
  */
 
+import { ref, onMounted } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useApprovalsApi } from './api.js';
 
 export default {
     setup() {
-        const { ref, onMounted } = Vue;
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
         const approvalsApi = useApprovalsApi(adminToken);
