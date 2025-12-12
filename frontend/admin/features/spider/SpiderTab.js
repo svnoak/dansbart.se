@@ -34,6 +34,9 @@ export default {
         const crawlHistory = ref([]);
         const currentTaskId = ref(null);
         const taskStatus = ref(null);
+        
+        // New refs for the reset functionality
+        const isResetting = ref(false);
 
         let pollInterval = null;
 
@@ -131,6 +134,43 @@ export default {
             }
         };
 
+        // --- NEW RESET FUNCTION ---
+        const triggerReset = async () => {
+            if (!confirm("⚠️ ARE YOU SURE? ⚠️\n\nThis will:\n1. Delete ALL pending tracks\n2. Clear your crawl history\n3. Clear the rejection list\n4. Flush the cache\n\nThis cannot be undone.")) {
+                return;
+            }
+
+            isResetting.value = true;
+            try {
+                // Direct fetch call since this is a unique danger endpoint
+                const response = await fetch('/api/admin/danger/reset-crawl-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-token': adminToken.value
+                    }
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Reset failed');
+                }
+                
+                const data = await response.json();
+                showToast(data.message, 'success');
+                
+                // Refresh data
+                await loadSpiderStats();
+                await loadSpiderHistory();
+                
+            } catch (e) {
+                alert("Error resetting data: " + e.message);
+                showToast(e.message, 'error');
+            } finally {
+                isResetting.value = false;
+            }
+        };
+
         onMounted(() => {
             loadSpiderStats();
             loadSpiderHistory();
@@ -142,8 +182,8 @@ export default {
 
         return {
             spiderSettings, spiderLoading, spiderMessage, spiderError,
-            spiderStats, crawlHistory, currentTaskId, taskStatus,
-            runSpider, loadSpiderStats, loadSpiderHistory, handleBlockArtist
+            spiderStats, crawlHistory, currentTaskId, taskStatus, isResetting,
+            runSpider, loadSpiderStats, loadSpiderHistory, handleBlockArtist, triggerReset
         };
     },
     template: /*html*/`
@@ -226,6 +266,25 @@ export default {
                 @refresh="loadSpiderHistory" 
                 @block-artist="handleBlockArtist" 
             />
+
+            <div class="mt-12 border-t-2 border-red-900/50 pt-8">
+                <h3 class="text-xl font-bold text-red-500 mb-4">⚠️ Danger Zone</h3>
+                <div class="bg-red-900/20 border border-red-700/50 rounded-lg p-6">
+                    <p class="text-gray-300 mb-4">
+                        <strong class="text-red-400">Emergency Cleanup:</strong> Use this if a crawl poisoned your database with irrelevant artists.
+                        <br>
+                        This will delete <strong class="text-white">{{ spiderStats?.total_pending || 'all' }}</strong> pending tracks, clear your crawl history, reset the rejection blocklist, and flush the Redis cache.
+                    </p>
+                    
+                    <button 
+                        @click="triggerReset" 
+                        :disabled="isResetting"
+                        class="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded shadow-lg flex items-center gap-2 transition-all">
+                        <span v-if="isResetting">💣 Nuking...</span>
+                        <span v-else>☢️ NUKE: Reset Spider & Pending Data</span>
+                    </button>
+                </div>
+            </div>
         </div>
     `
 };

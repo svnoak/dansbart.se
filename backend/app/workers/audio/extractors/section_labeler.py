@@ -17,6 +17,7 @@ class ABSectionLabeler:
         return fp
 
     def label_sections(self, audio, sections):
+        import numpy as np
         from sklearn.metrics.pairwise import cosine_similarity
         from sklearn.cluster import AgglomerativeClustering
 

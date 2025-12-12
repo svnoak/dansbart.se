@@ -7,7 +7,15 @@ from app.services.pipeline import PipelineService
 from pydantic import BaseModel
 from typing import List
 from app.services.feedback import FeedbackService
-from app.core.models import Track, TrackArtist, ArtistCrawlLog, Artist, Album, RejectionLog, PendingArtistApproval, PlaybackLink
+from app.core.models import (
+    Track, PlaybackLink, AnalysisSource, TrackDanceStyle, 
+    TrackStyleVote, TrackFeelVote, TrackStructureVersion, 
+    ArtistCrawlLog, RejectionLog, TrackArtist, TrackPlayback, 
+    UserInteraction, Artist, Album, PendingArtistApproval
+)
+import redis
+from app.core.config import settings
+
 
 router = APIRouter()
 
@@ -24,6 +32,72 @@ def verify_admin(x_admin_token: str = Header(None)):
 class IngestRequest(BaseModel):
     resource_id: str
     resource_type: str = "playlist"  # playlist, album, or artist
+
+
+@router.post("/danger/reset-crawl-data")
+def reset_crawl_data(
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    DANGER: Nuclear option.
+    1. Flushes Redis cache.
+    2. Deletes ALL ArtistCrawlLogs.
+    3. Deletes ALL RejectionLogs.
+    4. Deletes ALL tracks with status 'PENDING' (and their related data).
+    """
+    try:
+        # 1. Clear Redis
+        try:
+            r = redis.from_url(settings.REDIS_URL) 
+            r.flushdb()
+            print("Redis flushed.")
+        except Exception as e:
+            print(f"Warning: Could not flush Redis: {e}")
+
+        # 2. Clear Logs
+        db.query(ArtistCrawlLog).delete()
+        db.query(RejectionLog).delete()
+        
+        # 3. Find Pending Tracks
+        pending_tracks = db.query(Track).filter(Track.processing_status == "PENDING").all()
+        pending_track_ids = [t.id for t in pending_tracks]
+        
+        if pending_track_ids:
+            print(f"Deleting {len(pending_track_ids)} pending tracks and children...")
+            
+            # --- MANUALLY DELETE ALL CHILDREN FIRST ---
+            # SQLAlchemy bulk deletes do not trigger cascades, so we must do this explicitly.
+            
+            # 1. Core Relations
+            db.query(TrackArtist).filter(TrackArtist.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            db.query(PlaybackLink).filter(PlaybackLink.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            db.query(AnalysisSource).filter(AnalysisSource.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            
+            # 2. Dance/Style Relations
+            db.query(TrackDanceStyle).filter(TrackDanceStyle.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            db.query(TrackStyleVote).filter(TrackStyleVote.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            db.query(TrackFeelVote).filter(TrackFeelVote.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            db.query(TrackStructureVersion).filter(TrackStructureVersion.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            
+            # 3. Analytics Relations (just in case any exist for pending tracks)
+            db.query(TrackPlayback).filter(TrackPlayback.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            db.query(UserInteraction).filter(UserInteraction.track_id.in_(pending_track_ids)).delete(synchronize_session=False)
+            
+            # --- NOW DELETE THE PARENT TRACKS ---
+            db.query(Track).filter(Track.id.in_(pending_track_ids)).delete(synchronize_session=False)
+
+        db.commit()
+
+        return {
+            "status": "success", 
+            "message": f"System scrubbed. Deleted {len(pending_track_ids)} pending tracks, cleared crawl logs, rejection lists, and flushed Redis."
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error resetting data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ingest")
 def trigger_ingest(

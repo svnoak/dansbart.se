@@ -210,6 +210,7 @@ class FolkAuthenticityDetector:
         Traditional folk: More variance in mid-range frequencies, natural energy distribution
         Modern electronic: Concentrated energy, synthetic patterns
         """
+        import numpy as np
         try:
             if len(embedding) < 200:
                 return 0.5  # Not enough data

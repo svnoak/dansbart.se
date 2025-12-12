@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from app.services.analysis import AnalysisService
 
 class PipelineService:
     def __init__(self, db: Session):
