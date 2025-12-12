@@ -1270,38 +1270,47 @@ window.initAdminPanel = function(adminToken) {
                 const rejectArtist = async (artistId) => {
                     try {
                         // First check isolation status (dry run)
-                        const dryRunRes = await fetch(`/api/admin/artists/${artistId}/reject?dry_run=true`, {
+                        const dryRunRes = await fetch(`/api/admin/artists/${artistId}/reject`, {
                             method: 'POST',
                             headers: {
                                 'x-admin-token': token.value,
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({ reason: 'Not relevant' })
+                            body: JSON.stringify({
+                                reason: 'Not relevant',
+                                dry_run: true
+                            })
                         });
 
-                        if (!dryRunRes.ok) throw new Error('Failed to check artist isolation');
+                        if (!dryRunRes.ok) {
+                            const errorData = await dryRunRes.json();
+                            throw new Error(errorData.detail || 'Failed to check artist isolation');
+                        }
 
                         const dryRunData = await dryRunRes.json();
-                        const preview = dryRunData.preview;
-                        const isolation = preview.isolation_info;
+                        console.log('Dry run response:', dryRunData);
+
+                        // Handle both possible response structures
+                        const preview = dryRunData.preview || dryRunData;
+                        const isolation = preview.isolation_info || {};
 
                         // Show modal with rejection details
                         rejectionModal.value = {
                             show: true,
                             artistId: artistId,
-                            artistName: preview.artist_name,
-                            pendingTracks: preview.would_delete_pending_tracks,
-                            analyzedTracks: preview.would_keep_analyzed_tracks,
-                            isIsolated: isolation.is_isolated,
-                            sharedWith: isolation.shared_with_artists,
-                            sharedTracks: isolation.shared_tracks,
+                            artistName: preview.artist_name || 'Unknown Artist',
+                            pendingTracks: preview.would_delete_pending_tracks || 0,
+                            analyzedTracks: preview.would_keep_analyzed_tracks || 0,
+                            isIsolated: isolation.is_isolated !== false,
+                            sharedWith: isolation.shared_with_artists || [],
+                            sharedTracks: isolation.shared_tracks || 0,
                             confirming: false
                         };
                     } catch (e) {
                         console.error('Failed to check artist isolation:', e);
-                        rejectMessage.value = 'Failed to check artist isolation';
+                        rejectMessage.value = `Failed to check artist isolation: ${e.message}`;
                         rejectError.value = true;
-                        showToast('Failed to check artist isolation', 'error');
+                        showToast(`Failed to check artist isolation: ${e.message}`, 'error');
                     }
                 };
 
