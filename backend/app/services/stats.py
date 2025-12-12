@@ -7,24 +7,33 @@ class StatsService:
         self.db = db
 
     def get_global_stats(self):
-        # 1. Total Tracks
-        total_tracks = self.db.query(func.count(Track.id)).scalar()
+        # 1. Total Tracks (only DONE and FAILED - actual available tracks)
+        total_tracks = self.db.query(func.count(Track.id)).filter(
+            Track.processing_status.in_(['DONE', 'FAILED'])
+        ).scalar()
 
         # 2. Analyzed Tracks (Have raw data)
         analyzed_count = self.db.query(func.count(distinct(AnalysisSource.track_id))).scalar()
 
-        # 3. Classified Tracks (Have a style)
-        classified_count = self.db.query(func.count(distinct(TrackDanceStyle.track_id))).scalar()
+        # 3. Classified Tracks (Have a style) - only from DONE/FAILED tracks
+        classified_count = self.db.query(func.count(distinct(TrackDanceStyle.track_id)))\
+            .join(Track, TrackDanceStyle.track_id == Track.id)\
+            .filter(Track.processing_status.in_(['DONE', 'FAILED']))\
+            .scalar()
 
         # 4. Processing Queue (Total - Analyzed)
         pending_analysis = total_tracks - analyzed_count
-        
+
         # 5. Classification Queue (Analyzed - Classified)
         # Note: This is an approximation, some tracks might be unclassifiable
         pending_classification = analyzed_count - classified_count
 
-        last_track = self.db.query(Track.created_at).order_by(desc(Track.created_at)).first()
-        last_added_date = last_track[0] if last_track else None
+        # Get the most recent analysis completion time for DONE/FAILED tracks
+        last_analyzed = self.db.query(AnalysisSource.analyzed_at)\
+            .join(Track, AnalysisSource.track_id == Track.id)\
+            .filter(Track.processing_status.in_(['DONE', 'FAILED']))\
+            .order_by(desc(AnalysisSource.analyzed_at)).first()
+        last_added_date = last_analyzed[0] if last_analyzed else None
 
         return {
             "total_tracks": total_tracks,
