@@ -26,14 +26,14 @@ export default {
     
     computed: {
         structureButtonLabel() {
-            if (this.structureMode === 'sections') return 'Visa takter';
-            if (this.structureMode === 'bars') return 'Dölj';
-            return 'Visa repriser';
+            if (this.structureMode === 'bars') return 'Visa repriser';
+            if (this.structureMode === 'sections') return 'Dölj';
+            return 'Visa takter';
         },
         structureButtonIcon() {
-            if (this.structureMode === 'none') return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`; 
-            if (this.structureMode === 'sections') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
-            return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
+            if (this.structureMode === 'none') return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
+            if (this.structureMode === 'bars') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
+            return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
         },
         // Show Spotify hint only when it's a preview (duration <= 30s)
         showSpotifyHint() {
@@ -93,15 +93,15 @@ export default {
                 <div class="flex items-center gap-2">
                     <!-- Breakpoint controls - only show in bars mode -->
                     <button v-if="structureMode === 'bars'" @click="$emit('add-breakpoint')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-red-50 text-red-700 border-red-200 hover:bg-red-100" title="Lägg till breakpoint">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        BP
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
                     </button>
                     <button v-if="structureMode === 'bars' && breakpoints && breakpoints.length > 0" @click="$emit('clear-breakpoints')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100" title="Rensa alla breakpoints">
                         Rensa
                     </button>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button v-if="structureMode !== 'none'" @click="$emit('open-structure-editor')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" title="Redigera struktur">
+                    <button v-if="structureMode === 'sections'" @click="$emit('open-structure-editor')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" title="Redigera struktur">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         Rätta
                     </button>
@@ -119,7 +119,7 @@ export default {
                         Klicka i Spotify-spelaren för hela låten
                     </span>
                 </div>
-                <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" :breakpoints="breakpoints" @seek="$emit('seek', $event)" @jump-to-breakpoint="$emit('jump-to-breakpoint', $event)" @update-breakpoint="$emit('update-breakpoint', $event)" @remove-breakpoint="$emit('remove-breakpoint', $event)"></progress-bar>
+                <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" :breakpoints="breakpoints" @seek="$emit('seek', $event)" @jump-to-breakpoint="$emit('jump-to-breakpoint', $event)" @update-breakpoint="(...args) => $emit('update-breakpoint', ...args)" @remove-breakpoint="$emit('remove-breakpoint', $event)"></progress-bar>
             </div>
             
             <div class="flex justify-between text-xs text-gray-400 font-mono mb-4 shrink-0 px-1">

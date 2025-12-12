@@ -23,9 +23,9 @@ export default {
 
     computed: {
         structureButtonLabel() {
-            if (this.structureMode === 'sections') return 'Visa takter';
-            if (this.structureMode === 'bars') return 'Dölj';
-            return 'Visa repriser';
+            if (this.structureMode === 'bars') return 'Visa repriser';
+            if (this.structureMode === 'sections') return 'Dölj';
+            return 'Visa takter';
         },
         // Calculate the bottom offset for elements above the player
         nudgeBottomOffset() {
@@ -56,7 +56,7 @@ export default {
                     Klicka i Spotify-spelaren för hela låten
                 </span>
             </div>
-            <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" :breakpoints="breakpoints" @seek="$emit('seek', $event)" @jump-to-breakpoint="$emit('jump-to-breakpoint', $event)" @update-breakpoint="$emit('update-breakpoint', $event)" @remove-breakpoint="$emit('remove-breakpoint', $event)"></progress-bar>
+            <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" :breakpoints="breakpoints" @seek="$emit('seek', $event)" @jump-to-breakpoint="$emit('jump-to-breakpoint', $event)" @update-breakpoint="(...args) => $emit('update-breakpoint', ...args)" @remove-breakpoint="$emit('remove-breakpoint', $event)"></progress-bar>
         </div>
         
         <div class="md:hidden w-full h-1 bg-gray-200 relative">
@@ -81,7 +81,7 @@ export default {
                     
                     <div class="hidden md:flex items-center gap-2 mt-1">
                         <button v-if="currentTrack.sections?.length" @click.stop="$emit('toggle-structure-mode')" class="text-[9px] font-bold uppercase border px-1.5 rounded" :class="structureMode!=='none'?'bg-indigo-100 text-indigo-700':'bg-white text-gray-400'">{{ structureButtonLabel }}</button>
-                        <button v-if="structureMode !== 'none'" @click.stop="$emit('open-structure-editor')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 flex items-center gap-1" title="Redigera struktur">
+                        <button v-if="structureMode === 'sections'" @click.stop="$emit('open-structure-editor')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 flex items-center gap-1" title="Redigera struktur">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             Rätta
                         </button>
@@ -91,9 +91,9 @@ export default {
                             <button @click.stop="$emit('cycle-version', 1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold text-[10px]">›</button>
                         </div>
                         <!-- Breakpoint controls - only show in bars mode -->
-                        <button v-if="structureMode === 'bars'" @click.stop="$emit('add-breakpoint')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-red-50 text-red-700 border-red-200 hover:bg-red-100 flex items-center gap-1" title="Lägg till breakpoint">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            BP
+                        <button v-if="structureMode === 'bars'" @click.stop="$emit('add-breakpoint')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-red-50 text-red-700 border-red-200 hover:bg-red-100 flex items-center gap-0.5" title="Lägg till breakpoint">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
                         </button>
                         <button v-if="structureMode === 'bars' && breakpoints && breakpoints.length > 0" @click.stop="$emit('clear-breakpoints')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100" title="Rensa alla breakpoints">
                             Rensa

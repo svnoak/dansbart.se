@@ -332,8 +332,8 @@ export default {
         },
         stopDrag() { this.isDraggingVideo = false; },
         toggleStructureMode() {
-            if (this.structureMode === 'none') this.structureMode = 'sections';
-            else if (this.structureMode === 'sections') this.structureMode = 'bars';
+            if (this.structureMode === 'none') this.structureMode = 'bars';
+            else if (this.structureMode === 'bars') this.structureMode = 'sections';
             else this.structureMode = 'none';
         },
         formatTime(s) {
@@ -456,22 +456,37 @@ export default {
             this.saveBreakpoints();
         },
         updateBreakpoint(oldTime, newTime) {
-            const index = this.breakpoints.indexOf(oldTime);
-            if (index === -1) return;
+            console.log('[GlobalPlayer] updateBreakpoint called:', {
+                oldTime,
+                newTime,
+                currentBreakpoints: [...this.breakpoints]
+            });
 
-            if (oldTime === newTime) return;
+            const index = this.breakpoints.indexOf(oldTime);
+            if (index === -1) {
+                console.log('[GlobalPlayer] oldTime not found in breakpoints, aborting');
+                return;
+            }
+
+            if (oldTime === newTime) {
+                console.log('[GlobalPlayer] oldTime === newTime, no change needed');
+                return;
+            }
 
             // Check if newTime already exists...
             const newTimeIndex = this.breakpoints.indexOf(newTime);
             if (newTimeIndex !== -1 && newTimeIndex !== index) {
                 // MERGE: Remove the one we moved, keep the one that was already there
+                console.log('[GlobalPlayer] MERGE: newTime already exists at different index, removing dragged one');
                 this.breakpoints.splice(index, 1);
             } else {
                 // MOVE: Just update the value
+                console.log('[GlobalPlayer] MOVE: updating breakpoint from', oldTime, 'to', newTime);
                 this.breakpoints[index] = newTime;
             }
 
             this.breakpoints.sort((a, b) => a - b);
+            console.log('[GlobalPlayer] Updated breakpoints:', [...this.breakpoints]);
             this.saveBreakpoints();
         },
         jumpToBreakpoint(time) {

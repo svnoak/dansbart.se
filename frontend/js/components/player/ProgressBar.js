@@ -151,6 +151,10 @@ export default {
                 newTime = closestBar;
             }
 
+            if (this.dragCurrentTime !== newTime) {
+                console.log('[ProgressBar] Drag position updated:', this.dragCurrentTime, '→', newTime);
+            }
+
             this.dragCurrentTime = newTime;
         },
 
@@ -160,13 +164,24 @@ export default {
             const originalTime = this.draggingBreakpointOriginal;
             const finalTime = this.dragCurrentTime;
 
+            console.log('[ProgressBar] stopDragBreakpoint:', {
+                wasDragging,
+                clickDuration,
+                originalTime,
+                finalTime,
+                willUpdate: wasDragging && originalTime != null && finalTime != null && originalTime !== finalTime
+            });
+
             window.removeEventListener('pointermove', this.onDragBreakpoint);
             window.removeEventListener('pointerup', this.stopDragBreakpoint);
 
             // DRAG END
             if (wasDragging) {
                 if (originalTime != null && finalTime != null && originalTime !== finalTime) {
+                    console.log('[ProgressBar] Emitting update-breakpoint:', originalTime, '→', finalTime);
                     this.$emit('update-breakpoint', originalTime, finalTime);
+                } else {
+                    console.log('[ProgressBar] No update needed - same position or null values');
                 }
 
                 // Clear state AFTER DOM update
@@ -181,6 +196,7 @@ export default {
 
             // CLICK HANDLING
             if (clickDuration < 200 && originalTime !== null) {
+                console.log('[ProgressBar] Click detected, count:', this.clickCount + 1);
                 if (e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -189,11 +205,13 @@ export default {
                 this.clickCount++;
                 if (this.clickCount === 1) {
                     this.clickTimer = setTimeout(() => {
+                        console.log('[ProgressBar] Single click - jump to:', originalTime);
                         this.$emit('jump-to-breakpoint', originalTime);
                         this.clickCount = 0;
                     }, 250);
                 } else if (this.clickCount === 2) {
                     clearTimeout(this.clickTimer);
+                    console.log('[ProgressBar] Double click - remove:', originalTime);
                     this.$emit('remove-breakpoint', originalTime);
                     this.clickCount = 0;
                 }

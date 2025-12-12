@@ -217,7 +217,9 @@ export default {
             </button>
           </div>
 
+        
           <!-- Vocals Filter -->
+          <!--
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-500">Sång:</span>
             <div class="flex rounded-full overflow-hidden border border-gray-200 bg-white">
@@ -244,6 +246,7 @@ export default {
               </button>
             </div>
           </div>
+          -->
 
           <!-- User Confirmed Filter -->
           <div class="flex items-center gap-2">

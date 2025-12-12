@@ -43,10 +43,10 @@ export default {
                 <span class="text-gray-500 text-xs flex items-center font-medium border border-gray-100 bg-gray-50 px-2 py-1 rounded-full whitespace-nowrap">
                     {{ tempoLabel }}
                 </span>
-
+                <!--
                 <span v-if="track.has_vocals" class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full flex items-center gap-1">🎤 Vocals</span>
                 <span v-else class="px-2 py-1 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full flex items-center gap-1">🎻 Instr.</span>
-
+                -->
                 <span v-if="formattedDuration" class="px-2 py-1 text-gray-400 text-xs font-mono flex items-center border border-gray-100 bg-gray-50 rounded-full">{{ formattedDuration }}</span>
             </div>
             
