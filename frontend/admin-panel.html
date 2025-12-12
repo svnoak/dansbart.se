@@ -26,6 +26,12 @@
                     <span class="hidden sm:inline">🕸️ Spider</span>
                     <span class="sm:hidden">🕸️</span>
                 </button>
+                <button @click="activeTab = 'approvals'"
+                        :class="activeTab === 'approvals' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
+                        class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium">
+                    <span class="hidden sm:inline">✅ Approvals</span>
+                    <span class="sm:hidden">✅</span>
+                </button>
                 <button @click="activeTab = 'pending'"
                         :class="activeTab === 'pending' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
                         class="px-2 sm:px-4 py-1.5 sm:py-2 rounded-t text-xs sm:text-sm font-medium">
@@ -364,6 +370,76 @@
                 </div>
             </div>
 
+            <!-- Artist Approvals Tab -->
+            <div v-if="activeTab === 'approvals'" class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
+                <h2 class="font-bold mb-4">✅ Artist Approval Queue</h2>
+
+                <p class="text-sm text-gray-400 mb-6">
+                    Artists discovered by the spider that need manual approval before ingestion.
+                    These artists weren't clearly categorized as Swedish/Nordic folk music.
+                </p>
+
+                <div v-if="pendingApprovals.length === 0" class="text-gray-500 text-center py-8">
+                    No artists pending approval
+                </div>
+
+                <div v-else class="space-y-4">
+                    <div v-for="approval in pendingApprovals" :key="approval.id"
+                         class="p-4 bg-gray-900 rounded border border-gray-700">
+                        <div class="flex items-start gap-4">
+                            <img v-if="approval.image_url" :src="approval.image_url"
+                                 class="w-16 h-16 sm:w-20 sm:h-20 rounded object-cover" :alt="approval.name">
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-base sm:text-lg mb-1">{{ approval.name }}</div>
+
+                                <div class="flex flex-wrap gap-2 mb-2">
+                                    <span v-if="approval.music_genre_classification"
+                                          class="px-2 py-0.5 bg-indigo-600/30 text-indigo-400 rounded text-xs">
+                                        {{ approval.music_genre_classification.replace('_', ' ') }}
+                                    </span>
+                                    <span v-if="approval.genre_confidence"
+                                          :class="approval.genre_confidence >= 0.7 ? 'bg-green-600/30 text-green-400' : 'bg-yellow-600/30 text-yellow-400'"
+                                          class="px-2 py-0.5 rounded text-xs">
+                                        {{ (approval.genre_confidence * 100).toFixed(0) }}% confidence
+                                    </span>
+                                </div>
+
+                                <div v-if="approval.detected_genres && approval.detected_genres.length > 0"
+                                     class="text-xs text-gray-500 mb-2">
+                                    <strong>Spotify genres:</strong> {{ approval.detected_genres.join(', ') }}
+                                </div>
+
+                                <div class="text-xs text-gray-500">
+                                    Discovered: {{ formatDate(approval.discovered_at) }} via {{ approval.discovery_source }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 mt-3">
+                            <button @click="approveArtist(approval.id)" :disabled="approval.loading"
+                                    class="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 px-4 py-2 rounded font-medium text-sm">
+                                {{ approval.loading ? 'Processing...' : '✅ Approve & Ingest' }}
+                            </button>
+                            <button @click="rejectPendingArtist(approval.id)" :disabled="approval.loading"
+                                    class="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 px-4 py-2 rounded font-medium text-sm">
+                                {{ approval.loading ? 'Processing...' : '❌ Reject & Blocklist' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="pendingApprovals.length > 0" class="mt-4 text-center">
+                    <button @click="loadPendingApprovals"
+                            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <p v-if="approvalMessage" class="mt-4 text-sm" :class="approvalError ? 'text-red-400' : 'text-green-400'">
+                    {{ approvalMessage }}
+                </p>
+            </div>
+
             <!-- Review & Reject Tab -->
             <div v-if="activeTab === 'pending'" class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
                 <h2 class="font-bold mb-6">🗑️ Review & Reject Pending Items</h2>
@@ -521,17 +597,77 @@
                     {{ rejectMessage }}
                 </p>
             </div>
-        </div>
 
-        <!-- Toast Notifications -->
-        <div class="fixed bottom-4 right-4 space-y-2 z-50">
-            <transition-group name="fade">
-                <div v-for="toast in toasts" :key="toast.id"
-                     :class="toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'"
-                     class="px-4 py-2 rounded shadow-lg text-sm max-w-sm">
-                    {{ toast.message }}
+            <!-- Toast Notifications -->
+            <div class="fixed bottom-4 right-4 space-y-2 z-50">
+                <transition-group name="fade">
+                    <div v-for="toast in toasts" :key="toast.id"
+                         :class="toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'"
+                         class="px-4 py-2 rounded shadow-lg text-sm max-w-sm">
+                        {{ toast.message }}
+                    </div>
+                </transition-group>
+            </div>
+
+            <!-- Rejection Confirmation Modal -->
+            <div v-if="rejectionModal.show" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                <div class="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-4">⚠️ Confirm Artist Rejection</h3>
+
+                        <div class="mb-6">
+                            <p class="text-gray-300 mb-4">
+                                Are you sure you want to reject <strong>{{ rejectionModal.artistName }}</strong>?
+                            </p>
+
+                            <div class="bg-gray-900 rounded p-4 space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Pending tracks to delete:</span>
+                                    <span class="font-medium">{{ rejectionModal.pendingTracks }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Analyzed tracks to keep:</span>
+                                    <span class="font-medium text-green-400">{{ rejectionModal.analyzedTracks }}</span>
+                                </div>
+                            </div>
+
+                            <div v-if="!rejectionModal.isIsolated" class="mt-4 p-4 bg-amber-900/30 border border-amber-600/50 rounded">
+                                <div class="flex items-start gap-2">
+                                    <span class="text-xl">⚠️</span>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-amber-400 mb-2">
+                                            Collaboration Warning
+                                        </p>
+                                        <p class="text-sm text-gray-300 mb-2">
+                                            This artist collaborates with {{ rejectionModal.sharedWith.length }} other artist(s):
+                                        </p>
+                                        <div class="flex flex-wrap gap-2">
+                                            <span v-for="artist in rejectionModal.sharedWith" :key="artist"
+                                                  class="px-2 py-1 bg-amber-800/50 rounded text-xs">
+                                                {{ artist }}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-2">
+                                            {{ rejectionModal.sharedTracks }} shared track(s) and their albums will NOT be deleted.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button @click="confirmRejection" :disabled="rejectionModal.confirming"
+                                    class="flex-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 px-4 py-2 rounded font-medium">
+                                {{ rejectionModal.confirming ? 'Rejecting...' : '🗑️ Reject Artist' }}
+                            </button>
+                            <button @click="cancelRejection" :disabled="rejectionModal.confirming"
+                                    class="flex-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 px-4 py-2 rounded font-medium">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </transition-group>
+            </div>
         </div>
     </div>
 </div>
@@ -588,6 +724,11 @@ window.initAdminPanel = function(adminToken) {
                 const currentTaskId = ref(null);
                 const taskStatus = ref(null);
 
+                // Artist Approvals
+                const pendingApprovals = ref([]);
+                const approvalMessage = ref('');
+                const approvalError = ref(false);
+
                 // Rejection/Pending Review
                 const rejectView = ref('artists');  // 'artists', 'albums', 'blocklist'
                 const pendingArtists = ref([]);
@@ -596,6 +737,19 @@ window.initAdminPanel = function(adminToken) {
                 const blocklistFilter = ref('');
                 const rejectMessage = ref('');
                 const rejectError = ref(false);
+
+                // Rejection Modal
+                const rejectionModal = ref({
+                    show: false,
+                    artistId: null,
+                    artistName: '',
+                    pendingTracks: 0,
+                    analyzedTracks: 0,
+                    isIsolated: true,
+                    sharedWith: [],
+                    sharedTracks: 0,
+                    confirming: false
+                });
 
                 // Toasts
                 const toasts = ref([]);
@@ -954,6 +1108,104 @@ window.initAdminPanel = function(adminToken) {
                     'text-red-400': conf < 0.4
                 });
 
+                // === ARTIST APPROVAL FUNCTIONS ===
+
+                const loadPendingApprovals = async () => {
+                    try {
+                        const res = await fetch('/api/admin/pending-artists?status=pending&limit=100', {
+                            headers: { 'x-admin-token': token.value }
+                        });
+
+                        if (!res.ok) throw new Error('Failed to load pending approvals');
+
+                        const data = await res.json();
+                        pendingApprovals.value = data.items.map(item => ({ ...item, loading: false }));
+                        approvalMessage.value = '';
+                    } catch (e) {
+                        console.error('Failed to load pending approvals:', e);
+                        approvalMessage.value = 'Failed to load pending approvals';
+                        approvalError.value = true;
+                    }
+                };
+
+                const approveArtist = async (approvalId) => {
+                    const approval = pendingApprovals.value.find(a => a.id === approvalId);
+                    if (!approval) return;
+
+                    if (!confirm(`Approve and ingest artist "${approval.name}"? This will crawl their full discography.`)) {
+                        return;
+                    }
+
+                    approval.loading = true;
+                    try {
+                        const res = await fetch(`/api/admin/pending-artists/${approvalId}/approve`, {
+                            method: 'POST',
+                            headers: {
+                                'x-admin-token': token.value,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (!res.ok) throw new Error('Failed to approve artist');
+
+                        const data = await res.json();
+                        approvalMessage.value = data.message;
+                        approvalError.value = false;
+                        showToast(data.message, 'success');
+
+                        // Reload the list
+                        await loadPendingApprovals();
+
+                        // Refresh tracks to show new ingested content
+                        if (activeTab.value === 'tracks') {
+                            loadTracks();
+                        }
+                    } catch (e) {
+                        console.error('Failed to approve artist:', e);
+                        approvalMessage.value = 'Failed to approve artist';
+                        approvalError.value = true;
+                        showToast('Failed to approve artist', 'error');
+                        approval.loading = false;
+                    }
+                };
+
+                const rejectPendingArtist = async (approvalId) => {
+                    const approval = pendingApprovals.value.find(a => a.id === approvalId);
+                    if (!approval) return;
+
+                    if (!confirm(`Reject and blocklist artist "${approval.name}"? They will not be re-discovered by the spider.`)) {
+                        return;
+                    }
+
+                    approval.loading = true;
+                    try {
+                        const res = await fetch(`/api/admin/pending-artists/${approvalId}/reject`, {
+                            method: 'POST',
+                            headers: {
+                                'x-admin-token': token.value,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ reason: 'Not Swedish/Nordic folk music' })
+                        });
+
+                        if (!res.ok) throw new Error('Failed to reject artist');
+
+                        const data = await res.json();
+                        approvalMessage.value = data.message;
+                        approvalError.value = false;
+                        showToast(data.message, 'success');
+
+                        // Reload the list
+                        await loadPendingApprovals();
+                    } catch (e) {
+                        console.error('Failed to reject artist:', e);
+                        approvalMessage.value = 'Failed to reject artist';
+                        approvalError.value = true;
+                        showToast('Failed to reject artist', 'error');
+                        approval.loading = false;
+                    }
+                };
+
                 // === REJECTION / PENDING REVIEW FUNCTIONS ===
 
                 const loadPendingArtists = async () => {
@@ -1016,12 +1268,47 @@ window.initAdminPanel = function(adminToken) {
                 };
 
                 const rejectArtist = async (artistId) => {
-                    if (!confirm('Are you sure you want to reject this artist? This will delete all pending tracks and blocklist the artist.')) {
-                        return;
-                    }
-
                     try {
-                        const res = await fetch(`/api/admin/artists/${artistId}/reject`, {
+                        // First check isolation status (dry run)
+                        const dryRunRes = await fetch(`/api/admin/artists/${artistId}/reject?dry_run=true`, {
+                            method: 'POST',
+                            headers: {
+                                'x-admin-token': token.value,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ reason: 'Not relevant' })
+                        });
+
+                        if (!dryRunRes.ok) throw new Error('Failed to check artist isolation');
+
+                        const dryRunData = await dryRunRes.json();
+                        const preview = dryRunData.preview;
+                        const isolation = preview.isolation_info;
+
+                        // Show modal with rejection details
+                        rejectionModal.value = {
+                            show: true,
+                            artistId: artistId,
+                            artistName: preview.artist_name,
+                            pendingTracks: preview.would_delete_pending_tracks,
+                            analyzedTracks: preview.would_keep_analyzed_tracks,
+                            isIsolated: isolation.is_isolated,
+                            sharedWith: isolation.shared_with_artists,
+                            sharedTracks: isolation.shared_tracks,
+                            confirming: false
+                        };
+                    } catch (e) {
+                        console.error('Failed to check artist isolation:', e);
+                        rejectMessage.value = 'Failed to check artist isolation';
+                        rejectError.value = true;
+                        showToast('Failed to check artist isolation', 'error');
+                    }
+                };
+
+                const confirmRejection = async () => {
+                    rejectionModal.value.confirming = true;
+                    try {
+                        const res = await fetch(`/api/admin/artists/${rejectionModal.value.artistId}/reject`, {
                             method: 'POST',
                             headers: {
                                 'x-admin-token': token.value,
@@ -1037,6 +1324,9 @@ window.initAdminPanel = function(adminToken) {
                         rejectError.value = false;
                         showToast(data.message, 'success');
 
+                        // Close modal
+                        rejectionModal.value.show = false;
+
                         // Reload the list
                         await loadPendingArtists();
                     } catch (e) {
@@ -1044,7 +1334,13 @@ window.initAdminPanel = function(adminToken) {
                         rejectMessage.value = 'Failed to reject artist';
                         rejectError.value = true;
                         showToast('Failed to reject artist', 'error');
+                    } finally {
+                        rejectionModal.value.confirming = false;
                     }
+                };
+
+                const cancelRejection = () => {
+                    rejectionModal.value.show = false;
                 };
 
                 const rejectAlbum = async (albumId) => {
@@ -1120,10 +1416,12 @@ window.initAdminPanel = function(adminToken) {
                     loadSpiderHistory();
                 });
 
-                // Watch for tab changes to auto-load rejection data
+                // Watch for tab changes to auto-load data
                 const { watch } = Vue;
                 watch(activeTab, (newTab) => {
-                    if (newTab === 'pending') {
+                    if (newTab === 'approvals') {
+                        loadPendingApprovals();
+                    } else if (newTab === 'pending') {
                         if (rejectView.value === 'artists') {
                             loadPendingArtists();
                         } else if (rejectView.value === 'albums') {
@@ -1164,11 +1462,16 @@ window.initAdminPanel = function(adminToken) {
                     spiderStats, crawlHistory, currentTaskId, taskStatus,
                     runSpider, loadSpiderStats, loadSpiderHistory,
                     formatDate,
+                    // Artist Approvals
+                    pendingApprovals, approvalMessage, approvalError,
+                    loadPendingApprovals, approveArtist, rejectPendingArtist,
                     // Rejection/Pending Review
                     rejectView, pendingArtists, pendingAlbums, blocklist, blocklistFilter,
                     rejectMessage, rejectError,
                     loadPendingArtists, loadPendingAlbums, loadBlocklist,
                     rejectArtist, rejectAlbum, removeFromBlocklist,
+                    // Rejection Modal
+                    rejectionModal, confirmRejection, cancelRejection,
                     // Helpers
                     statusClass, statusIcon, confidenceClass,
                     // Toasts

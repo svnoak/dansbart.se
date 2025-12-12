@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.services.pipeline import PipelineService
 from pydantic import BaseModel
 from app.services.feedback import FeedbackService
-from app.core.models import Track, TrackArtist, ArtistCrawlLog, Artist, Album, RejectionLog
+from app.core.models import Track, TrackArtist, ArtistCrawlLog, Artist, Album, RejectionLog, PendingArtistApproval, PlaybackLink
 
 router = APIRouter()
 
@@ -585,6 +585,9 @@ def reject_artist(
     artist_name = artist.name
     spotify_id = artist.spotify_id
 
+    # Check artist isolation status for smart rejection
+    isolation_info = check_artist_isolation(artist_id, db)
+
     # Get pending tracks that would be deleted
     pending_tracks = db.query(Track).join(TrackArtist).filter(
         TrackArtist.artist_id == artist_id,
@@ -639,6 +642,7 @@ def reject_artist(
                 "would_delete_artist": remaining_tracks_count == 0,
                 "would_blocklist": spotify_id is not None,
                 "affected_albums": albums_info,
+                "isolation_info": isolation_info,  # Smart rejection info
                 "sample_pending_tracks": [
                     {
                         "title": t.title,
@@ -671,8 +675,11 @@ def reject_artist(
             )
             db.add(rejection)
 
-    # Delete all pending tracks for this artist
+    # Delete all pending tracks for this artist (with related records)
     for track in pending_tracks:
+        # Delete related playback links first (not cascaded in model)
+        db.query(PlaybackLink).filter(PlaybackLink.track_id == track.id).delete()
+        # Now delete the track
         db.delete(track)
 
     # Check if artist has any remaining tracks
@@ -686,7 +693,8 @@ def reject_artist(
         "message": f"Artist '{artist_name}' rejected. Deleted {len(pending_tracks)} pending tracks.",
         "artist_deleted": remaining_tracks_count == 0,
         "kept_tracks": len(analyzed_tracks),
-        "blocklisted": spotify_id is not None
+        "blocklisted": spotify_id is not None,
+        "isolation_info": isolation_info  # Include for frontend warning
     }
 
 @router.post("/albums/{album_id}/reject")
@@ -757,8 +765,11 @@ def reject_album(
             }
         }
 
-    # Delete all pending tracks for this album
+    # Delete all pending tracks for this album (with related records)
     for track in pending_tracks:
+        # Delete related playback links first (not cascaded in model)
+        db.query(PlaybackLink).filter(PlaybackLink.track_id == track.id).delete()
+        # Now delete the track
         db.delete(track)
 
     # If no remaining tracks, delete the album too
@@ -834,4 +845,219 @@ def remove_from_blocklist(
     return {
         "status": "success",
         "message": f"'{entity_name}' removed from blocklist"
+    }
+
+
+# ===== PENDING ARTIST APPROVAL ENDPOINTS =====
+
+@router.get("/pending-artists")
+def get_pending_artists_for_approval(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get artists discovered by the spider that are pending manual approval.
+    These are artists with low confidence genre classification.
+    """
+    query = db.query(PendingArtistApproval).filter(
+        PendingArtistApproval.status == 'pending'
+    )
+
+    total = query.count()
+    artists = query.order_by(PendingArtistApproval.discovered_at.desc()).offset(offset).limit(limit).all()
+
+    results = []
+    for artist in artists:
+        results.append({
+            "id": str(artist.id),
+            "spotify_id": artist.spotify_id,
+            "name": artist.name,
+            "image_url": artist.image_url,
+            "detected_genres": artist.detected_genres,
+            "music_genre": artist.music_genre_classification,
+            "genre_confidence": artist.genre_confidence,
+            "discovered_at": artist.discovered_at.isoformat(),
+            "discovery_source": artist.discovery_source
+        })
+
+    return {
+        "items": results,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+@router.post("/pending-artists/{artist_id}/approve")
+def approve_pending_artist(
+    artist_id: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Approve a pending artist and ingest their discography.
+    """
+    from datetime import datetime
+    from app.workers.ingestion.spotify import SpotifyIngestor
+    from app.workers.tasks import analyze_track_task
+    from app.services.genre_classifier import GenreClassifier
+
+    artist = db.query(PendingArtistApproval).filter(PendingArtistApproval.id == artist_id).first()
+    if not artist:
+        raise HTTPException(status_code=404, detail="Pending artist not found")
+
+    if artist.status != 'pending':
+        raise HTTPException(status_code=400, detail=f"Artist already {artist.status}")
+
+    # Mark as approved
+    artist.status = 'approved'
+    artist.reviewed_at = datetime.utcnow()
+
+    try:
+        # Ingest the artist
+        ingestor = SpotifyIngestor(db)
+        track_ids = ingestor.ingest_artist_albums(artist.spotify_id)
+
+        # Queue tracks for analysis
+        if track_ids:
+            for tid in track_ids:
+                analyze_track_task.delay(tid)
+
+        # Log the crawl
+        crawl_log = ArtistCrawlLog(
+            spotify_artist_id=artist.spotify_id,
+            artist_name=artist.name,
+            tracks_found=len(track_ids) if isinstance(track_ids, list) else track_ids,
+            status='success',
+            detected_genres=artist.detected_genres or [],
+            music_genre_classification=artist.music_genre_classification,
+            discovery_source=f'manual_approval_from_{artist.discovery_source}'
+        )
+        db.add(crawl_log)
+
+        # Update track genres
+        genre_classifier = GenreClassifier(db)
+        tracks_updated = genre_classifier.classify_all_tracks_for_artist(artist.spotify_id)
+
+        db.commit()
+
+        return {
+            "status": "success",
+            "message": f"Approved and ingested {artist.name}",
+            "tracks_found": len(track_ids) if isinstance(track_ids, list) else track_ids,
+            "tracks_tagged": tracks_updated
+        }
+
+    except Exception as e:
+        db.rollback()
+        artist.status = 'pending'  # Revert status on error
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Failed to ingest artist: {str(e)}")
+
+@router.post("/pending-artists/{artist_id}/reject")
+def reject_pending_artist(
+    artist_id: str,
+    req: RejectRequest = RejectRequest(),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Reject a pending artist and add them to the blocklist.
+    """
+    from datetime import datetime
+
+    artist = db.query(PendingArtistApproval).filter(PendingArtistApproval.id == artist_id).first()
+    if not artist:
+        raise HTTPException(status_code=404, detail="Pending artist not found")
+
+    # Mark as rejected
+    artist.status = 'rejected'
+    artist.reviewed_at = datetime.utcnow()
+
+    # Add to rejection blocklist
+    rejection = RejectionLog(
+        entity_type='artist',
+        spotify_id=artist.spotify_id,
+        entity_name=artist.name,
+        reason=req.reason or 'Not relevant',
+        additional_data={
+            'genres': artist.detected_genres,
+            'classification': artist.music_genre_classification,
+            'confidence': artist.genre_confidence
+        }
+    )
+    db.add(rejection)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Rejected {artist.name} and added to blocklist"
+    }
+
+
+# ===== SMART REJECTION HELPERS =====
+
+def check_artist_isolation(artist_id: str, db: Session) -> dict:
+    """
+    Check if an artist is isolated (only appears alone) or shares tracks/albums with other artists.
+    Returns a dict with:
+    - is_isolated: bool
+    - shared_with_artists: list of artist names they collaborate with
+    - shared_tracks: count
+    - shared_albums: count
+    """
+    # Get all tracks by this artist
+    artist_tracks = db.query(Track).join(TrackArtist).filter(
+        TrackArtist.artist_id == artist_id
+    ).all()
+
+    shared_with = set()
+    shared_track_count = 0
+    shared_album_ids = set()
+
+    for track in artist_tracks:
+        # Check if track has multiple artists
+        other_artists = [
+            link.artist for link in track.artist_links
+            if str(link.artist_id) != artist_id
+        ]
+
+        if other_artists:
+            shared_track_count += 1
+            for other_artist in other_artists:
+                shared_with.add(other_artist.name)
+
+            if track.album_id:
+                shared_album_ids.add(track.album_id)
+
+    return {
+        "is_isolated": len(shared_with) == 0,
+        "shared_with_artists": list(shared_with),
+        "shared_tracks": shared_track_count,
+        "shared_albums": len(shared_album_ids),
+        "total_tracks": len(artist_tracks)
+    }
+
+@router.get("/artists/{artist_id}/isolation-check")
+def get_artist_isolation_status(
+    artist_id: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if an artist is isolated or shares content with other artists in the database.
+    Useful for smart rejection decisions.
+    """
+    artist = db.query(Artist).filter(Artist.id == artist_id).first()
+    if not artist:
+        raise HTTPException(status_code=404, detail="Artist not found")
+
+    isolation_info = check_artist_isolation(artist_id, db)
+
+    return {
+        "artist_id": artist_id,
+        "artist_name": artist.name,
+        **isolation_info,
+        "recommendation": "safe_to_reject" if isolation_info["is_isolated"] else "review_shared_content"
     }

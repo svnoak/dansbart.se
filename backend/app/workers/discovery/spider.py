@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.workers.ingestion.spotify import SpotifyIngestor
 from app.repository.track import TrackRepository
-from app.core.models import Track, ArtistCrawlLog, RejectionLog
+from app.core.models import Track, ArtistCrawlLog, RejectionLog, PendingArtistApproval
 from app.services.genre_classifier import GenreClassifier
 from app.workers.tasks import analyze_track_task
 
@@ -460,16 +460,78 @@ class DiscoverySpider:
             print(f"      ⏭️  Skipping {name} (already crawled on {existing_log.crawled_at.date()})")
             return False
 
-        # STEP 3: GENRE CLASSIFICATION
+        # STEP 4: GENRE CLASSIFICATION
         music_genre, confidence = self.genre_classifier.classify_artist_genre(
             name, genres, None
         )
 
-        print(f"      🎯 New Folk Artist: {name}")
+        # STEP 5: CONFIDENCE CHECK - Should we auto-approve or queue for manual review?
+        # Auto-approve if:
+        # 1. High confidence (>= 0.7) in genre classification, OR
+        # 2. Artist has strong Swedish/Nordic folk signals in name/genres
+
+        AUTO_APPROVE_CONFIDENCE = 0.7
+
+        # Check for strong folk signals (traditional keywords, etc.)
+        name_lower = name.lower()
+        traditional_keywords = ['spelmanslag', 'riksspelman', 'folkmusik', 'polska']
+        has_strong_folk_signal = any(kw in name_lower for kw in traditional_keywords)
+
+        should_auto_approve = confidence >= AUTO_APPROVE_CONFIDENCE or has_strong_folk_signal
+
+        if not should_auto_approve:
+            # Queue for manual approval
+            print(f"      ⏸️  Queuing for approval: {name}")
+            print(f"         Genres: {genres}")
+            print(f"         Classified as: {music_genre} ({confidence:.2f} confidence)")
+            print(f"         Reason: Low confidence or uncertain genre match")
+
+            try:
+                # Check if already pending approval
+                existing_pending = self.db.query(PendingArtistApproval).filter(
+                    PendingArtistApproval.spotify_id == artist_id
+                ).first()
+
+                if existing_pending:
+                    print(f"         Already pending approval")
+                    return False
+
+                # Get artist image
+                image_url = artist_obj.get('images', [{}])[0].get('url') if artist_obj.get('images') else None
+
+                pending = PendingArtistApproval(
+                    spotify_id=artist_id,
+                    name=name,
+                    image_url=image_url,
+                    discovery_source='spider',
+                    detected_genres=genres,
+                    music_genre_classification=music_genre,
+                    genre_confidence=confidence,
+                    status='pending'
+                )
+
+                self.db.add(pending)
+                self.db.commit()
+
+                print(f"         ✅ Added to approval queue")
+                self.stats['artists_pending_approval'] = self.stats.get('artists_pending_approval', 0) + 1
+                return False  # Not crawled yet, waiting for approval
+
+            except IntegrityError:
+                # Already pending
+                self.db.rollback()
+                return False
+            except Exception as e:
+                print(f"         ❌ Error queueing for approval: {e}")
+                self.db.rollback()
+                return False
+
+        # Auto-approved - proceed with ingestion
+        print(f"      🎯 Auto-approved Folk Artist: {name}")
         print(f"         Genres: {genres}")
         print(f"         Classified as: {music_genre} ({confidence:.2f} confidence)")
 
-        # STEP 4: INGEST FULL DISCOGRAPHY
+        # STEP 6: INGEST FULL DISCOGRAPHY
         # Note: spotipy has built-in retry logic with exponential backoff
         # Light delay just to spread requests nicely over time
         time.sleep(0.5)  # 500ms delay between artists
@@ -483,7 +545,7 @@ class DiscoverySpider:
                 for tid in track_ids:
                     analyze_track_task.delay(tid)
 
-            # STEP 5: LOG THE CRAWL
+            # STEP 7: LOG THE CRAWL
             crawl_log = ArtistCrawlLog(
                 spotify_artist_id=artist_id,
                 artist_name=name,
@@ -497,7 +559,7 @@ class DiscoverySpider:
             self.db.add(crawl_log)
             self.db.commit()
 
-            # STEP 6: UPDATE TRACK GENRES
+            # STEP 8: UPDATE TRACK GENRES
             # All tracks from this artist should inherit the artist's genre
             tracks_updated = self.genre_classifier.classify_all_tracks_for_artist(artist_id)
             if tracks_updated > 0:

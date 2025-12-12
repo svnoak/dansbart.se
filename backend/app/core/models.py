@@ -263,3 +263,36 @@ class RejectionLog(Base):
 
     # Additional context
     additional_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # Store genre, artist info, etc.
+
+class PendingArtistApproval(Base):
+    """
+    Queue for artists discovered by the spider that need manual approval before ingestion.
+    Used when the spider finds artists that aren't clearly folk music.
+    """
+    __tablename__ = "pending_artist_approvals"
+    __table_args__ = (
+        UniqueConstraint('spotify_id', name='unique_pending_artist'),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Artist info from Spotify
+    spotify_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Discovery metadata
+    discovered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    discovery_source: Mapped[str] = mapped_column(String, nullable=False)  # 'spider_search', 'spider_backfill', etc.
+
+    # Genre classification (why it needs approval)
+    detected_genres: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    music_genre_classification: Mapped[str | None] = mapped_column(String, nullable=True)
+    genre_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Status
+    status: Mapped[str] = mapped_column(String, default="pending", index=True)  # pending, approved, rejected
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Additional context
+    additional_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
