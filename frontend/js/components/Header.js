@@ -2,13 +2,14 @@ import { useConsent } from '../consent.js';
 
 export default {
     setup() {
-        const { revokeConsent } = useConsent();
+        const { consentStatus, revokeConsent } = useConsent();
 
         const openCookieSettings = () => {
             revokeConsent();
         };
 
         return {
+            consentStatus,
             openCookieSettings
         };
     },
@@ -30,6 +31,9 @@ export default {
                     <a href="/" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
                         Hem
                     </a>
+                    <a href="/help.html" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
+                        Hjälp
+                    </a>
                     <!-- Placeholder for future pages -->
                     <!-- <a href="/feedback" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
                         Feedback
@@ -47,13 +51,13 @@ export default {
                             </svg>
                         </button>
                         <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                            <a href="/privacy.html" target="_blank" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg">
+                            <a href="/privacy.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg">
                                 Integritetspolicy
                             </a>
-                            <a href="/terms.html" target="_blank" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <a href="/terms.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" :class="{ 'rounded-b-lg': !consentStatus }">
                                 Användarvillkor
                             </a>
-                            <button @click="openCookieSettings" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg">
+                            <button v-if="consentStatus" @click="openCookieSettings" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg">
                                 Cookie-inställningar
                             </button>
                         </div>
@@ -76,6 +80,9 @@ export default {
                         <a href="/" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
                             Hem
                         </a>
+                        <a href="/help.html" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
+                            Hjälp
+                        </a>
                         <!-- Placeholder for future pages -->
                         <!-- <a href="/feedback" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
                             Feedback
@@ -85,13 +92,13 @@ export default {
                         </a> -->
 
                         <div class="border-t border-gray-200 pt-3 mt-3">
-                            <a href="/privacy.html" target="_blank" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">
+                            <a href="/privacy.html" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">
                                 Integritetspolicy
                             </a>
-                            <a href="/terms.html" target="_blank" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">
+                            <a href="/terms.html" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">
                                 Användarvillkor
                             </a>
-                            <button @click="openCookieSettings" class="w-full text-left block text-sm text-gray-600 hover:text-indigo-600 py-2">
+                            <button v-if="consentStatus" @click="openCookieSettings" class="w-full text-left block text-sm text-gray-600 hover:text-indigo-600 py-2">
                                 Cookie-inställningar
                             </button>
                         </div>

@@ -175,6 +175,41 @@ export default {
                 </div>
             </div>
 
+            <!-- Help Page Analytics -->
+            <div v-if="analytics.help_page" class="bg-gray-800/50 rounded-lg p-4 sm:p-6">
+                <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">❓ Help Page Performance</h3>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="bg-gray-900/50 rounded p-3 sm:p-4">
+                        <p class="text-gray-400 text-xs sm:text-sm uppercase mb-1">Page Views</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-white">{{ analytics.help_page.views }}</p>
+                    </div>
+                    <div class="bg-gray-900/50 rounded p-3 sm:p-4">
+                        <p class="text-gray-400 text-xs sm:text-sm uppercase mb-1">Feedback Given</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-white">{{ analytics.help_page.feedback_count }}</p>
+                    </div>
+                    <div class="bg-gray-900/50 rounded p-3 sm:p-4">
+                        <p class="text-gray-400 text-xs sm:text-sm uppercase mb-1">Helpful</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-green-400">{{ analytics.help_page.helpful_count }}</p>
+                    </div>
+                    <div class="bg-gray-900/50 rounded p-3 sm:p-4">
+                        <p class="text-gray-400 text-xs sm:text-sm uppercase mb-1">Not Helpful</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-red-400">{{ analytics.help_page.not_helpful_count }}</p>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 text-sm">Helpfulness Rate</span>
+                        <span class="text-xl sm:text-2xl font-bold"
+                              :class="analytics.help_page.helpfulness_rate >= 70 ? 'text-green-400' : analytics.help_page.helpfulness_rate >= 50 ? 'text-yellow-400' : 'text-red-400'">
+                            {{ analytics.help_page.helpfulness_rate }}%
+                        </span>
+                    </div>
+                    <div class="mt-2 bg-gray-900 rounded-full h-2 overflow-hidden">
+                        <div class="bg-green-500 h-full transition-all" :style="{width: analytics.help_page.helpfulness_rate + '%'}"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Engagement & Abandonment -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div class="bg-gray-800/50 rounded-lg p-4 sm:p-6">
