@@ -1061,3 +1061,109 @@ def get_artist_isolation_status(
         **isolation_info,
         "recommendation": "safe_to_reject" if isolation_info["is_isolated"] else "review_shared_content"
     }
+
+class BulkRejectRequest(BaseModel):
+    ids: list[str]
+    reason: str = "Bulk rejection"
+
+@router.post("/artists/bulk-reject")
+def bulk_reject_artists(
+    req: BulkRejectRequest,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+        
+    """
+    Reject multiple artists at once.
+    """
+    success_count = 0
+    errors = 0
+    
+    # 1. Fetch all artists
+    artists = db.query(Artist).filter(Artist.id.in_(req.ids)).all()
+    
+    for artist in artists:
+        try:
+            # Logic similar to single reject_artist
+            spotify_id = artist.spotify_id
+            artist_name = artist.name
+            
+            # Add to blocklist
+            if spotify_id:
+                exists = db.query(RejectionLog).filter(
+                    RejectionLog.spotify_id == spotify_id,
+                    RejectionLog.entity_type == 'artist'
+                ).first()
+                
+                if not exists:
+                    rejection = RejectionLog(
+                        entity_type='artist',
+                        spotify_id=spotify_id,
+                        entity_name=artist_name,
+                        reason=req.reason
+                    )
+                    db.add(rejection)
+
+            # Delete pending tracks
+            pending_tracks = db.query(Track).join(TrackArtist).filter(
+                TrackArtist.artist_id == artist.id,
+                Track.processing_status == "PENDING"
+            ).all()
+
+            for track in pending_tracks:
+                db.query(PlaybackLink).filter(PlaybackLink.track_id == track.id).delete()
+                db.delete(track)
+
+            # Delete artist if no tracks left (simplified check for bulk speed)
+            remaining_tracks = db.query(Track).join(TrackArtist).filter(
+                TrackArtist.artist_id == artist.id,
+                Track.processing_status != "PENDING"
+            ).count()
+            
+            if remaining_tracks == 0:
+                db.delete(artist)
+            
+            success_count += 1
+            
+        except Exception as e:
+            print(f"Error rejecting {artist.id}: {e}")
+            errors += 1
+
+    db.commit()
+    
+    return {
+        "status": "success", 
+        "message": f"Rejected {success_count} artists. {errors} failed."
+    }
+
+
+class BlockSpotifyRequest(BaseModel):
+    spotify_id: str
+    artist_name: str
+    reason: str = "Blocked from spider"
+
+@router.post("/blocklist/add")
+def add_to_blocklist(
+    req: BlockSpotifyRequest,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    # Check if already blocked
+    exists = db.query(RejectionLog).filter(
+        RejectionLog.spotify_id == req.spotify_id,
+        RejectionLog.entity_type == 'artist'
+    ).first()
+    
+    if exists:
+        return {"message": "Already blocked"}
+        
+    rejection = RejectionLog(
+        entity_type='artist',
+        spotify_id=req.spotify_id,
+        entity_name=req.artist_name,
+        reason=req.reason
+    )
+    db.add(rejection)
+    db.commit()
+    
+    return {"status": "success", "message": f"Added {req.artist_name} to blocklist"}

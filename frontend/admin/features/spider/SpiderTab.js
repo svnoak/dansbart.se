@@ -7,6 +7,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useSpiderApi } from './api.js';
+import { useRejectApi } from '../reject/api.js';
 import SpiderStats from './SpiderStats.js';
 import SpiderHistory from './SpiderHistory.js';
 
@@ -19,8 +20,8 @@ export default {
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
         const spiderApi = useSpiderApi(adminToken);
+        const rejectApi = useRejectApi(adminToken);
 
-        // State
         const spiderSettings = ref({
             max_discoveries: 10,
             mode: 'backfill',
@@ -36,7 +37,6 @@ export default {
 
         let pollInterval = null;
 
-        // Methods
         const loadSpiderStats = async () => {
             try {
                 spiderStats.value = await spiderApi.getStats();
@@ -55,7 +55,6 @@ export default {
         };
 
         const pollTaskStatus = async (taskId) => {
-            // Clear any existing polling
             if (pollInterval) clearInterval(pollInterval);
 
             const checkStatus = async () => {
@@ -63,27 +62,22 @@ export default {
                     const data = await spiderApi.getTaskStatus(taskId);
                     taskStatus.value = data;
 
-                    // Update message with current state
                     if (data.state === 'PENDING') {
                         spiderMessage.value = `Task queued (ID: ${taskId})...`;
                     } else if (data.state === 'STARTED') {
                         spiderMessage.value = `🕷️ Spider is crawling... (ID: ${taskId})`;
                     } else if (data.state === 'SUCCESS') {
-                        // Task completed successfully
                         clearInterval(pollInterval);
                         spiderLoading.value = false;
                         const stats = data.result;
                         spiderMessage.value = `✅ Crawl complete! Found ${stats.artists_crawled} new artists, ${stats.tracks_found} tracks.`;
 
-                        // Reload data
                         loadSpiderStats();
                         loadSpiderHistory();
 
-                        // Emit event
                         window.dispatchEvent(new CustomEvent('admin:spider-complete'));
                         showToast(`Spider complete! ${stats.artists_crawled} artists, ${stats.tracks_found} tracks`);
                     } else if (data.state === 'FAILURE') {
-                        // Task failed
                         clearInterval(pollInterval);
                         spiderLoading.value = false;
                         spiderError.value = true;
@@ -95,10 +89,7 @@ export default {
                 }
             };
 
-            // Check immediately
             await checkStatus();
-
-            // Then poll every 2 seconds
             pollInterval = setInterval(checkStatus, 2000);
         };
 
@@ -112,8 +103,6 @@ export default {
                 spiderError.value = false;
                 currentTaskId.value = data.task_id;
                 spiderMessage.value = `${data.message} - Task ID: ${data.task_id}`;
-
-                // Start polling for task status
                 pollTaskStatus(data.task_id);
             } catch (e) {
                 spiderError.value = true;
@@ -123,27 +112,45 @@ export default {
             }
         };
 
+        const handleBlockArtist = async (log) => {
+            if (!confirm(`Block "${log.artist_name}"?\n\nThis will add their Spotify ID to the blocklist so the spider ignores them in the future.`)) {
+                return;
+            }
+
+            try {
+                await rejectApi.addToBlocklist({
+                    spotify_id: log.spotify_artist_id,
+                    entity_name: log.artist_name,
+                    entity_type: 'artist',
+                    reason: 'Blocked via Spider History'
+                });
+                
+                showToast(`🚫 Blocked ${log.artist_name}`, 'success');
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to block artist', 'error');
+            }
+        };
+
         onMounted(() => {
             loadSpiderStats();
             loadSpiderHistory();
         });
 
         onUnmounted(() => {
-            // Clear polling on unmount
             if (pollInterval) clearInterval(pollInterval);
         });
 
         return {
             spiderSettings, spiderLoading, spiderMessage, spiderError,
             spiderStats, crawlHistory, currentTaskId, taskStatus,
-            runSpider, loadSpiderStats, loadSpiderHistory
+            runSpider, loadSpiderStats, loadSpiderHistory, handleBlockArtist
         };
     },
     template: /*html*/`
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
             <h2 class="font-bold mb-6">🕸️ Discovery Spider</h2>
 
-            <!-- Spider Control Panel -->
             <div class="mb-6 p-4 bg-gray-900 rounded border border-gray-700 max-w-2xl">
                 <h3 class="font-medium mb-3">Swedish/Nordic Folk Discovery</h3>
                 <p class="text-sm text-gray-400 mb-4">
@@ -191,7 +198,6 @@ export default {
                     {{ spiderLoading ? '🕷️ Crawling...' : '🚀 Start Discovery Crawl' }}
                 </button>
 
-                <!-- Task Status Display -->
                 <div v-if="taskStatus && spiderLoading" class="mt-3 p-3 bg-gray-800 rounded border border-gray-600">
                     <div class="flex items-center justify-between text-sm">
                         <span class="text-gray-400">Task Status:</span>
@@ -214,11 +220,13 @@ export default {
                 </p>
             </div>
 
-            <!-- Spider Statistics -->
             <spider-stats :stats="spiderStats" />
 
-            <!-- Crawl History -->
-            <spider-history :history="crawlHistory" @refresh="loadSpiderHistory" />
+            <spider-history 
+                :history="crawlHistory" 
+                @refresh="loadSpiderHistory" 
+                @block-artist="handleBlockArtist" 
+            />
         </div>
     `
 };
