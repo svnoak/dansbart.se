@@ -421,10 +421,13 @@ class DiscoverySpider:
         2. Folk genre gatekeeper check
         3. Deduplication via ArtistCrawlLog
         4. Genre classification
-        5. Full discography ingestion
+        5. MANUAL VERIFICATION CHECK (New)
+        6. Full discography ingestion
 
         Returns True if artist was newly crawled.
         """
+        from app.core.models import Artist # Ensure import is available
+
         artist_id = artist_obj['id']
         name = artist_obj['name']
         genres = artist_obj.get('genres', [])
@@ -442,11 +445,19 @@ class DiscoverySpider:
             print(f"      🚫 Skipping {name} (on rejection blocklist: {rejected.reason})")
             return False
 
-        # STEP 2: GATEKEEPER - Is this a folk artist?
-        is_folk = self.genre_classifier.is_folk_artist(genres, name)
+        # STEP 2: CHECK EXISTING VERIFICATION STATUS (The Fix)
+        # If we have manually approved/verified this artist, bypass the genre gatekeeper
+        # and confidence checks. We want them in the feed.
+        existing_db_artist = self.db.query(Artist).filter(Artist.spotify_id == artist_id).first()
+        is_manually_verified = existing_db_artist and existing_db_artist.is_verified
 
-        if not is_folk:
-            return False
+        if is_manually_verified:
+             print(f"      🛡️  Artist '{name}' is Manually Verified. Bypassing gatekeeper.")
+        else:
+            # Only run strict gatekeeper if NOT verified
+            is_folk = self.genre_classifier.is_folk_artist(genres, name)
+            if not is_folk:
+                return False
 
         self.stats['artists_passed_gatekeeper'] += 1
 
@@ -465,19 +476,22 @@ class DiscoverySpider:
             name, genres, None
         )
 
-        # STEP 5: CONFIDENCE CHECK - Should we auto-approve or queue for manual review?
-        # Auto-approve if:
-        # 1. High confidence (>= 0.7) in genre classification, OR
-        # 2. Artist has strong Swedish/Nordic folk signals in name/genres
-
-        AUTO_APPROVE_CONFIDENCE = 0.7
-
-        # Check for strong folk signals (traditional keywords, etc.)
-        name_lower = name.lower()
-        traditional_keywords = ['spelmanslag', 'riksspelman', 'folkmusik', 'polska']
-        has_strong_folk_signal = any(kw in name_lower for kw in traditional_keywords)
-
-        should_auto_approve = confidence >= AUTO_APPROVE_CONFIDENCE or has_strong_folk_signal
+        # STEP 5: CONFIDENCE CHECK 
+        # Should we auto-approve or queue for manual review?
+        
+        if is_manually_verified:
+            # If verified, confidence is irrelevant. We want them.
+            should_auto_approve = True
+        else:
+            # Auto-approve if:
+            # 1. High confidence (>= 0.7) in genre classification, OR
+            # 2. Artist has strong Swedish/Nordic folk signals in name/genres
+            AUTO_APPROVE_CONFIDENCE = 0.7
+            name_lower = name.lower()
+            traditional_keywords = ['spelmanslag', 'riksspelman', 'folkmusik', 'polska']
+            has_strong_folk_signal = any(kw in name_lower for kw in traditional_keywords)
+            
+            should_auto_approve = confidence >= AUTO_APPROVE_CONFIDENCE or has_strong_folk_signal
 
         if not should_auto_approve:
             # Queue for manual approval
@@ -518,7 +532,6 @@ class DiscoverySpider:
                 return False  # Not crawled yet, waiting for approval
 
             except IntegrityError:
-                # Already pending
                 self.db.rollback()
                 return False
             except Exception as e:
@@ -526,15 +539,17 @@ class DiscoverySpider:
                 self.db.rollback()
                 return False
 
-        # Auto-approved - proceed with ingestion
-        print(f"      🎯 Auto-approved Folk Artist: {name}")
+        # Auto-approved (or Verified) - proceed with ingestion
+        if is_manually_verified:
+            print(f"      🎯 Updating Verified Artist: {name}")
+        else:
+            print(f"      🎯 Auto-approved Folk Artist: {name}")
+            
         print(f"         Genres: {genres}")
         print(f"         Classified as: {music_genre} ({confidence:.2f} confidence)")
 
         # STEP 6: INGEST FULL DISCOGRAPHY
-        # Note: spotipy has built-in retry logic with exponential backoff
-        # Light delay just to spread requests nicely over time
-        time.sleep(0.5)  # 500ms delay between artists
+        time.sleep(0.5) 
 
         try:
             track_ids = self.ingestor.ingest_artist_albums(artist_id)
@@ -560,7 +575,6 @@ class DiscoverySpider:
             self.db.commit()
 
             # STEP 8: UPDATE TRACK GENRES
-            # All tracks from this artist should inherit the artist's genre
             tracks_updated = self.genre_classifier.classify_all_tracks_for_artist(artist_id)
             if tracks_updated > 0:
                 print(f"         🏷️  Tagged {tracks_updated} tracks as '{music_genre}'")
@@ -571,15 +585,12 @@ class DiscoverySpider:
             return True
 
         except IntegrityError:
-            # Race condition - another process crawled this artist
             self.db.rollback()
             self.stats['artists_already_crawled'] += 1
             return False
 
         except Exception as e:
             print(f"         ❌ Error ingesting {name}: {e}")
-
-            # Log the failure
             try:
                 crawl_log = ArtistCrawlLog(
                     spotify_artist_id=artist_id,

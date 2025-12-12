@@ -224,48 +224,47 @@ def get_all_artists_admin(
     _: bool = Depends(verify_admin),
     db: Session = Depends(get_db)
 ):
-    """
-    Admin endpoint to list all artists with track counts and collaboration info.
-    """
     query = db.query(Artist)
 
     if search:
         query = query.filter(Artist.name.ilike(f"%{search}%"))
 
-    # Get all artists first to filter by isolation status
-    all_artists = query.order_by(Artist.name).all()
-
-    # Filter by isolation if requested
-    if isolated is not None:
-        filter_isolated = isolated.lower() == 'true'
-        filtered_artists = []
-        for artist in all_artists:
-            isolation_info = check_artist_isolation(str(artist.id), db)
-            if isolation_info["is_isolated"] == filter_isolated:
-                filtered_artists.append(artist)
-        all_artists = filtered_artists
-
-    total = len(all_artists)
-    artists = all_artists[offset:offset + limit]
+    # Optimization: If we are not searching/filtering, paginate in DB
+    if not isolated and not search:
+        artists = query.order_by(Artist.name).offset(offset).limit(limit).all()
+        total = db.query(Artist).count()
+    else:
+        # If filtering by isolation, we must load all to check the complex logic
+        all_artists = query.order_by(Artist.name).all()
+        
+        # Filter by isolation if requested
+        if isolated is not None:
+            filter_isolated = isolated.lower() == 'true'
+            filtered_artists = []
+            
+            for artist in all_artists:
+                # If we want isolated artists (filter_isolated=True), 
+                # we HIDE the ones that are verified (artist.is_verified=True).
+                if filter_isolated and artist.is_verified:
+                    continue
+                    
+                isolation_info = check_artist_isolation(str(artist.id), db)
+                
+                if isolation_info["is_isolated"] == filter_isolated:
+                    filtered_artists.append(artist)
+                    
+            all_artists = filtered_artists
+            
+        total = len(all_artists)
+        artists = all_artists[offset:offset + limit]
 
     results = []
     for artist in artists:
-        # Count tracks by status
-        total_tracks = db.query(Track).join(TrackArtist).filter(
-            TrackArtist.artist_id == artist.id
-        ).count()
+        # Efficient counting (subqueries or separate counts)
+        total_tracks = db.query(Track).join(TrackArtist).filter(TrackArtist.artist_id == artist.id).count()
+        done_tracks = db.query(Track).join(TrackArtist).filter(TrackArtist.artist_id == artist.id, Track.processing_status == "DONE").count()
+        pending_tracks = db.query(Track).join(TrackArtist).filter(TrackArtist.artist_id == artist.id, Track.processing_status == "PENDING").count()
 
-        done_tracks = db.query(Track).join(TrackArtist).filter(
-            TrackArtist.artist_id == artist.id,
-            Track.processing_status == "DONE"
-        ).count()
-
-        pending_tracks = db.query(Track).join(TrackArtist).filter(
-            TrackArtist.artist_id == artist.id,
-            Track.processing_status == "PENDING"
-        ).count()
-
-        # Get collaboration info
         isolation_info = check_artist_isolation(str(artist.id), db)
 
         results.append({
@@ -277,6 +276,7 @@ def get_all_artists_admin(
             "done_tracks": done_tracks,
             "pending_tracks": pending_tracks,
             "is_isolated": isolation_info["is_isolated"],
+            "is_verified": artist.is_verified, # Return verification status
             "shared_with_artists": isolation_info["shared_with_artists"],
             "shared_tracks": isolation_info["shared_tracks"],
             "shared_albums": isolation_info["shared_albums"]
@@ -1416,7 +1416,6 @@ def bulk_reject_artists(
         "message": f"Rejected {success_count} artists. {errors} failed."
     }
 
-
 @router.post("/artists/{artist_id}/approve")
 def approve_artist(
     artist_id: str,
@@ -1458,7 +1457,6 @@ def approve_artist(
 class BulkApproveRequest(BaseModel):
     ids: List[str]
 
-
 @router.post("/artists/bulk-approve")
 def bulk_approve_artists(
     req: BulkApproveRequest,
@@ -1466,7 +1464,9 @@ def bulk_approve_artists(
     db: Session = Depends(get_db)
 ):
     """
-    Approve multiple artists at once by queuing all their pending tracks for analysis.
+    Approve multiple artists:
+    1. Marks them as verified (so they leave the isolation list).
+    2. Queues any pending tracks for analysis.
     """
     success_count = 0
     total_tracks_queued = 0
@@ -1479,13 +1479,15 @@ def bulk_approve_artists(
 
     for artist in artists:
         try:
-            # Get all pending tracks for this artist
+            # 1. Mark as verified (permanent approval)
+            artist.is_verified = True
+            
+            # 2. Queue pending tracks
             pending_tracks = db.query(Track).join(TrackArtist).filter(
                 TrackArtist.artist_id == artist.id,
                 Track.processing_status == "PENDING"
             ).all()
 
-            # Queue all tracks for analysis
             for track in pending_tracks:
                 analyze_track_task.delay(str(track.id))
 
@@ -1500,7 +1502,7 @@ def bulk_approve_artists(
 
     return {
         "status": "success",
-        "message": f"Approved {success_count} artists, queued {total_tracks_queued} tracks for analysis. {errors} failed."
+        "message": f"Verified {success_count} artists. Queued {total_tracks_queued} tracks."
     }
 
 

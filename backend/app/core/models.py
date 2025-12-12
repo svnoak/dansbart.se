@@ -82,6 +82,7 @@ class Artist(Base):
     spotify_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     track_links: Mapped[List["TrackArtist"]] = relationship("TrackArtist", back_populates="artist")
     albums: Mapped[List["Album"]] = relationship("Album", back_populates="artist")
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
 
 class Album(Base):
     __tablename__ = "albums"
