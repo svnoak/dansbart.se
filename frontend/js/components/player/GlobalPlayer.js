@@ -48,7 +48,8 @@ export default {
             isNudgeVisible: false,
             ytPlayStartTime: null, // Track when YouTube playback started
             potentialBrokenState: null, // For broken link toast
-            isLoadingVideo: false // Track when we're loading a new video
+            isLoadingVideo: false, // Track when we're loading a new video
+            breakpoints: [] // Array of timestamps for practice breakpoints
         }
     },
 
@@ -128,6 +129,7 @@ export default {
                 if (newId) {
                     this.fetchVersions(newId);
                     this.ytPlayStartTime = null; // Reset on track change
+                    this.loadBreakpoints(newId); // Load breakpoints for new track
                 }
             }
         },
@@ -397,7 +399,87 @@ export default {
         handlePlayerError(e) {
             console.warn("YouTube Error:", e);
             if (this.playerStore && this.playerStore.handlePlayerError) this.playerStore.handlePlayerError(e.data);
-            else this.nextTrack(); 
+            else this.nextTrack();
+        },
+        // Breakpoint management
+        loadBreakpoints(trackId) {
+            if (!trackId) {
+                this.breakpoints = [];
+                return;
+            }
+            const key = `breakpoints_${trackId}`;
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                try {
+                    this.breakpoints = JSON.parse(stored);
+                } catch (e) {
+                    this.breakpoints = [];
+                }
+            } else {
+                this.breakpoints = [];
+            }
+        },
+        saveBreakpoints() {
+            if (!this.currentTrack?.id) return;
+            const key = `breakpoints_${this.currentTrack.id}`;
+            localStorage.setItem(key, JSON.stringify(this.breakpoints));
+        },
+        addBreakpoint() {
+            if (this.consentStatus !== 'granted') {
+                window.dispatchEvent(new Event('show-consent-banner'));
+                return;
+            }
+
+            let time = this.visualTime;
+
+            // Snap to nearest bar if in bars mode
+            if (this.structureMode === 'bars' && this.currentTrack?.bars && this.currentTrack.bars.length > 0) {
+                const closestBar = this.currentTrack.bars.reduce((prev, curr) => {
+                    return (Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev);
+                });
+                time = closestBar;
+            }
+
+            // Don't add if already exists at this time
+            if (this.breakpoints.includes(time)) return;
+
+            this.breakpoints.push(time);
+            this.breakpoints.sort((a, b) => a - b);
+            this.saveBreakpoints();
+        },
+        removeBreakpoint(time) {
+            this.breakpoints = this.breakpoints.filter(bp => bp !== time);
+            this.saveBreakpoints();
+        },
+        clearAllBreakpoints() {
+            this.breakpoints = [];
+            this.saveBreakpoints();
+        },
+        updateBreakpoint(oldTime, newTime) {
+            const index = this.breakpoints.indexOf(oldTime);
+            if (index === -1) return;
+
+            if (oldTime === newTime) return;
+
+            // Check if newTime already exists...
+            const newTimeIndex = this.breakpoints.indexOf(newTime);
+            if (newTimeIndex !== -1 && newTimeIndex !== index) {
+                // MERGE: Remove the one we moved, keep the one that was already there
+                this.breakpoints.splice(index, 1);
+            } else {
+                // MOVE: Just update the value
+                this.breakpoints[index] = newTime;
+            }
+
+            this.breakpoints.sort((a, b) => a - b);
+            this.saveBreakpoints();
+        },
+        jumpToBreakpoint(time) {
+            if (this.consentStatus !== 'granted') {
+                window.dispatchEvent(new Event('show-consent-banner'));
+                return;
+            }
+            this.handleSeek(time);
         }
     },
 
@@ -423,6 +505,7 @@ export default {
             :has-spot="hasSpot"
             :fmt-current="fmtCurrent"
             :fmt-duration="fmtDuration"
+            :breakpoints="breakpoints"
             @close="isExpanded = false"
             @set-source="setSource"
             @cycle-version="cycleVersion"
@@ -437,6 +520,11 @@ export default {
             @nudge-visibility="isNudgeVisible = $event"
             @dismiss-broken="potentialBrokenState = null"
             @open-structure-editor="showStructureEditor = true"
+            @add-breakpoint="addBreakpoint"
+            @clear-breakpoints="clearAllBreakpoints"
+            @jump-to-breakpoint="jumpToBreakpoint"
+            @update-breakpoint="updateBreakpoint"
+            @remove-breakpoint="removeBreakpoint"
         ></player-mobile-view>
 
         <player-docked-view
@@ -455,6 +543,7 @@ export default {
             :has-spot="hasSpot"
             :fmt-current="fmtCurrent"
             :fmt-duration="fmtDuration"
+            :breakpoints="breakpoints"
             @expand="isExpanded = true"
             @set-source="setSource"
             @cycle-version="cycleVersion"
@@ -467,6 +556,11 @@ export default {
             @toggle-repeat="handleToggleRepeat"
             @jump="handleJump"
             @open-structure-editor="showStructureEditor = true"
+            @add-breakpoint="addBreakpoint"
+            @clear-breakpoints="clearAllBreakpoints"
+            @jump-to-breakpoint="jumpToBreakpoint"
+            @update-breakpoint="updateBreakpoint"
+            @remove-breakpoint="removeBreakpoint"
         ></player-docked-view>
 
         <div ref="videoContainer"
@@ -495,7 +589,8 @@ export default {
              }"
         >
             <div v-if="!isExpanded || windowWidth >= 768"
-                 @mousedown="startDrag" @touchstart.prevent="startDrag"
+                 @mousedown="startDrag"
+                 @touchstart.prevent="startDrag"
                  @click="!isExpanded && windowWidth < 768 && (isExpanded = true)"
                  class="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/80 to-transparent z-20 cursor-move flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                 <div class="w-8 h-1 bg-white/30 rounded-full"></div>

@@ -6,19 +6,21 @@ import ProgressBar from './ProgressBar.js';
 
 export default {
     props: [
-        'currentTrack', 'availableVersions', 'currentVersionIndex', 
-        'isPlaying', 'isShuffled', 'repeatMode', 
-        'structureMode', 'activeSource', 
-        'visualTime', 'duration', 
+        'currentTrack', 'availableVersions', 'currentVersionIndex',
+        'isPlaying', 'isShuffled', 'repeatMode',
+        'structureMode', 'activeSource',
+        'visualTime', 'duration',
         'isExpanded', 'trackArtist', 'trackAlbum',
         'brokenState', 'hasYt', 'hasSpot',
-        'fmtCurrent', 'fmtDuration'
+        'fmtCurrent', 'fmtDuration', 'breakpoints'
     ],
     emits: [
-        'close', 'set-source', 'cycle-version', 
-        'toggle-structure-mode', 'seek', 
+        'close', 'set-source', 'cycle-version',
+        'toggle-structure-mode', 'seek',
         'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump',
-        'dismiss-broken', 'open-structure-editor'
+        'dismiss-broken', 'open-structure-editor',
+        'add-breakpoint', 'clear-breakpoints',
+        'jump-to-breakpoint', 'update-breakpoint', 'remove-breakpoint'
     ],
     components: { SmartNudge, SectionVoting, BrokenLinkToast, PlayerControls, ProgressBar },
     
@@ -88,7 +90,16 @@ export default {
                 </div>
                 <div v-else></div>
                 -->
-                <div></div>
+                <div class="flex items-center gap-2">
+                    <!-- Breakpoint controls - only show in bars mode -->
+                    <button v-if="structureMode === 'bars'" @click="$emit('add-breakpoint')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-red-50 text-red-700 border-red-200 hover:bg-red-100" title="Lägg till breakpoint">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        BP
+                    </button>
+                    <button v-if="structureMode === 'bars' && breakpoints && breakpoints.length > 0" @click="$emit('clear-breakpoints')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100" title="Rensa alla breakpoints">
+                        Rensa
+                    </button>
+                </div>
                 <div class="flex items-center gap-2">
                     <button v-if="structureMode !== 'none'" @click="$emit('open-structure-editor')" class="flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide transition-all h-8 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" title="Redigera struktur">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -108,7 +119,7 @@ export default {
                         Klicka i Spotify-spelaren för hela låten
                     </span>
                 </div>
-                <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
+                <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" :breakpoints="breakpoints" @seek="$emit('seek', $event)" @jump-to-breakpoint="$emit('jump-to-breakpoint', $event)" @update-breakpoint="$emit('update-breakpoint', $event)" @remove-breakpoint="$emit('remove-breakpoint', $event)"></progress-bar>
             </div>
             
             <div class="flex justify-between text-xs text-gray-400 font-mono mb-4 shrink-0 px-1">

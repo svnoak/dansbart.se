@@ -1,10 +1,20 @@
 export default {
-    props: ['currentTime', 'duration', 'disabled', 'structureMode', 'track'], 
-    emits: ['seek'],
-    
+    props: ['currentTime', 'duration', 'disabled', 'structureMode', 'track', 'breakpoints'],
+    emits: ['seek', 'jump-to-breakpoint', 'update-breakpoint', 'remove-breakpoint'],
+
     data() {
         return {
-            isDragging: false
+            isDragging: false,
+            
+            // Breakpoint State
+            draggingBreakpointOriginal: null, // The timestamp we started dragging
+            dragCurrentTime: null,            // The timestamp where the ghost is NOW
+            dragStartX: 0,
+            hasMoved: false,
+            
+            mouseDownTime: 0,
+            clickCount: 0,
+            clickTimer: null
         }
     },
 
@@ -14,20 +24,13 @@ export default {
             return (this.currentTime / this.duration) * 100;
         },
         
-        // 1. CALCULATE CURRENT BAR NUMBER
         currentBarIndex() {
             if (!this.track?.bars || this.track.bars.length === 0) return 0;
-            
-            // Find the last bar timestamp that is less than current time
-            // e.g. if bars are [0, 2, 4] and time is 3, we are in bar 2 (index 1 + 1)
             const barIndex = this.track.bars.findIndex(b => b > this.currentTime);
-            
-            // If -1, we are past the last bar. If 0, we are before first bar (intro).
             if (barIndex === -1) return this.track.bars.length; 
-            return barIndex; // Returns 1-based count if we consider index 0 as Bar 1 start
+            return barIndex;
         },
 
-        // Pre-calculate visual blocks for Sections (A-part, B-part)
         sectionBlocks() {
             if (this.structureMode !== 'sections' || !this.track?.sections) return [];
             
@@ -50,22 +53,36 @@ export default {
             return blocks;
         },
 
-        // Pre-calculate tick marks for Bars
         barTicks() {
             if (this.structureMode !== 'bars' || !this.track?.bars) return [];
             return this.track.bars.map(time => ({
                 left: (time / this.duration) * 100
             })).filter(b => b.left <= 100);
+        },
+
+        // Return ALL markers; hide active one in template
+        breakpointMarkers() {
+            if (this.structureMode !== 'bars' || !this.breakpoints || !Array.isArray(this.breakpoints)) return [];
+            
+            return this.breakpoints.map(time => ({
+                time,
+                left: (time / this.duration) * 100
+            })).filter(b => b.left <= 100);
+        },
+
+        draggingMarkerStyle() {
+            if (this.dragCurrentTime === null) return null;
+            return {
+                left: (this.dragCurrentTime / this.duration) * 100 + '%'
+            };
         }
     },
 
     methods: {
         onInput(e) {
-            this.isDragging = true; // Show tooltip
-            
+            this.isDragging = true; 
             let val = parseFloat(e.target.value);
 
-            // Magnetic Snap Logic (Sections Only)
             if (this.structureMode === 'sections' && this.track?.sections) {
                 const closestSection = this.track.sections.reduce((prev, curr) => {
                     return (Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev);
@@ -78,8 +95,114 @@ export default {
         },
         
         onChange(e) {
-            this.isDragging = false; // Hide tooltip
-            this.onInput(e); 
+            this.isDragging = false; 
+            this.onInput(e);
+        },
+
+        getClientX(evt) {
+            if (evt.clientX != null) return evt.clientX;
+            if (evt.touches && evt.touches.length > 0) return evt.touches[0].clientX;
+            return null;
+        },
+
+        startDragBreakpoint(e, breakpoint) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            const clientX = this.getClientX(e);
+            if (clientX === null) return;
+
+            this.mouseDownTime = Date.now();
+            this.draggingBreakpointOriginal = breakpoint.time;
+            this.dragCurrentTime = breakpoint.time;
+            this.dragStartX = clientX;
+            this.hasMoved = false;
+
+            window.addEventListener('pointermove', this.onDragBreakpoint);
+            window.addEventListener('pointerup', this.stopDragBreakpoint);
+        },
+
+        onDragBreakpoint(e) {
+            if (this.draggingBreakpointOriginal === null) return;
+
+            const clientX = this.getClientX(e);
+            if (clientX === null) return;
+
+            const distanceMoved = Math.abs(clientX - this.dragStartX);
+            if (distanceMoved > 5) {
+                this.hasMoved = true;
+            }
+
+            if (!this.hasMoved) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const rect = this.$el.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const percent = Math.max(0, Math.min(100, (x / rect.width) * 100));
+            let newTime = (percent / 100) * this.duration;
+
+            // Snap to Bars
+            if (this.structureMode === 'bars' && this.track?.bars && this.track.bars.length > 0) {
+                const closestBar = this.track.bars.reduce((prev, curr) => {
+                    return (Math.abs(curr - newTime) < Math.abs(prev - newTime) ? curr : prev);
+                });
+                newTime = closestBar;
+            }
+
+            this.dragCurrentTime = newTime;
+        },
+
+        stopDragBreakpoint(e) {
+            const wasDragging = this.hasMoved;
+            const clickDuration = Date.now() - this.mouseDownTime;
+            const originalTime = this.draggingBreakpointOriginal;
+            const finalTime = this.dragCurrentTime;
+
+            window.removeEventListener('pointermove', this.onDragBreakpoint);
+            window.removeEventListener('pointerup', this.stopDragBreakpoint);
+
+            // DRAG END
+            if (wasDragging) {
+                if (originalTime != null && finalTime != null && originalTime !== finalTime) {
+                    this.$emit('update-breakpoint', originalTime, finalTime);
+                }
+
+                // Clear state AFTER DOM update
+                this.$nextTick(() => {
+                    this.draggingBreakpointOriginal = null;
+                    this.dragCurrentTime = null;
+                    this.hasMoved = false;
+                });
+
+                return;
+            }
+
+            // CLICK HANDLING
+            if (clickDuration < 200 && originalTime !== null) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                this.clickCount++;
+                if (this.clickCount === 1) {
+                    this.clickTimer = setTimeout(() => {
+                        this.$emit('jump-to-breakpoint', originalTime);
+                        this.clickCount = 0;
+                    }, 250);
+                } else if (this.clickCount === 2) {
+                    clearTimeout(this.clickTimer);
+                    this.$emit('remove-breakpoint', originalTime);
+                    this.clickCount = 0;
+                }
+            }
+
+            // If it was a click, reset immediately
+            this.draggingBreakpointOriginal = null;
+            this.dragCurrentTime = null;
+            this.hasMoved = false;
         }
     },
 
@@ -101,6 +224,23 @@ export default {
                  class="absolute top-0 h-full border-l border-gray-400/60 pointer-events-none"
                  :style="{ left: tick.left + '%' }">
             </div>
+
+            <div v-for="bp in breakpointMarkers" :key="bp.time"
+                 @pointerdown="startDragBreakpoint($event, bp)"
+                 class="absolute top-0 h-full w-3 -ml-1.5 cursor-grab active:cursor-grabbing z-30 group/bp transition-opacity duration-75"
+                 :class="bp.time === draggingBreakpointOriginal ? 'opacity-0 pointer-events-none' : 'opacity-100'"
+                 :style="{ left: bp.left + '%' }">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 h-full w-0.5 bg-red-500"></div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-md transition-transform group-hover/bp:scale-125"></div>
+            </div>
+
+            <div v-if="draggingMarkerStyle" 
+                 class="absolute top-0 h-full w-3 -ml-1.5 cursor-grabbing z-40 pointer-events-none"
+                 :style="draggingMarkerStyle">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 h-full w-0.5 bg-red-600"></div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-red-600 rounded-full border-2 border-white shadow-lg"></div>
+            </div>
+
         </template>
 
         <div class="absolute top-0 left-0 h-full bg-indigo-600/40 border-r-2 border-indigo-700 pointer-events-none" 
@@ -129,7 +269,6 @@ export default {
                  class="h-3 w-3 bg-indigo-600 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity">
             </div>
             
-            <!-- Always show bar number bubble when in bars mode -->
             <div v-if="structureMode === 'bars'"
                  class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-indigo-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
                 {{ currentBarIndex }}

@@ -5,18 +5,19 @@ import ProgressBar from './ProgressBar.js';
 
 export default {
     props: [
-        'currentTrack', 'availableVersions', 'currentVersionIndex', 
-        'isPlaying', 'isShuffled', 'repeatMode', 
-        'structureMode', 'activeSource', 
-        'visualTime', 'duration', 
+        'currentTrack', 'availableVersions', 'currentVersionIndex',
+        'isPlaying', 'isShuffled', 'repeatMode',
+        'structureMode', 'activeSource',
+        'visualTime', 'duration',
         'isExpanded', 'hasYt', 'hasSpot', // passed from parent
-        'fmtCurrent', 'fmtDuration'
+        'fmtCurrent', 'fmtDuration', 'breakpoints'
     ],
     emits: [
-        'expand', 'set-source', 'cycle-version', 
-        'toggle-structure-mode', 'seek', 
+        'expand', 'set-source', 'cycle-version',
+        'toggle-structure-mode', 'seek',
         'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump',
-        'open-structure-editor'
+        'open-structure-editor', 'add-breakpoint', 'clear-breakpoints',
+        'jump-to-breakpoint', 'update-breakpoint', 'remove-breakpoint'
     ],
     components: { SmartNudge, SectionVoting, PlayerControls, ProgressBar },
 
@@ -55,7 +56,7 @@ export default {
                     Klicka i Spotify-spelaren för hela låten
                 </span>
             </div>
-            <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" @seek="$emit('seek', $event)"></progress-bar>
+            <progress-bar :current-time="visualTime" :duration="duration" :disabled="false" :structure-mode="structureMode" :track="currentTrack" :breakpoints="breakpoints" @seek="$emit('seek', $event)" @jump-to-breakpoint="$emit('jump-to-breakpoint', $event)" @update-breakpoint="$emit('update-breakpoint', $event)" @remove-breakpoint="$emit('remove-breakpoint', $event)"></progress-bar>
         </div>
         
         <div class="md:hidden w-full h-1 bg-gray-200 relative">
@@ -89,6 +90,14 @@ export default {
                             <span class="text-[9px] font-mono font-bold text-gray-700 px-1">v{{ currentVersionIndex + 1 }}</span>
                             <button @click.stop="$emit('cycle-version', 1)" class="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-indigo-600 font-bold text-[10px]">›</button>
                         </div>
+                        <!-- Breakpoint controls - only show in bars mode -->
+                        <button v-if="structureMode === 'bars'" @click.stop="$emit('add-breakpoint')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-red-50 text-red-700 border-red-200 hover:bg-red-100 flex items-center gap-1" title="Lägg till breakpoint">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            BP
+                        </button>
+                        <button v-if="structureMode === 'bars' && breakpoints && breakpoints.length > 0" @click.stop="$emit('clear-breakpoints')" class="text-[9px] font-bold uppercase border px-1.5 rounded bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100" title="Rensa alla breakpoints">
+                            Rensa
+                        </button>
                     </div>
                 </div>
              </div>
