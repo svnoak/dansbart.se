@@ -120,11 +120,10 @@ export default {
             try {
                 await rejectApi.addToBlocklist({
                     spotify_id: log.spotify_artist_id,
-                    entity_name: log.artist_name,
-                    entity_type: 'artist',
+                    artist_name: log.artist_name,
                     reason: 'Blocked via Spider History'
                 });
-                
+
                 showToast(`🚫 Blocked ${log.artist_name}`, 'success');
             } catch (e) {
                 console.error(e);

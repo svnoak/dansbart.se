@@ -35,5 +35,54 @@ export function useTracksApi(token) {
         return res.json();
     };
 
-    return { loadTracks, reanalyze, reclassify, unflag };
+    const loadArtists = async (params) => {
+        const queryString = new URLSearchParams(params).toString();
+        const res = await fetchWithAuth(`/api/admin/artists?${queryString}`);
+        return res.json();
+    };
+
+    const loadAlbums = async (params) => {
+        const queryString = new URLSearchParams(params).toString();
+        const res = await fetchWithAuth(`/api/admin/albums?${queryString}`);
+        return res.json();
+    };
+
+    const rejectArtist = async (artistId, reason) => {
+        const res = await fetchWithAuth(`/api/admin/artists/${artistId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        return res.json();
+    };
+
+    const rejectAlbum = async (albumId, reason) => {
+        const res = await fetchWithAuth(`/api/admin/albums/${albumId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        return res.json();
+    };
+
+    const rejectTrack = async (trackId, reason) => {
+        const res = await fetchWithAuth(`/api/admin/tracks/${trackId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        return res.json();
+    };
+
+    return {
+        loadTracks,
+        loadArtists,
+        loadAlbums,
+        reanalyze,
+        reclassify,
+        unflag,
+        rejectArtist,
+        rejectAlbum,
+        rejectTrack
+    };
 }

@@ -30,6 +30,9 @@ export default {
         const offset = ref(0);
         const totalItems = ref(0);
 
+        // Search State
+        const searchQuery = ref('');
+
         // Bulk Selection State
         const selectedIds = ref(new Set());
 
@@ -52,7 +55,7 @@ export default {
             try {
                 let data;
                 if (rejectView.value === 'artists') {
-                    data = await rejectApi.loadPendingArtists(limit.value, offset.value);
+                    data = await rejectApi.loadPendingArtists(limit.value, offset.value, searchQuery.value);
                     pendingArtists.value = data.items;
                 } else if (rejectView.value === 'albums') {
                     data = await rejectApi.loadPendingAlbums(limit.value, offset.value);
@@ -148,9 +151,16 @@ export default {
             // (Just ensure you call loadData() instead of loadPendingArtists() at the end)
         };
 
+        // Search functionality
+        const handleSearch = () => {
+            offset.value = 0; // Reset to first page when searching
+            loadData();
+        };
+
         // Watch for view changes
         watch(rejectView, () => {
             offset.value = 0;
+            searchQuery.value = ''; // Clear search when switching views
             loadData();
         });
 
@@ -158,10 +168,12 @@ export default {
         loadData();
 
         return {
-            rejectView, pendingArtists, pendingAlbums, blocklist, 
+            rejectView, pendingArtists, pendingAlbums, blocklist,
             rejectMessage, rejectError, rejectionModal, loading,
             // Pagination
             limit, offset, totalItems, nextPage, prevPage,
+            // Search
+            searchQuery, handleSearch,
             // Bulk
             selectedIds, toggleSelection, toggleSelectAll, isAllSelected, rejectSelected,
             // Actions
@@ -195,18 +207,47 @@ export default {
             </div>
 
             <div v-if="rejectView === 'artists'">
-                
+
+                <!-- Search Bar -->
+                <div class="mb-4 flex gap-2">
+                    <input
+                        v-model="searchQuery"
+                        @keyup.enter="handleSearch"
+                        type="text"
+                        placeholder="Search artists by name..."
+                        class="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                    >
+                    <button
+                        @click="handleSearch"
+                        class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-sm font-medium"
+                    >
+                        🔍 Search
+                    </button>
+                    <button
+                        v-if="searchQuery"
+                        @click="searchQuery = ''; handleSearch()"
+                        class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded text-sm"
+                    >
+                        ✕ Clear
+                    </button>
+                </div>
+
                 <div v-if="pendingArtists.length > 0" class="flex items-center gap-3 p-2 bg-gray-900/50 border-b border-gray-700 mb-2">
                     <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" class="w-4 h-4 rounded border-gray-600 bg-gray-700">
                     <span class="text-xs text-gray-500 uppercase font-bold">Select All (Page)</span>
                 </div>
 
-                <div class="space-y-2">
+                <div v-if="pendingArtists.length === 0 && !loading" class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">🎉</div>
+                    <p>{{ searchQuery ? 'No artists found matching your search' : 'No pending artists to review' }}</p>
+                </div>
+
+                <div v-else class="space-y-2">
                     <div v-for="artist in pendingArtists" :key="artist.id"
                          class="p-3 bg-gray-900 rounded border border-gray-700 flex items-center gap-3 hover:border-gray-500 transition-colors">
-                        
-                        <input type="checkbox" 
-                               :checked="selectedIds.has(artist.id)" 
+
+                        <input type="checkbox"
+                               :checked="selectedIds.has(artist.id)"
                                @change="toggleSelection(artist.id)"
                                class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-indigo-500">
 
@@ -223,6 +264,55 @@ export default {
                         <button @click="rejectArtist(artist.id)" class="text-gray-500 hover:text-red-400 p-2" title="Reject individual">
                             🗑️
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Albums View -->
+            <div v-if="rejectView === 'albums'">
+                <div v-if="pendingAlbums.length === 0 && !loading" class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">🎉</div>
+                    <p>No pending albums to review</p>
+                </div>
+
+                <div v-else class="space-y-2">
+                    <div v-for="album in pendingAlbums" :key="album.id"
+                         class="p-3 bg-gray-900 rounded border border-gray-700 flex items-center gap-3">
+
+                        <img v-if="album.cover_image_url" :src="album.cover_image_url" class="w-10 h-10 rounded object-cover">
+                        <div v-else class="w-10 h-10 bg-gray-800 rounded flex items-center justify-center text-lg">💿</div>
+
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm truncate">{{ album.title }}</div>
+                            <div class="text-xs text-gray-400">
+                                {{ album.artist_name }} • {{ album.pending_tracks }} pending
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blocklist View -->
+            <div v-if="rejectView === 'blocklist'">
+                <div v-if="blocklist.length === 0 && !loading" class="text-center py-8 text-gray-500">
+                    <p>No items in blocklist</p>
+                </div>
+
+                <div v-else class="space-y-2">
+                    <div v-for="item in blocklist" :key="item.id"
+                         class="p-3 bg-gray-900 rounded border border-gray-700">
+
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">{{ item.entity_name }}</div>
+                                <div class="text-xs text-gray-400 mt-1">
+                                    Type: {{ item.entity_type }} • Reason: {{ item.reason }}
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    Blocked: {{ new Date(item.rejected_at).toLocaleDateString() }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

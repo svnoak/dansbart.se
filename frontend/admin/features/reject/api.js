@@ -1,6 +1,6 @@
 /**
  * Reject API
- * API methods for managing rejections and blocklist
+ * API methods for managing rejections, blocklist, and artist review
  */
 
 import { useAdminApi } from '../../shared/composables/useAdminApi.js';
@@ -8,31 +8,47 @@ import { useAdminApi } from '../../shared/composables/useAdminApi.js';
 export function useRejectApi(token) {
     const { fetchWithAuth } = useAdminApi(token);
 
-    const loadPendingArtists = async (limit = 100) => {
-        const res = await fetchWithAuth(`/api/admin/pending/artists?limit=${limit}`);
+    const loadPendingArtists = async (limit = 50, offset = 0, search = '') => {
+        const params = new URLSearchParams({
+            limit: String(limit),
+            offset: String(offset)
+        });
+
+        if (search) {
+            params.append('search', search);
+        }
+
+        const res = await fetchWithAuth(`/api/admin/pending/artists?${params.toString()}`);
         return res.json();
     };
 
-    const loadPendingAlbums = async (limit = 100) => {
-        const res = await fetchWithAuth(`/api/admin/pending/albums?limit=${limit}`);
+    const loadPendingAlbums = async (limit = 50, offset = 0) => {
+        const params = new URLSearchParams({
+            limit: String(limit),
+            offset: String(offset)
+        });
+        const res = await fetchWithAuth(`/api/admin/pending/albums?${params.toString()}`);
         return res.json();
     };
 
-    const loadBlocklist = async (filter = '', limit = 100) => {
-        const params = new URLSearchParams({ limit: String(limit) });
+    const loadBlocklist = async (filter = '', limit = 50, offset = 0) => {
+        const params = new URLSearchParams({ 
+            limit: String(limit), 
+            offset: String(offset) 
+        });
+        
         if (filter) {
             params.append('entity_type', filter);
         }
-        const res = await fetchWithAuth(`/api/admin/rejections?${params}`);
+        
+        const res = await fetchWithAuth(`/api/admin/rejections?${params.toString()}`);
         return res.json();
     };
 
     const rejectArtistPreview = async (artistId) => {
         const res = await fetchWithAuth(`/api/admin/artists/${artistId}/reject`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 reason: 'Not relevant',
                 dry_run: true
@@ -44,9 +60,7 @@ export function useRejectApi(token) {
     const confirmRejectArtist = async (artistId, reason) => {
         const res = await fetchWithAuth(`/api/admin/artists/${artistId}/reject`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reason })
         });
         return res.json();
@@ -55,9 +69,7 @@ export function useRejectApi(token) {
     const rejectAlbum = async (albumId, reason) => {
         const res = await fetchWithAuth(`/api/admin/albums/${albumId}/reject`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reason })
         });
         return res.json();
@@ -70,6 +82,24 @@ export function useRejectApi(token) {
         return res.json();
     };
 
+    const addToBlocklist = async (data) => {
+        const res = await fetchWithAuth('/api/admin/blocklist/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    };
+    
+    const bulkRejectArtists = async (ids, reason = 'Bulk rejection') => {
+        const res = await fetchWithAuth('/api/admin/artists/bulk-reject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids, reason })
+        });
+        return res.json();
+    };
+
     return {
         loadPendingArtists,
         loadPendingAlbums,
@@ -77,6 +107,8 @@ export function useRejectApi(token) {
         rejectArtistPreview,
         confirmRejectArtist,
         rejectAlbum,
-        unblock
+        unblock,
+        addToBlocklist,
+        bulkRejectArtists
     };
 }

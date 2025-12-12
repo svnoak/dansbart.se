@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.services.pipeline import PipelineService
 from pydantic import BaseModel
+from typing import List
 from app.services.feedback import FeedbackService
 from app.core.models import Track, TrackArtist, ArtistCrawlLog, Artist, Album, RejectionLog, PendingArtistApproval, PlaybackLink
 
@@ -43,6 +44,8 @@ def get_all_tracks_admin(
     search: str = Query(None),
     status: str = Query(None, description="Filter by status: PENDING, PROCESSING, DONE, FAILED"),
     flagged: bool = Query(None, description="Filter by flagged status"),
+    artist_id: str = Query(None, description="Filter by artist ID"),
+    album_id: str = Query(None, description="Filter by album ID"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     _: bool = Depends(verify_admin),
@@ -52,10 +55,20 @@ def get_all_tracks_admin(
     Admin endpoint to list all tracks with their status.
     """
 
-    query = db.query(Track).options(
-        joinedload(Track.dance_styles),
-        joinedload(Track.artist_links).joinedload(TrackArtist.artist)
-    )
+    # Build base query with necessary joins
+    if artist_id:
+        # When filtering by artist, we need to join TrackArtist for the filter
+        query = db.query(Track).join(Track.artist_links).options(
+            joinedload(Track.dance_styles),
+            joinedload(Track.artist_links).joinedload(TrackArtist.artist),
+            joinedload(Track.album)
+        ).filter(TrackArtist.artist_id == artist_id)
+    else:
+        query = db.query(Track).options(
+            joinedload(Track.dance_styles),
+            joinedload(Track.artist_links).joinedload(TrackArtist.artist),
+            joinedload(Track.album)
+        )
 
     if search:
         query = query.filter(Track.title.ilike(f"%{search}%"))
@@ -65,6 +78,9 @@ def get_all_tracks_admin(
 
     if flagged is not None:
         query = query.filter(Track.is_flagged == flagged)
+
+    if album_id:
+        query = query.filter(Track.album_id == album_id)
     
     total = query.count()
     tracks = query.order_by(Track.created_at.desc()).offset(offset).limit(limit).all()
@@ -73,11 +89,17 @@ def get_all_tracks_admin(
     for track in tracks:
         primary_style = next((s for s in track.dance_styles if s.is_primary), None)
         artist_names = [link.artist.name for link in track.artist_links] if track.artist_links else []
-        
+
+        # Get album info
+        album_title = track.album.title if track.album else None
+        album_id = str(track.album_id) if track.album_id else None
+
         results.append({
             "id": str(track.id),
             "title": track.title,
             "artists": artist_names,
+            "album_title": album_title,
+            "album_id": album_id,
             "status": track.processing_status,
             "dance_style": primary_style.dance_style if primary_style else None,
             "confidence": primary_style.confidence if primary_style else None,
@@ -87,6 +109,146 @@ def get_all_tracks_admin(
             "flag_reason": track.flag_reason
         })
     
+    return {
+        "items": results,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+
+@router.get("/artists")
+def get_all_artists_admin(
+    search: str = Query(None, description="Search artists by name"),
+    isolated: str = Query(None, description="Filter by isolation status: 'true' or 'false'"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Admin endpoint to list all artists with track counts and collaboration info.
+    """
+    query = db.query(Artist)
+
+    if search:
+        query = query.filter(Artist.name.ilike(f"%{search}%"))
+
+    # Get all artists first to filter by isolation status
+    all_artists = query.order_by(Artist.name).all()
+
+    # Filter by isolation if requested
+    if isolated is not None:
+        filter_isolated = isolated.lower() == 'true'
+        filtered_artists = []
+        for artist in all_artists:
+            isolation_info = check_artist_isolation(str(artist.id), db)
+            if isolation_info["is_isolated"] == filter_isolated:
+                filtered_artists.append(artist)
+        all_artists = filtered_artists
+
+    total = len(all_artists)
+    artists = all_artists[offset:offset + limit]
+
+    results = []
+    for artist in artists:
+        # Count tracks by status
+        total_tracks = db.query(Track).join(TrackArtist).filter(
+            TrackArtist.artist_id == artist.id
+        ).count()
+
+        done_tracks = db.query(Track).join(TrackArtist).filter(
+            TrackArtist.artist_id == artist.id,
+            Track.processing_status == "DONE"
+        ).count()
+
+        pending_tracks = db.query(Track).join(TrackArtist).filter(
+            TrackArtist.artist_id == artist.id,
+            Track.processing_status == "PENDING"
+        ).count()
+
+        # Get collaboration info
+        isolation_info = check_artist_isolation(str(artist.id), db)
+
+        results.append({
+            "id": str(artist.id),
+            "name": artist.name,
+            "spotify_id": artist.spotify_id,
+            "image_url": artist.image_url,
+            "total_tracks": total_tracks,
+            "done_tracks": done_tracks,
+            "pending_tracks": pending_tracks,
+            "is_isolated": isolation_info["is_isolated"],
+            "shared_with_artists": isolation_info["shared_with_artists"],
+            "shared_tracks": isolation_info["shared_tracks"],
+            "shared_albums": isolation_info["shared_albums"]
+        })
+
+    return {
+        "items": results,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+
+@router.get("/albums")
+def get_all_albums_admin(
+    search: str = Query(None, description="Search albums by title"),
+    artist_id: str = Query(None, description="Filter by artist_id"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Admin endpoint to list all albums with track counts.
+    """
+    query = db.query(Album).options(joinedload(Album.artist))
+
+    if search:
+        query = query.filter(Album.title.ilike(f"%{search}%"))
+
+    if artist_id:
+        query = query.filter(Album.artist_id == artist_id)
+
+    total = query.count()
+    albums = query.order_by(Album.title).offset(offset).limit(limit).all()
+
+    results = []
+    for album in albums:
+        # Count tracks by status
+        total_tracks = db.query(Track).filter(Track.album_id == album.id).count()
+
+        done_tracks = db.query(Track).filter(
+            Track.album_id == album.id,
+            Track.processing_status == "DONE"
+        ).count()
+
+        pending_tracks = db.query(Track).filter(
+            Track.album_id == album.id,
+            Track.processing_status == "PENDING"
+        ).count()
+
+        # Get all unique artists on this album
+        album_artists = db.query(Artist).join(TrackArtist).join(Track).filter(
+            Track.album_id == album.id
+        ).distinct().all()
+        artist_names = [a.name for a in album_artists]
+
+        results.append({
+            "id": str(album.id),
+            "title": album.title,
+            "artist_name": album.artist.name if album.artist else None,
+            "artist_id": str(album.artist_id) if album.artist_id else None,
+            "all_artists": artist_names,
+            "cover_image_url": album.cover_image_url,
+            "release_date": album.release_date,
+            "total_tracks": total_tracks,
+            "done_tracks": done_tracks,
+            "pending_tracks": pending_tracks
+        })
+
     return {
         "items": results,
         "total": total,
@@ -381,6 +543,7 @@ class RejectRequest(BaseModel):
 
 @router.get("/pending/artists")
 def get_pending_artists(
+    search: str = Query(None, description="Search artists by name"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     _: bool = Depends(verify_admin),
@@ -394,6 +557,9 @@ def get_pending_artists(
     query = db.query(Artist).join(TrackArtist).join(Track).filter(
         Track.processing_status == "PENDING"
     ).distinct()
+
+    if search:
+        query = query.filter(Artist.name.ilike(f"%{search}%"))
 
     total = query.count()
     artists = query.order_by(Artist.name).offset(offset).limit(limit).all()
@@ -412,6 +578,9 @@ def get_pending_artists(
             Track.processing_status == "DONE"
         ).count()
 
+        # Get collaboration info
+        isolation_info = check_artist_isolation(str(artist.id), db)
+
         results.append({
             "id": str(artist.id),
             "name": artist.name,
@@ -419,7 +588,12 @@ def get_pending_artists(
             "image_url": artist.image_url,
             "pending_tracks": pending_count,
             "analyzed_tracks": analyzed_count,
-            "warning": "Analyzed tracks will be kept" if analyzed_count > 0 else None
+            "total_tracks": pending_count + analyzed_count,
+            "warning": "Analyzed tracks will be kept" if analyzed_count > 0 else None,
+            "is_isolated": isolation_info["is_isolated"],
+            "shared_with_artists": isolation_info["shared_with_artists"],
+            "shared_tracks": isolation_info["shared_tracks"],
+            "shared_albums": isolation_info["shared_albums"]
         })
 
     return {
@@ -465,6 +639,12 @@ def get_pending_albums(
             Track.album_id == album.id
         ).count()
 
+        # Count done tracks
+        done_tracks = db.query(Track).filter(
+            Track.album_id == album.id,
+            Track.processing_status == "DONE"
+        ).count()
+
         # Get all unique artists on this album
         album_artists = db.query(Artist).join(TrackArtist).join(Track).filter(
             Track.album_id == album.id
@@ -475,10 +655,12 @@ def get_pending_albums(
             "id": str(album.id),
             "title": album.title,
             "artist_name": album.artist.name if album.artist else None,
+            "artist_id": str(album.artist_id) if album.artist_id else None,
             "all_artists": artist_names,  # All artists featured on this album
             "cover_image_url": album.cover_image_url,
             "release_date": album.release_date,
             "pending_tracks": pending_count,
+            "done_tracks": done_tracks,
             "total_tracks": total_tracks
         })
 
@@ -1132,8 +1314,95 @@ def bulk_reject_artists(
     db.commit()
     
     return {
-        "status": "success", 
+        "status": "success",
         "message": f"Rejected {success_count} artists. {errors} failed."
+    }
+
+
+@router.post("/artists/{artist_id}/approve")
+def approve_artist(
+    artist_id: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Approve an artist by queuing all their pending tracks for analysis.
+    """
+    artist = db.query(Artist).filter(Artist.id == artist_id).first()
+    if not artist:
+        raise HTTPException(status_code=404, detail="Artist not found")
+
+    # Get all pending tracks for this artist
+    pending_tracks = db.query(Track).join(TrackArtist).filter(
+        TrackArtist.artist_id == artist_id,
+        Track.processing_status == "PENDING"
+    ).all()
+
+    if not pending_tracks:
+        return {
+            "status": "success",
+            "message": f"No pending tracks found for {artist.name}",
+            "tracks_queued": 0
+        }
+
+    # Queue all tracks for analysis
+    from app.workers.tasks import analyze_track_task
+    for track in pending_tracks:
+        analyze_track_task.delay(str(track.id))
+
+    return {
+        "status": "success",
+        "message": f"Queued {len(pending_tracks)} tracks for analysis for {artist.name}",
+        "tracks_queued": len(pending_tracks)
+    }
+
+
+class BulkApproveRequest(BaseModel):
+    ids: List[str]
+
+
+@router.post("/artists/bulk-approve")
+def bulk_approve_artists(
+    req: BulkApproveRequest,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Approve multiple artists at once by queuing all their pending tracks for analysis.
+    """
+    success_count = 0
+    total_tracks_queued = 0
+    errors = 0
+
+    # Fetch all artists
+    artists = db.query(Artist).filter(Artist.id.in_(req.ids)).all()
+
+    from app.workers.tasks import analyze_track_task
+
+    for artist in artists:
+        try:
+            # Get all pending tracks for this artist
+            pending_tracks = db.query(Track).join(TrackArtist).filter(
+                TrackArtist.artist_id == artist.id,
+                Track.processing_status == "PENDING"
+            ).all()
+
+            # Queue all tracks for analysis
+            for track in pending_tracks:
+                analyze_track_task.delay(str(track.id))
+
+            total_tracks_queued += len(pending_tracks)
+            success_count += 1
+
+        except Exception as e:
+            print(f"Error approving {artist.id}: {e}")
+            errors += 1
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Approved {success_count} artists, queued {total_tracks_queued} tracks for analysis. {errors} failed."
     }
 
 
