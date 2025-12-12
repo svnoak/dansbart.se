@@ -2,13 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.api.admin import router as admin_router
+import os
 
 app = FastAPI(title="Dansbart API")
 
-# Allow frontend (localhost:3000) to communicate with backend
+origins_str = os.getenv("ALLOWED_ORIGINS", "*")
+origins = [origin.strip() for origin in origins_str.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, change to your domain
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
