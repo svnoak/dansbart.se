@@ -700,6 +700,51 @@ def bulk_approve_artists(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/artists/{artist_id}/collaboration-network")
+def get_collaboration_network(
+    artist_id: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed collaboration network for an artist.
+    Returns all collaborating artists and albums for the rejection workflow.
+    """
+    service = AdminArtistService(db)
+    try:
+        result = service.get_collaboration_network(artist_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RejectNetworkRequest(BaseModel):
+    artist_ids: List[str]
+    album_ids: List[str]
+    reason: str = "Network rejection"
+
+@router.post("/reject-network")
+def reject_network(
+    req: RejectNetworkRequest,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Reject a network of artists and albums together.
+    Used by the enhanced rejection modal.
+    """
+    service = AdminArtistService(db)
+    try:
+        result = service.reject_network(req.artist_ids, req.album_ids, req.reason)
+        db.commit()
+        return result
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class BlockSpotifyRequest(BaseModel):
     spotify_id: str
     artist_name: str

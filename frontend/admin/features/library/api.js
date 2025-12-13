@@ -100,6 +100,20 @@ export function useLibraryApi(token) {
         return res.json();
     };
 
+    const getCollaborationNetwork = async (artistId) => {
+        const res = await fetchWithAuth(`/api/admin/artists/${artistId}/collaboration-network`);
+        return res.json();
+    };
+
+    const rejectNetwork = async (artistIds, albumIds, reason) => {
+        const res = await fetchWithAuth('/api/admin/reject-network', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ artist_ids: artistIds, album_ids: albumIds, reason })
+        });
+        return res.json();
+    };
+
     // ===== ALBUMS =====
     const loadAlbums = async (params) => {
         const queryString = new URLSearchParams(params).toString();
@@ -170,6 +184,8 @@ export function useLibraryApi(token) {
         bulkRejectArtists,
         approveArtist,
         bulkApproveArtists,
+        getCollaborationNetwork,
+        rejectNetwork,
         // Albums
         loadAlbums,
         loadPendingAlbums,

@@ -8,8 +8,12 @@ import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useLibraryApi } from './api.js';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
+import RejectionModal from './RejectionModal.js';
 
 export default {
+    components: {
+        RejectionModal
+    },
     setup() {
         const { adminToken } = useAdminAuth();
         const { showToast } = useToast();
@@ -43,6 +47,12 @@ export default {
 
         // Expanded artist details
         const expandedArtist = ref(null);
+
+        // Rejection modal state
+        const showRejectionModal = ref(false);
+        const rejectionEntity = ref(null);
+        const rejectionEntityType = ref('artist');
+        const collaborationData = ref(null);
 
         // Computed
         const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
@@ -317,21 +327,44 @@ export default {
         };
 
         const rejectArtist = async (artist) => {
-            const confirmMsg = artist.is_isolated
-                ? `Reject and delete artist "${artist.name}"?\n\n✅ Safe to reject: This artist has no collaborations.\n\n• ${artist.total_tracks} tracks will be deleted\n• Artist will be added to blocklist`
-                : `⚠️ WARNING: Reject artist "${artist.name}"?\n\nThis artist has collaborations with:\n${artist.shared_with_artists.join(', ')}\n\n• ${artist.total_tracks} tracks will be deleted\n• ${artist.shared_tracks} are collaborations\n• Shared artists will remain in database\n\nContinue?`;
-
-            if (!confirm(confirmMsg)) {
-                return;
-            }
+            // Open the enhanced rejection modal
+            rejectionEntity.value = artist;
+            rejectionEntityType.value = 'artist';
 
             try {
-                const data = await api.rejectArtist(artist.id, 'Rejected from library');
-                showToast(data.message);
+                // Fetch collaboration network data
+                const networkData = await api.getCollaborationNetwork(artist.id);
+                collaborationData.value = networkData;
+                showRejectionModal.value = true;
+            } catch (e) {
+                showToast('Failed to load collaboration data', 'error');
+                console.error(e);
+            }
+        };
+
+        const closeRejectionModal = () => {
+            showRejectionModal.value = false;
+            rejectionEntity.value = null;
+            collaborationData.value = null;
+        };
+
+        const confirmRejection = async (selections) => {
+            loading.value = true;
+            showRejectionModal.value = false;
+
+            try {
+                const data = await api.rejectNetwork(
+                    selections.artistIds,
+                    selections.albumIds,
+                    selections.reason
+                );
+                showToast(data.message || 'Network rejected successfully', 'success');
                 loadData();
             } catch (e) {
-                showToast('Failed to reject artist', 'error');
+                showToast('Failed to reject network', 'error');
                 console.error(e);
+            } finally {
+                loading.value = false;
             }
         };
 
@@ -456,11 +489,24 @@ export default {
             reanalyze, reclassify, unflagTrack, rejectTrack,
             toggleArtistDetails, approveArtist, rejectArtist, rejectAlbum, removeFromBlocklist,
             statusClass, statusIcon, confidenceClass,
-            pageNumber, totalPages
+            pageNumber, totalPages,
+            // Rejection modal
+            showRejectionModal, rejectionEntity, rejectionEntityType, collaborationData,
+            closeRejectionModal, confirmRejection
         };
     },
     template: /*html*/`
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
+            <!-- Rejection Modal -->
+            <RejectionModal
+                :show="showRejectionModal"
+                :entity-type="rejectionEntityType"
+                :entity="rejectionEntity"
+                :collaboration-data="collaborationData"
+                @close="closeRejectionModal"
+                @confirm="confirmRejection"
+            />
+
             <div class="flex justify-between items-center mb-6">
                 <h2 class="font-bold text-xl">📚 Library Manager</h2>
 

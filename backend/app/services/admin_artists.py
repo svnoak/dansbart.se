@@ -1,12 +1,13 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
-from app.core.models import Artist, Track, TrackArtist, PlaybackLink
+from app.core.models import Artist, Track, TrackArtist, PlaybackLink, Album
 from app.repository.artist import ArtistRepository
 from app.repository.track import TrackRepository
 from app.repository.rejection import RejectionRepository
 from .admin_query_helpers import build_paginated_response
 from .admin_rejections import AdminRejectionService
 from .admin_tracks import AdminTrackService
+import uuid
 
 
 class AdminArtistService:
@@ -415,5 +416,206 @@ class AdminArtistService:
             "status": "success",
             "message": f"Rejected {success_count} artists. {errors} failed.",
             "artists_rejected": success_count,
+            "errors": errors
+        }
+
+    def get_collaboration_network(self, artist_id: str) -> dict:
+        """
+        Get detailed collaboration network for an artist.
+        Returns all collaborating artists and albums for rejection workflow.
+
+        Args:
+            artist_id: Artist ID to analyze
+
+        Returns:
+            Dict with artists and albums in the collaboration network
+        """
+        artist = self.db.query(Artist).filter(Artist.id == artist_id).first()
+        if not artist:
+            raise ValueError("Artist not found")
+
+        # Get all tracks by this artist
+        artist_tracks = self.db.query(Track).join(TrackArtist).filter(
+            TrackArtist.artist_id == artist_id
+        ).all()
+
+        # Find collaborating artists
+        collab_artists = {}
+        collab_albums = {}
+
+        for track in artist_tracks:
+            # Check if track has multiple artists
+            track_artist_links = self.db.query(TrackArtist).filter(
+                TrackArtist.track_id == track.id
+            ).all()
+
+            if len(track_artist_links) > 1:
+                # This is a collaboration
+                for link in track_artist_links:
+                    artist_obj = link.artist
+                    artist_key = str(artist_obj.id)
+
+                    # Add collaborating artist (excluding the main artist)
+                    if artist_key not in collab_artists:
+                        collab_artists[artist_key] = {
+                            "id": artist_key,
+                            "name": artist_obj.name,
+                            "image_url": artist_obj.image_url,
+                            "track_count": 0,
+                            "shared_track_count": 0
+                        }
+
+                    # Count tracks for this artist
+                    total_artist_tracks = self.db.query(Track).join(TrackArtist).filter(
+                        TrackArtist.artist_id == artist_obj.id
+                    ).count()
+
+                    collab_artists[artist_key]["track_count"] = total_artist_tracks
+
+                    # Count shared tracks
+                    if artist_key != artist_id:
+                        collab_artists[artist_key]["shared_track_count"] += 1
+
+            # Add album if it's a collaboration
+            if track.album and len(track_artist_links) > 1:
+                album_key = str(track.album.id)
+                if album_key not in collab_albums:
+                    # Get all artists on this album
+                    album_artists = self.db.query(Artist).join(TrackArtist).join(Track).filter(
+                        Track.album_id == track.album.id
+                    ).distinct().all()
+
+                    collab_albums[album_key] = {
+                        "id": album_key,
+                        "title": track.album.title,
+                        "cover_image_url": track.album.cover_image_url,
+                        "artist_name": track.album.artist.name if track.album.artist else "Unknown",
+                        "artists": [a.name for a in album_artists],
+                        "track_count": self.db.query(Track).filter(
+                            Track.album_id == track.album.id
+                        ).count()
+                    }
+
+        # Remove the main artist from the collaboration list
+        if artist_id in collab_artists:
+            del collab_artists[artist_id]
+
+        return {
+            "artists": list(collab_artists.values()),
+            "albums": list(collab_albums.values())
+        }
+
+    def reject_network(self, artist_ids: list[str], album_ids: list[str], reason: str) -> dict:
+        """
+        Reject a network of artists and albums together.
+        This is used for the enhanced rejection modal workflow.
+
+        Args:
+            artist_ids: List of artist IDs to reject
+            album_ids: List of album IDs to reject
+            reason: Reason for rejection
+
+        Returns:
+            Status dict with operation results
+        """
+        rejected_artists = 0
+        rejected_albums = 0
+        deleted_tracks = 0
+        errors = []
+
+        # Reject artists
+        for artist_id_str in artist_ids:
+            try:
+                artist_uuid = uuid.UUID(artist_id_str)
+                artist = self.db.query(Artist).filter(Artist.id == artist_uuid).first()
+
+                if not artist:
+                    errors.append(f"Artist {artist_id_str} not found")
+                    continue
+
+                # Add to blocklist
+                if artist.spotify_id:
+                    self.rejection_service.add_to_blocklist(
+                        entity_type='artist',
+                        spotify_id=artist.spotify_id,
+                        name=artist.name,
+                        reason=reason
+                    )
+
+                # Get all tracks for this artist
+                artist_tracks = self.db.query(Track).join(TrackArtist).filter(
+                    TrackArtist.artist_id == artist_uuid
+                ).all()
+
+                # Delete all tracks
+                for track in artist_tracks:
+                    # Delete playback links
+                    self.db.query(PlaybackLink).filter(
+                        PlaybackLink.track_id == track.id
+                    ).delete()
+
+                    self.db.delete(track)
+                    deleted_tracks += 1
+
+                # Delete artist
+                self.db.delete(artist)
+                rejected_artists += 1
+
+            except Exception as e:
+                errors.append(f"Error rejecting artist {artist_id_str}: {str(e)}")
+
+        # Reject albums
+        for album_id_str in album_ids:
+            try:
+                album_uuid = uuid.UUID(album_id_str)
+                album = self.db.query(Album).filter(Album.id == album_uuid).first()
+
+                if not album:
+                    errors.append(f"Album {album_id_str} not found")
+                    continue
+
+                # Get all tracks in this album
+                album_tracks = self.db.query(Track).filter(
+                    Track.album_id == album_uuid
+                ).all()
+
+                # Delete all tracks in the album
+                for track in album_tracks:
+                    # Delete playback links
+                    self.db.query(PlaybackLink).filter(
+                        PlaybackLink.track_id == track.id
+                    ).delete()
+
+                    self.db.delete(track)
+                    deleted_tracks += 1
+
+                # Add album to blocklist if it has spotify_id
+                if album.spotify_id:
+                    self.rejection_service.add_to_blocklist(
+                        entity_type='album',
+                        spotify_id=album.spotify_id,
+                        name=album.title,
+                        reason=reason
+                    )
+
+                # Delete album
+                self.db.delete(album)
+                rejected_albums += 1
+
+            except Exception as e:
+                errors.append(f"Error rejecting album {album_id_str}: {str(e)}")
+
+        self.db.flush()
+
+        message = f"Rejected {rejected_artists} artist(s) and {rejected_albums} album(s). Deleted {deleted_tracks} track(s)."
+        if errors:
+            message += f" {len(errors)} error(s) occurred."
+
+        return {
+            "status": "success" if len(errors) == 0 else "partial_success",
+            "message": message,
+            "rejected_artists": rejected_artists,
+            "rejected_albums": rejected_albums,
+            "deleted_tracks": deleted_tracks,
             "errors": errors
         }
