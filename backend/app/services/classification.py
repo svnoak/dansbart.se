@@ -6,12 +6,13 @@ from app.repository import track
 class ClassificationService:
     def __init__(self, db: Session):
         self.db = db
-        self.classifier = StyleClassifier() # Instantiate the "Brain"
+        # Pass db session to classifier for keyword lookups
+        self.classifier = StyleClassifier(db=db)
 
     def _save_predictions(self, track, predictions):
         try:
             # 1. Wipe existing styles for this track
-            # Since we checked 'is_locked' in the loop above, we know 
+            # Since we checked 'is_locked' in the loop above, we know
             # we are only deleting unconfirmed/AI-generated data here.
             self.db.query(TrackDanceStyle).filter(TrackDanceStyle.track_id == track.id).delete()
 
@@ -20,17 +21,18 @@ class ClassificationService:
                 new_style = TrackDanceStyle(
                     track_id=track.id,
                     dance_style=p['style'],
+                    sub_style=p.get('sub_style'),  # Save sub-style from metadata match
                     is_primary=(p['type'] == 'Primary'),
                     confidence=p.get('confidence', 0.0),
                     tempo_category=p.get('dance_tempo'),
                     bpm_multiplier=p.get('multiplier', 1.0),
                     effective_bpm=p.get('effective_bpm', 0),
-                    is_user_confirmed=False # AI predictions are never confirmed by default
+                    is_user_confirmed=False  # AI predictions are never confirmed by default
                 )
                 self.db.add(new_style)
-            
+
             self.db.commit()
-            
+
         except Exception as e:
             self.db.rollback()
             print(f"   ❌ Error saving {track.title}: {e}")

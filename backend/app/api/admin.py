@@ -877,3 +877,142 @@ def add_to_blocklist(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== STYLE KEYWORDS ENDPOINTS =====
+
+class StyleKeywordRequest(BaseModel):
+    keyword: str
+    main_style: str
+    sub_style: str | None = None
+
+class StyleKeywordUpdateRequest(BaseModel):
+    keyword: str | None = None
+    main_style: str | None = None
+    sub_style: str | None = None
+    is_active: bool | None = None
+
+
+@router.get("/style-keywords")
+def get_style_keywords(
+    search: str = Query(None, description="Search keywords"),
+    main_style: str = Query(None, description="Filter by main style"),
+    is_active: bool = Query(None, description="Filter by active status"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get paginated list of style keywords.
+    Used for Admin UI to manage keyword mappings.
+    """
+    from app.services.admin_style_keywords import AdminStyleKeywordService
+    service = AdminStyleKeywordService(db)
+    return service.get_keywords_paginated(search, main_style, is_active, limit, offset)
+
+
+@router.get("/style-keywords/stats")
+def get_style_keyword_stats(
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get keyword statistics (counts by style, unique styles, cache info).
+    """
+    from app.services.admin_style_keywords import AdminStyleKeywordService
+    service = AdminStyleKeywordService(db)
+    return service.get_stats()
+
+
+@router.get("/style-keywords/{keyword_id}")
+def get_style_keyword(
+    keyword_id: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a single style keyword by ID.
+    """
+    from app.services.admin_style_keywords import AdminStyleKeywordService
+    service = AdminStyleKeywordService(db)
+    try:
+        return service.get_keyword_by_id(keyword_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/style-keywords")
+def create_style_keyword(
+    req: StyleKeywordRequest,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new style keyword mapping.
+    Automatically invalidates the classifier cache.
+    """
+    from app.services.admin_style_keywords import AdminStyleKeywordService
+    service = AdminStyleKeywordService(db)
+    try:
+        result = service.create_keyword(req.keyword, req.main_style, req.sub_style)
+        return {"status": "success", "keyword": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.put("/style-keywords/{keyword_id}")
+def update_style_keyword(
+    keyword_id: str,
+    req: StyleKeywordUpdateRequest,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Update an existing style keyword.
+    Automatically invalidates the classifier cache.
+    """
+    from app.services.admin_style_keywords import AdminStyleKeywordService
+    service = AdminStyleKeywordService(db)
+    try:
+        result = service.update_keyword(
+            keyword_id,
+            keyword=req.keyword,
+            main_style=req.main_style,
+            sub_style=req.sub_style,
+            is_active=req.is_active
+        )
+        return {"status": "success", "keyword": result}
+    except ValueError as e:
+        status_code = 400 if "exists" in str(e) else 404
+        raise HTTPException(status_code=status_code, detail=str(e))
+
+
+@router.delete("/style-keywords/{keyword_id}")
+def delete_style_keyword(
+    keyword_id: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a style keyword.
+    Consider using is_active=false instead for audit trail.
+    """
+    from app.services.admin_style_keywords import AdminStyleKeywordService
+    service = AdminStyleKeywordService(db)
+    if service.delete_keyword(keyword_id):
+        return {"status": "success", "message": "Keyword deleted"}
+    raise HTTPException(status_code=404, detail="Keyword not found")
+
+
+@router.post("/style-keywords/invalidate-cache")
+def invalidate_keyword_cache(
+    _: bool = Depends(verify_admin)
+):
+    """
+    Manually invalidate the style keywords cache.
+    Useful if database was modified directly.
+    """
+    from app.services.style_keywords_cache import invalidate_cache
+    invalidate_cache()
+    return {"status": "success", "message": "Cache invalidated"}

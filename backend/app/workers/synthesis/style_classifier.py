@@ -1,49 +1,32 @@
+from typing import Optional, Tuple
+from sqlalchemy.orm import Session
 from app.core.models import Track
 from app.core.music_theory import categorize_tempo
+
 
 class StyleClassifier:
     """
     Multi-Label Classifier for Swedish Folk Music.
-    
+
     Decision Priority:
     1. Metadata (Keywords in Title/Album) -> 98% Confidence
     2. AI Brain (Texture + Rhythmic Fingerprint) -> 85% Confidence
     3. Heuristics (Math on BPM, Swing, Ratios, Structure) -> 40-75% Confidence
+
+    Keywords are now loaded from the database (style_keywords table) via a cache.
+    This allows admin updates without code redeployment.
     """
 
     # ====================================================
-    # 1. KNOWLEDGE BASE
+    # 1. MAIN ENTRY POINT
     # ====================================================
 
-    KEYWORDS = {
-        # Ternary (3/4)
-        "hambo": "Hambo", "hamburska": "Hambo", "hambor": "Hambo",
-        # Polska variants - be specific to capture regional styles
-        "polska": "Polska", "bondpolska": "Polska", "springlek": "Polska", 
-        "pols": "Polska", "finnskogspols": "Polska", "gammelpols": "Polska",
-        "hoppvals": "Polska",  # Often polska-like despite the name
-        "bingsjöpolska": "Polska", "orsakorspolska": "Polska", "rättvikspolska": "Polska",
-        "slängpolska": "Slängpolska", "släng": "Slängpolska",
-        "mazurka": "Mazurka", "masurka": "Mazurka",
-        "vals": "Vals", "waltz": "Vals", "brudvals": "Vals", "walz": "Vals",
-        "menuett": "Menuett",
-        
-        # Binary (2/4, 4/4)
-        "schottis": "Schottis", "reinländer": "Schottis", "reinlender": "Schottis",
-        "rheinlender": "Schottis",
-        "snoa": "Snoa", "gånglåt": "Gånglåt", "marsch": "Gånglåt",
-        "polka": "Polka", "polkett": "Polka",
-        "engelska": "Engelska", "reel": "Engelska", "anglais": "Engelska"
-    }
-
-    # ====================================================
-    # 2. MAIN ENTRY POINT
-    # ====================================================
-
-    def __init__(self):
+    def __init__(self, db: Session = None):
         from app.workers.audio.style_head import ClassificationHead
         # Load the Brain (AI Model)
         self.head = ClassificationHead()
+        # Store db session for keyword lookups
+        self._db = db
 
     def classify(self, track: Track, analysis: dict) -> list:
         """
@@ -75,20 +58,23 @@ class StyleClassifier:
     def _get_primary_style(self, track, analysis):
         """
         Decides the main style.
+        Now returns sub_style when matched via metadata.
         """
 
         import numpy as np
-        
+
         # --- 1. GOD RULE: Metadata ---
         # If the artist calls it a Hambo, it is a Hambo.
         print(f"   🎯 Checking metadata for: {track.title}")
-        meta = self._check_metadata(track)
-        if meta: 
-            print(f"   ✅ Using metadata classification: {meta}")
+        main_style, sub_style = self._check_metadata(track)
+        if main_style:
+            style_desc = main_style + (f"/{sub_style}" if sub_style else "")
+            print(f"   ✅ Using metadata classification: {style_desc}")
             return {
-                "style": meta, 
-                "confidence": 0.98, 
-                "reason": f"Metadata match: '{meta}'",
+                "style": main_style,
+                "sub_style": sub_style,
+                "confidence": 0.98,
+                "reason": f"Metadata match: '{style_desc}'",
                 "source": "metadata"
             }
         
@@ -382,44 +368,62 @@ class StyleClassifier:
         effective_bpm = int(raw_bpm * multiplier)
         return multiplier, effective_bpm
 
-    def _check_metadata(self, track):
+    def _check_metadata(self, track) -> Tuple[Optional[str], Optional[str]]:
         """
         Check metadata for dance style keywords.
         Priority: Track title > Album title > Artist names
-        Keywords are checked longest-first to avoid substring matches
+        Keywords are loaded from database and checked longest-first to avoid substring matches
         (e.g., "slängpolska" should match before "polska")
+
+        Returns:
+            Tuple of (main_style, sub_style) or (None, None) if no match.
         """
-        artist_names = []
-        if track.artist_links:
-            artist_names = [link.artist.name for link in track.artist_links]
-        
-        album_title = track.album.title if track.album else ""
-        track_title = track.title.lower()
-        
-        # Debug: Log what we're searching
-        print(f"   🔍 Metadata check - Title: '{track_title}', Album: '{album_title}'")
-        
-        # Sort keywords by length (longest first) to match specific terms before generic ones
-        sorted_keywords = sorted(self.KEYWORDS.items(), key=lambda x: len(x[0]), reverse=True)
-        
-        # 1. FIRST: Check track title (highest priority)
-        for keyword, style in sorted_keywords:
-            if keyword in track_title:
-                print(f"   ✅ Title match: '{keyword}' -> {style}")
-                return style
-        
-        # 2. SECOND: Check album title (lower priority)
-        album_lower = album_title.lower()
-        for keyword, style in sorted_keywords:
-            if keyword in album_lower:
-                print(f"   ✅ Album match: '{keyword}' -> {style}")
-                return style
-        
-        # 3. THIRD: Check artist names (lowest priority, rarely useful)
-        artist_text = ' '.join(artist_names).lower()
-        for keyword, style in sorted_keywords:
-            if keyword in artist_text:
-                print(f"   ✅ Artist match: '{keyword}' -> {style}")
-                return style
-        
-        return None
+        from app.services.style_keywords_cache import get_sorted_keywords
+
+        # Get database session - use stored session or create new one
+        db = self._db
+        should_close = False
+        if db is None:
+            from app.core.database import SessionLocal
+            db = SessionLocal()
+            should_close = True
+
+        try:
+            artist_names = []
+            if track.artist_links:
+                artist_names = [link.artist.name for link in track.artist_links]
+
+            album_title = track.album.title if track.album else ""
+            track_title = track.title.lower()
+
+            # Debug: Log what we're searching
+            print(f"   🔍 Metadata check - Title: '{track_title}', Album: '{album_title}'")
+
+            # Get keywords from cache (already sorted longest-first)
+            sorted_keywords = get_sorted_keywords(db)
+
+            # 1. FIRST: Check track title (highest priority)
+            for keyword, main_style, sub_style in sorted_keywords:
+                if keyword in track_title:
+                    style_desc = main_style + (f"/{sub_style}" if sub_style else "")
+                    print(f"   ✅ Title match: '{keyword}' -> {style_desc}")
+                    return (main_style, sub_style)
+
+            # 2. SECOND: Check album title (lower priority)
+            album_lower = album_title.lower()
+            for keyword, main_style, sub_style in sorted_keywords:
+                if keyword in album_lower:
+                    print(f"   ✅ Album match: '{keyword}' -> {main_style}")
+                    return (main_style, sub_style)
+
+            # 3. THIRD: Check artist names (lowest priority, rarely useful)
+            artist_text = ' '.join(artist_names).lower()
+            for keyword, main_style, sub_style in sorted_keywords:
+                if keyword in artist_text:
+                    print(f"   ✅ Artist match: '{keyword}' -> {main_style}")
+                    return (main_style, sub_style)
+
+            return (None, None)
+        finally:
+            if should_close:
+                db.close()

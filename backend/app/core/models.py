@@ -112,15 +112,16 @@ class TrackDanceStyle(Base):
     __tablename__ = "track_dance_styles"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
-    
+
     dance_style: Mapped[str] = mapped_column(String, index=True)
+    sub_style: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
-    
+
     tempo_category: Mapped[str | None] = mapped_column(String, nullable=True)
     bpm_multiplier: Mapped[float] = mapped_column(Float, default=1.0)
-    effective_bpm: Mapped[int] = mapped_column(Integer)   
-    
+    effective_bpm: Mapped[int] = mapped_column(Integer)
+
     track = relationship("Track", back_populates="dance_styles")
     confirmation_count: Mapped[int] = mapped_column(Integer, default=0)
     is_user_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -365,3 +366,33 @@ class VisitorSession(Base):
 
     # Total interaction count
     page_views: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class StyleKeyword(Base):
+    """
+    Maps keywords found in track metadata to dance styles.
+    Used by StyleClassifier for metadata-based classification.
+    Supports hierarchical taxonomy: main_style (e.g., "Polska") + sub_style (e.g., "Bingsjö").
+    """
+    __tablename__ = "style_keywords"
+    __table_args__ = (
+        UniqueConstraint('keyword', name='unique_keyword'),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # The keyword to match in metadata (stored lowercase, e.g., "bingsjöpolska")
+    keyword: Mapped[str] = mapped_column(String, nullable=False, index=True)
+
+    # Main dance style (e.g., "Polska", "Hambo", "Vals")
+    main_style: Mapped[str] = mapped_column(String, nullable=False, index=True)
+
+    # Optional sub-style/variant (e.g., "Bingsjö", "Orsa") - NULL means generic style
+    sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Soft-disable without deletion (for testing/audit)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+
+    # Audit timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

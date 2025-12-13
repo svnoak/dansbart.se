@@ -11,11 +11,10 @@ Provides:
 import uuid
 from typing import TypeVar, Generic, Type, Optional, List, Dict, Any, Tuple
 from sqlalchemy.orm import Session, Query, joinedload, selectinload
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 from app.core.database import Base
 
 T = TypeVar('T', bound=Base)
-
 
 class BaseRepository(Generic[T]):
     """
@@ -140,7 +139,7 @@ class BaseRepository(Generic[T]):
             conditions.append(column.ilike(f"%{search_term}%"))
 
         if conditions:
-            query = query.filter(func.or_(*conditions))
+            query = query.filter(or_(*conditions))
 
         return query
 
