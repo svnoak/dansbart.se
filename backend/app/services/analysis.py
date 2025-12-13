@@ -138,7 +138,7 @@ class AnalysisService:
                 self.repo.add_analysis(
                     track_id=track.id,
                     source_type="hybrid_ml_v2",
-                    data=data
+                    raw_data=data
                 )
 
                 ai_version = TrackStructureVersion(

@@ -19,18 +19,21 @@ def __getattr__(name):
             return analyze_track_task
         else:
             return get_analysis_service
-    elif name in ('spider_crawl_related_task', 'spider_crawl_search_task', 'spider_backfill_task'):
+    elif name in ('spider_crawl_related_task', 'spider_crawl_search_task', 'spider_backfill_task', 'cleanup_orphaned_tracks_task'):
         from app.workers.tasks_light import (
             spider_crawl_related_task,
             spider_crawl_search_task,
-            spider_backfill_task
+            spider_backfill_task,
+            cleanup_orphaned_tracks_task
         )
         if name == 'spider_crawl_related_task':
             return spider_crawl_related_task
         elif name == 'spider_crawl_search_task':
             return spider_crawl_search_task
-        else:
+        elif name == 'spider_backfill_task':
             return spider_backfill_task
+        else:
+            return cleanup_orphaned_tracks_task
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 # Re-export for backwards compatibility
@@ -40,4 +43,5 @@ __all__ = [
     'spider_crawl_related_task',
     'spider_crawl_search_task',
     'spider_backfill_task',
+    'cleanup_orphaned_tracks_task',
 ]

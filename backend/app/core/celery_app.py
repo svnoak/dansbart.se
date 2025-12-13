@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
 # Get Redis URL from env or default to localhost (for local testing)
 BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -45,14 +46,25 @@ celery_app.conf.update(
         'app.workers.tasks_light.spider_crawl_related_task': {'queue': 'light'},
         'app.workers.tasks_light.spider_crawl_search_task': {'queue': 'light'},
         'app.workers.tasks_light.spider_backfill_task': {'queue': 'light'},
+        'app.workers.tasks_light.cleanup_orphaned_tracks_task': {'queue': 'light'},
 
         # Backwards compatibility for tasks imported from old tasks.py
         'app.workers.tasks.analyze_track_task': {'queue': 'audio'},
         'app.workers.tasks.spider_crawl_related_task': {'queue': 'light'},
         'app.workers.tasks.spider_crawl_search_task': {'queue': 'light'},
         'app.workers.tasks.spider_backfill_task': {'queue': 'light'},
+        'app.workers.tasks.cleanup_orphaned_tracks_task': {'queue': 'light'},
     },
 
     # Default queue for any unrouted tasks
     task_default_queue='light',
+
+    # Periodic task schedule (Celery Beat)
+    beat_schedule={
+        'cleanup-orphaned-tracks-every-15-minutes': {
+            'task': 'app.workers.tasks_light.cleanup_orphaned_tracks_task',
+            'schedule': crontab(minute='*/15'),  # Every 15 minutes
+            'args': (30,),  # stuck_threshold_minutes = 30
+        },
+    },
 )

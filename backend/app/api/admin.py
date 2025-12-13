@@ -130,11 +130,11 @@ def trigger_reanalysis(
     Forces a complete re-analysis of a track.
     Resets status to PENDING and queues for analysis.
     """
-    
+
     track = db.query(Track).filter(Track.id == track_id).first()
     if not track:
         raise HTTPException(status_code=404, detail="Track not found")
-    
+
     # Reset status to trigger re-analysis
     track.processing_status = "PENDING"
     db.commit()
@@ -146,6 +146,114 @@ def trigger_reanalysis(
     return {
         "status": "success",
         "message": f"Re-analysis queued for: {track.title}"
+    }
+
+
+class BulkReanalyzeRequest(BaseModel):
+    status_filter: str = "PENDING"  # PENDING, PROCESSING, FAILED, or "all"
+    limit: int = 100  # Max tracks to re-analyze at once
+
+
+@router.post("/tracks/bulk-reanalyze")
+def trigger_bulk_reanalysis(
+    req: BulkReanalyzeRequest = BulkReanalyzeRequest(),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Bulk re-analyze tracks based on their status.
+
+    Use cases:
+    - status_filter="PENDING": Re-queue tracks that were never processed
+    - status_filter="PROCESSING": Recover orphaned tracks stuck in processing
+    - status_filter="FAILED": Retry all failed tracks
+    - status_filter="all": Re-analyze all non-DONE tracks
+
+    Args:
+        status_filter: Which status to filter by (PENDING, PROCESSING, FAILED, or "all")
+        limit: Maximum number of tracks to re-analyze (default: 100, max: 500)
+
+    Returns:
+        Statistics about queued tracks
+    """
+    if req.limit > 500:
+        req.limit = 500
+
+    # Build query based on status filter
+    query = db.query(Track)
+    if req.status_filter == "all":
+        query = query.filter(Track.processing_status != "DONE")
+    elif req.status_filter in ["PENDING", "PROCESSING", "FAILED"]:
+        query = query.filter(Track.processing_status == req.status_filter)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status_filter. Use: PENDING, PROCESSING, FAILED, or 'all'"
+        )
+
+    tracks = query.limit(req.limit).all()
+
+    if not tracks:
+        return {
+            "status": "success",
+            "message": f"No tracks found with status: {req.status_filter}",
+            "queued": 0,
+            "tracks": []
+        }
+
+    # Reset all to PENDING and queue
+    from app.workers.tasks import analyze_track_task
+
+    queued_tracks = []
+    for track in tracks:
+        track.processing_status = "PENDING"
+        queued_tracks.append({
+            "id": str(track.id),
+            "title": track.title
+        })
+
+    db.commit()
+
+    # Queue all tracks for analysis
+    for track_info in queued_tracks:
+        analyze_track_task.delay(track_info["id"])
+
+    return {
+        "status": "success",
+        "message": f"Queued {len(queued_tracks)} tracks for re-analysis",
+        "queued": len(queued_tracks),
+        "tracks": queued_tracks
+    }
+
+
+@router.post("/maintenance/cleanup-orphaned")
+def trigger_orphaned_cleanup(
+    stuck_threshold_minutes: int = Query(30, ge=5, le=1440),
+    _: bool = Depends(verify_admin)
+):
+    """
+    Manually trigger cleanup of orphaned tracks.
+
+    Finds tracks stuck in PROCESSING status for longer than the threshold
+    and resets them to PENDING, then re-queues them for analysis.
+
+    This runs automatically every 15 minutes, but you can trigger it manually.
+
+    Args:
+        stuck_threshold_minutes: How long a track can be in PROCESSING before
+                                 it's considered orphaned (default: 30, min: 5, max: 1440)
+
+    Returns:
+        Task ID to check status
+    """
+    from app.workers.tasks import cleanup_orphaned_tracks_task
+
+    task = cleanup_orphaned_tracks_task.delay(stuck_threshold_minutes)
+
+    return {
+        "status": "queued",
+        "message": f"Cleanup task queued (threshold: {stuck_threshold_minutes} minutes)",
+        "task_id": task.id
     }
 
 
