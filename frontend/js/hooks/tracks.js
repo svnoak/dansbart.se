@@ -1,43 +1,18 @@
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
+import { useFilters } from './filter.js';
 
 export function useTracks() {
+    // Import shared state
+    const { filters, targetTempo, tempoEnabled, computedMin, computedMax } = useFilters();
+
     const tracks = ref([]);
     const loading = ref(false);
     const loadingMore = ref(false);
     const hasMore = ref(true);
     const offset = ref(0);
     const limit = 20;
-    
-    // State
-    const filters = ref({
-        style: '',
-        search: '',
-        source: '',      // '', 'spotify', 'youtube'
-        vocals: '',      // '', 'instrumental', 'vocals'
-        styleConfirmed: false,
-        minDuration: null,
-        maxDuration: null
-    }); 
-    const targetTempo = ref(130);
-    const tempoEnabled = ref(false);
-    const tempoWindow = 10;
 
-    // Computed Logic
-    const computedMin = computed(() => targetTempo.value - tempoWindow);
-    const computedMax = computed(() => targetTempo.value + tempoWindow);
-
-    // Visual Helpers
-    const getRangeLeftPct = computed(() => {
-        const min = 60, max = 200;
-        return Math.max(0, ((computedMin.value - min) / (max - min)) * 100);
-    });
-    
-    const getRangeWidthPct = computed(() => {
-        const min = 60, max = 200;
-        return ((tempoWindow * 2) / (max - min)) * 100;
-    });
-
-    // API Logic
+    // --- Fetch Tracks ---
     const fetchTracks = async (append = false) => {
         if (append) {
             if (loadingMore.value || !hasMore.value) return;
@@ -50,7 +25,9 @@ export function useTracks() {
 
         try {
             const params = new URLSearchParams();
-            if (filters.value.style) params.append('style', filters.value.style);
+            
+            if (filters.value.mainStyle) params.append('main_style', filters.value.mainStyle);
+            if (filters.value.subStyle) params.append('sub_style', filters.value.subStyle);
             if (filters.value.search) params.append('search', filters.value.search);
             if (filters.value.source) params.append('source', filters.value.source);
             if (filters.value.vocals) params.append('vocals', filters.value.vocals);
@@ -89,18 +66,13 @@ export function useTracks() {
 
     const loadMore = () => fetchTracks(true);
 
-    // Available dance styles (Swedish folk dance styles)
-    const availableStyles = ref([
-        'Polska', 'Vals', 'Schottis', 'Hambo', 'Mazurka', 
-        'Slängpolska', 'Engelska', 'Polka', 'Gånglåt', 'Brudmarsch'
-    ]);
-
-    // Watchers: Re-fetch when any filter changes
+    // Watchers: Re-fetch when shared filter state changes
     let timeout;
     watch([
         () => targetTempo.value,
         () => tempoEnabled.value,
-        () => filters.value.style,
+        () => filters.value.mainStyle,
+        () => filters.value.subStyle,
         () => filters.value.search,
         () => filters.value.source,
         () => filters.value.vocals,
@@ -114,11 +86,6 @@ export function useTracks() {
 
     return {
         tracks, loading, loadingMore, hasMore,
-        filters, 
-        targetTempo, tempoEnabled,
-        computedMin, computedMax, 
-        getRangeLeftPct, getRangeWidthPct, 
-        availableStyles,
         fetchTracks, loadMore
     };
 }

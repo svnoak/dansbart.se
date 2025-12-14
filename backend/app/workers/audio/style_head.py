@@ -20,7 +20,6 @@ class ClassificationHead:
 
     def _load(self):
         import joblib
-
         if os.path.exists(self.model_path):
             data = joblib.load(self.model_path)
             self.model = data['model']

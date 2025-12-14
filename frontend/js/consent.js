@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 // Consent state management for GDPR compliance
 const CONSENT_KEY = 'cookie_consent_v1';

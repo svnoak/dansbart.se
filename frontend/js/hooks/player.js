@@ -1,6 +1,6 @@
 import { ref, computed, watch, nextTick } from 'vue';
-import { useConsent } from './consent.js';
-import { createPlaybackTracker } from './analytics.js';
+import { useConsent } from '../consent.js';
+import { createPlaybackTracker } from '../analytics.js';
 
 // GLOBAL STATE
 const queue = ref([]);           

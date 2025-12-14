@@ -21,7 +21,8 @@
             </div>
 
             <filter-bar
-                v-model:style="filters.style"
+                v-model:main-style="filters.mainStyle"
+                v-model:sub-style="filters.subStyle"
                 v-model:search="filters.search"
                 v-model:source="filters.source"
                 v-model:vocals="filters.vocals"
@@ -32,7 +33,8 @@
                 v-model:tempo-enabled="tempoEnabled"
                 :computed-min="computedMin"
                 :computed-max="computedMax"
-                :styles="availableStyles"
+                :style-tree="styleTree"
+                @filter-style="handleFilterStyle"
             ></filter-bar>
 
         <div class="max-w-4xl mx-auto">
@@ -49,6 +51,7 @@
                     @play="handlePlay"
                     @stop="togglePlay"
                     @refresh="fetchTracks"
+                    @filter-style="handleFilterStyle"
                 ></track-card>
 
                 <!-- Infinite Scroll Trigger -->

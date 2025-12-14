@@ -6,7 +6,7 @@
 -r requirements.common.txt       
 
 # Web Scraping
-bs4                       # HTML parsing (for FolkWiki scraping)
+bs4                       # HTML parsing (for FolkWiki scraping)             
 
 # Music Theory (lightweight, for metadata parsing)
 music21                   # Music theory and notation analysis

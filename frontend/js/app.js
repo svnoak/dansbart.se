@@ -1,6 +1,7 @@
 import { createApp, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useTracks } from './tracks.js';
-import { usePlayer } from './player.js';
+import { useTracks } from './hooks/tracks.js';
+import { useFilters } from './hooks/filter.js';
+import { usePlayer } from './hooks/player.js';
 import { trackSession } from './analytics.js';
 
 // Import styles
@@ -24,6 +25,7 @@ const app = createApp({
         'cookie-consent': CookieConsent
     },
     setup() {
+        const filterLogic = useFilters();
         const trackLogic = useTracks();
         const playerLogic = usePlayer();
         const { isPlaying, togglePlay } = playerLogic;
@@ -86,6 +88,13 @@ const app = createApp({
         return { 
             ...trackLogic, 
             ...playerLogic,
+            filters: filterLogic.filters,
+            styleTree: filterLogic.styleTree,
+            targetTempo: filterLogic.targetTempo,
+            tempoEnabled: filterLogic.tempoEnabled,
+            computedMin: filterLogic.computedMin,
+            computedMax: filterLogic.computedMax,
+            handleFilterStyle: filterLogic.handleFilterStyle,
             handlePlay,
             togglePlay,
             scrollTrigger

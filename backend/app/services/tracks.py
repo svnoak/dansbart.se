@@ -1,14 +1,49 @@
-from sqlalchemy.orm import Session, joinedload
-from app.core.models import Track, TrackDanceStyle, TrackArtist, DanceMovementFeedback, PlaybackLink
+from sqlalchemy.orm import Session
+from app.core.models import StyleKeyword, DanceMovementFeedback, TrackDanceStyle
 from app.core.music_theory import get_tempo_description
+from app.repository.track import TrackRepository
 
 class TrackService:
     def __init__(self, db: Session):
         self.db = db
+        self.repo = TrackRepository(db)
+
+    def get_style_hierarchy(self):
+        """
+        Returns a tree of styles based on ACTUAL DATA in TrackDanceStyle.
+        Now looks at both 'dance_style' (Main) and 'sub_style' (Sub).
+        """
+        # 1. Fetch all unique pairs of (Main, Sub) that exist in your DB
+        used_combinations = (
+            self.db.query(TrackDanceStyle.dance_style, TrackDanceStyle.sub_style)
+            .filter(TrackDanceStyle.confidence > 0.5) # Filter out noise
+            .distinct()
+            .all()
+        )
+        
+        # used_combinations will look like:
+        # [('Schottis', 'Reinländer'), ('Polska', 'Pols'), ('Schottis', None)]
+
+        hierarchy = {}
+        
+        for main, sub in used_combinations:
+            if not main: continue
+            
+            # Initialize the list for this Main Category if new
+            if main not in hierarchy:
+                hierarchy[main] = set()
+            
+            # If a sub_style exists for this row, add it to the list
+            if sub:
+                hierarchy[main].add(sub)
+
+        # 2. Sort lists for the frontend
+        return {k: sorted(list(v)) for k, v in hierarchy.items()}
 
     def get_playable_tracks(
         self, 
-        style: str = None, 
+        main_style: str = None,
+        sub_style: str = None,
         style_confirmed: bool = False,
         min_bpm: int = None, 
         max_bpm: int = None, 
@@ -23,112 +58,76 @@ class TrackService:
         offset: int = 0
     ):
         """
-        Fetches tracks with pagination.
-        - Filters out broken links.
-        - Includes 'Unclassified' tracks if no specific style filter is applied.
-        - Returns dict with 'items', 'total', 'limit', 'offset'
+        Fetches tracks for the feed.
         """
         
-        # 1. BASE QUERY
-        query = self.db.query(Track).outerjoin(Track.dance_styles)
-        query = query.filter(Track.processing_status.in_(['DONE', 'FAILED']))
-
-        # Filter out flagged tracks from main feed
-        query = query.filter(Track.is_flagged == False)
-
-        # 2. APPLY FILTERS
-        if style:
-            query = query.filter(TrackDanceStyle.dance_style.ilike(style))
-            if style_confirmed:
-                # When filtering by specific style, only show tracks where THAT style has high confidence
-                query = query.filter(TrackDanceStyle.confidence >= 0.98)
-        else:
-            if style_confirmed:
-                # When no style filter, only show tracks that have at least ONE style with high confidence
-                # This requires the joined TrackDanceStyle to have confidence >= 0.98
-                query = query.filter(TrackDanceStyle.confidence >= 0.98)
+        # 1. PREPARE STYLE LOGIC
+        exact_style = None
+        allowed_styles = None
         
-        if min_bpm:
-            query = query.filter(TrackDanceStyle.effective_bpm >= min_bpm)
+        if sub_style:
+            # User wants a specific dance. Ignore Main Category logic.
+            exact_style = sub_style
         
-        if max_bpm:
-            query = query.filter(TrackDanceStyle.effective_bpm <= max_bpm)
-        
-        # Search by title
-        if search:
-            query = query.filter(Track.title.ilike(f"%{search}%"))
-        
-        # Filter by source (spotify/youtube)
-        if source:
-            query = query.join(Track.playback_links).filter(
-                PlaybackLink.platform == source,
-                PlaybackLink.is_working == True
-            )
-        
-        # Filter by vocals
-        if vocals == 'instrumental':
-            query = query.filter(Track.has_vocals == False)
-        elif vocals == 'vocals':
-            query = query.filter(Track.has_vocals == True)
-        
-        # Filter by duration
-        if min_duration:
-            query = query.filter(Track.duration_ms >= min_duration * 1000)
-        if max_duration:
-            query = query.filter(Track.duration_ms <= max_duration * 1000)
-
-        query = query.options(
-            joinedload(Track.playback_links),
-            joinedload(Track.dance_styles),
-            joinedload(Track.structure_versions),
+        elif main_style:
+            # User wants a whole family.
+            keywords = self.db.query(StyleKeyword).filter(
+                StyleKeyword.main_style.ilike(main_style)
+            ).all()
             
-            # Eager load the Album
-            joinedload(Track.album),
-            
-            # Eager load the Bridge Table -> Then the Artist
-            # This ensures track.artist_links[0].artist is already loaded
-            joinedload(Track.artist_links).joinedload(TrackArtist.artist)
-        ).distinct()
+            style_set = {main_style} 
+            for kw in keywords:
+                if kw.sub_style: style_set.add(kw.sub_style)
+                # Also add the keyword if it acts as a style name (e.g. "Rørospols")
+                style_set.add(kw.keyword)
+                
+            allowed_styles = list(style_set)
 
-        # Get total count before pagination (will be adjusted if energy filtering)
-        # Note: Energy filtering happens post-query since it depends on style+bpm calculation
-        base_total = query.count()
+        # 2. CALL REPO
+        tracks, base_total = self.repo.search_playable_tracks(
+            exact_style=exact_style,
+            allowed_styles=allowed_styles,
+            style_confirmed=style_confirmed,
+            min_bpm=min_bpm,
+            max_bpm=max_bpm,
+            min_duration_ms=min_duration * 1000 if min_duration else None,
+            max_duration_ms=max_duration * 1000 if max_duration else None,
+            vocals=vocals,
+            search=search,
+            source=source,
+            limit=limit,
+            offset=offset
+        )
 
-        # Apply pagination
-        tracks = query.offset(offset).limit(limit).all()
-
-        # Gather all unique styles currently visible in this list
+        # 3. POST-PROCESSING (Tags, Formatting, Tempo Logic)
+        
+        # Gather styles for Tag Lookup
         visible_styles = set()
         for t in tracks:
             primary = next((s for s in t.dance_styles if s.is_primary), None)
-            if primary:
-                visible_styles.add(primary.dance_style)
+            if primary: visible_styles.add(primary.dance_style)
         
-        # Fetch the top tags for these styles in ONE query
         style_feel_map = self._get_global_feels(list(visible_styles))
-
+        
         results = []
-        filtered_count = 0  # Track how many we filter out
+        filtered_count = 0
 
         for track in tracks:
-            # --- A. FILTER BROKEN LINKS ---
+            # Filter Broken Links
             valid_links = [l for l in track.playback_links if l.is_working]
+            if not valid_links: continue
 
-            if not valid_links:
-                continue
-
-            # --- B. DETERMINE STYLE ---
+            # Determine Display Style
             primary_style = next((s for s in track.dance_styles if s.is_primary), None)
+            matched_style = primary_style
 
-            if style:
-                matched_style = next(
-                    (s for s in track.dance_styles if s.dance_style.lower() == style.lower()),
-                    primary_style
-                )
-            else:
-                matched_style = primary_style
+            # Highlight specific style if filtered
+            target_filter = sub_style or main_style
+            if target_filter:
+                specific = next((s for s in track.dance_styles if target_filter.lower() in s.dance_style.lower()), None)
+                if specific: matched_style = specific
 
-            # --- C. HANDLE UNCLASSIFIED ---
+            # Map fields
             if matched_style:
                 final_style = matched_style.dance_style
                 final_bpm = matched_style.effective_bpm
@@ -144,60 +143,31 @@ class TrackService:
                 final_confirmations = 0
                 final_verifications = False
 
-            # --- D. FORMAT OUTPUT ---            
-            sorted_links = sorted(
-                track.artist_links,
-                key=lambda x: 0 if x.role == 'primary' else 1
-            )
-
-            # 1. Get generic tags for this style (e.g. Hambo -> Sviktande)
-            global_tags = style_feel_map.get(final_style, [])
-
-            # 2. Refine based on THIS track's physics (Bounciness)
-            final_tags = self._refine_tags_with_physics(global_tags, track.bounciness)
+            # Format Output
+            sorted_artists = sorted(track.artist_links, key=lambda x: 0 if x.role == 'primary' else 1)
+            artist_list = [{"id": l.artist.id, "name": l.artist.name, "role": l.role, "image_url": l.artist.image_url} for l in sorted_artists]
             
-            artist_list = []
-            for link in sorted_links:
-                artist_list.append({
-                    "id": link.artist.id,
-                    "name": link.artist.name,
-                    "role": link.role,
-                    "image_url": link.artist.image_url
-                })
-
-            # 2. Build Album Object
-            album_data = None
-            if track.album:
-                album_data = {
-                    "id": track.album.id,
-                    "title": track.album.title,
-                    "cover_image_url": track.album.cover_image_url,
-                    "release_date": track.album.release_date
-                }
-
-            # 3. Build Secondary Styles (non-primary styles suggested by users)
+            # Tags & Physics
+            tags = self._refine_tags_with_physics(style_feel_map.get(final_style, []), track.bounciness)
+            
+            # Secondary Styles
             secondary_styles = [
                 {
-                    "style": s.dance_style,
-                    "effective_bpm": s.effective_bpm,
-                    "tempo_category": s.tempo_category,
+                    "style": s.dance_style, 
+                    "effective_bpm": s.effective_bpm, 
                     "tempo": get_tempo_description(s.dance_style, s.effective_bpm),
                     "confirmations": s.confirmation_count
                 }
-                for s in track.dance_styles 
-                if not s.is_primary
+                for s in track.dance_styles if not s.is_primary
             ]
 
-            # 4. Get tempo description for primary style
+            # Tempo Description
             tempo_data = get_tempo_description(final_style, final_bpm) if final_bpm else None
 
-            # --- E. TEMPO LEVEL FILTER (post-query since it depends on style+bpm) ---
+            # Post-Query Tempo Filtering (Level 1-5)
             if tempo_data and (min_tempo or max_tempo):
-                track_tempo_level = tempo_data["level"]
-                if min_tempo and track_tempo_level < min_tempo:
-                    filtered_count += 1
-                    continue
-                if max_tempo and track_tempo_level > max_tempo:
+                lvl = tempo_data["level"]
+                if (min_tempo and lvl < min_tempo) or (max_tempo and lvl > max_tempo):
                     filtered_count += 1
                     continue
 
@@ -205,38 +175,28 @@ class TrackService:
                 "id": str(track.id),
                 "title": track.title,
                 "artists": artist_list,
-                "album": album_data,
+                "album": {"title": track.album.title, "cover_image_url": track.album.cover_image_url} if track.album else None,
                 "dance_style": final_style,
-                "is_user_confirmed": final_verifications,
-                "feel_tags": final_tags,
+                "feel_tags": tags,
                 "effective_bpm": final_bpm,
-                "tempo_category": final_category,
                 "tempo": tempo_data,
+                "tempo_category": final_category,
                 "style_confidence": final_confidence,
+                "is_user_confirmed": final_verifications,
                 "style_confirmations": final_confirmations,
                 "secondary_styles": secondary_styles,
                 "swing_ratio": track.swing_ratio,
-                "articulation": track.articulation,
                 "bounciness": track.bounciness,
                 "has_vocals": track.has_vocals,
                 "duration": track.duration_ms,
-                "bars": track.bars,
-                "sections": track.sections,
-                "section_labels": track.section_labels,
                 "version_count": len(track.structure_versions),
-                "playback_links": [
-                    {"id": str(l.id), "platform": l.platform, "deep_link": l.deep_link}
-                    for l in valid_links
-                ]
+                "playback_links": [{"id": str(l.id), "platform": l.platform, "deep_link": l.deep_link} for l in valid_links]
             })
 
-        # Adjust total for tempo filtering (approximate - not exact for pagination)
         total_count = base_total - filtered_count if (min_tempo or max_tempo) else base_total
 
-        results.sort(key=lambda x: not x["is_user_confirmed"])
-        results.sort(key=lambda x: not x["style_confirmations"])
-        results.sort(key=lambda x: not x["style_confidence"])
-        
+        # Sort: User Confirmed > High Confidence
+        results.sort(key=lambda x: (not x["is_user_confirmed"], not x["style_confirmations"], -x["style_confidence"]))
 
         return {
             "items": results,
@@ -245,43 +205,34 @@ class TrackService:
             "offset": offset,
             "has_more": offset + len(results) < total_count
         }
-    
-    def _get_global_feels(self, styles: list[str]) -> dict:
-        """
-        Returns: {'Hambo': ['Sviktande', 'Majestätisk'], 'Schottis': [...]}
-        """
-        if not styles: return {}
 
+    # ==================== HELPER METHODS ====================
+
+    def _get_global_feels(self, styles: list[str]) -> dict:
+        """Returns: {'Hambo': ['Sviktande', 'Majestätisk'], ...}"""
+        if not styles: return {}
         rows = (
             self.db.query(DanceMovementFeedback)
             .filter(DanceMovementFeedback.dance_style.in_(styles))
             .order_by(DanceMovementFeedback.score.desc())
             .all()
         )
-
         mapped = {}
         for r in rows:
-            if r.dance_style not in mapped:
-                mapped[r.dance_style] = []
-            # Cap at top 3 tags per style
-            if len(mapped[r.dance_style]) < 3:
-                mapped[r.dance_style].append(r.movement_tag)
+            if r.dance_style not in mapped: mapped[r.dance_style] = []
+            if len(mapped[r.dance_style]) < 3: mapped[r.dance_style].append(r.movement_tag)
         return mapped
 
     def _refine_tags_with_physics(self, global_tags: list[str], bounciness: float | None) -> list[str]:
-        """
-        Adjusts tags based on audio analysis.
-        """
+        """Adjusts tags based on audio analysis (e.g. bounciness)."""
         if not bounciness: return global_tags
+        tags = global_tags[:]
         
-        tags = global_tags[:] # Copy
-
-        # If it's physically flat, remove bouncy words
+        # Physics Logic: Flat vs Bouncy
         if bounciness < 0.35 and "Studsigt" in tags:
             tags.remove("Studsigt")
             if "Flytande" not in tags: tags.append("Flytande")
 
-        # If it's physically bouncy, ensure bouncy words are first
         if bounciness > 0.65:
             if "Sviktande" in tags:
                 tags.remove("Sviktande")

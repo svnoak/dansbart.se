@@ -2,7 +2,7 @@ import YouTubeEngine from './YouTubeEngine.js';
 import SpotifyEngine from './SpotifyEngine.js';
 import StructureEditor from '../modals/StructureEditor.js';
 import BrokenLinkToast from '../toasts/BrokenLinkToast.js';
-import { usePlayer } from '../../player.js';
+import { usePlayer } from '../../hooks/player.js';
 import { useConsent } from '../../consent.js';
 
 import PlayerMobileView from './PlayerMobileView.js';
@@ -52,7 +52,6 @@ export default {
             breakpoints: [] // Array of timestamps for practice breakpoints
         }
     },
-
     mounted() {
         // Only initialize YouTube if consent is already granted
         if (this.consentStatus === 'granted') {

@@ -5,7 +5,7 @@ import FlagIcon from "../icons/FlagIcon.js";
 
 export default {
     props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
-    emits: ['play', 'stop', 'refresh'],
+    emits: ['play', 'stop', 'refresh', 'filter-style'], // Added 'filter-style'
     components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
     
     data() {
@@ -23,19 +23,38 @@ export default {
             <div class="flex flex-wrap items-center gap-2 mb-2">
                 
                 <template v-if="track.dance_style && track.dance_style !== 'Unknown' && track.dance_style !== 'Unclassified'">
-                    <span v-if="track.style_confidence >= 1.0" class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200">
+                    
+                    <button 
+                        v-if="track.style_confidence >= 1.0" 
+                        @click.stop="$emit('filter-style', track.dance_style)"
+                        class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                        title="Filtrera på denna stil"
+                    >
                         {{ track.dance_style }}
-                    </span>
-                    <span v-else-if="track.style_confidence > 0.75" class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200">
+                    </button>
+
+                    <button 
+                        v-else-if="track.style_confidence > 0.75" 
+                        @click.stop="$emit('filter-style', track.dance_style)"
+                        class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                        title="Filtrera på denna stil (AI-gissning)"
+                    >
                         {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-blue-400" />
-                    </span>
-                    <span v-else class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200">
+                    </button>
+
+                    <button 
+                        v-else 
+                        @click.stop="$emit('filter-style', track.dance_style)"
+                        class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
+                        title="Filtrera på denna stil (Osäker AI-gissning)"
+                    >
                         {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-amber-400" />
-                    </span>
+                    </button>
+
                 </template>
 
                 <template v-else>
-                    <span class="px-2 py-1 bg-gray-100 text-gray-600 border border-gray-300 text-xs font-bold rounded-full flex items-center gap-1 cursor-help">
+                    <span class="px-2 py-1 bg-gray-100 text-gray-600 border border-gray-300 text-xs font-bold rounded-full flex items-center gap-1 cursor-help" title="Kunde inte avgöra stil">
                         ❓ Okänd stil
                     </span>
                 </template>
@@ -43,10 +62,7 @@ export default {
                 <span class="text-gray-500 text-xs flex items-center font-medium border border-gray-100 bg-gray-50 px-2 py-1 rounded-full whitespace-nowrap">
                     {{ tempoLabel }}
                 </span>
-                <!--
-                <span v-if="track.has_vocals" class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full flex items-center gap-1">🎤 Vocals</span>
-                <span v-else class="px-2 py-1 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full flex items-center gap-1">🎻 Instr.</span>
-                -->
+                
                 <span v-if="formattedDuration" class="px-2 py-1 text-gray-400 text-xs font-mono flex items-center border border-gray-100 bg-gray-50 rounded-full">{{ formattedDuration }}</span>
             </div>
             

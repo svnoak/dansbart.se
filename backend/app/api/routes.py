@@ -17,9 +17,19 @@ from app.services.analytics import AnalyticsService
 
 router = APIRouter()
 
+@router.get("/styles/tree")
+def get_style_tree(db: Session = Depends(get_db)):
+    """
+    Returns the hierarchy of available styles for the filter dropdowns.
+    Example: { "Polska": ["Slängpolska", "Hambo"], "Schottis": [] }
+    """
+    service = TrackService(db)
+    return service.get_style_hierarchy()
+
 @router.get("/tracks")
 def get_tracks(
-    style: str = Query(None),
+    main_style: str = Query(None, description="Broad category (e.g., Polska)"),
+    sub_style: str = Query(None, description="Specific dance (e.g., Slängpolska)"),
     style_confirmed: bool = Query(False, description="Filter by tracks with verified dancestyle only"),
     min_bpm: int = Query(None),
     max_bpm: int = Query(None),
@@ -36,7 +46,8 @@ def get_tracks(
 ):
     service = TrackService(db)
     return service.get_playable_tracks(
-        style=style, 
+        main_style=main_style,
+        sub_style=sub_style,
         style_confirmed=style_confirmed,
         min_bpm=min_bpm, 
         max_bpm=max_bpm,
