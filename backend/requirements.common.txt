@@ -10,6 +10,7 @@ psycopg2-binary           # PostgreSQL adapter
 pydantic-settings         # Environment variable management
 python-dotenv             # .env file loading
 alembic                   # Database migrations
+pgvector
 
 # Task Queue
 celery                    # Distributed task queue

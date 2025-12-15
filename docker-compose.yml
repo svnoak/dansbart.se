@@ -20,7 +20,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:

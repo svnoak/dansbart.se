@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+from pgvector.sqlalchemy import Vector
 
 class Track(Base):
     __tablename__ = "tracks"
@@ -26,6 +27,10 @@ class Track(Base):
     swing_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     articulation: Mapped[float | None] = mapped_column(Float, nullable=True)
     bounciness: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Analysis vector
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(), nullable=True)
+    analysis_version: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
     # Music Genre Classification (separate from dance style)
     # Values: 'traditional_folk', 'modern_folk', 'folk_pop', 'contemporary', 'unknown'

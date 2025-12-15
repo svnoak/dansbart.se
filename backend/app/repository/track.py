@@ -74,7 +74,15 @@ class TrackRepository(BaseRepository[Track]):
         query = self.db.query(Track).outerjoin(Track.dance_styles)
         
         # Base Filtering
-        query = query.filter(Track.processing_status.in_(['DONE', 'FAILED']))
+        query = query.filter(
+            or_(
+                Track.processing_status.in_(['DONE', 'FAILED']),
+                and_(
+                    Track.processing_status.in_(['PENDING', 'PROCESSING']),
+                    TrackDanceStyle.id.isnot(None)
+                )
+            )
+        )
         query = query.filter(Track.is_flagged == False)
 
         # 2. Apply Style Filters (Strict Hierarchy)
