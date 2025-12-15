@@ -2,7 +2,6 @@ import { ref, watch } from 'vue';
 import { useFilters } from './filter.js';
 
 export function useTracks() {
-    // Import shared state
     const { filters, targetTempo, tempoEnabled, computedMin, computedMax } = useFilters();
 
     const tracks = ref([]);
@@ -12,20 +11,22 @@ export function useTracks() {
     const offset = ref(0);
     const limit = 20;
 
-    // --- Fetch Tracks ---
     const fetchTracks = async (append = false) => {
         if (append) {
-            if (loadingMore.value || !hasMore.value) return;
+            if (loadingMore.value) return;
+            if (!hasMore.value) return; 
             loadingMore.value = true;
         } else {
             loading.value = true;
             offset.value = 0;
-            tracks.value = [];
+            // Note: We don't empty tracks here immediately to avoid flickering
+            // We replace them after the fetch returns
         }
 
         try {
             const params = new URLSearchParams();
             
+            // Append filters
             if (filters.value.mainStyle) params.append('main_style', filters.value.mainStyle);
             if (filters.value.subStyle) params.append('sub_style', filters.value.subStyle);
             if (filters.value.search) params.append('search', filters.value.search);
@@ -43,21 +44,38 @@ export function useTracks() {
             params.append('limit', limit);
             params.append('offset', offset.value);
 
+            // Fetch
             const response = await fetch(`/api/tracks?${params.toString()}`);
             if (!response.ok) throw new Error('Network error');
             
             const data = await response.json();
-            
+            const newItems = data.items || [];
+
+            // Update List
             if (append) {
-                tracks.value = [...tracks.value, ...data.items];
+                tracks.value = [...tracks.value, ...newItems];
             } else {
-                tracks.value = data.items;
+                tracks.value = newItems;
             }
-            
-            hasMore.value = data.has_more;
-            offset.value += data.items.length;
+
+            // --- THE FIX IS HERE ---
+            // Calculate hasMore based on total vs loaded count
+            if (typeof data.total !== 'undefined') {
+                // If the server tells us the total, compare current length to total
+                hasMore.value = tracks.value.length < data.total;
+            } else {
+                // Fallback: If we got a full page (20 items), assume there might be more
+                hasMore.value = newItems.length >= limit;
+            }
+
+            console.log(`Loaded ${tracks.value.length} of ${data.total || '?'} tracks. HasMore: ${hasMore.value}`);
+
+            // Update offset for next batch
+            offset.value += newItems.length;
+
         } catch (error) {
             console.error("Error fetching tracks:", error);
+            // On error, we might want to reset loading states
         } finally {
             loading.value = false;
             loadingMore.value = false;
@@ -66,7 +84,7 @@ export function useTracks() {
 
     const loadMore = () => fetchTracks(true);
 
-    // Watchers: Re-fetch when shared filter state changes
+    // Watchers for filters
     let timeout;
     watch([
         () => targetTempo.value,
@@ -80,6 +98,7 @@ export function useTracks() {
         () => filters.value.minDuration,
         () => filters.value.maxDuration
     ], () => {
+        // Debounce filter changes
         clearTimeout(timeout);
         timeout = setTimeout(() => fetchTracks(false), 400);
     });

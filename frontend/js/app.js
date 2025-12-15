@@ -1,13 +1,11 @@
-import { createApp, onMounted, onUnmounted, ref, watch } from 'vue';
+import { createApp, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'; // Added nextTick
 import { useTracks } from './hooks/tracks.js';
 import { useFilters } from './hooks/filter.js';
 import { usePlayer } from './hooks/player.js';
 import { trackSession } from './analytics.js';
 
-// Import styles
 import './main.css';
 
-// Components
 import TrackCard from './components/TrackCard.js';
 import FilterBar from './components/FilterBar.js';
 import GlobalPlayer from './components/player/GlobalPlayer.js';
@@ -36,53 +34,59 @@ const app = createApp({
         const handlePlay = (track, sourcePreference = null) => {
             const list = trackLogic.tracks.value;
             const index = list.findIndex(t => t.id === track.id);
-
             if (index !== -1) {
                 playerLogic.playContext(list, index, sourcePreference);
             }
         };
 
-        const setupScrollObserver = () => {
-            // Disconnect existing observer if any
-            if (observer) {
-                observer.disconnect();
-            }
+        const createObserver = () => {
+            if (observer) observer.disconnect();
 
-            // Create new observer
+            console.log("Creating Observer..."); // Debug
+
             observer = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting && !trackLogic.loading.value && !trackLogic.loadingMore.value) {
-                    trackLogic.loadMore();
+                const entry = entries[0];
+                
+                // Debugging logs to see why it might fail
+                if (entry.isIntersecting) {
+                    console.log("Trigger visible. Loading:", trackLogic.loading.value, "LoadingMore:", trackLogic.loadingMore.value);
+                    
+                    if (!trackLogic.loading.value && !trackLogic.loadingMore.value) {
+                        console.log("Firing loadMore()");
+                        trackLogic.loadMore();
+                    }
                 }
-            }, { rootMargin: '100px' });
+            }, { 
+                root: null, // viewport
+                rootMargin: '200px', 
+                threshold: 0 
+            });
 
-            // Watch for the trigger element
-            const checkTrigger = setInterval(() => {
-                const el = document.querySelector('[data-scroll-trigger]');
-                if (el) {
-                    observer.observe(el);
-                    clearInterval(checkTrigger);
-                }
-            }, 100);
+            if (scrollTrigger.value) {
+                console.log("Attached observer to element"); // Debug
+                observer.observe(scrollTrigger.value);
+            } else {
+                console.warn("Could not find scrollTrigger element to attach to");
+            }
         };
 
         onMounted(() => {
             trackLogic.fetchTracks();
-            setupScrollObserver();
-
-            // Track session for analytics
             trackSession();
-
-            // Re-setup observer whenever tracks are reset (filters change)
-            watch(() => trackLogic.tracks.value.length, (newLen, oldLen) => {
-                // If tracks were reset (length became 0 or jumped back), re-setup observer
-                if (newLen === 0 || (oldLen > newLen && newLen <= 20)) {
-                    setTimeout(setupScrollObserver, 100);
-                }
-            });
         });
 
         onUnmounted(() => {
             if (observer) observer.disconnect();
+        });
+
+        watch(() => trackLogic.loading.value, async (isLoading) => {
+            if (!isLoading) {
+                await nextTick(); // Wait for v-else to render the div
+                createObserver();
+            }
+        });
+        watch(scrollTrigger, (el) => {
+            if (el) createObserver();
         });
 
         return { 
@@ -103,5 +107,4 @@ const app = createApp({
 });
 
 app.config.devtools = true;
-
 app.mount('#app');
