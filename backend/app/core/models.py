@@ -145,6 +145,8 @@ class TrackStyleVote(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+
+    voter_id: Mapped[str] = mapped_column(String, index=True)
     
     suggested_style: Mapped[str | None] = mapped_column(String, nullable=True) 
     tempo_correction: Mapped[str | None] = mapped_column(String, nullable=True) 

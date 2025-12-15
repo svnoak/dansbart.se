@@ -54,8 +54,9 @@ class FeedbackService:
         track_id: str, 
         style: str, 
         tempo_correction: str, 
+        voter_id: str,
         tempo_category: str | None = None, 
-        explicit_main_style: str | None = None
+        explicit_main_style: str | None = None,
     ) -> dict | None:
         track = self.db.query(Track).filter(Track.id == track_id).first()
         if not track: return None
@@ -75,13 +76,24 @@ class FeedbackService:
         vote_string = final_sub if final_sub else final_main
 
         # --- STEP 1: RECORD VOTE ---
-        # We record exactly what was clicked
-        new_vote = TrackStyleVote(
-            track_id=track.id,
-            suggested_style=vote_string, 
-            tempo_correction=tempo_correction
-        )
-        self.db.add(new_vote)
+        # Check if a vote was already cast this session
+        existing_vote = self.db.query(TrackStyleVote).filter(
+            TrackStyleVote.track_id == track.id,
+            TrackStyleVote.voter_id == voter_id
+        ).first()
+
+        if existing_vote:
+            existing_vote.suggested_style = vote_string
+            existing_vote.tempo_correction = tempo_correction
+            existing_vote.created_at = func.now() 
+        else:
+            new_vote = TrackStyleVote(
+                track_id=track.id,
+                voter_id=voter_id,
+                suggested_style=vote_string, 
+                tempo_correction=tempo_correction
+            )
+            self.db.add(new_vote)
         self.db.flush()
 
         # --- STEP 2: CALCULATE METRICS ---

@@ -1,10 +1,11 @@
-import FlagIcon from '../../icons/FlagIcon.js';
-import { trackInteraction, AnalyticsEvents } from '../../analytics.js';
+import FlagIcon from "../../icons/FlagIcon.js";
+import { trackInteraction, AnalyticsEvents } from "../../analytics.js";
 import { useFilters } from "../../hooks/filter.js";
+import { getAuthHeaders } from "../../utils/voter.js";
 
 export default {
-    props: ['track', 'isOpen'],
-    emits: ['close', 'refresh'],
+    props: ["track", "isOpen"],
+    emits: ["close", "refresh"],
     components: { FlagIcon },
     setup() {
         const { styleTree } = useFilters();
@@ -12,179 +13,265 @@ export default {
     },
     data() {
         return {
-            view: 'menu',
+            view: "menu",
             isSubmitting: false,
             error: null,
-            successMessage: '',
-            
+            successMessage: "",
+
             // Correction State
-            correction: { 
-                main: '', 
-                style: '', // Final string sent to API
-                tempo: 'ok' 
+            correction: {
+                main: "",
+                style: "", // Final string sent to API
+                tempo: "ok",
             },
-            
+
             // Data
-            styleTree: {}, 
-            dropdownOpen: false
-        }
+            styleTree: {},
+            dropdownOpen: false,
+        };
     },
     computed: {
-        mainCategories() { return Object.keys(this.styleTree).sort(); },
-        currentSubStyles() { 
-            if (!this.correction.main) return [];
-            return this.styleTree[this.correction.main] || []; 
+        mainCategories() {
+            return Object.keys(this.styleTree).sort();
         },
-        
+        currentSubStyles() {
+            if (!this.correction.main) return [];
+            return this.styleTree[this.correction.main] || [];
+        },
+
         // Helpers
         youtubeLink() {
             if (!this.track || !this.track.playback_links) return null;
-            return this.track.playback_links.find(l => {
-                if (l.platform === 'youtube') return true;
-                const url = l.deep_link || (typeof l === 'string' ? l : '');
-                return url.includes('youtube') || url.includes('youtu.be');
+            return this.track.playback_links.find((l) => {
+                if (l.platform === "youtube") return true;
+                const url = l.deep_link || (typeof l === "string" ? l : "");
+                return url.includes("youtube") || url.includes("youtu.be");
             });
         },
-        hasStyle() { return this.track?.dance_style && this.track.dance_style !== 'Unknown' && this.track.dance_style !== 'Unclassified'; },
-        hasTempo() { return (this.track?.tempo || this.track?.tempo_category) && this.track?.effective_bpm > 0; },
+        hasStyle() {
+            return (
+                this.track?.dance_style &&
+                this.track.dance_style !== "Unknown" &&
+                this.track.dance_style !== "Unclassified"
+            );
+        },
+        hasTempo() {
+            return (
+                (this.track?.tempo || this.track?.tempo_category) &&
+                this.track?.effective_bpm > 0
+            );
+        },
         tempoLabel() {
-            if (!this.track) return '';
+            if (!this.track) return "";
             if (this.track.tempo?.label) return this.track.tempo.label;
-            const labels = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
-            return labels[this.track.tempo_category] || '';
-        }
+            const labels = {
+                Slow: "Långsamt",
+                SlowMed: "Lugnt",
+                Medium: "Lagom",
+                Fast: "Snabbt",
+                Turbo: "Väldigt snabbt",
+            };
+            return labels[this.track.tempo_category] || "";
+        },
     },
     watch: {
         isOpen(newVal) {
             if (newVal) {
-                this.view = 'menu';
+                this.view = "menu";
                 this.error = null;
                 this.isSubmitting = false;
                 this.resetCorrection();
-                trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_OPENED, this.track?.id);
+                trackInteraction(
+                    AnalyticsEvents.MODAL_FLAG_TRACK_OPENED,
+                    this.track?.id
+                );
             }
-        }
+        },
     },
     methods: {
         async loadStyles() {
             try {
-                const res = await fetch('/api/styles/tree');
+                const res = await fetch("/api/styles/tree");
                 if (res.ok) this.styleTree = await res.json();
             } catch (e) {
-                this.styleTree = { "Polska": ["Hambo", "Slängpolska"] };
+                this.styleTree = { Polska: ["Hambo", "Slängpolska"] };
             }
         },
         resetCorrection() {
-            this.correction.main = '';
-            this.correction.style = this.track?.dance_style || '';
-            this.correction.tempo = 'ok';
+            this.correction.main = this.track?.dance_style || "";
+            this.correction.style = this.track?.sub_style || this.track?.dance_style || "";
+            this.correction.tempo = "ok";
         },
-        toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; },
+        toggleDropdown() {
+            this.dropdownOpen = !this.dropdownOpen;
+        },
 
         // --- NEW SELECTION LOGIC ---
-        
+
         // Generic Select Main (Used by both ASK and FIX flows)
-        selectMain(cat, flowType) { 
+        selectMain(cat, flowType) {
             // flowType is 'ask' or 'fix'
             this.correction.main = cat;
             this.dropdownOpen = false;
-            
+
             const subs = this.styleTree[cat];
-            
+
             if (!subs || subs.length === 0) {
                 // No substyles -> Go straight to tempo
                 this.correction.style = cat;
-                this.view = (flowType === 'fix') ? 'fix_tempo' : 'ask_tempo';
+                this.view = flowType === "fix" ? "fix_tempo" : "ask_tempo";
             } else {
                 // Has substyles -> Go to sub step
-                this.view = (flowType === 'fix') ? 'fix_sub' : 'ask_sub';
+                this.view = flowType === "fix" ? "fix_sub" : "ask_sub";
             }
         },
-        
+
         // Generic Select Sub
         selectSub(sub, flowType) {
             this.correction.style = sub;
             this.dropdownOpen = false;
-            this.view = (flowType === 'fix') ? 'fix_tempo' : 'ask_tempo';
+            this.view = flowType === "fix" ? "fix_tempo" : "ask_tempo";
         },
 
         // --- SUBMISSION ---
         async submitNotFolk() {
             this.isSubmitting = true;
             try {
-                const response = await fetch(`/api/tracks/${this.track.id}/flag`, { method: 'POST' });
+                const response = await fetch(`/api/tracks/${this.track.id}/flag`, {
+                    method: "POST",
+                });
                 if (!response.ok) throw new Error("Kunde inte rapportera");
-                trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, { reason: 'not_folk_music' });
+                trackInteraction(
+                    AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED,
+                    this.track.id,
+                    { reason: "not_folk_music" }
+                );
                 this.finish("Rapporterad som ej folkmusik");
-            } catch (e) { this.error = e.message; this.isSubmitting = false; }
+            } catch (e) {
+                this.error = e.message;
+                this.isSubmitting = false;
+            }
         },
         async submitBrokenLink(reason) {
             const link = this.youtubeLink;
-            if (!link) { this.error = "Ingen länk"; return; }
+            if (!link) {
+                this.error = "Ingen länk";
+                return;
+            }
             this.isSubmitting = true;
             try {
-                await fetch(`/api/links/${link.id}/report?reason=${reason}`, { method: 'PATCH' });
-                trackInteraction(reason === 'wrong_track' ? AnalyticsEvents.LINK_REPORTED_WRONG_TRACK : AnalyticsEvents.LINK_REPORTED_BROKEN, this.track.id, { link_id: link.id });
-                this.finish(reason === 'wrong_track' ? 'Rapporterad: Fel låt' : 'Rapporterad: Trasig länk');
-            } catch (e) { this.error = "Kunde inte skicka"; this.isSubmitting = false; }
+                await fetch(`/api/links/${link.id}/report?reason=${reason}`, {
+                    method: "PATCH",
+                });
+                trackInteraction(
+                    reason === "wrong_track"
+                        ? AnalyticsEvents.LINK_REPORTED_WRONG_TRACK
+                        : AnalyticsEvents.LINK_REPORTED_BROKEN,
+                    this.track.id,
+                    { link_id: link.id }
+                );
+                this.finish(
+                    reason === "wrong_track"
+                        ? "Rapporterad: Fel låt"
+                        : "Rapporterad: Trasig länk"
+                );
+            } catch (e) {
+                this.error = "Kunde inte skicka";
+                this.isSubmitting = false;
+            }
         },
-        
+
         // Submit Style + Tempo (Used by Fix Flow)
         async submitStyleTempo() {
-            if (!this.correction.style) { this.error = "Välj stil"; return; }
+            if (!this.correction.style) {
+                this.error = "Välj stil";
+                return;
+            }
             this.isSubmitting = true;
             try {
-                const payload = { 
-                    style: this.correction.style, 
+                const payload = {
+                    style: this.correction.style,
                     main_style: this.correction.main || this.correction.style,
-                    tempo_correction: this.correction.tempo 
+                    tempo_correction: this.correction.tempo,
                 };
 
                 const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload)
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload),
                 });
 
                 if (!res.ok) throw new Error("Fel");
                 const data = await res.json();
 
                 if (data.updates) Object.assign(this.track, data.updates);
-                trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, { reason: 'style_correction', ...payload });
+                trackInteraction(
+                    AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED,
+                    this.track.id,
+                    { reason: "style_correction", ...payload }
+                );
 
                 this.finish("Tack för att du bidrar till att göra sidan bättre!");
-            } catch (e) { this.error = e.message; this.isSubmitting = false; }
+            } catch (e) {
+                this.error = e.message;
+                this.isSubmitting = false;
+            }
         },
-        
+
         // Submit Tempo Category (Used by Ask Flow)
         submitTempoSelection(tempoCategory) {
-            const map = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
-            this.correction.tempo = 'ok';
-            this.tempoCategorySelection = map[tempoCategory] || 'Lagom';
+            const map = {
+                Slow: "Långsamt",
+                SlowMed: "Lugnt",
+                Medium: "Lagom",
+                Fast: "Snabbt",
+                Turbo: "Väldigt snabbt",
+            };
+            this.correction.tempo = "ok";
+            this.tempoCategorySelection = map[tempoCategory] || "Lagom";
             this.submitStyleTempoWithCategory();
         },
         async submitStyleTempoWithCategory() {
-            if (!this.correction.style) { this.error = "Välj stil"; return; }
+            if (!this.correction.style) {
+                this.error = "Välj stil";
+                return;
+            }
             this.isSubmitting = true;
             try {
-                const payload = { style: this.correction.style, tempo_correction: 'ok', tempo_category: this.tempoCategorySelection };
+                const payload = {
+                    style: this.correction.style,
+                    tempo_correction: "ok",
+                    tempo_category: this.tempoCategorySelection,
+                };
                 const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload),
                 });
                 if (!res.ok) throw new Error("Fel");
                 const data = await res.json();
                 if (data.updates) Object.assign(this.track, data.updates);
-                trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, { reason: 'style_correction', ...payload });
+                trackInteraction(
+                    AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED,
+                    this.track.id,
+                    { reason: "style_correction", ...payload }
+                );
                 this.finish("Tack för att du bidrar till att göra sidan bättre!");
-            } catch (e) { this.error = e.message; this.isSubmitting = false; }
+            } catch (e) {
+                this.error = e.message;
+                this.isSubmitting = false;
+            }
         },
         finish(message) {
             this.successMessage = message;
-            this.view = 'success';
-            setTimeout(() => { this.$emit('refresh'); this.$emit('close'); }, 1500);
-        }
+            this.view = "success";
+            setTimeout(() => {
+                this.$emit("refresh");
+                this.$emit("close");
+            }, 1500);
+        },
     },
-    template: /*html*/`
+    template: /*html*/ `
     <div v-if="isOpen" class="fixed inset-0 z-[70] flex items-center justify-center p-4 font-sans">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" @click="$emit('close')"></div>
 
@@ -200,19 +287,92 @@ export default {
             <div v-if="view === 'menu'" class="flex flex-col gap-3">
                 <p class="text-sm text-gray-600 mb-1">Vad är fel med den här låten?</p>
                 <button @click="view = hasStyle && hasTempo ? 'verify_style_tempo' : (hasStyle ? 'verify_style_only' : 'ask_main')" class="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left group">
-                    <div class="bg-gray-100 group-hover:bg-white text-gray-500 group-hover:text-indigo-600 p-2.5 rounded-full"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg></div>
-                    <div><div class="font-bold text-gray-800 text-sm">Dansstil / Tempo</div><div class="text-xs text-gray-500">Korrigera eller bekräfta</div></div>
+                    <div class="bg-gray-100 group-hover:bg-white text-gray-500 group-hover:text-indigo-600 p-2.5 rounded-full">
+                        <svg
+                            class="w-6 h-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                                />
+                        </svg>
+                    </div>
+                    <div>
+                    <div class="font-bold text-gray-800 text-sm">Dansstil / Tempo</div>
+                    <div class="text-xs text-gray-500">Korrigera eller bekräfta</div>
+                </div>
                 </button>
-                <button @click="view = 'confirm_folk'" class="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-left group"><div class="bg-gray-100 group-hover:bg-white text-gray-500 group-hover:text-amber-600 p-2.5 rounded-full"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" stroke-dasharray="2 2" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg></div><div><div class="font-bold text-gray-800 text-sm">Inte folkmusik</div><div class="text-xs text-gray-500">Felaktig genre</div></div></button>
-                <button @click="view = 'options_link'" :disabled="!youtubeLink" class="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-all text-left group disabled:opacity-50"><div class="bg-gray-100 group-hover:bg-white text-gray-500 group-hover:text-red-600 p-2.5 rounded-full"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg></div><div><div class="font-bold text-gray-800 text-sm">Länk / Uppspelning</div><div class="text-xs text-gray-500">Trasig länk eller fel låt</div></div></button>
+                <button @click="view = 'confirm_folk'" class="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-left group">
+                    <div class="bg-gray-100 group-hover:bg-white text-gray-500 group-hover:text-amber-600 p-2.5 rounded-full">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" stroke-dasharray="2 2" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">Inte folkmusik</div>
+                        <div class="text-xs text-gray-500">Felaktig genre</div>
+                    </div>
+                </button>
+                <button @click="view = 'options_link'" :disabled="!youtubeLink" class="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-all text-left group disabled:opacity-50">
+                    <div class="bg-gray-100 group-hover:bg-white text-gray-500 group-hover:text-red-600 p-2.5 rounded-full">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">Länk / Uppspelning</div>
+                        <div class="text-xs text-gray-500">Trasig länk eller fel låt</div>
+                    </div>
+                </button>
             </div>
 
             <div v-else-if="view === 'confirm_folk'" class="animate-fade-in-up"><p class="text-sm text-gray-700 mb-4">Är du säker på att du vill rapportera <strong>{{ track.title }}</strong> som <strong>ej folkmusik</strong>?</p><div class="flex justify-end gap-2"><button @click="view = 'menu'" class="px-3 py-2 text-sm text-gray-500">Tillbaka</button><button @click="submitNotFolk" :disabled="isSubmitting" class="px-4 py-2 bg-amber-600 text-white text-sm font-bold rounded">Rapportera</button></div></div>
             <div v-else-if="view === 'options_link'" class="animate-fade-in-up"><p class="text-sm text-gray-700 mb-4">Vad är fel med YouTube-länken?</p><div class="grid grid-cols-2 gap-3 mb-6"><button @click="submitBrokenLink('wrong_track')" :disabled="isSubmitting" class="p-4 border rounded bg-orange-50 text-orange-800">Fel låt</button><button @click="submitBrokenLink('broken')" :disabled="isSubmitting" class="p-4 border rounded bg-red-50 text-red-800">Trasig</button></div><div class="text-center"><button @click="view = 'menu'" class="text-xs text-gray-400 underline">Tillbaka</button></div></div>
             <div v-else-if="view === 'success'" class="text-center py-6 animate-scale-in"><h4 class="font-bold text-gray-900 text-lg">Tack!</h4><p class="text-sm text-gray-600 mt-1">{{ successMessage }}</p></div>
             
-            <div v-else-if="view === 'verify_style_tempo'" class="animate-fade-in-up"><p class="text-sm text-gray-700 mb-4">Stämmer detta?</p><div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6"><div class="font-bold text-indigo-900 text-lg">{{ track.dance_style }}</div><div class="text-indigo-700 text-sm">{{ tempoLabel }}</div></div><div class="flex justify-end gap-2"><button @click="view = 'menu'" class="px-3 py-2 text-sm text-gray-500">Tillbaka</button><button @click="view = 'fix_main'" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-bold rounded">Nej, rätta</button><button @click="submitStyleTempo" :disabled="isSubmitting" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded">Ja, stämmer</button></div></div>
-            <div v-else-if="view === 'verify_style_only'" class="animate-fade-in-up"><p class="text-sm text-gray-700 mb-4">Är detta en</p><div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6"><div class="font-bold text-indigo-900 text-lg">{{ track.dance_style }}?</div></div><div class="flex justify-end gap-2"><button @click="view = 'menu'" class="px-3 py-2 text-sm text-gray-500">Tillbaka</button><button @click="correction.style = ''; view = 'ask_main'" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-bold rounded">Nej</button><button @click="correction.style = track.dance_style; view = 'ask_tempo'" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded">Ja</button></div></div>
+            <div v-else-if="view === 'verify_style_tempo'" class="animate-fade-in-up">
+                <p class="text-sm text-gray-700 mb-4">Stämmer detta?</p>
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+                    <div class="font-bold text-indigo-900 text-lg">
+                        {{ track.dance_style }}
+                        <span v-if="track.sub_style && track.sub_style !== track.dance_style" class="font-normal text-indigo-700">
+                            ({{ track.sub_style }})
+                        </span>
+                    </div>
+                    <div class="text-indigo-700 text-sm">{{ tempoLabel }}</div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button @click="view = 'menu'" class="px-3 py-2 text-sm text-gray-500">Tillbaka</button>
+                    <button @click="view = 'fix_main'" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-bold rounded">Nej, rätta</button>
+                    <button @click="submitStyleTempo" :disabled="isSubmitting" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded">Ja, stämmer</button>
+                </div>
+            </div>
+            <div v-else-if="view === 'verify_style_only'" class="animate-fade-in-up">
+                <p class="text-sm text-gray-700 mb-4">Är detta en</p>
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+                    <div class="font-bold text-indigo-900 text-lg">
+                        {{ track.dance_style }}
+                        <span v-if="track.sub_style && track.sub_style !== track.dance_style" class="font-normal text-indigo-700">
+                            ({{ track.sub_style }})
+                        </span>?
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button @click="view = 'menu'" class="px-3 py-2 text-sm text-gray-500">Tillbaka</button>
+                    <button @click="correction.style = ''; view = 'ask_main'" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-bold rounded">Nej</button>
+                    
+                    <button 
+                        @click="correction.style = track.sub_style || track.dance_style; view = 'ask_tempo'"
+                        class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded"
+                    >
+                        Ja
+                    </button>
+                </div>
+            </div>
 
             <div v-else-if="view === 'ask_main'" class="animate-fade-in-up">
                 <p class="text-sm text-gray-700 mb-1 font-bold">Vad kan man dansa?</p>
@@ -309,5 +469,5 @@ export default {
 
         </div>
     </div>
-    `
-}
+    `,
+};

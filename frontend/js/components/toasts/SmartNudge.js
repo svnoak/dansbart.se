@@ -1,5 +1,6 @@
 import { trackInteraction, AnalyticsEvents } from '../../analytics.js';
 import { useFilters } from '../../hooks/filter.js';
+import { getAuthHeaders } from '../../utils/voter.js';
 
 export default {
     props: ['track', 'isPlaying'],
@@ -37,6 +38,76 @@ export default {
     beforeUnmount() {
         this.clearTimers();
         document.removeEventListener('click', this.closeDropdownHandler);
+    },
+    watch: {
+        'track.id': {
+            immediate: true,
+            handler(newId, oldId) {
+                console.log('Track changed:', { newId, oldId, isPlaying: this.isPlaying });
+                if (newId !== oldId) {
+                    this.clearTimers();
+                    this.step = 'hidden';
+                    this.playbackStartTime = null;
+                    this.mode = 'correction';
+                    this.resetForm();
+                }
+            }
+        },
+        isPlaying: {
+            immediate: true, // ← ADD THIS!
+            handler(playing, oldPlaying) {
+                console.log('isPlaying watcher fired:', { 
+                    playing, 
+                    oldPlaying,
+                    track: this.track?.id,
+                    step: this.step,
+                    playbackStartTime: this.playbackStartTime,
+                    hasFeedback: localStorage.getItem(`fb_${this.track?.id}`)
+                });
+                
+                if (!this.track) {
+                    console.log('No track, returning');
+                    return;
+                }
+                
+                // Don't process if we're already showing a step (user is interacting)
+                if (this.step !== 'hidden' && this.step !== 'verify') {
+                    console.log('Step not hidden/verify, returning');
+                    return;
+                }
+                
+                const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
+                if (hasFeedback) {
+                    console.log('Already has feedback, hiding');
+                    this.step = 'hidden';
+                    return;
+                }
+
+                if (playing && !this.playbackStartTime) {
+                    console.log("✅ Starting nudge timer for track:", this.track.id);
+                    this.playbackStartTime = Date.now();
+                    this.clearTimers();
+                    
+                    const trackIdAtStart = this.track.id;
+                    this.showDelayTimer = setTimeout(() => {
+                        console.log('Timer fired! Checking conditions:', {
+                            currentTrackId: this.track?.id,
+                            trackIdAtStart,
+                            isPlaying: this.isPlaying,
+                            match: this.track?.id === trackIdAtStart
+                        });
+                        if (this.track?.id === trackIdAtStart && this.isPlaying) {
+                            console.log('✅ Showing nudge!');
+                            this.determineInitialStep();
+                            this.startAutoDismiss();
+                        }
+                    }, 7000);
+                } else if (!playing && this.step === 'hidden') {
+                    console.log('Playback paused, clearing timers');
+                    this.clearTimers();
+                }
+            }
+        }
     },
     computed: {
         mainCategories() {
@@ -80,6 +151,18 @@ export default {
         clearTimers() {
             if (this.showDelayTimer) clearTimeout(this.showDelayTimer);
             if (this.autoDismissTimer) clearTimeout(this.autoDismissTimer);
+        },
+        startAutoDismiss() {
+            // Auto-dismiss after 20 seconds if no interaction
+            this.autoDismissTimer = setTimeout(() => {
+                if (this.step === 'verify') {
+                    // Track abandonment
+                    trackInteraction(AnalyticsEvents.NUDGE_DISMISSED, this.track?.id, {
+                        reason: 'auto_timeout'
+                    });
+                    this.step = 'hidden';
+                }
+            }, 20000);
         },
         resetForm() {
             this.correction.main = '';
@@ -137,8 +220,10 @@ export default {
             }
         },
         confirmVerify() {
+            const specificStyle = this.track.sub_style || this.track.dance_style;
             this.submit({
-                style: this.track.dance_style,
+                style: specificStyle,
+                main_style: this.track.dance_style,
                 tempo_correction: 'ok'
             }).then(() => {
                 this.showSecondaryConfirm();
@@ -178,7 +263,9 @@ export default {
             this.isSubmitting = true;
             try {
                 const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (res.ok && data.updates) Object.assign(this.track, data.updates);
@@ -198,15 +285,63 @@ export default {
                 this.step = 'confirm-secondary';
             } else { this.step = 'bonus'; }
         },
-        async confirmSecondary() { /* ... same as before ... */ },
-        rejectSecondary() { this.pendingSecondary = null; this.step = 'bonus'; }
+        async confirmSecondary() {
+            if (!this.pendingSecondary) return;
+            this.clearTimers();
+            this.isSubmitting = true;
+            
+            try {
+                const res = await fetch(`/api/tracks/${this.track.id}/confirm-secondary`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        style: this.pendingSecondary.style, 
+                        tempo_correction: 'ok' 
+                    })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    // Update the local secondary style confirmation count
+                    if (data.updates && this.track.secondary_styles) {
+                        const sec = this.track.secondary_styles.find(s => s.style === this.pendingSecondary.style);
+                        if (sec) {
+                            sec.confirmations = data.updates.confirmations;
+                        }
+                    }
+                }
+                
+                localStorage.setItem(`fb_${this.track.id}`, 'true');
+                this.step = 'success';
+                setTimeout(() => { this.step = 'hidden'; }, 2500);
+                
+            } catch(e) {
+                console.error(e);
+                this.step = 'hidden';
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+        rejectSecondary() { 
+            this.pendingSecondary = null;
+            this.step = 'bonus';
+        }
     },
     template: /*html*/`
     <transition enter-active-class="transition-opacity duration-200" leave-active-class="transition-opacity duration-150" enter-from-class="opacity-0" leave-to-class="opacity-0">
         <div v-if="step !== 'hidden'" class="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans">
             
             <div v-if="step === 'verify'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
-                <div class="text-sm md:text-xs leading-tight"><p class="opacity-80">Stämmer detta?</p><p class="font-bold text-base md:text-sm">{{ track.dance_style }} • {{ tempoLabel }}</p></div>
+                <div class="text-sm md:text-xs leading-tight">
+                    <p class="opacity-80">Stämmer detta?</p>
+                    <p class="font-bold text-base md:text-sm">
+                        {{ track.dance_style }}
+                        <span v-if="track.sub_style && track.sub_style !== track.dance_style" class="font-normal opacity-90">
+                            ({{ track.sub_style }})
+                        </span>
+                        • {{ tempoLabel }}
+                    </p>
+                </div>
                 <div class="flex gap-3 md:gap-2">
                     <button @click="startCorrection" class="bg-indigo-800 hover:bg-indigo-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">Nej</button>
                     <button @click="confirmVerify" :disabled="isSubmitting" class="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1"><span>Ja</span></button>
@@ -214,7 +349,15 @@ export default {
             </div>
 
             <div v-else-if="step === 'verify-style-only'" class="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
-                <div class="text-sm md:text-xs leading-tight"><p class="opacity-80">Är detta en</p><p class="font-bold text-base md:text-sm">{{ track.dance_style }}?</p></div>
+                <div class="text-sm md:text-xs leading-tight">
+                    <p class="opacity-80">Är detta en</p>
+                    <p class="font-bold text-base md:text-sm">
+                        {{ track.dance_style }}
+                        <span v-if="track.sub_style && track.sub_style !== track.dance_style" class="font-normal opacity-90">
+                            ({{ track.sub_style }})
+                        </span>?
+                    </p>
+                </div>
                 <div class="flex gap-3 md:gap-2">
                     <button @click="rejectStyleOnly" class="bg-indigo-800 hover:bg-indigo-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors">Nej</button>
                     <button @click="confirmStyleOnly" :disabled="isSubmitting" class="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors flex items-center gap-1"><span>Ja</span></button>

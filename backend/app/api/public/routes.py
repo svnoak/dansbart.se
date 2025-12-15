@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException, Header
 from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
 from app.api.public.schemas import (
@@ -68,6 +68,7 @@ def submit_track_feedback(
     track_id: str, 
     feedback: FeedbackIn, 
     background_tasks: BackgroundTasks,
+    x_voter_id: str = Header(..., alias="X-Voter-ID"),
     db: Session = Depends(get_db)
 ):
     service = FeedbackService(db)
@@ -76,7 +77,8 @@ def submit_track_feedback(
         style=feedback.style,
         tempo_correction=feedback.tempo_correction,
         tempo_category=feedback.tempo_category,
-        explicit_main_style=feedback.main_style
+        explicit_main_style=feedback.main_style,
+        voter_id=x_voter_id
     )
 
     if not updated_data:
