@@ -98,6 +98,7 @@ export default {
             
             const subs = this.styleTree[mainStyle];
             
+            // If no substyles, the Main Style IS the Style
             if (!subs || subs.length === 0) {
                 this.correction.style = mainStyle;
                 this.step = (this.mode === 'addition' || this.step.startsWith('fix')) ? 'fix-tempo' : 'ask-tempo';
@@ -135,16 +136,38 @@ export default {
                 this.step = 'verify';
             }
         },
-        confirmVerify() { this.submit({ style: this.track.dance_style, tempo_correction: 'ok' }).then(() => { this.showSecondaryConfirm(); }); },
-        confirmStyleOnly() { this.clearTimers(); this.correction.style = this.track.dance_style; this.step = 'ask-tempo'; },
-        rejectStyleOnly() { this.clearTimers(); this.mode = 'correction'; this.correction.style = ''; this.step = 'ask-main'; },
-        
-        submitFix() { this.submit({ style: this.correction.style, tempo_correction: this.correction.tempo }, 'success'); },
-        
+        confirmVerify() {
+            this.submit({
+                style: this.track.dance_style,
+                tempo_correction: 'ok'
+            }).then(() => {
+                this.showSecondaryConfirm();
+            });
+        },
+        confirmStyleOnly() {
+            this.clearTimers();
+            this.correction.style = this.track.dance_style;
+            this.step = 'ask-tempo';
+        },
+        rejectStyleOnly() {
+            this.clearTimers();
+            this.mode = 'correction';
+            this.correction.style = '';
+            this.correction.main = '';
+            this.step = 'ask-main';
+        },
+        submitFix() {
+            this.submit({
+                style: this.correction.style,
+                main_style: this.correction.main || this.correction.style,
+                tempo_correction: this.correction.tempo
+            }, 'success');
+        },
         submitTempoSelection(tempoCategory) {
             const categoryMap = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
             this.submit({ 
                 style: this.correction.style, 
+                main_style: this.correction.main || this.correction.style,
                 tempo_correction: 'ok', 
                 tempo_category: categoryMap[tempoCategory] || 'Lagom'
             }, 'success');

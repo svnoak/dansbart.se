@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import router
+from app.api.public.routes import router
 from app.api.admin import router as admin_router
-from app.api.analytics_admin import router as analytics_admin_router
+from app.api.admin.analytics_admin import router as analytics_admin_router
 import os
 
 app = FastAPI(title="Dansbart API")

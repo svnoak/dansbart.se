@@ -134,15 +134,25 @@ export default {
             if (!this.correction.style) { this.error = "Välj stil"; return; }
             this.isSubmitting = true;
             try {
-                const payload = { style: this.correction.style, tempo_correction: this.correction.tempo };
+                const payload = { 
+                    style: this.correction.style, 
+                    main_style: this.correction.main || this.correction.style,
+                    tempo_correction: this.correction.tempo 
+                };
+
                 const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload)
                 });
+
                 if (!res.ok) throw new Error("Fel");
                 const data = await res.json();
+
                 if (data.updates) Object.assign(this.track, data.updates);
                 trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, { reason: 'style_correction', ...payload });
-                this.finish("Tack!");
+
+                this.finish("Tack för att du bidrar till att göra sidan bättre!");
             } catch (e) { this.error = e.message; this.isSubmitting = false; }
         },
         
@@ -165,7 +175,7 @@ export default {
                 const data = await res.json();
                 if (data.updates) Object.assign(this.track, data.updates);
                 trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, { reason: 'style_correction', ...payload });
-                this.finish("Tack!");
+                this.finish("Tack för att du bidrar till att göra sidan bättre!");
             } catch (e) { this.error = e.message; this.isSubmitting = false; }
         },
         finish(message) {
@@ -178,7 +188,7 @@ export default {
     <div v-if="isOpen" class="fixed inset-0 z-[70] flex items-center justify-center p-4 font-sans">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" @click="$emit('close')"></div>
 
-        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 overflow-hidden transition-all duration-300">
+        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transition-all duration-300">
             <button @click="$emit('close')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-full"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             <h3 class="font-bold text-lg mb-5 flex items-center gap-2 text-gray-800 border-b border-gray-100 pb-3 pr-8">
                 <span v-if="view === 'success'" class="text-green-500"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>

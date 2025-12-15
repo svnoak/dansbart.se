@@ -5,7 +5,7 @@ import FlagIcon from "../icons/FlagIcon.js";
 
 export default {
     props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
-    emits: ['play', 'stop', 'refresh', 'filter-style'], // Added 'filter-style'
+    emits: ['play', 'stop', 'refresh', 'filter-style'],
     components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
     
     data() {
@@ -22,34 +22,70 @@ export default {
             
             <div class="flex flex-wrap items-center gap-2 mb-2">
                 
-                <template v-if="track.dance_style && track.dance_style !== 'Unknown' && track.dance_style !== 'Unclassified'">
+                <template v-if="hasValidStyle">
                     
-                    <button 
-                        v-if="track.style_confidence >= 1.0" 
-                        @click.stop="$emit('filter-style', track.dance_style)"
-                        class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
-                        title="Filtrera på denna stil"
-                    >
-                        {{ track.dance_style }}
-                    </button>
+                    <div v-if="track.style_confidence >= 1.0" class="flex items-center gap-1">
+                        <button 
+                            @click.stop="$emit('filter-style', track.dance_style)"
+                            class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                            title="Filtrera på huvudstil"
+                        >
+                            {{ track.dance_style }}
+                        </button>
 
-                    <button 
-                        v-else-if="track.style_confidence > 0.75" 
-                        @click.stop="$emit('filter-style', track.dance_style)"
-                        class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
-                        title="Filtrera på denna stil (AI-gissning)"
-                    >
-                        {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-blue-400" />
-                    </button>
+                        <template v-if="hasSubStyle">
+                            <span class="text-gray-300 text-[10px] font-bold">›</span>
+                            <button 
+                                @click.stop="$emit('filter-style', track.sub_style)"
+                                class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                                title="Filtrera på understil"
+                            >
+                                {{ track.sub_style }}
+                            </button>
+                        </template>
+                    </div>
 
-                    <button 
-                        v-else 
-                        @click.stop="$emit('filter-style', track.dance_style)"
-                        class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
-                        title="Filtrera på denna stil (Osäker AI-gissning)"
-                    >
-                        {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-amber-400" />
-                    </button>
+                    <div v-else-if="track.style_confidence > 0.75" class="flex items-center gap-1">
+                        <button 
+                            @click.stop="$emit('filter-style', track.dance_style)"
+                            class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                            title="Filtrera på huvudstil (AI-gissning)"
+                        >
+                            {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-blue-400" />
+                        </button>
+
+                        <template v-if="hasSubStyle">
+                            <span class="text-gray-300 text-[10px] font-bold">›</span>
+                            <button 
+                                @click.stop="$emit('filter-style', track.sub_style)"
+                                class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                                title="Filtrera på understil (AI-gissning)"
+                            >
+                                {{ track.sub_style }}
+                            </button>
+                        </template>
+                    </div>
+
+                    <div v-else class="flex items-center gap-1">
+                        <button 
+                            @click.stop="$emit('filter-style', track.dance_style)"
+                            class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
+                            title="Filtrera på huvudstil (Osäker)"
+                        >
+                            {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-amber-400" />
+                        </button>
+
+                        <template v-if="hasSubStyle">
+                            <span class="text-gray-300 text-[10px] font-bold">›</span>
+                            <button 
+                                @click.stop="$emit('filter-style', track.sub_style)"
+                                class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
+                                title="Filtrera på understil (Osäker)"
+                            >
+                                {{ track.sub_style }}
+                            </button>
+                        </template>
+                    </div>
 
                 </template>
 
@@ -80,7 +116,6 @@ export default {
             </p>
 
             <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500">
-                
                 <button v-if="hasSpotify" @click="$emit('play', track, 'spotify')" 
                         class="flex items-center gap-1 hover:text-[#1DB954] transition-colors" 
                         :class="{ 'text-[#1DB954] font-bold': isCurrent && isSpotifyMode }">
@@ -139,28 +174,29 @@ export default {
     </div>
     `,
     computed: {
-        // --- Helper for Artist Display ---
+        hasValidStyle() {
+             return this.track.dance_style && 
+                    this.track.dance_style !== 'Unknown' && 
+                    this.track.dance_style !== 'Unclassified';
+        },
+        hasSubStyle() {
+            // Checks if sub_style exists and is different from main style
+            return this.track.sub_style && 
+                   this.track.sub_style !== this.track.dance_style;
+        },
+        // ... (Rest of computed properties: artistDisplayString, links, etc. remain the same)
         artistDisplayString() {
             if (!this.track.artists || this.track.artists.length === 0) return 'Okänd artist';
-            
-            // Format: "Primary, Primary feat. Featured"
             const primary = this.track.artists.filter(a => a.role === 'primary').map(a => a.name);
             const feat = this.track.artists.filter(a => a.role === 'featured').map(a => a.name);
-            
             let text = primary.join(', ');
-            if (feat.length > 0) {
-                text += ' feat. ' + feat.join(', ');
-            }
-            // Fallback if roles aren't set correctly
+            if (feat.length > 0) text += ' feat. ' + feat.join(', ');
             if (!text) text = this.track.artists.map(a => a.name).join(', ');
-            
             return text;
         },
-        
         hasYouTube() { return this.getLink('youtube'); },
         hasSpotify() { return this.getLink('spotify'); },
         isCurrent() { return this.currentTrack?.id === this.track.id; },
-        
         primarySource() {
             if (this.hasYouTube) return 'youtube';
             if (this.hasSpotify) return 'spotify';
@@ -180,14 +216,8 @@ export default {
         },
         tempoLabel() {
             if (!this.track) return '';
-            if (this.track.dance_style === 'Unknown' || this.track.dance_style === 'Unclassified') {
-               return 'Tempo?';
-            }
-            // Use new tempo object if available
-            if (this.track.tempo && this.track.tempo.label) {
-                return this.track.tempo.label;
-            }
-            // Fallback to legacy tempo_category
+            if (!this.hasValidStyle) return 'Tempo?';
+            if (this.track.tempo && this.track.tempo.label) return this.track.tempo.label;
             const labels = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
             return labels[this.track.tempo_category] || 'Lagom';
         }
@@ -196,11 +226,7 @@ export default {
         getLink(type) {
             if (!this.track.playback_links) return null;
             return this.track.playback_links.find(l => {
-                // Use the platform field if available
-                if (l.platform) {
-                    return l.platform === type;
-                }
-                // Fallback: check the deep_link URL for platform hints
+                if (l.platform) return l.platform === type;
                 const url = l.deep_link || (typeof l === 'string' ? l : null);
                 if (!url) return false;
                 return type === 'spotify' ? url.includes('spotify') : !url.includes('spotify');

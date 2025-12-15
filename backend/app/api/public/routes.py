@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
-from app.api.schemas import (
+from app.api.public.schemas import (
     TrackOut, LinkSubmission, FeedbackIn, StructureIn,
     StructureVersionOut, VoteIn, MovementVoteIn,
     PlaybackTrackingIn, InteractionTrackingIn, VisitorSessionIn
 )
 from app.core.models import TrackStructureVersion
+from app.api.schemas import Page
 
 # Services
 from app.services.tracks import TrackService
@@ -26,7 +27,7 @@ def get_style_tree(db: Session = Depends(get_db)):
     service = TrackService(db)
     return service.get_style_hierarchy()
 
-@router.get("/tracks")
+@router.get("/tracks", response_model=Page[TrackOut])
 def get_tracks(
     main_style: str = Query(None, description="Broad category (e.g., Polska)"),
     sub_style: str = Query(None, description="Specific dance (e.g., Slängpolska)"),
@@ -74,7 +75,8 @@ def submit_track_feedback(
         track_id=track_id,
         style=feedback.style,
         tempo_correction=feedback.tempo_correction,
-        tempo_category=feedback.tempo_category
+        tempo_category=feedback.tempo_category,
+        explicit_main_style=feedback.main_style
     )
 
     if not updated_data:

@@ -130,6 +130,7 @@ class TrackService:
             # Map fields
             if matched_style:
                 final_style = matched_style.dance_style
+                final_sub_style = matched_style.sub_style
                 final_bpm = matched_style.effective_bpm
                 final_category = matched_style.tempo_category
                 final_confidence = matched_style.confidence
@@ -137,6 +138,7 @@ class TrackService:
                 final_verifications = matched_style.is_user_confirmed
             else:
                 final_style = "Unclassified"
+                final_sub_style = None
                 final_bpm = 0
                 final_category = "Unknown"
                 final_confidence = 0.0
@@ -145,7 +147,14 @@ class TrackService:
 
             # Format Output
             sorted_artists = sorted(track.artist_links, key=lambda x: 0 if x.role == 'primary' else 1)
-            artist_list = [{"id": l.artist.id, "name": l.artist.name, "role": l.role, "image_url": l.artist.image_url} for l in sorted_artists]
+            artist_list = [{"id": l.artist.id, "name": l.artist.name, "role": l.role} for l in sorted_artists]
+
+            album_data = None
+            if track.album:
+                album_data = {
+                    "id": track.album.id,
+                    "title": track.album.title
+                }
             
             # Tags & Physics
             tags = self._refine_tags_with_physics(style_feel_map.get(final_style, []), track.bounciness)
@@ -154,6 +163,7 @@ class TrackService:
             secondary_styles = [
                 {
                     "style": s.dance_style, 
+                    "sub_style": s.sub_style,
                     "effective_bpm": s.effective_bpm, 
                     "tempo": get_tempo_description(s.dance_style, s.effective_bpm),
                     "confirmations": s.confirmation_count
@@ -175,8 +185,9 @@ class TrackService:
                 "id": str(track.id),
                 "title": track.title,
                 "artists": artist_list,
-                "album": {"title": track.album.title, "cover_image_url": track.album.cover_image_url} if track.album else None,
+                "album": album_data,
                 "dance_style": final_style,
+                "sub_style": final_sub_style,
                 "feel_tags": tags,
                 "effective_bpm": final_bpm,
                 "tempo": tempo_data,

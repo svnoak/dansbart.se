@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-from sqlalchemy.exc import ProgrammingError
 from app.core.database import get_db
 from app.core.config import settings
 from app.services.pipeline import PipelineService
@@ -17,7 +16,8 @@ from typing import List
 from app.core.models import (
     Track, ArtistCrawlLog, TrackArtist, Artist
 )
-
+from app.api.admin.admin_schemas import AlbumOutAdmin, AdminArtistListItem, AdminTrackListItem
+from app.api.schemas import Page
 
 router = APIRouter()
 
@@ -34,7 +34,6 @@ def verify_admin(x_admin_token: str = Header(None)):
 class IngestRequest(BaseModel):
     resource_id: str
     resource_type: str = "playlist"  # playlist, album, or artist
-
 
 @router.post("/danger/reset-crawl-data")
 def reset_crawl_data(
@@ -72,7 +71,7 @@ def trigger_ingest(
     pipeline = PipelineService(db)
     return pipeline.ingest_and_process(req.resource_id, req.resource_type)
 
-@router.get("/tracks")
+@router.get("/tracks", response_model=Page[AdminTrackListItem])
 def get_all_tracks_admin(
     search: str = Query(None),
     status: str = Query(None, description="Filter by status: PENDING, PROCESSING, DONE, FAILED"),
@@ -91,7 +90,7 @@ def get_all_tracks_admin(
     return service.get_tracks_paginated(search, status, flagged, artist_id, album_id, limit, offset)
 
 
-@router.get("/artists")
+@router.get("/artists", response_model=Page[AdminArtistListItem])
 def get_all_artists_admin(
     search: str = Query(None, description="Search artists by name"),
     isolated: str = Query(None, description="Filter by isolation status: 'true' or 'false'"),
@@ -104,7 +103,7 @@ def get_all_artists_admin(
     return service.get_artists_paginated(search, isolated, limit, offset)
 
 
-@router.get("/albums")
+@router.get("/albums", response_model=Page[AlbumOutAdmin])
 def get_all_albums_admin(
     search: str = Query(None, description="Search albums by title"),
     artist_id: str = Query(None, description="Filter by artist_id"),
