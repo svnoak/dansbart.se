@@ -141,34 +141,49 @@ class AnalysisService:
                     raw_data=data
                 )
 
+                # --- Basic Audio Stats ---
+                track.tempo_bpm = data.get('tempo_bpm')
+                track.duration_ms = int(result.get('duration', 0) * 1000)
+                track.loudness = data.get('loudness_lufs') 
+                track.is_instrumental = data.get('is_likely_instrumental', False)
+
+                # --- Advanced Features ---
+                track.swing_ratio = data.get('swing_ratio')
+                track.articulation = data.get('articulation')
+                track.bounciness = data.get('bounciness')
+                track.punchiness = data.get('punchiness')
+                
+                # --- Specialized Scores ---
+                track.polska_score = data.get('polska_score')
+                track.hambo_score = data.get('hambo_score')
+                track.voice_probability = data.get('voice_probability')
+                
+                # --- Structural Data ---
+                track.bars = data.get('bars')
+                track.sections = data.get('sections')
+                track.section_labels = data.get('section_labels')
+                track.embedding = data.get('embedding')
+
                 ai_version = TrackStructureVersion(
                     track_id=track.id,
                     description="Original AI Analysis",
-                    author_alias="AI", # Distinct from a User ID
+                    author_alias="AI",
                     structure_data={
                         "bars": data.get('bars'),
                         "sections": data.get('sections'),
                         "labels": data.get('section_labels')
                     },
-                    is_active=True, # It starts as the Truth
-                    vote_count=0,   # AI has no votes, easy to overthrow
+                    is_active=True, 
+                    vote_count=0,
                     is_hidden=False
                 )
                 self.db.add(ai_version)
-
-                # ADDING BARS AND SECTIONS TO TRACK
-                track.bars = data.get('bars')
-                track.sections = data.get('sections')
-                track.section_labels = data.get('section_labels')
-                track.swing_ratio = data.get('swing_ratio')
-                track.articulation = data.get('articulation')
-                track.bounciness = data.get('bounciness')
                 self.db.add(track)
                 
                 # 4. AUTO-CLASSIFY
                 # This makes the track visible in the frontend immediately if successful
                 print(f"   🧠 Auto-classifying...")
-                self.classifier_service.classify_track_immediately(track)
+                self.classifier_service.classify_track_immediately(track, analysis_data=data)
                 
                 return True
             

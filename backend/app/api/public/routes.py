@@ -359,6 +359,3 @@ def track_session(
         is_returning=session.is_returning
     )
     return {"status": "success"}
-
-# Analytics GET endpoints moved to /api/admin/analytics/* for security
-# Only POST endpoints (tracking) remain public

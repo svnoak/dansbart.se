@@ -163,31 +163,35 @@ def trigger_bulk_reanalysis(
     Bulk re-analyze tracks based on their status.
 
     Use cases:
+    - status_filter="everything": Force re-analyze ALL tracks (including DONE) [NEW]
+    - status_filter="all": Re-analyze all non-DONE tracks (recovery)
     - status_filter="PENDING": Re-queue tracks that were never processed
     - status_filter="PROCESSING": Recover orphaned tracks stuck in processing
     - status_filter="FAILED": Retry all failed tracks
-    - status_filter="all": Re-analyze all non-DONE tracks
 
     Args:
-        status_filter: Which status to filter by (PENDING, PROCESSING, FAILED, or "all")
-        limit: Maximum number of tracks to re-analyze (default: 100, max: 500)
-
-    Returns:
-        Statistics about queued tracks
+        status_filter: Which status to filter by
+        limit: Maximum number of tracks to re-analyze (max: 5000)
     """
-    if req.limit > 500:
-        req.limit = 500
+    # Increased limit cap for admin convenience
+    if req.limit > 5000:
+        req.limit = 5000
 
     # Build query based on status filter
     query = db.query(Track)
-    if req.status_filter == "all":
+    
+    if req.status_filter == "everything":
+        # No filter - fetch everything including DONE tracks
+        pass
+    elif req.status_filter == "all":
+        # Recovery mode - fetch everything NOT done
         query = query.filter(Track.processing_status != "DONE")
     elif req.status_filter in ["PENDING", "PROCESSING", "FAILED"]:
         query = query.filter(Track.processing_status == req.status_filter)
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid status_filter. Use: PENDING, PROCESSING, FAILED, or 'all'"
+            detail=f"Invalid status_filter. Use: everything, all, PENDING, PROCESSING, FAILED"
         )
 
     tracks = query.limit(req.limit).all()
@@ -1015,3 +1019,4 @@ def invalidate_keyword_cache(
     from app.services.style_keywords_cache import invalidate_cache
     invalidate_cache()
     return {"status": "success", "message": "Cache invalidated"}
+

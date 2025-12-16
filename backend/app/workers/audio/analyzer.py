@@ -1,5 +1,7 @@
 import traceback
 import os
+
+# Local imports
 from .extractors.vocal import analyze_vocal_presence
 from .extractors.swing import calculate_swing_ratio
 from .extractors.feel import analyze_feel
@@ -11,18 +13,30 @@ MODEL_BACKBONE = os.path.join(BASE_DIR, "models", "msd-musicnn-1.pb")
 class AudioAnalyzer:
     def __init__(self):
         print("🧠 Loading Analysis Models...")
+        
+        # Delayed imports to avoid circular dependency issues during startup
         from .extractors.rhythm import RhythmExtractor
         from .extractors.structure import StructureExtractor
         from .style_head import ClassificationHead
         from .folk_authenticity import FolkAuthenticityDetector
-        import essentia.standard as es
         
         self.rhythm_extractor = RhythmExtractor()
         self.structure_extractor = StructureExtractor()
         self.head = ClassificationHead()
         self.folk_detector = FolkAuthenticityDetector(manual_review_threshold=0.6)
 
+        self.tf_embeddings = None
+        self._load_ai_models()
+
+    def _load_ai_models(self):
+        import essentia.standard as es
         try:
+            if not os.path.exists(MODEL_BACKBONE):
+                # Don't crash immediately, allow retry, but log error
+                print(f"   ⚠️ Model file missing: {MODEL_BACKBONE}")
+                self.tf_embeddings = None
+                return
+
             self.tf_embeddings = es.TensorflowPredictMusiCNN(
                 graphFilename=MODEL_BACKBONE,
                 output="model/dense/BiasAdd"
@@ -32,107 +46,134 @@ class AudioAnalyzer:
             print(f"   ⚠️ AI Models failed to load: {e}")
             self.tf_embeddings = None
 
-
     def _extract_lightweight_features(self, audio) -> list:
         """
         Extracts robust, crash-proof structural proxies.
-        These help the classifier distinguish between 'busy' styles (Polska) 
-        and 'sparse' styles (Waltz) without running the full segmentation logic.
+        Returns: [RMS (Dynamics), ZCR (Texture), OnsetRate (Busyness)]
         """
         import essentia.standard as es
-
         try:
             # 1. Dynamics (Standard Deviation of RMS amplitude)
-            # High deviation = lots of pauses/dynamic changes (Live Folk)
-            # Low deviation = constant volume (Modern/Pop)
             rms = es.RMS()(audio)
             
-            # 2. Density (Zero Crossing Rate)
-            # High ZCR often correlates with percussive/noisy sounds
+            # 2. Texture (Zero Crossing Rate)
             zcr = es.ZeroCrossingRate()(audio)
             
-            # 3. Simple Onset Density (How many events per second?)
-            # We don't need perfect onset times, just the count/rate.
-            # HFC is fast and good for percussive detection.
-            onsets = es.OnsetDetection(method='hfc')(audio, audio) # passing audio twice is a quirk of some es versions, check docs or use complex spectral
-            # If HFC is complex to setup, we can use a simpler proxy:
-            # Just returning RMS and ZCR is often enough for a huge boost.
+            # 3. Busyness (Onset Rate)
+            # This is valuable for distinguishing "busy" Polskas from "smooth" Waltzes
+            # OnsetRate returns [onset_rate, num_onsets]
+            onset_rate, _ = es.OnsetRate()(audio)
             
-            return [float(rms), float(zcr)]
+            return [float(rms), float(zcr), float(onset_rate)]
         except Exception:
-            # Never let lightweight features crash the pipeline
-            return [0.0, 0.0]
+            # Fallback (return 3 zeros since we expect 3 features now)
+            return [0.0, 0.0, 0.0]
 
     def analyze_file(self, file_path: str, metadata_context: str = "") -> dict:
         import essentia.standard as es
         import numpy as np
-
         try:
-            # --- 1. LOAD AUDIO & TEXTURE ---
+            # --- 1. LOAD AUDIO ---
             print(f"   [ANALYSIS] Load audio and texture...")
             loader = es.MonoLoader(filename=file_path, sampleRate=16000, resampleQuality=4)
             audio_16k = loader()
-            
-            print(f"   [ANALYSIS] Set embeddings...")
+
+            # --- FIX: ROBUST LOUDNESS CALCULATION ---
+            # This handles the "length-1 array" crash by force-flattening the result.
+            loudness = -14.0 # Default
+            try:
+                stereo_audio = np.stack([audio_16k, audio_16k], axis=1)
+                loudness_results = es.LoudnessEBUR128()(stereo_audio)
+                
+                # Unwrap: Essentia might return a scalar, a 1D array, or a tuple of arrays.
+                # We want the first value (Integrated Loudness).
+                first_val = loudness_results[0]
+                
+                # Convert to numpy array to unify handling, then flatten and grab index 0.
+                # This works for scalars (becomes [x]), 1D arrays ([x, x]), etc.
+                loudness = float(np.array(first_val).flatten()[0])
+            except Exception as e:
+                print(f"   ⚠️ Loudness calc warning: {e}")
+
+            # --- EMBEDDINGS ---
+            print(f"   [ANALYSIS] Generating embeddings...")
             if self.tf_embeddings is None:
                 raise RuntimeError("MusiCNN embeddings model not loaded")
-            raw_embeddings = self.tf_embeddings(audio_16k)
+            
+            # Safe Normalization for Neural Net
+            max_val = np.max(np.abs(audio_16k))
+            audio_for_nn = (audio_16k / max_val) if max_val > 0 else audio_16k
+
+            raw_embeddings = self.tf_embeddings(audio_for_nn)
             avg_embedding = np.mean(raw_embeddings, axis=0) 
 
-            # --- 2. VOICE DETECTION ---
-            print(f"   [ANALYSIS] Doing voicedetection...")
+            # --- 2. VOCALS ---
+            print(f"   [ANALYSIS] Doing voice detection...")
             vocal_data = analyze_vocal_presence(audio_16k)
 
-            # --- 3. RHYTHM ANALYSIS ---
-            # Call method on the instance, NOT the class
-            print(f"   [ANALYSIS] Doing rythm analysis...")
+            # --- 3. RHYTHM ---
+            print(f"   [ANALYSIS] Doing rhythm analysis...")
             act, beat_times, beat_info, ternary_confidence = self.rhythm_extractor.analyze_beats(file_path, metadata_context)
             folk_features = self.rhythm_extractor.extract_folk_features(beat_times, act)
             bars = self.rhythm_extractor.get_bars(beat_info)
 
-            # --- 4. SWING ANALYSIS ---
-            print(f"   [ANALYSIS] Doing swinganalysis...")
+            # --- 4. FEEL ---
+            print(f"   [ANALYSIS] Doing swing & feel analysis...")
             swing_ratio = calculate_swing_ratio(file_path, beat_times)
-
-            print(f"   [ANALYSIS] Analyzing feel/texture...")
             feel_data = analyze_feel(audio_16k, beat_times, swing_ratio)
 
-            # --- 5. LIGHTWEIGHT STRUCTURAL PROXIES (NEW) ---
-            # This is the "Safety Net" feature injection
+            # --- 5. STATS ---
             print(f"   [ANALYSIS] Extracting layout stats...")
             layout_stats = self._extract_lightweight_features(audio_16k)
 
-            # --- 6. PREDICT STYLE ---
+            voice_conf = float(vocal_data['confidence'])
+            articulation = float(feel_data['articulation'])
+            bounciness = float(feel_data['bounciness'])
+            ternary_conf = float(ternary_confidence)
+
+            # --- 6. PREDICT ---
             print(f"   [ANALYSIS] Predict style...")
+            # Note: Ensure ClassificationHead.EXPECTED_FEATURE_COUNT = 216
+            folk_vector_list = [
+                folk_features["bpm"],
+                folk_features["avg_ibi"],
+                folk_features["punchiness"],
+                folk_features["r1_mean"],
+                folk_features["r2_mean"],
+                folk_features["r3_mean"],
+                folk_features["polska_score"],
+                folk_features["hambo_score"],
+                folk_features["bpm_stability"]
+            ]
+
             full_vector = np.concatenate([
-                avg_embedding, 
-                folk_features, 
-                [swing_ratio],
-                layout_stats
+                avg_embedding,      # 200
+                folk_vector_list,   # 9
+                [swing_ratio],      # 1
+                layout_stats,       # 3 
+                [ternary_conf],     # 1
+                [voice_conf],       # 1
+                [articulation],     # 1
+                [bounciness]        # 1
             ])
             
             predicted_style, ml_confidence = self.head.predict(full_vector)
 
-            # --- 7. FOLK AUTHENTICITY DETECTION ---
-            print(f"   [ANALYSIS] Checking folk authenticity...")
-            rms_value = layout_stats[0]
-            zcr_value = layout_stats[1]
+            # --- 7. AUTHENTICITY ---
+            print(f"   [ANALYSIS] Checking authenticity...")
             folk_auth_result = self.folk_detector.analyze(
-                rms_value=rms_value,
-                zcr_value=zcr_value,
+                rms_value=layout_stats[0],
+                zcr_value=layout_stats[1],
                 swing_ratio=swing_ratio,
-                articulation=feel_data['articulation'],
-                bounciness=feel_data['bounciness'],
-                voice_probability=vocal_data['confidence'],
+                articulation=articulation,
+                bounciness=bounciness,
+                voice_probability=voice_conf,
                 is_likely_instrumental=vocal_data['is_instrumental'],
                 embedding=avg_embedding
             )
 
-            # --- 8. DEEP STRUCTURE ANALYSIS --- 
-            # Now we run the unstable heavy structure analysis, 
-            # but we use the predicted style (which is now smarter) to guide it.
-            print(f"   [ANALYSIS] Structure analysis (Hint: {predicted_style}, conf: {ml_confidence:.2f})...")
-            
+            # --- 8. STRUCTURE --- 
+            print(f"   [ANALYSIS] Structure analysis (Hint: {predicted_style})...")
             try:
                 sections = self.structure_extractor.extract_segments(
                     audio=audio_16k, 
@@ -142,87 +183,88 @@ class AudioAnalyzer:
                 if sections is None: sections = []
             except Exception as e:
                 print(f"   ⚠️ Structure analysis unstable: {e}")
-                sections = [] # Fallback to empty, don't crash
+                sections = [] 
 
-            # Only label if we actually found sections
             if sections:
                 section_labeler = ABSectionLabeler(sr=16000)
                 section_labels = section_labeler.label_sections(audio_16k, sections)
             else:
                 section_labels = []
 
-            # --- 7. RETURN METRICS ---
+            # --- 9. RETURN ---
             print(f"   [ANALYSIS] Returning metrics...")
-            raw_bpm = folk_features[0]
             
-            # Extract Polska/Hambo signature scores (indices 6 and 7)
-            polska_score = folk_features[6] if len(folk_features) > 6 else 0.0
-            hambo_score = folk_features[7] if len(folk_features) > 7 else 0.0
+            polska_score = folk_features.get('polska_score', 0.0)
+            hambo_score = folk_features.get('hambo_score', 0.0)
+            bpm_stability = folk_features.get('bpm_stability', 0.0)
+            meter_numerator = int(np.max(beat_info[:,1])) if len(beat_info) > 0 else 0
 
-            return {
+            raw_result = {
                 "ml_suggested_style": predicted_style,
+                "ml_confidence": float(ml_confidence),
                 "embedding": full_vector.tolist(),
-                "tempo_bpm": self._to_float(raw_bpm),
-                "is_likely_instrumental": vocal_data['is_instrumental'],
-                "voice_probability": vocal_data['confidence'],
-                "swing_ratio": self._to_float(swing_ratio),
-                "articulation": feel_data['articulation'],
-                "bounciness": feel_data['bounciness'],
-                "avg_beat_ratios": [self._to_float(x) for x in folk_features[3:6]],
-                "punchiness": self._to_float(folk_features[2]),
-                "polska_score": self._to_float(polska_score),
-                "hambo_score": self._to_float(hambo_score),
-                "ternary_confidence": self._to_float(ternary_confidence),
-                "meter": f"{int(np.max(beat_info[:,1])) if len(beat_info) > 0 else 0}/4",
-                "bars": [self._to_float(b) for b in bars],
-                "sections": [self._to_float(s) for s in sections],
+                "loudness_lufs": loudness,
+                "tempo_bpm": folk_features["bpm"],
+                "bpm_stability": folk_features["bpm_stability"],
+                "is_likely_instrumental": bool(vocal_data['is_instrumental']),
+                "voice_probability": voice_conf,
+                "swing_ratio": float(swing_ratio),
+                "articulation": articulation,
+                "bounciness": bounciness,
+                "avg_beat_ratios": [
+                    folk_features["r1_mean"], 
+                    folk_features["r2_mean"], 
+                    folk_features["r3_mean"]
+                ],
+                "punchiness": folk_features["punchiness"],
+                "polska_score": folk_features["polska_score"],
+                "hambo_score": folk_features["hambo_score"],
+                "ternary_confidence": ternary_conf,
+                "meter": f"{meter_numerator}/4",
+                "bars": [float(b) for b in bars],
+                "sections": [float(s) for s in sections],
                 "section_labels": section_labels,
-                "folk_authenticity_score": folk_auth_result['folk_authenticity_score'],
-                "requires_manual_review": folk_auth_result['requires_manual_review'],
+                "folk_authenticity_score": float(folk_auth_result['folk_authenticity_score']),
+                "requires_manual_review": bool(folk_auth_result['requires_manual_review']),
                 "folk_authenticity_breakdown": folk_auth_result['confidence_breakdown'],
                 "folk_authenticity_interpretation": folk_auth_result['interpretation']
             }
+
+            return self._sanitize_for_json(raw_result)
 
         except Exception as e:
             print(f"❌ Analysis Error: {e}")
             traceback.print_exc()
             return None
-        
 
-    def refine_structure(self, file_path: str, bars: list, new_style_hint: str) -> dict:
-        """
-        Lightweight pass: Re-runs ONLY the structure segmentation 
-        using a confirmed style hint (e.g., 'Hambo').
-        """
+    def refine_structure(self, file_path: str, bars: list, new_style_hint: str, audio_array=None) -> dict:
         import essentia.standard as es
-
         try:
             print(f"   [ANALYSIS] Refining structure with hint: {new_style_hint}...")
             
-            # 1. Load Audio (Fast load, we don't need high-res resampling for just structure if not needed, 
-            # but usually structure needs the full signal or at least 16k)
-            loader = es.MonoLoader(filename=file_path, sampleRate=16000)
-            audio_16k = loader()
+            if audio_array is not None:
+                audio_16k = audio_array
+            else:
+                loader = es.MonoLoader(filename=file_path, sampleRate=16000)
+                audio_16k = loader()
 
-            # 2. Run Extractor with the GROUND TRUTH hint
             sections = self.structure_extractor.extract_segments(
                 audio=audio_16k, 
                 bars=bars, 
                 style_hint=new_style_hint
             )
 
-            # 3. Label
             if sections:
                 section_labeler = ABSectionLabeler(sr=16000)
                 labels = section_labeler.label_sections(audio_16k, sections)
             else:
                 labels = []
 
-            return {
+            result = {
                 "sections": [self._to_float(s) for s in sections],
                 "section_labels": labels
             }
-            
+            return self._sanitize_for_json(result)
         except Exception as e:
             print(f"❌ Structure Refinement Error: {e}")
             return None
@@ -233,3 +275,21 @@ class AudioAnalyzer:
             if isinstance(value, (list, tuple)): return float(value[0]) if value else 0.0
             return float(value)
         except: return 0.0
+
+    def _sanitize_for_json(self, data):
+        import numpy as np
+        """Recursively converts numpy types to native Python types."""
+        if isinstance(data, dict):
+            return {k: self._sanitize_for_json(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self._sanitize_for_json(i) for i in data]
+        elif isinstance(data, np.ndarray):
+            return data.tolist()
+        elif isinstance(data, (np.float32, np.float64)):
+            return float(data)
+        elif isinstance(data, (np.int32, np.int64)):
+            return int(data)
+        elif isinstance(data, (np.bool_, bool)):
+            return bool(data)
+        else:
+            return data

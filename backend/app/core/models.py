@@ -27,6 +27,12 @@ class Track(Base):
     swing_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     articulation: Mapped[float | None] = mapped_column(Float, nullable=True)
     bounciness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    loudness: Mapped[float | None] = mapped_column(Float, nullable=True)          # EBU R128 Loudness (LUFS-ish)
+    punchiness: Mapped[float | None] = mapped_column(Float, nullable=True)        # 0.0-1.0 Energy transient score
+    voice_probability: Mapped[float | None] = mapped_column(Float, nullable=True) # 0.0-1.0 Vocal confidence
+    polska_score: Mapped[float | None] = mapped_column(Float, nullable=True)      # Asymmetric rhythm score
+    hambo_score: Mapped[float | None] = mapped_column(Float, nullable=True)      # Asymmetric rhythm score
+    bpm_stability: Mapped[float | None] = mapped_column(Float, nullable=True) # 1.0 = Perfectly Metronomic, 0.0 = Chaotic/Heavy Rubato
 
     # Analysis vector
     embedding: Mapped[list[float] | None] = mapped_column(Vector(), nullable=True)

@@ -22,3 +22,4 @@ yt-dlp                    # YouTube URL validation (used by LinkService)
 spotipy                   # Spotify API client (for discovery/ingestion)
 joblib
 numpy
+scikit-learn

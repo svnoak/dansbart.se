@@ -8,8 +8,9 @@ class ClassificationHead:
     """
     
     # Increment this when changing feature vector composition
-    FEATURE_VERSION = 2
-    EXPECTED_FEATURE_COUNT = 211  # MusiCNN(200) + folk(8) + swing(1) + layout(2)
+    FEATURE_VERSION = 4  
+    
+    EXPECTED_FEATURE_COUNT = 217
     
     def __init__(self, model_dir: str = "models"):
         self.model_path = os.path.join(model_dir, "custom_style_head.pkl")
@@ -84,6 +85,22 @@ class ClassificationHead:
 
         if not embeddings or not labels:
             print("⚠️ No data to train on.")
+            return
+        
+        valid_embeddings = []
+        valid_labels = []
+
+        print(f"🔍 Validating {len(embeddings)} samples against expected size {self.EXPECTED_FEATURE_COUNT}...")
+
+        for emb, lbl in zip(embeddings, labels):
+            # Only keep vectors that match the current version (217)
+            if len(emb) == self.EXPECTED_FEATURE_COUNT:
+                valid_embeddings.append(emb)
+                valid_labels.append(lbl)
+        
+        if len(valid_embeddings) == 0:
+            print(f"⚠️ No valid samples found! All {len(embeddings)} inputs were the wrong size.")
+            print("   Action: You need to re-analyze tracks to generate new 217-len vectors.")
             return
 
         print(f"💪 Training Head on {len(labels)} examples...")
