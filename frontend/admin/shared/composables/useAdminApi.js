@@ -7,9 +7,11 @@ import { unref } from 'vue';
 
 export function useAdminApi(token) {
     const fetchWithAuth = async (url, options = {}) => {
-        let tokenValue = unref(token);
-        tokenValue = tokenValue.value;
-
+        const rawToken = unref(token);
+        const tokenValue = (rawToken && typeof rawToken === 'object' && 'value' in rawToken) 
+            ? rawToken.value 
+            : rawToken;
+            
         const headers = {
             'x-admin-token': tokenValue,
             ...options.headers
@@ -17,9 +19,11 @@ export function useAdminApi(token) {
 
         const response = await fetch(url, { ...options, headers });
 
-        if (response.status === 401) {
-            localStorage.removeItem('admin_token');
-            window.location.href = '/admin/index.html';
+        if (response.status === 401 || response.status === 403) {
+            if (response.status === 401) {
+                localStorage.removeItem('admin_token');
+                window.location.href = '/admin/index.html';
+            }
             throw new Error('Unauthorized');
         }
 
