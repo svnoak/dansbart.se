@@ -1,6 +1,6 @@
 export default {
   name: 'FilterBar',
-  template: /*html*/`
+  template: /*html*/ `
     <div class="mb-6 max-w-4xl mx-auto">
       <div class="md:hidden">
         <div class="flex gap-2 mb-2">
@@ -236,9 +236,20 @@ export default {
     targetTempo: { type: Number, default: 130 },
     tempoEnabled: { type: Boolean, default: false },
     computedMin: { type: Number, default: 120 },
-    computedMax: { type: Number, default: 140 }
+    computedMax: { type: Number, default: 140 },
   },
-  emits: ['update:mainStyle', 'update:subStyle', 'update:search', 'update:source', 'update:vocals', 'update:styleConfirmed', 'update:minDuration', 'update:maxDuration', 'update:targetTempo', 'update:tempoEnabled'],
+  emits: [
+    'update:mainStyle',
+    'update:subStyle',
+    'update:search',
+    'update:source',
+    'update:vocals',
+    'update:styleConfirmed',
+    'update:minDuration',
+    'update:maxDuration',
+    'update:targetTempo',
+    'update:tempoEnabled',
+  ],
   data() {
     return {
       isExpanded: false,
@@ -251,7 +262,7 @@ export default {
       localDuration: this.getDurationPreset(),
       localTargetTempo: this.targetTempo,
       localTempoEnabled: this.tempoEnabled,
-      searchTimeout: null
+      searchTimeout: null,
     };
   },
   computed: {
@@ -266,42 +277,64 @@ export default {
       if (this.localVocals) count++;
       if (this.localStyleConfirmed) count++;
       if (this.localMainStyle) count++; // Count main
-      if (this.localSubStyle) count++;   // Count sub
+      if (this.localSubStyle) count++; // Count sub
       if (this.localDuration) count++;
       if (this.localTempoEnabled) count++;
       return count;
     },
     durationLabel() {
       const labels = {
-        'short': 'Kort (< 3 min)',
-        'medium': 'Medium (3-5 min)',
-        'long': 'Lång (> 5 min)'
+        short: 'Kort (< 3 min)',
+        medium: 'Medium (3-5 min)',
+        long: 'Lång (> 5 min)',
       };
       return labels[this.localDuration] || '';
     },
     rangeLeftPct() {
-      const min = 60, max = 200;
+      const min = 60,
+        max = 200;
       const rangeStart = Math.max(min, this.computedMin);
       return ((rangeStart - min) / (max - min)) * 100;
     },
     rangeWidthPct() {
-      const min = 60, max = 200;
+      const min = 60,
+        max = 200;
       const rangeStart = Math.max(min, this.computedMin);
       const rangeEnd = Math.min(max, this.computedMax);
       return ((rangeEnd - rangeStart) / (max - min)) * 100;
-    }
+    },
   },
   watch: {
-    mainStyle(val) { this.localMainStyle = val; },
-    subStyle(val) { this.localSubStyle = val; },
-    search(val) { this.localSearch = val; },
-    source(val) { this.localSource = val; },
-    vocals(val) { this.localVocals = val; },
-    styleConfirmed(val) { this.localStyleConfirmed = val; },
-    targetTempo(val) { this.localTargetTempo = val; },
-    tempoEnabled(val) { this.localTempoEnabled = val; },
-    minDuration() { this.localDuration = this.getDurationPreset(); },
-    maxDuration() { this.localDuration = this.getDurationPreset(); }
+    mainStyle(val) {
+      this.localMainStyle = val;
+    },
+    subStyle(val) {
+      this.localSubStyle = val;
+    },
+    search(val) {
+      this.localSearch = val;
+    },
+    source(val) {
+      this.localSource = val;
+    },
+    vocals(val) {
+      this.localVocals = val;
+    },
+    styleConfirmed(val) {
+      this.localStyleConfirmed = val;
+    },
+    targetTempo(val) {
+      this.localTargetTempo = val;
+    },
+    tempoEnabled(val) {
+      this.localTempoEnabled = val;
+    },
+    minDuration() {
+      this.localDuration = this.getDurationPreset();
+    },
+    maxDuration() {
+      this.localDuration = this.getDurationPreset();
+    },
   },
   methods: {
     onMainStyleChange() {
@@ -399,6 +432,6 @@ export default {
       this.clearSubStyle();
       this.clearDuration();
       this.clearTempo();
-    }
-  }
+    },
+  },
 };

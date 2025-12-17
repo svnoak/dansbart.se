@@ -7,497 +7,512 @@ import { useConsent } from '../../consent.js';
 
 import PlayerMobileView from './PlayerMobileView.js';
 import PlayerDockedView from './PlayerDockedView.js';
+import { showError } from '../../hooks/useToast.js';
 
 export default {
-    components: {
-        YouTubeEngine,
-        SpotifyEngine,
-        StructureEditor,
-        BrokenLinkToast,
-        PlayerMobileView,
-        PlayerDockedView
-    },
+  components: {
+    YouTubeEngine,
+    SpotifyEngine,
+    StructureEditor,
+    BrokenLinkToast,
+    PlayerMobileView,
+    PlayerDockedView,
+  },
 
-    setup() {
-        const { consentStatus, revokeConsent } = useConsent();
-        return {
-            consentStatus,
-            revokeConsent,
-            ...usePlayer()
-        };
+  setup() {
+    const { consentStatus, revokeConsent } = useConsent();
+    return {
+      consentStatus,
+      revokeConsent,
+      ...usePlayer(),
+    };
+  },
+
+  data() {
+    return {
+      realTime: 0,
+      duration: 0,
+      visualTime: 0,
+      lastTick: 0,
+      rafId: null,
+      ytPlayer: null,
+      videoPos: { x: 16, y: 96 },
+      isDraggingVideo: false,
+      dragOffset: { x: 0, y: 0 },
+      structureMode: 'none',
+      showStructureEditor: false,
+      isExpanded: false,
+      windowWidth: window.innerWidth,
+      availableVersions: [],
+      currentVersionIndex: 0,
+      isFetchingVersions: false,
+      isNudgeVisible: false,
+      ytPlayStartTime: null, // Track when YouTube playback started
+      potentialBrokenState: null, // For broken link toast
+      isLoadingVideo: false, // Track when we're loading a new video
+      breakpoints: [], // Array of timestamps for practice breakpoints
+    };
+  },
+  mounted() {
+    // Only initialize YouTube if consent is already granted
+    if (this.consentStatus === 'granted') {
+      this.initYouTube();
+    }
+
+    // Listen for consent changes
+    window.addEventListener('consent-changed', this.onConsentChanged);
+
+    this.startSmoothLoop();
+    window.addEventListener('mousemove', this.onDrag);
+    window.addEventListener('mouseup', this.stopDrag);
+    window.addEventListener('touchmove', this.onDrag, { passive: false });
+    window.addEventListener('touchend', this.stopDrag);
+    window.addEventListener('resize', this.onResize);
+  },
+
+  beforeUnmount() {
+    if (this.rafId) cancelAnimationFrame(this.rafId);
+    window.removeEventListener('consent-changed', this.onConsentChanged);
+    window.removeEventListener('mousemove', this.onDrag);
+    window.removeEventListener('mouseup', this.stopDrag);
+    window.removeEventListener('touchmove', this.onDrag);
+    window.removeEventListener('touchend', this.stopDrag);
+    window.removeEventListener('resize', this.onResize);
+  },
+
+  watch: {
+    isPlaying(val) {
+      // Only send play/pause commands if we're not loading a new video
+      // (loadVideoById autoplays, so we don't need to call play())
+      if (this.activeSource === 'youtube' && this.$refs.ytEngine && !this.isLoadingVideo) {
+        val ? this.$refs.ytEngine.play() : this.$refs.ytEngine.pause();
+      }
+      if (this.activeSource === 'spotify' && this.$refs.spotifyEngine) {
+        val ? this.$refs.spotifyEngine.resume() : this.$refs.spotifyEngine.pause();
+      }
+      if (val) this.lastTick = performance.now();
     },
-    
-    data() {
-        return {
-            realTime: 0,
-            duration: 0,
-            visualTime: 0,
-            lastTick: 0,
-            rafId: null,
-            ytPlayer: null,
-            videoPos: { x: 16, y: 96 },
-            isDraggingVideo: false,
-            dragOffset: { x: 0, y: 0 },
-            structureMode: 'none',
-            showStructureEditor: false,
-            isExpanded: false,
-            windowWidth: window.innerWidth,
-            availableVersions: [],
-            currentVersionIndex: 0,
-            isFetchingVersions: false,
-            isNudgeVisible: false,
-            ytPlayStartTime: null, // Track when YouTube playback started
-            potentialBrokenState: null, // For broken link toast
-            isLoadingVideo: false, // Track when we're loading a new video
-            breakpoints: [] // Array of timestamps for practice breakpoints
+    activeSource(newVal, oldVal) {
+      // Check for potential broken link: switching from youtube to spotify within 5 seconds
+      if (oldVal === 'youtube' && newVal === 'spotify' && this.ytPlayStartTime) {
+        const elapsed = (Date.now() - this.ytPlayStartTime) / 1000;
+        if (elapsed < 5) {
+          // Find the YouTube link that was playing
+          const track = this.currentTrack;
+          const badLink = track?.playback_links?.find(l => l.platform === 'youtube');
+          if (badLink) {
+            this.potentialBrokenState = { track, badLink };
+            // Auto-dismiss after 8 seconds
+            setTimeout(() => {
+              if (this.potentialBrokenState?.track.id === track.id) {
+                this.potentialBrokenState = null;
+              }
+            }, 8000);
+          }
         }
+      }
+
+      if (newVal === 'spotify') {
+        this.realTime = 0;
+        this.visualTime = 0;
+        this.duration = 0;
+        this.videoPos = { x: 16, y: 96 };
+        this.ytPlayStartTime = null; // Reset when switching away from YouTube
+      } else if (newVal === 'youtube') {
+        // Will be set when YouTube actually starts playing (in onYtStateChange)
+        this.ytPlayStartTime = null;
+      }
     },
-    mounted() {
-        // Only initialize YouTube if consent is already granted
-        if (this.consentStatus === 'granted') {
-            this.initYouTube();
+    'currentTrack.id': {
+      immediate: true,
+      handler(newId) {
+        if (newId) {
+          this.fetchVersions(newId);
+          this.ytPlayStartTime = null; // Reset on track change
+          this.loadBreakpoints(newId); // Load breakpoints for new track
         }
+      },
+    },
+    currentVideoId(newId, oldId) {
+      // When video ID changes, we're loading a new video
+      if (newId && newId !== oldId) {
+        this.isLoadingVideo = true;
+      }
+    },
+  },
 
-        // Listen for consent changes
-        window.addEventListener('consent-changed', this.onConsentChanged);
-
-        this.startSmoothLoop();
-        window.addEventListener('mousemove', this.onDrag);
-        window.addEventListener('mouseup', this.stopDrag);
-        window.addEventListener('touchmove', this.onDrag, { passive: false });
-        window.addEventListener('touchend', this.stopDrag);
-        window.addEventListener('resize', this.onResize);
+  computed: {
+    spotifyTrackId() {
+      if (!this.currentTrack?.playback_links) return null;
+      // Use platform field to find Spotify link
+      let link = this.currentTrack.playback_links.find(l => l.platform === 'spotify');
+      if (!link) {
+        // Fallback: check for old URL format
+        link = this.currentTrack.playback_links.find(l => {
+          const val = l.deep_link || l;
+          return typeof val === 'string' && val.includes('spotify');
+        });
+      }
+      if (!link) return null;
+      const val = link.deep_link || link;
+      // If it's already just an ID (no URL), return it directly
+      if (typeof val === 'string' && !val.includes('/')) {
+        return val;
+      }
+      // Otherwise extract from URL
+      const match = val.match(/track\/([a-zA-Z0-9]+)/);
+      return match ? match[1] : null;
+    },
+    spotifySrc() {
+      const trackId = this.spotifyTrackId;
+      if (!trackId) return '';
+      return `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0&autoplay=1`;
+    },
+    hasYt() {
+      return !!this.getYouTubeId(this.currentTrack);
+    },
+    hasSpot() {
+      return !!this.getSpotifyId(this.currentTrack);
+    },
+    fmtCurrent() {
+      return this.formatTime(this.visualTime);
+    },
+    fmtDuration() {
+      return this.formatTime(this.duration);
     },
 
-    beforeUnmount() {
-        if (this.rafId) cancelAnimationFrame(this.rafId);
-        window.removeEventListener('consent-changed', this.onConsentChanged);
-        window.removeEventListener('mousemove', this.onDrag);
-        window.removeEventListener('mouseup', this.stopDrag);
-        window.removeEventListener('touchmove', this.onDrag);
-        window.removeEventListener('touchend', this.stopDrag);
-        window.removeEventListener('resize', this.onResize);
+    // Calculate the bottom offset for elements above the player
+    // Player bar: ~80px, Progress bar: 6px (or 32px with sections)
+    playerBottomOffset() {
+      const playerHeight = 80;
+      const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
+      return playerHeight + progressBarHeight;
     },
 
-    watch: {
-        isPlaying(val) {
-            // Only send play/pause commands if we're not loading a new video
-            // (loadVideoById autoplays, so we don't need to call play())
-            if (this.activeSource === 'youtube' && this.$refs.ytEngine && !this.isLoadingVideo) {
-                val ? this.$refs.ytEngine.play() : this.$refs.ytEngine.pause();
-            }
-            if (this.activeSource === 'spotify' && this.$refs.spotifyEngine) {
-                val ? this.$refs.spotifyEngine.resume() : this.$refs.spotifyEngine.pause();
-            }
-            if (val) this.lastTick = performance.now();
-        },
-        activeSource(newVal, oldVal) {
-            // Check for potential broken link: switching from youtube to spotify within 5 seconds
-            if (oldVal === 'youtube' && newVal === 'spotify' && this.ytPlayStartTime) {
-                const elapsed = (Date.now() - this.ytPlayStartTime) / 1000;
-                if (elapsed < 5) {
-                    // Find the YouTube link that was playing
-                    const track = this.currentTrack;
-                    const badLink = track?.playback_links?.find(l => l.platform === 'youtube');
-                    if (badLink) {
-                        this.potentialBrokenState = { track, badLink };
-                        // Auto-dismiss after 8 seconds
-                        setTimeout(() => {
-                            if (this.potentialBrokenState?.track.id === track.id) {
-                                this.potentialBrokenState = null;
-                            }
-                        }, 8000);
-                    }
-                }
-            }
-            
-            if (newVal === 'spotify') {
-                this.realTime = 0;
-                this.visualTime = 0;
-                this.duration = 0;
-                this.videoPos = { x: 16, y: 96 };
-                this.ytPlayStartTime = null; // Reset when switching away from YouTube
-            } else if (newVal === 'youtube') {
-                // Will be set when YouTube actually starts playing (in onYtStateChange)
-                this.ytPlayStartTime = null;
-            }
-        },
-        'currentTrack.id': {
-            immediate: true,
-            handler(newId) {
-                if (newId) {
-                    this.fetchVersions(newId);
-                    this.ytPlayStartTime = null; // Reset on track change
-                    this.loadBreakpoints(newId); // Load breakpoints for new track
-                }
-            }
-        },
-        currentVideoId(newId, oldId) {
-            // When video ID changes, we're loading a new video
-            if (newId && newId !== oldId) {
-                this.isLoadingVideo = true;
-            }
+    // --- UPDATED HELPERS FOR NEW SCHEMA ---
+    trackArtist() {
+      const t = this.currentTrack;
+      if (!t) return 'Unknown Artist';
+
+      // 1. New Schema (Array of Objects)
+      if (Array.isArray(t.artists) && t.artists.length > 0) {
+        // Filter primaries first if you want, or just join all names
+        return t.artists.map(a => a.name).join(', ');
+      }
+
+      // 2. Fallback (Old String)
+      if (typeof t.artist_name === 'string' && t.artist_name) return t.artist_name;
+
+      return 'Unknown Artist';
+    },
+
+    trackAlbum() {
+      const t = this.currentTrack;
+      if (!t) return '';
+
+      // 1. New Schema (Object)
+      if (t.album && t.album.title) return t.album.title;
+
+      // 2. Fallback (Old String)
+      if (typeof t.album_name === 'string') return t.album_name;
+
+      return '';
+    },
+  },
+
+  methods: {
+    onResize() {
+      this.windowWidth = window.innerWidth;
+      if (this.windowWidth >= 768) this.isExpanded = false;
+    },
+    async fetchVersions(trackId) {
+      this.availableVersions = [];
+      this.currentVersionIndex = 0;
+      this.isFetchingVersions = true;
+      try {
+        const res = await fetch(`api/tracks/${trackId}/structure-versions`);
+        if (res.ok) {
+          this.availableVersions = await res.json();
+          const activeIdx = this.availableVersions.findIndex(v => v.is_active);
+          this.currentVersionIndex = activeIdx >= 0 ? activeIdx : 0;
         }
+      } catch {
+        showError();
+      } finally {
+        this.isFetchingVersions = false;
+      }
     },
+    cycleVersion(direction) {
+      if (!Array.isArray(this.availableVersions) || this.availableVersions.length <= 1) return;
+      const len = this.availableVersions.length;
+      const dir = Number(direction) || 0;
+      if (dir === 0) return;
+      const newIndex = (this.currentVersionIndex + dir + len) % len;
+      this.currentVersionIndex = newIndex;
+      this.handleVersionPreview(this.availableVersions[newIndex]?.structure_data);
+      if (this.structureMode === 'none') this.structureMode = 'sections';
+    },
+    handleVersionPreview(structureData) {
+      if (this.currentTrack && structureData) {
+        this.currentTrack.bars = structureData.bars || [];
+        this.currentTrack.sections = structureData.sections || [];
+        this.currentTrack.section_labels = structureData.labels || [];
+      }
+    },
+    handleJump(direction) {
+      if (this.consentStatus !== 'granted') {
+        window.dispatchEvent(new Event('show-consent-banner'));
+        return;
+      }
 
-    computed: {
-        spotifyTrackId() {
-            if (!this.currentTrack?.playback_links) return null;
-            // Use platform field to find Spotify link
-            let link = this.currentTrack.playback_links.find(l => l.platform === 'spotify');
-            if (!link) {
-                // Fallback: check for old URL format
-                link = this.currentTrack.playback_links.find(l => {
-                    const val = l.deep_link || l;
-                    return typeof val === 'string' && val.includes('spotify');
-                });
-            }
-            if (!link) return null;
-            const val = link.deep_link || link;
-            // If it's already just an ID (no URL), return it directly
-            if (typeof val === 'string' && !val.includes('/')) {
-                return val;
-            }
-            // Otherwise extract from URL
-            const match = val.match(/track\/([a-zA-Z0-9]+)/);
-            return match ? match[1] : null;
-        },
-        spotifySrc() {
-            const trackId = this.spotifyTrackId;
-            if (!trackId) return '';
-            return `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0&autoplay=1`;
-        },
-        hasYt() { return !!this.getYouTubeId(this.currentTrack); },
-        hasSpot() { return !!this.getSpotifyId(this.currentTrack); },
-        fmtCurrent() { return this.formatTime(this.visualTime) },
-        fmtDuration() { return this.formatTime(this.duration) },
-        
-        // Calculate the bottom offset for elements above the player
-        // Player bar: ~80px, Progress bar: 6px (or 32px with sections)
-        playerBottomOffset() {
-            const playerHeight = 80;
-            const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
-            return playerHeight + progressBarHeight;
-        },
-        
-        // --- UPDATED HELPERS FOR NEW SCHEMA ---
-        trackArtist() {
-            const t = this.currentTrack;
-            if (!t) return 'Unknown Artist';
-            
-            // 1. New Schema (Array of Objects)
-            if (Array.isArray(t.artists) && t.artists.length > 0) {
-                // Filter primaries first if you want, or just join all names
-                return t.artists.map(a => a.name).join(', ');
-            }
-            
-            // 2. Fallback (Old String)
-            if (typeof t.artist_name === 'string' && t.artist_name) return t.artist_name;
-            
-            return 'Unknown Artist';
-        },
-        
-        trackAlbum() {
-            const t = this.currentTrack;
-            if (!t) return '';
-            
-            // 1. New Schema (Object)
-            if (t.album && t.album.title) return t.album.title;
-            
-            // 2. Fallback (Old String)
-            if (typeof t.album_name === 'string') return t.album_name;
-            
-            return '';
+      if (this.structureMode !== 'none' && this.currentTrack?.bars?.length > 0) {
+        const bars = this.currentTrack.bars;
+        let nextBarIdx = bars.findIndex(b => b > this.visualTime);
+        let currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
+        let targetIdx = currentIdx + direction * 4;
+        if (targetIdx < 0) targetIdx = 0;
+        if (targetIdx >= bars.length) targetIdx = bars.length - 1;
+        this.handleSeek(bars[targetIdx]);
+      } else {
+        let newTime = this.visualTime + direction * 10;
+        if (newTime < 0) newTime = 0;
+        if (newTime > this.duration) newTime = this.duration;
+        this.handleSeek(newTime);
+      }
+    },
+    handleToggleRepeat() {
+      this.cycleRepeatMode();
+    },
+    startSmoothLoop() {
+      const loop = now => {
+        // Smooth interpolation for both YouTube and Spotify
+        if (this.isPlaying && this.duration > 0) {
+          const delta = (now - this.lastTick) / 1000;
+          if (delta < 1.0) this.visualTime = Math.min(this.visualTime + delta, this.duration);
         }
+        this.lastTick = now;
+        this.rafId = requestAnimationFrame(loop);
+      };
+      this.rafId = requestAnimationFrame(loop);
     },
+    onTimeUpdate({ currentTime, duration }) {
+      this.realTime = currentTime;
+      this.duration = duration;
+      if (Math.abs(this.visualTime - this.realTime) > 0.5) this.visualTime = this.realTime;
+    },
+    handleSeek(seconds) {
+      if (this.consentStatus !== 'granted') {
+        window.dispatchEvent(new Event('show-consent-banner'));
+        return;
+      }
 
-    methods: {
-        onResize() {
-            this.windowWidth = window.innerWidth;
-            if (this.windowWidth >= 768) this.isExpanded = false;
-        },
-        async fetchVersions(trackId) {
-            this.availableVersions = [];
-            this.currentVersionIndex = 0;
-            this.isFetchingVersions = true;
-            try {
-                const res = await fetch(`api/tracks/${trackId}/structure-versions`);
-                if (res.ok) {
-                    this.availableVersions = await res.json();
-                    const activeIdx = this.availableVersions.findIndex(v => v.is_active);
-                    this.currentVersionIndex = activeIdx >= 0 ? activeIdx : 0;
-                }
-            } catch (e) { console.warn("Could not fetch versions", e); } 
-            finally { this.isFetchingVersions = false; }
-        },
-        cycleVersion(direction) {
-            if (!Array.isArray(this.availableVersions) || this.availableVersions.length <= 1) return;
-            const len = this.availableVersions.length;
-            const dir = Number(direction) || 0;
-            if (dir === 0) return;
-            const newIndex = (this.currentVersionIndex + dir + len) % len;
-            this.currentVersionIndex = newIndex;
-            this.handleVersionPreview(this.availableVersions[newIndex]?.structure_data);
-            if (this.structureMode === 'none') this.structureMode = 'sections';
-        },
-        handleVersionPreview(structureData) {
-            if (this.currentTrack && structureData) {
-                this.currentTrack.bars = structureData.bars || [];
-                this.currentTrack.sections = structureData.sections || [];
-                this.currentTrack.section_labels = structureData.labels || [];
-            }
-        },
-        handleJump(direction) {
-            if (this.consentStatus !== 'granted') {
-                window.dispatchEvent(new Event('show-consent-banner'));
-                return;
-            }
+      this.visualTime = seconds;
+      if (this.activeSource === 'youtube' && this.$refs.ytEngine)
+        this.$refs.ytEngine.seekTo(seconds);
+      if (this.activeSource === 'spotify' && this.$refs.spotifyEngine)
+        this.$refs.spotifyEngine.seek(seconds);
+    },
+    handleTrackEnd() {
+      if (this.showStructureEditor) {
+        this.isPlaying = false;
+        return;
+      }
+      if (this.repeatMode === 'one') {
+        this.handleSeek(0);
+        if (this.$refs.ytEngine) this.$refs.ytEngine.play();
+      } else {
+        this.nextTrack();
+      }
+    },
+    handleMainButton() {
+      if (this.activeSource === 'youtube') this.togglePlay();
+    },
+    startDrag(e) {
+      this.isDraggingVideo = true;
+      const rect = this.$refs.videoContainer.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      this.dragOffset = { x: clientX - rect.left, y: window.innerHeight - rect.bottom };
+    },
+    onDrag(e) {
+      if (this.isExpanded) return;
+      if (!this.isDraggingVideo) return;
+      // Don't allow dragging on desktop - video is fixed position
+      if (this.windowWidth >= 768) return;
+      if (e.cancelable) e.preventDefault();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      let newLeft = clientX - this.dragOffset.x;
+      let newBottom = window.innerHeight - clientY - this.dragOffset.y;
+      const videoWidth = 160;
+      const maxX = window.innerWidth - videoWidth - 16;
+      const maxY = window.innerHeight - 200;
+      this.videoPos.x = Math.max(0, Math.min(newLeft, maxX));
+      this.videoPos.y = Math.max(80, Math.min(newBottom, maxY));
+    },
+    stopDrag() {
+      this.isDraggingVideo = false;
+    },
+    toggleStructureMode() {
+      if (this.structureMode === 'none') this.structureMode = 'bars';
+      else if (this.structureMode === 'bars') this.structureMode = 'sections';
+      else this.structureMode = 'none';
+    },
+    formatTime(s) {
+      if (!s || isNaN(s)) return '0:00';
+      const m = Math.floor(s / 60);
+      const sc = Math.floor(s % 60);
+      return `${m}:${sc < 10 ? '0' : ''}${sc}`;
+    },
+    onConsentChanged(event) {
+      if (event.detail.status === 'granted') {
+        // Initialize YouTube when consent is granted
+        this.initYouTube();
+      }
+    },
+    openCookieSettings() {
+      this.revokeConsent();
+    },
+    initYouTube() {
+      // Only load if consent is granted
+      if (this.consentStatus !== 'granted') return;
 
-            if (this.structureMode !== 'none' && this.currentTrack?.bars?.length > 0) {
-                const bars = this.currentTrack.bars;
-                let nextBarIdx = bars.findIndex(b => b > this.visualTime);
-                let currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
-                let targetIdx = currentIdx + (direction * 4);
-                if (targetIdx < 0) targetIdx = 0;
-                if (targetIdx >= bars.length) targetIdx = bars.length - 1;
-                this.handleSeek(bars[targetIdx]);
-            } else {
-                let newTime = this.visualTime + (direction * 10);
-                if (newTime < 0) newTime = 0;
-                if (newTime > this.duration) newTime = this.duration;
-                this.handleSeek(newTime);
-            }
-        },
-        handleToggleRepeat() { this.cycleRepeatMode(); },
-        startSmoothLoop() {
-            const loop = (now) => {
-                // Smooth interpolation for both YouTube and Spotify
-                if (this.isPlaying && this.duration > 0) {
-                    const delta = (now - this.lastTick) / 1000;
-                    if (delta < 1.0) this.visualTime = Math.min(this.visualTime + delta, this.duration);
-                }
-                this.lastTick = now;
-                this.rafId = requestAnimationFrame(loop);
-            };
-            this.rafId = requestAnimationFrame(loop);
-        },
-        onTimeUpdate({ currentTime, duration }) {
-            this.realTime = currentTime;
-            this.duration = duration;
-            if (Math.abs(this.visualTime - this.realTime) > 0.5) this.visualTime = this.realTime;
-        },
-        handleSeek(seconds) {
-            if (this.consentStatus !== 'granted') {
-                window.dispatchEvent(new Event('show-consent-banner'));
-                return;
-            }
-
-            this.visualTime = seconds; 
-            if (this.activeSource === 'youtube' && this.$refs.ytEngine) this.$refs.ytEngine.seekTo(seconds);
-            if (this.activeSource === 'spotify' && this.$refs.spotifyEngine) this.$refs.spotifyEngine.seek(seconds);
-        },
-        handleTrackEnd() {
-            if (this.showStructureEditor) { this.isPlaying = false; return; }
-            if (this.repeatMode === 'one') {
-                this.handleSeek(0);
-                if(this.$refs.ytEngine) this.$refs.ytEngine.play(); 
-            } else {
-                this.nextTrack();
-            }
-        },
-        handleMainButton() { if (this.activeSource === 'youtube') this.togglePlay(); },
-        startDrag(e) {
-            this.isDraggingVideo = true;
-            const rect = this.$refs.videoContainer.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            this.dragOffset = { x: clientX - rect.left, y: window.innerHeight - rect.bottom };
-        },
-        onDrag(e) {
-            if (this.isExpanded) return;
-            if (!this.isDraggingVideo) return;
-            // Don't allow dragging on desktop - video is fixed position
-            if (this.windowWidth >= 768) return;
-            if (e.cancelable) e.preventDefault(); 
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            let newLeft = clientX - this.dragOffset.x;
-            let newBottom = (window.innerHeight - clientY) - this.dragOffset.y;
-            const videoWidth = 160;
-            const maxX = window.innerWidth - videoWidth - 16; 
-            const maxY = window.innerHeight - 200;
-            this.videoPos.x = Math.max(0, Math.min(newLeft, maxX));
-            this.videoPos.y = Math.max(80, Math.min(newBottom, maxY)); 
-        },
-        stopDrag() { this.isDraggingVideo = false; },
-        toggleStructureMode() {
-            if (this.structureMode === 'none') this.structureMode = 'bars';
-            else if (this.structureMode === 'bars') this.structureMode = 'sections';
-            else this.structureMode = 'none';
-        },
-        formatTime(s) {
-            if (!s || isNaN(s)) return "0:00";
-            const m = Math.floor(s / 60);
-            const sc = Math.floor(s % 60);
-            return `${m}:${sc < 10 ? '0' : ''}${sc}`;
-        },
-        onConsentChanged(event) {
-            if (event.detail.status === 'granted') {
-                // Initialize YouTube when consent is granted
-                this.initYouTube();
-            }
-        },
-        openCookieSettings() {
-            this.revokeConsent();
-        },
-        initYouTube() {
-            // Only load if consent is granted
-            if (this.consentStatus !== 'granted') return;
-
-            if (window.YT && window.YT.Player) { }
-            else {
-                window.onYouTubeIframeAPIReady = () => {};
-                if (!document.getElementById('yt-api-script')) {
-                    const tag = document.createElement('script');
-                    tag.id = 'yt-api-script';
-                    tag.src = "https://www.youtube.com/iframe_api";
-                    document.head.appendChild(tag);
-                }
-            }
-        },
-        onSpotifyPlaybackUpdate({ isPaused, position, duration }) {
-            if (this.activeSource === 'spotify') {
-                this.isPlaying = !isPaused;
-                this.duration = duration;
-                // Sync position only if drift is significant (like YouTube)
-                if (Math.abs(this.visualTime - position) > 0.5) {
-                    this.visualTime = position;
-                }
-                // Reset lastTick when playback state changes for smooth interpolation
-                if (!isPaused) {
-                    this.lastTick = performance.now();
-                }
-            }
-        },
-        onYtStateChange(stateCode) {
-            if (stateCode === 1) {
-                this.isPlaying = true;
-                this.lastTick = performance.now();
-                this.isLoadingVideo = false; // Video has started playing
-                // Track when YouTube playback actually started (for broken link detection)
-                if (!this.ytPlayStartTime) {
-                    this.ytPlayStartTime = Date.now();
-                }
-            }
-            // Only set isPlaying to false if we're not loading a new video
-            if (stateCode === 2 && !this.isLoadingVideo) {
-                this.isPlaying = false;
-            }
-            if (stateCode === 0) this.handleTrackEnd();
-        },
-        handlePlayerError(e) {
-            console.warn("YouTube Error:", e);
-            if (this.playerStore && this.playerStore.handlePlayerError) this.playerStore.handlePlayerError(e.data);
-            else this.nextTrack();
-        },
-        // Breakpoint management
-        loadBreakpoints(trackId) {
-            if (!trackId) {
-                this.breakpoints = [];
-                return;
-            }
-            const key = `breakpoints_${trackId}`;
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                try {
-                    this.breakpoints = JSON.parse(stored);
-                } catch (e) {
-                    this.breakpoints = [];
-                }
-            } else {
-                this.breakpoints = [];
-            }
-        },
-        saveBreakpoints() {
-            if (!this.currentTrack?.id) return;
-            const key = `breakpoints_${this.currentTrack.id}`;
-            localStorage.setItem(key, JSON.stringify(this.breakpoints));
-        },
-        addBreakpoint() {
-            if (this.consentStatus !== 'granted') {
-                window.dispatchEvent(new Event('show-consent-banner'));
-                return;
-            }
-
-            let time = this.visualTime;
-
-            // Snap to nearest bar if in bars mode
-            if (this.structureMode === 'bars' && this.currentTrack?.bars && this.currentTrack.bars.length > 0) {
-                const closestBar = this.currentTrack.bars.reduce((prev, curr) => {
-                    return (Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev);
-                });
-                time = closestBar;
-            }
-
-            // Don't add if already exists at this time
-            if (this.breakpoints.includes(time)) return;
-
-            this.breakpoints.push(time);
-            this.breakpoints.sort((a, b) => a - b);
-            this.saveBreakpoints();
-        },
-        removeBreakpoint(time) {
-            this.breakpoints = this.breakpoints.filter(bp => bp !== time);
-            this.saveBreakpoints();
-        },
-        clearAllBreakpoints() {
-            this.breakpoints = [];
-            this.saveBreakpoints();
-        },
-        updateBreakpoint(oldTime, newTime) {
-            console.log('[GlobalPlayer] updateBreakpoint called:', {
-                oldTime,
-                newTime,
-                currentBreakpoints: [...this.breakpoints]
-            });
-
-            const index = this.breakpoints.indexOf(oldTime);
-            if (index === -1) {
-                console.log('[GlobalPlayer] oldTime not found in breakpoints, aborting');
-                return;
-            }
-
-            if (oldTime === newTime) {
-                console.log('[GlobalPlayer] oldTime === newTime, no change needed');
-                return;
-            }
-
-            // Check if newTime already exists...
-            const newTimeIndex = this.breakpoints.indexOf(newTime);
-            if (newTimeIndex !== -1 && newTimeIndex !== index) {
-                // MERGE: Remove the one we moved, keep the one that was already there
-                console.log('[GlobalPlayer] MERGE: newTime already exists at different index, removing dragged one');
-                this.breakpoints.splice(index, 1);
-            } else {
-                // MOVE: Just update the value
-                console.log('[GlobalPlayer] MOVE: updating breakpoint from', oldTime, 'to', newTime);
-                this.breakpoints[index] = newTime;
-            }
-
-            this.breakpoints.sort((a, b) => a - b);
-            console.log('[GlobalPlayer] Updated breakpoints:', [...this.breakpoints]);
-            this.saveBreakpoints();
-        },
-        jumpToBreakpoint(time) {
-            if (this.consentStatus !== 'granted') {
-                window.dispatchEvent(new Event('show-consent-banner'));
-                return;
-            }
-            this.handleSeek(time);
+      if (window.YT && window.YT.Player) {
+        // Do nothing
+      } else {
+        window.onYouTubeIframeAPIReady = () => {};
+        if (!document.getElementById('yt-api-script')) {
+          const tag = document.createElement('script');
+          tag.id = 'yt-api-script';
+          tag.src = 'https://www.youtube.com/iframe_api';
+          document.head.appendChild(tag);
         }
+      }
     },
+    onSpotifyPlaybackUpdate({ isPaused, position, duration }) {
+      if (this.activeSource === 'spotify') {
+        this.isPlaying = !isPaused;
+        this.duration = duration;
+        // Sync position only if drift is significant (like YouTube)
+        if (Math.abs(this.visualTime - position) > 0.5) {
+          this.visualTime = position;
+        }
+        // Reset lastTick when playback state changes for smooth interpolation
+        if (!isPaused) {
+          this.lastTick = performance.now();
+        }
+      }
+    },
+    onYtStateChange(stateCode) {
+      if (stateCode === 1) {
+        this.isPlaying = true;
+        this.lastTick = performance.now();
+        this.isLoadingVideo = false; // Video has started playing
+        // Track when YouTube playback actually started (for broken link detection)
+        if (!this.ytPlayStartTime) {
+          this.ytPlayStartTime = Date.now();
+        }
+      }
+      // Only set isPlaying to false if we're not loading a new video
+      if (stateCode === 2 && !this.isLoadingVideo) {
+        this.isPlaying = false;
+      }
+      if (stateCode === 0) this.handleTrackEnd();
+    },
+    handlePlayerError(e) {
+      if (this.playerStore && this.playerStore.handlePlayerError)
+        this.playerStore.handlePlayerError(e.data);
+      else this.nextTrack();
+    },
+    // Breakpoint management
+    loadBreakpoints(trackId) {
+      if (!trackId) {
+        this.breakpoints = [];
+        return;
+      }
+      const key = `breakpoints_${trackId}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        try {
+          this.breakpoints = JSON.parse(stored);
+        } catch {
+          this.breakpoints = [];
+        }
+      } else {
+        this.breakpoints = [];
+      }
+    },
+    saveBreakpoints() {
+      if (!this.currentTrack?.id) return;
+      const key = `breakpoints_${this.currentTrack.id}`;
+      localStorage.setItem(key, JSON.stringify(this.breakpoints));
+    },
+    addBreakpoint() {
+      if (this.consentStatus !== 'granted') {
+        window.dispatchEvent(new Event('show-consent-banner'));
+        return;
+      }
 
-    template: /*html*/`
+      let time = this.visualTime;
+
+      // Snap to nearest bar if in bars mode
+      if (
+        this.structureMode === 'bars' &&
+        this.currentTrack?.bars &&
+        this.currentTrack.bars.length > 0
+      ) {
+        const closestBar = this.currentTrack.bars.reduce((prev, curr) => {
+          return Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev;
+        });
+        time = closestBar;
+      }
+
+      // Don't add if already exists at this time
+      if (this.breakpoints.includes(time)) return;
+
+      this.breakpoints.push(time);
+      this.breakpoints.sort((a, b) => a - b);
+      this.saveBreakpoints();
+    },
+    removeBreakpoint(time) {
+      this.breakpoints = this.breakpoints.filter(bp => bp !== time);
+      this.saveBreakpoints();
+    },
+    clearAllBreakpoints() {
+      this.breakpoints = [];
+      this.saveBreakpoints();
+    },
+    updateBreakpoint(oldTime, newTime) {
+      const index = this.breakpoints.indexOf(oldTime);
+      if (index === -1) {
+        return;
+      }
+
+      if (oldTime === newTime) {
+        return;
+      }
+
+      // Check if newTime already exists...
+      const newTimeIndex = this.breakpoints.indexOf(newTime);
+      if (newTimeIndex !== -1 && newTimeIndex !== index) {
+        // MERGE: Remove the one we moved, keep the one that was already there
+        this.breakpoints.splice(index, 1);
+      } else {
+        this.breakpoints[index] = newTime;
+      }
+
+      this.breakpoints.sort((a, b) => a - b);
+      this.saveBreakpoints();
+    },
+    jumpToBreakpoint(time) {
+      if (this.consentStatus !== 'granted') {
+        window.dispatchEvent(new Event('show-consent-banner'));
+        return;
+      }
+      this.handleSeek(time);
+    },
+  },
+
+  template: /*html*/ `
     <div v-if="currentTrack">
     
         <player-mobile-view
@@ -652,5 +667,5 @@ export default {
         ></broken-link-toast>
 
     </div>
-    `
-}
+    `,
+};

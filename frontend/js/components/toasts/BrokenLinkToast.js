@@ -1,54 +1,55 @@
 import { toRaw } from 'vue';
+import { showError } from '../../hooks/useToast.js';
 
 export default {
-    props: {
-        brokenState: { type: Object, default: null }, // Expects { track, badLink } or null
-        structureMode: { type: String, default: 'none' },
-        inlineMode: { type: Boolean, default: false } // When true, renders inline instead of fixed
+  props: {
+    brokenState: { type: Object, default: null }, // Expects { track, badLink } or null
+    structureMode: { type: String, default: 'none' },
+    inlineMode: { type: Boolean, default: false }, // When true, renders inline instead of fixed
+  },
+  emits: ['close'],
+  data() {
+    return {
+      view: 'ask', // 'ask' or 'success'
+    };
+  },
+  computed: {
+    // Calculate the bottom offset for desktop positioning
+    bottomOffset() {
+      const playerHeight = 80;
+      const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
+      return playerHeight + progressBarHeight + 12; // 12px margin
     },
-    emits: ['close'],
-    data() {
-        return {
-            view: 'ask' // 'ask' or 'success'
-        }
+  },
+  watch: {
+    brokenState() {
+      this.view = 'ask'; // Reset when a new broken link pops up
     },
-    computed: {
-        // Calculate the bottom offset for desktop positioning
-        bottomOffset() {
-            const playerHeight = 80;
-            const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
-            return playerHeight + progressBarHeight + 12; // 12px margin
-        }
-    },
-    watch: {
-        brokenState() {
-            this.view = 'ask'; // Reset when a new broken link pops up
-        }
-    },
-    methods: {
-        async confirm(reason) {
-            // 1. Show Success UI immediately
-            this.view = 'success';
-            
-            const { track, badLink } = toRaw(this.brokenState);
+  },
+  methods: {
+    async confirm(reason) {
+      // 1. Show Success UI immediately
+      this.view = 'success';
 
-            // 2. Perform API call in background
-            try {
-                if (badLink && badLink.id) {
-                    await fetch(`/api/links/${badLink.id}/report?reason=${reason}`, { method: 'PATCH' });
-                }
-            } catch (e) {
-                console.error(e);
-            }
+      const { badLink } = toRaw(this.brokenState);
 
-            // 3. Close after delay
-            setTimeout(() => {
-                this.$emit('close');
-                this.view = 'ask';
-            }, 2500);
+      // 2. Perform API call in background
+      try {
+        if (badLink && badLink.id) {
+          await fetch(`/api/links/${badLink.id}/report?reason=${reason}`, { method: 'PATCH' });
         }
+      } catch {
+        showError();
+      }
+
+      // 3. Close after delay
+      setTimeout(() => {
+        this.$emit('close');
+        this.view = 'ask';
+      }, 2500);
     },
-    template: /*html*/`
+  },
+  template: /*html*/ `
     <transition
         enter-active-class="transform ease-out duration-300 transition"
         enter-from-class="translate-y-2 opacity-0"
@@ -119,5 +120,5 @@ export default {
 
         </div>
     </transition>
-    `
-}
+    `,
+};

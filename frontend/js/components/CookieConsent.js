@@ -2,46 +2,46 @@ import { useConsent } from '../consent.js';
 import { ref, onMounted } from 'vue';
 
 export default {
-    setup() {
-        const { consentStatus, grantConsent, denyConsent } = useConsent();
-        const showBanner = ref(false);
+  setup() {
+    const { consentStatus, grantConsent, denyConsent } = useConsent();
+    const showBanner = ref(false);
 
-        onMounted(() => {
-            // Show banner only if consent is not set
-            if (consentStatus.value === null) {
-                // Slight delay for better UX
-                setTimeout(() => {
-                    showBanner.value = true;
-                }, 500);
-            }
+    onMounted(() => {
+      // Show banner only if consent is not set
+      if (consentStatus.value === null) {
+        // Slight delay for better UX
+        setTimeout(() => {
+          showBanner.value = true;
+        }, 500);
+      }
 
-            // Listen for show-consent event (triggered when user tries to play without consent)
-            window.addEventListener('show-consent-banner', () => {
-                if (consentStatus.value === null || consentStatus.value === 'denied') {
-                    showBanner.value = true;
-                }
-            });
-        });
+      // Listen for show-consent event (triggered when user tries to play without consent)
+      window.addEventListener('show-consent-banner', () => {
+        if (consentStatus.value === null || consentStatus.value === 'denied') {
+          showBanner.value = true;
+        }
+      });
+    });
 
-        const handleAccept = () => {
-            grantConsent();
-            showBanner.value = false;
-        };
+    const handleAccept = () => {
+      grantConsent();
+      showBanner.value = false;
+    };
 
-        const handleDecline = () => {
-            denyConsent();
-            showBanner.value = false;
-        };
+    const handleDecline = () => {
+      denyConsent();
+      showBanner.value = false;
+    };
 
-        return {
-            consentStatus,
-            showBanner,
-            handleAccept,
-            handleDecline
-        };
-    },
+    return {
+      consentStatus,
+      showBanner,
+      handleAccept,
+      handleDecline,
+    };
+  },
 
-    template: /*html*/`
+  template: /*html*/ `
     <Transition name="slide-up">
         <div v-if="showBanner" class="fixed inset-0 z-[100] pointer-events-none flex items-end justify-center p-4 sm:p-6">
             <div class="pointer-events-auto bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-2xl p-6 sm:p-8">
@@ -102,5 +102,5 @@ export default {
         transform: translateY(10px);
     }
     </style>
-    `
+    `,
 };

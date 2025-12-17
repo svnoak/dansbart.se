@@ -9,65 +9,74 @@ import { useToast } from '../../shared/composables/useToast.js';
 import { useBulkApi } from './api.js';
 
 export default {
-    setup() {
-        const { adminToken } = useAdminAuth();
-        const { showToast } = useToast();
-        const bulkApi = useBulkApi(adminToken);
+  setup() {
+    const { adminToken } = useAdminAuth();
+    const { showToast } = useToast();
+    const bulkApi = useBulkApi(adminToken);
 
-        // State
-        const bulkLoading = ref(false);
-        const reanalyzeLoading = ref(false);
-        const bulkMessage = ref('');
-        const bulkError = ref(false);
+    // State
+    const bulkLoading = ref(false);
+    const reanalyzeLoading = ref(false);
+    const bulkMessage = ref('');
+    const bulkError = ref(false);
 
-        // 1. Reclassify Logic
-        const reclassifyAll = async () => {
-            bulkLoading.value = true;
-            bulkMessage.value = '';
-            try {
-                const data = await bulkApi.reclassifyAll();
-                bulkError.value = false;
-                bulkMessage.value = data.message;
-                showToast(data.message);
-                window.dispatchEvent(new CustomEvent('admin:tracks-reclassified'));
-            } catch (e) {
-                bulkError.value = true;
-                bulkMessage.value = e.message;
-                showToast(e.message, 'error');
-            } finally {
-                bulkLoading.value = false;
-            }
-        };
+    // 1. Reclassify Logic
+    const reclassifyAll = async () => {
+      bulkLoading.value = true;
+      bulkMessage.value = '';
+      try {
+        const data = await bulkApi.reclassifyAll();
+        bulkError.value = false;
+        bulkMessage.value = data.message;
+        showToast(data.message);
+        window.dispatchEvent(new CustomEvent('admin:tracks-reclassified'));
+      } catch (e) {
+        bulkError.value = true;
+        bulkMessage.value = e.message;
+        showToast(e.message, 'error');
+      } finally {
+        bulkLoading.value = false;
+      }
+    };
 
-        // 2. Re-analyze Logic (Using the new API method)
-        const runBulkReanalysis = async () => {
-            if (!confirm('⚠️ Warning: This will reset all tracks to PENDING and re-download/analyze audio.\n\nThis is a heavy CPU/Network operation. Are you sure?')) return;
-            
-            reanalyzeLoading.value = true;
-            bulkMessage.value = '';
-            
-            try {
-                // Call the new API function
-                const data = await bulkApi.bulkReanalyze('everything', 5000);
-                
-                showToast(data.message);
-                bulkMessage.value = `Queued ${data.queued} tracks for analysis.`;
-                bulkError.value = false;
-            } catch (e) {
-                showToast(e.message, 'error');
-                bulkMessage.value = e.message;
-                bulkError.value = true;
-            } finally {
-                reanalyzeLoading.value = false;
-            }
-        };
+    // 2. Re-analyze Logic (Using the new API method)
+    const runBulkReanalysis = async () => {
+      if (
+        !confirm(
+          '⚠️ Warning: This will reset all tracks to PENDING and re-download/analyze audio.\n\nThis is a heavy CPU/Network operation. Are you sure?'
+        )
+      )
+        return;
 
-        return {
-            bulkLoading, reanalyzeLoading, bulkMessage, bulkError,
-            reclassifyAll, runBulkReanalysis
-        };
-    },
-    template: /*html*/`
+      reanalyzeLoading.value = true;
+      bulkMessage.value = '';
+
+      try {
+        // Call the new API function
+        const data = await bulkApi.bulkReanalyze('everything', 5000);
+
+        showToast(data.message);
+        bulkMessage.value = `Queued ${data.queued} tracks for analysis.`;
+        bulkError.value = false;
+      } catch (e) {
+        showToast(e.message, 'error');
+        bulkMessage.value = e.message;
+        bulkError.value = true;
+      } finally {
+        reanalyzeLoading.value = false;
+      }
+    };
+
+    return {
+      bulkLoading,
+      reanalyzeLoading,
+      bulkMessage,
+      bulkError,
+      reclassifyAll,
+      runBulkReanalysis,
+    };
+  },
+  template: /*html*/ `
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700 max-w-md">
             <h2 class="font-bold mb-4">⚡ Bulk Actions</h2>
 
@@ -102,5 +111,5 @@ export default {
                 > {{ bulkMessage }}
             </p>
         </div>
-    `
+    `,
 };

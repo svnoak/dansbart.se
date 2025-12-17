@@ -10,183 +10,203 @@ import { useSpiderApi } from './api.js';
 import { useRejectApi } from '../reject/api.js';
 import SpiderStats from './SpiderStats.js';
 import SpiderHistory from './SpiderHistory.js';
+import { showError } from '../../../js/hooks/useToast.js';
 
 export default {
-    components: {
-        SpiderStats,
-        SpiderHistory
-    },
-    setup() {
-        const { adminToken } = useAdminAuth();
-        const { showToast } = useToast();
-        const spiderApi = useSpiderApi(adminToken);
-        const rejectApi = useRejectApi(adminToken);
+  components: {
+    SpiderStats,
+    SpiderHistory,
+  },
+  setup() {
+    const { adminToken } = useAdminAuth();
+    const { showToast } = useToast();
+    const spiderApi = useSpiderApi(adminToken);
+    const rejectApi = useRejectApi(adminToken);
 
-        const spiderSettings = ref({
-            max_discoveries: 10,
-            mode: 'backfill',
-            discover_from_albums: true
-        });
-        const spiderLoading = ref(false);
-        const spiderMessage = ref('');
-        const spiderError = ref(false);
-        const spiderStats = ref(null);
-        const crawlHistory = ref([]);
-        const currentTaskId = ref(null);
-        const taskStatus = ref(null);
-        
-        // New refs for the reset functionality
-        const isResetting = ref(false);
+    const spiderSettings = ref({
+      max_discoveries: 10,
+      mode: 'backfill',
+      discover_from_albums: true,
+    });
+    const spiderLoading = ref(false);
+    const spiderMessage = ref('');
+    const spiderError = ref(false);
+    const spiderStats = ref(null);
+    const crawlHistory = ref([]);
+    const currentTaskId = ref(null);
+    const taskStatus = ref(null);
 
-        let pollInterval = null;
+    // New refs for the reset functionality
+    const isResetting = ref(false);
 
-        const loadSpiderStats = async () => {
-            try {
-                spiderStats.value = await spiderApi.getStats();
-            } catch (e) {
-                console.error('Failed to load spider stats:', e);
-            }
-        };
+    let pollInterval = null;
 
-        const loadSpiderHistory = async () => {
-            try {
-                const data = await spiderApi.getHistory(50);
-                crawlHistory.value = data.items;
-            } catch (e) {
-                console.error('Failed to load spider history:', e);
-            }
-        };
+    const loadSpiderStats = async () => {
+      try {
+        spiderStats.value = await spiderApi.getStats();
+      } catch (e) {
+        showError(e.message);
+      }
+    };
 
-        const pollTaskStatus = async (taskId) => {
-            if (pollInterval) clearInterval(pollInterval);
+    const loadSpiderHistory = async () => {
+      try {
+        const data = await spiderApi.getHistory(50);
+        crawlHistory.value = data.items;
+      } catch (e) {
+        showError(e.message);
+      }
+    };
 
-            const checkStatus = async () => {
-                try {
-                    const data = await spiderApi.getTaskStatus(taskId);
-                    taskStatus.value = data;
+    const pollTaskStatus = async taskId => {
+      if (pollInterval) clearInterval(pollInterval);
 
-                    if (data.state === 'PENDING') {
-                        spiderMessage.value = `Task queued (ID: ${taskId})...`;
-                    } else if (data.state === 'STARTED') {
-                        spiderMessage.value = `🕷️ Spider is crawling... (ID: ${taskId})`;
-                    } else if (data.state === 'SUCCESS') {
-                        clearInterval(pollInterval);
-                        spiderLoading.value = false;
-                        const stats = data.result;
-                        spiderMessage.value = `✅ Crawl complete! Found ${stats.artists_crawled} new artists, ${stats.tracks_found} tracks.`;
+      const checkStatus = async () => {
+        try {
+          const data = await spiderApi.getTaskStatus(taskId);
+          taskStatus.value = data;
 
-                        loadSpiderStats();
-                        loadSpiderHistory();
+          if (data.state === 'PENDING') {
+            spiderMessage.value = `Task queued (ID: ${taskId})...`;
+          } else if (data.state === 'STARTED') {
+            spiderMessage.value = `🕷️ Spider is crawling... (ID: ${taskId})`;
+          } else if (data.state === 'SUCCESS') {
+            clearInterval(pollInterval);
+            spiderLoading.value = false;
+            const stats = data.result;
+            spiderMessage.value = `✅ Crawl complete! Found ${stats.artists_crawled} new artists, ${stats.tracks_found} tracks.`;
 
-                        window.dispatchEvent(new CustomEvent('admin:spider-complete'));
-                        showToast(`Spider complete! ${stats.artists_crawled} artists, ${stats.tracks_found} tracks`);
-                    } else if (data.state === 'FAILURE') {
-                        clearInterval(pollInterval);
-                        spiderLoading.value = false;
-                        spiderError.value = true;
-                        spiderMessage.value = `❌ Crawl failed: ${data.error}`;
-                        showToast('Spider crawl failed', 'error');
-                    }
-                } catch (e) {
-                    console.error('Polling error:', e);
-                }
-            };
-
-            await checkStatus();
-            pollInterval = setInterval(checkStatus, 2000);
-        };
-
-        const runSpider = async () => {
-            spiderLoading.value = true;
-            spiderMessage.value = '';
-            taskStatus.value = null;
-
-            try {
-                const data = await spiderApi.crawl(spiderSettings.value);
-                spiderError.value = false;
-                currentTaskId.value = data.task_id;
-                spiderMessage.value = `${data.message} - Task ID: ${data.task_id}`;
-                pollTaskStatus(data.task_id);
-            } catch (e) {
-                spiderError.value = true;
-                spiderMessage.value = e.message;
-                spiderLoading.value = false;
-                showToast(e.message, 'error');
-            }
-        };
-
-        const handleBlockArtist = async (log) => {
-            if (!confirm(`Block "${log.artist_name}"?\n\nThis will add their Spotify ID to the blocklist so the spider ignores them in the future.`)) {
-                return;
-            }
-
-            try {
-                await rejectApi.addToBlocklist({
-                    spotify_id: log.spotify_artist_id,
-                    artist_name: log.artist_name,
-                    reason: 'Blocked via Spider History'
-                });
-
-                showToast(`🚫 Blocked ${log.artist_name}`, 'success');
-            } catch (e) {
-                console.error(e);
-                showToast('Failed to block artist', 'error');
-            }
-        };
-
-        // --- NEW RESET FUNCTION ---
-        const triggerReset = async () => {
-            if (!confirm("⚠️ ARE YOU SURE? ⚠️\n\nThis will:\n1. Delete ALL pending tracks\n2. Clear your crawl history\n3. Clear the rejection list\n4. Flush the cache\n\nThis cannot be undone.")) {
-                return;
-            }
-
-            isResetting.value = true;
-            try {
-                // Direct fetch call since this is a unique danger endpoint
-                const response = await fetch('/api/admin/danger/reset-crawl-data', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-token': adminToken.value
-                    }
-                });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.detail || 'Reset failed');
-                }
-                
-                const data = await response.json();
-                showToast(data.message, 'success');
-                
-                // Refresh data
-                await loadSpiderStats();
-                await loadSpiderHistory();
-                
-            } catch (e) {
-                alert("Error resetting data: " + e.message);
-                showToast(e.message, 'error');
-            } finally {
-                isResetting.value = false;
-            }
-        };
-
-        onMounted(() => {
             loadSpiderStats();
             loadSpiderHistory();
+
+            window.dispatchEvent(new CustomEvent('admin:spider-complete'));
+            showToast(
+              `Spider complete! ${stats.artists_crawled} artists, ${stats.tracks_found} tracks`
+            );
+          } else if (data.state === 'FAILURE') {
+            clearInterval(pollInterval);
+            spiderLoading.value = false;
+            spiderError.value = true;
+            spiderMessage.value = `❌ Crawl failed: ${data.error}`;
+            showToast('Spider crawl failed', 'error');
+          }
+        } catch (e) {
+          showError(e.message);
+        }
+      };
+
+      await checkStatus();
+      pollInterval = setInterval(checkStatus, 2000);
+    };
+
+    const runSpider = async () => {
+      spiderLoading.value = true;
+      spiderMessage.value = '';
+      taskStatus.value = null;
+
+      try {
+        const data = await spiderApi.crawl(spiderSettings.value);
+        spiderError.value = false;
+        currentTaskId.value = data.task_id;
+        spiderMessage.value = `${data.message} - Task ID: ${data.task_id}`;
+        pollTaskStatus(data.task_id);
+      } catch (e) {
+        spiderError.value = true;
+        spiderMessage.value = e.message;
+        spiderLoading.value = false;
+        showToast(e.message, 'error');
+      }
+    };
+
+    const handleBlockArtist = async log => {
+      if (
+        !confirm(
+          `Block "${log.artist_name}"?\n\nThis will add their Spotify ID to the blocklist so the spider ignores them in the future.`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await rejectApi.addToBlocklist({
+          spotify_id: log.spotify_artist_id,
+          artist_name: log.artist_name,
+          reason: 'Blocked via Spider History',
         });
 
-        onUnmounted(() => {
-            if (pollInterval) clearInterval(pollInterval);
+        showToast(`🚫 Blocked ${log.artist_name}`, 'success');
+      } catch (e) {
+        showError(e.message);
+      }
+    };
+
+    // --- NEW RESET FUNCTION ---
+    const triggerReset = async () => {
+      if (
+        !confirm(
+          '⚠️ ARE YOU SURE? ⚠️\n\nThis will:\n1. Delete ALL pending tracks\n2. Clear your crawl history\n3. Clear the rejection list\n4. Flush the cache\n\nThis cannot be undone.'
+        )
+      ) {
+        return;
+      }
+
+      isResetting.value = true;
+      try {
+        // Direct fetch call since this is a unique danger endpoint
+        const response = await fetch('/api/admin/danger/reset-crawl-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken.value,
+          },
         });
 
-        return {
-            spiderSettings, spiderLoading, spiderMessage, spiderError,
-            spiderStats, crawlHistory, currentTaskId, taskStatus, isResetting,
-            runSpider, loadSpiderStats, loadSpiderHistory, handleBlockArtist, triggerReset
-        };
-    },
-    template: /*html*/`
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || 'Reset failed');
+        }
+
+        const data = await response.json();
+        showToast(data.message, 'success');
+
+        // Refresh data
+        await loadSpiderStats();
+        await loadSpiderHistory();
+      } catch (e) {
+        alert('Error resetting data: ' + e.message);
+        showToast(e.message, 'error');
+      } finally {
+        isResetting.value = false;
+      }
+    };
+
+    onMounted(() => {
+      loadSpiderStats();
+      loadSpiderHistory();
+    });
+
+    onUnmounted(() => {
+      if (pollInterval) clearInterval(pollInterval);
+    });
+
+    return {
+      spiderSettings,
+      spiderLoading,
+      spiderMessage,
+      spiderError,
+      spiderStats,
+      crawlHistory,
+      currentTaskId,
+      taskStatus,
+      isResetting,
+      runSpider,
+      loadSpiderStats,
+      loadSpiderHistory,
+      handleBlockArtist,
+      triggerReset,
+    };
+  },
+  template: /*html*/ `
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
             <h2 class="font-bold mb-6">🕸️ Discovery Spider</h2>
 
@@ -286,5 +306,5 @@ export default {
                 </div>
             </div>
         </div>
-    `
+    `,
 };

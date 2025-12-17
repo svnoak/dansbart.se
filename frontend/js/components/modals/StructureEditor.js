@@ -1,233 +1,245 @@
 import { toRaw } from 'vue';
 import ProgressBar from '../player/ProgressBar.js';
+import { showError } from '../../hooks/useToast.js';
 
 export default {
-    components: { ProgressBar },
-    props: ['track', 'isOpen', 'currentTime', 'duration', 'isPlaying'],
-    emits: ['close', 'save', 'seek', 'toggle-play'],
-    
-    data() {
-        return {
-            sections: [],
-            selectedIndices: [], 
-            historyStack: [],
-            isSubmitting: false,
-            editorStructureMode: 'sections',
-            isDirty: false,
-            zoomLevel: 1, 
-            isResizing: false,
-            resizeIndex: null,
+  components: { ProgressBar },
+  props: ['track', 'isOpen', 'currentTime', 'duration', 'isPlaying'],
+  emits: ['close', 'save', 'seek', 'toggle-play'],
+
+  data() {
+    return {
+      sections: [],
+      selectedIndices: [],
+      historyStack: [],
+      isSubmitting: false,
+      editorStructureMode: 'sections',
+      isDirty: false,
+      zoomLevel: 1,
+      isResizing: false,
+      resizeIndex: null,
+    };
+  },
+
+  watch: {
+    isOpen(val) {
+      if (val) this.initData();
+    },
+  },
+
+  computed: {
+    selectedSection() {
+      return this.selectedIndex !== null ? this.sections[this.selectedIndex] : null;
+    },
+    hasSelection() {
+      return this.selectedIndices.length > 0;
+    },
+    canMerge() {
+      if (this.selectedIndices.length < 2) return false;
+      const sorted = [...this.selectedIndices].sort((a, b) => a - b);
+      for (let i = 0; i < sorted.length - 1; i++) {
+        if (sorted[i + 1] !== sorted[i] + 1) return false;
+      }
+      return true;
+    },
+    viewToggleIcon() {
+      if (this.editorStructureMode === 'sections') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
+      return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
+    },
+    viewToggleLabel() {
+      return this.editorStructureMode === 'sections' ? 'Visar Repriser' : 'Visar Takter';
+    },
+  },
+
+  mounted() {
+    window.addEventListener('mousemove', this.onDragMove);
+    window.addEventListener('mouseup', this.onDragEnd);
+  },
+  beforeUnmount() {
+    window.removeEventListener('mousemove', this.onDragMove);
+    window.removeEventListener('mouseup', this.onDragEnd);
+  },
+
+  methods: {
+    initData() {
+      this.historyStack = [];
+      this.isDirty = false;
+      this.zoomLevel = 1;
+      this.selectedIndices = [];
+
+      if (!this.track.sections) return;
+
+      const rawSec = toRaw(this.track.sections);
+      const rawLbl = toRaw(this.track.section_labels) || [];
+      const duration = this.track.duration / 1000;
+
+      this.sections = [];
+      for (let i = 0; i < rawSec.length; i++) {
+        const start = rawSec[i];
+        const end = i + 1 < rawSec.length ? rawSec[i + 1] : duration;
+        this.sections.push({
+          start: start,
+          end: end,
+          label: rawLbl[i] || '?',
+        });
+      }
+    },
+
+    startResize(index, event) {
+      event.stopPropagation();
+      this.pushHistory();
+      this.isResizing = true;
+      this.resizeIndex = index;
+    },
+
+    onDragMove(e) {
+      if (!this.isResizing || this.resizeIndex === null) return;
+
+      const container = this.$refs.timelineContainer;
+      const rect = container.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left + container.scrollLeft;
+      const totalWidth = container.scrollWidth;
+      const percentage = Math.max(0, Math.min(1, offsetX / totalWidth));
+      const rawTime = percentage * (this.track.duration / 1000);
+
+      let snappedTime = rawTime;
+
+      if (this.track.bars) {
+        const closestBar = this.track.bars.reduce((prev, curr) =>
+          Math.abs(curr - rawTime) < Math.abs(prev - rawTime) ? curr : prev
+        );
+        if (Math.abs(rawTime - closestBar) < 0.5) {
+          snappedTime = closestBar;
         }
-    },
-    
-    watch: {
-        isOpen(val) {
-            if (val) this.initData();
+      }
+
+      const currentSection = this.sections[this.resizeIndex];
+      const nextSection = this.sections[this.resizeIndex + 1];
+      const minLen = 1.0;
+
+      if (snappedTime > currentSection.start + minLen) {
+        if (nextSection) {
+          if (snappedTime < nextSection.end - minLen) {
+            currentSection.end = snappedTime;
+            nextSection.start = snappedTime;
+          }
         }
+      }
     },
-    
-    computed: {
-        selectedSection() {
-            return this.selectedIndex !== null ? this.sections[this.selectedIndex] : null;
-        },
-        hasSelection() { return this.selectedIndices.length > 0; },
-        canMerge() {
-            if (this.selectedIndices.length < 2) return false;
-            const sorted = [...this.selectedIndices].sort((a, b) => a - b);
-            for (let i = 0; i < sorted.length - 1; i++) {
-                if (sorted[i+1] !== sorted[i] + 1) return false;
-            }
-            return true;
-        },
-        viewToggleIcon() {
-             if (this.editorStructureMode === 'sections') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
-             return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
-        },
-        viewToggleLabel() { return this.editorStructureMode === 'sections' ? 'Visar Repriser' : 'Visar Takter'; }
+
+    onDragEnd() {
+      if (this.isResizing) {
+        this.isResizing = false;
+        this.resizeIndex = null;
+      }
     },
-    
-    mounted() {
-        window.addEventListener('mousemove', this.onDragMove);
-        window.addEventListener('mouseup', this.onDragEnd);
+
+    pushHistory() {
+      this.historyStack.push(JSON.parse(JSON.stringify(this.sections)));
+      if (this.historyStack.length > 20) this.historyStack.shift();
+      this.isDirty = true;
     },
-    beforeUnmount() {
-        window.removeEventListener('mousemove', this.onDragMove);
-        window.removeEventListener('mouseup', this.onDragEnd);
+    undo() {
+      if (this.historyStack.length === 0) return;
+      this.sections = this.historyStack.pop();
+      this.selectedIndices = [];
     },
-    
-    methods: {
-        initData() {
-            this.historyStack = [];
-            this.isDirty = false;
-            this.zoomLevel = 1;
-            this.selectedIndices = [];
-            
-            if (!this.track.sections) return;
-            
-            const rawSec = toRaw(this.track.sections);
-            const rawLbl = toRaw(this.track.section_labels) || [];
-            const duration = this.track.duration / 1000;
-
-            this.sections = [];
-            for (let i = 0; i < rawSec.length; i++) {
-                const start = rawSec[i];
-                const end = (i + 1 < rawSec.length) ? rawSec[i+1] : duration;
-                this.sections.push({
-                    start: start, end: end, label: rawLbl[i] || '?',
-                });
-            }
-        },
-        
-        startResize(index, event) {
-            event.stopPropagation(); 
-            this.pushHistory();
-            this.isResizing = true;
-            this.resizeIndex = index;
-        },
-
-        onDragMove(e) {
-            if (!this.isResizing || this.resizeIndex === null) return;
-            
-            const container = this.$refs.timelineContainer;
-            const rect = container.getBoundingClientRect();
-            const offsetX = e.clientX - rect.left + container.scrollLeft;
-            const totalWidth = container.scrollWidth;
-            const percentage = Math.max(0, Math.min(1, offsetX / totalWidth));
-            const rawTime = percentage * (this.track.duration / 1000);
-
-            let snappedTime = rawTime;
-            
-            if (this.track.bars) {
-                const closestBar = this.track.bars.reduce((prev, curr) => 
-                    Math.abs(curr - rawTime) < Math.abs(prev - rawTime) ? curr : prev
-                );
-                if (Math.abs(rawTime - closestBar) < 0.5) {
-                    snappedTime = closestBar;
-                }
-            }
-
-            const currentSection = this.sections[this.resizeIndex];
-            const nextSection = this.sections[this.resizeIndex + 1];
-            const minLen = 1.0;
-
-            if (snappedTime > currentSection.start + minLen) {
-                if (nextSection) {
-                    if (snappedTime < nextSection.end - minLen) {
-                        currentSection.end = snappedTime;
-                        nextSection.start = snappedTime;
-                    }
-                }
-            }
-        },
-
-        onDragEnd() {
-            if (this.isResizing) {
-                this.isResizing = false;
-                this.resizeIndex = null;
-            }
-        },
-
-        pushHistory() {
-            this.historyStack.push(JSON.parse(JSON.stringify(this.sections)));
-            if (this.historyStack.length > 20) this.historyStack.shift();
-            this.isDirty = true;
-        },
-        undo() {
-            if (this.historyStack.length === 0) return;
-            this.sections = this.historyStack.pop();
-            this.selectedIndices = [];
-        },
-        reset() {
-            if (!confirm("Vill du återställa?")) return;
-            this.initData();
-        },
-        handleBlockClick(index, event) {
-            if (event.shiftKey || event.metaKey || event.ctrlKey) {
-                if (this.selectedIndices.includes(index)) {
-                    this.selectedIndices = this.selectedIndices.filter(i => i !== index);
-                } else {
-                    this.selectedIndices.push(index);
-                }
-            } else {
-                this.selectedIndices = [index];
-                this.$emit('seek', this.sections[index].start);
-            }
-        },
-        jumpToSection(index) {
-             // Separate method for simple clicking vs multi-select logic
-             this.selectedIndices = [index];
-             this.$emit('seek', this.sections[index].start);
-        },
-
-        cycleLabel() {
-            if (!this.hasSelection) return;
-            this.pushHistory();
-            const map = { 'A': 'B', 'B': 'C', 'C': 'D', 'D': 'A' };
-            this.selectedIndices.forEach(idx => {
-                this.sections[idx].label = map[this.sections[idx].label] || 'A';
-            });
-        },
-        splitSection() {
-            if (this.selectedIndices.length !== 1) return;
-            this.pushHistory();
-            const index = this.selectedIndices[0];
-            const current = this.sections[index];
-            const midPoint = current.start + (current.end - current.start) / 2;
-            const newSection = {
-                start: midPoint, end: current.end, label: current.label
-            };
-            current.end = midPoint;
-            this.sections.splice(index + 1, 0, newSection);
-            this.selectedIndices = [index, index + 1];
-        },
-        mergeSelection() {
-            if (!this.canMerge) return;
-            this.pushHistory();
-            const indices = [...this.selectedIndices].sort((a, b) => a - b);
-            const firstIdx = indices[0];
-            const target = this.sections[firstIdx];
-            const lastIdx = indices[indices.length - 1];
-            const lastBlock = this.sections[lastIdx];
-            target.end = lastBlock.end;
-            for (let i = indices.length - 1; i > 0; i--) {
-                this.sections.splice(indices[i], 1);
-            }
-            this.selectedIndices = [firstIdx];
-        },
-
-        toggleBars() {
-            this.editorStructureMode = this.editorStructureMode === 'sections' ? 'bars' : 'sections';
-        },
-        skip(seconds) {
-            const newTime = Math.max(0, Math.min(this.duration, this.currentTime + seconds));
-            this.$emit('seek', newTime);
-        },
-        async save() {
-            if (!confirm("Spara ändringar?")) return;
-            this.isSubmitting = true;
-            const timestamps = this.sections.map(s => s.start);
-            const labels = this.sections.map(s => s.label);
-            const payload = { sections: timestamps, section_labels: labels };
-            try {
-                await fetch(`/api/tracks/${this.track.id}/structure`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                this.track.sections = timestamps;
-                this.track.section_labels = labels;
-                this.isDirty = false;
-                this.$emit('close');
-            } catch (e) { console.error(e); alert("Error saving"); } 
-            finally { this.isSubmitting = false; }
-        },
-        attemptClose() {
-            if (this.isDirty && !confirm("Osparade ändringar. Stäng ändå?")) return;
-            this.$emit('close');
+    reset() {
+      if (!confirm('Vill du återställa?')) return;
+      this.initData();
+    },
+    handleBlockClick(index, event) {
+      if (event.shiftKey || event.metaKey || event.ctrlKey) {
+        if (this.selectedIndices.includes(index)) {
+          this.selectedIndices = this.selectedIndices.filter(i => i !== index);
+        } else {
+          this.selectedIndices.push(index);
         }
+      } else {
+        this.selectedIndices = [index];
+        this.$emit('seek', this.sections[index].start);
+      }
+    },
+    jumpToSection(index) {
+      // Separate method for simple clicking vs multi-select logic
+      this.selectedIndices = [index];
+      this.$emit('seek', this.sections[index].start);
     },
 
-    template: /*html*/`
+    cycleLabel() {
+      if (!this.hasSelection) return;
+      this.pushHistory();
+      const map = { A: 'B', B: 'C', C: 'D', D: 'A' };
+      this.selectedIndices.forEach(idx => {
+        this.sections[idx].label = map[this.sections[idx].label] || 'A';
+      });
+    },
+    splitSection() {
+      if (this.selectedIndices.length !== 1) return;
+      this.pushHistory();
+      const index = this.selectedIndices[0];
+      const current = this.sections[index];
+      const midPoint = current.start + (current.end - current.start) / 2;
+      const newSection = {
+        start: midPoint,
+        end: current.end,
+        label: current.label,
+      };
+      current.end = midPoint;
+      this.sections.splice(index + 1, 0, newSection);
+      this.selectedIndices = [index, index + 1];
+    },
+    mergeSelection() {
+      if (!this.canMerge) return;
+      this.pushHistory();
+      const indices = [...this.selectedIndices].sort((a, b) => a - b);
+      const firstIdx = indices[0];
+      const target = this.sections[firstIdx];
+      const lastIdx = indices[indices.length - 1];
+      const lastBlock = this.sections[lastIdx];
+      target.end = lastBlock.end;
+      for (let i = indices.length - 1; i > 0; i--) {
+        this.sections.splice(indices[i], 1);
+      }
+      this.selectedIndices = [firstIdx];
+    },
+
+    toggleBars() {
+      this.editorStructureMode = this.editorStructureMode === 'sections' ? 'bars' : 'sections';
+    },
+    skip(seconds) {
+      const newTime = Math.max(0, Math.min(this.duration, this.currentTime + seconds));
+      this.$emit('seek', newTime);
+    },
+    async save() {
+      if (!confirm('Spara ändringar?')) return;
+      this.isSubmitting = true;
+      const timestamps = this.sections.map(s => s.start);
+      const labels = this.sections.map(s => s.label);
+      const payload = { sections: timestamps, section_labels: labels };
+      try {
+        await fetch(`/api/tracks/${this.track.id}/structure`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        this.track.sections = timestamps;
+        this.track.section_labels = labels;
+        this.isDirty = false;
+        this.$emit('close');
+      } catch {
+        showError('Något gick fel, försök igen senare');
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
+    attemptClose() {
+      if (this.isDirty && !confirm('Osparade ändringar. Stäng ändå?')) return;
+      this.$emit('close');
+    },
+  },
+
+  template: /*html*/ `
     <div v-if="isOpen" class="fixed inset-0 z-[110] flex items-center justify-center p-2 md:p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="attemptClose"></div>
         
@@ -357,5 +369,5 @@ export default {
             </div>
         </div>
     </div>
-    `
-}
+    `,
+};

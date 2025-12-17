@@ -5,43 +5,68 @@ import PlayerControls from './PlayerControls.js';
 import ProgressBar from './ProgressBar.js';
 
 export default {
-    props: [
-        'currentTrack', 'availableVersions', 'currentVersionIndex',
-        'isPlaying', 'isShuffled', 'repeatMode',
-        'structureMode', 'activeSource',
-        'visualTime', 'duration',
-        'isExpanded', 'trackArtist', 'trackAlbum',
-        'brokenState', 'hasYt', 'hasSpot',
-        'fmtCurrent', 'fmtDuration', 'breakpoints'
-    ],
-    emits: [
-        'close', 'set-source', 'cycle-version',
-        'toggle-structure-mode', 'seek',
-        'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump',
-        'dismiss-broken', 'open-structure-editor',
-        'add-breakpoint', 'clear-breakpoints',
-        'jump-to-breakpoint', 'update-breakpoint', 'remove-breakpoint'
-    ],
-    components: { SmartNudge, SectionVoting, BrokenLinkToast, PlayerControls, ProgressBar },
-    
-    computed: {
-        structureButtonLabel() {
-            if (this.structureMode === 'bars') return 'Visa repriser';
-            if (this.structureMode === 'sections') return 'Dölj';
-            return 'Visa takter';
-        },
-        structureButtonIcon() {
-            if (this.structureMode === 'none') return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
-            if (this.structureMode === 'bars') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
-            return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
-        },
-        // Show Spotify hint only when it's a preview (duration <= 30s)
-        showSpotifyHint() {
-            return this.activeSource === 'spotify' && this.duration <= 30;
-        }
-    },
+  props: [
+    'currentTrack',
+    'availableVersions',
+    'currentVersionIndex',
+    'isPlaying',
+    'isShuffled',
+    'repeatMode',
+    'structureMode',
+    'activeSource',
+    'visualTime',
+    'duration',
+    'isExpanded',
+    'trackArtist',
+    'trackAlbum',
+    'brokenState',
+    'hasYt',
+    'hasSpot',
+    'fmtCurrent',
+    'fmtDuration',
+    'breakpoints',
+  ],
+  emits: [
+    'close',
+    'set-source',
+    'cycle-version',
+    'toggle-structure-mode',
+    'seek',
+    'toggle-play',
+    'next',
+    'prev',
+    'shuffle',
+    'toggle-repeat',
+    'jump',
+    'dismiss-broken',
+    'open-structure-editor',
+    'add-breakpoint',
+    'clear-breakpoints',
+    'jump-to-breakpoint',
+    'update-breakpoint',
+    'remove-breakpoint',
+  ],
+  components: { SmartNudge, SectionVoting, BrokenLinkToast, PlayerControls, ProgressBar },
 
-    template: /*html*/`
+  computed: {
+    structureButtonLabel() {
+      if (this.structureMode === 'bars') return 'Visa repriser';
+      if (this.structureMode === 'sections') return 'Dölj';
+      return 'Visa takter';
+    },
+    structureButtonIcon() {
+      if (this.structureMode === 'none')
+        return `<path d="M4 6h1v12H4zm5 0h1v12H9zm5 0h1v12h-1zm5 0h1v12h-1z"/>`;
+      if (this.structureMode === 'bars') return `<path d="M4 4h16v16H4z M12 4v16"/>`;
+      return `<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
+    },
+    // Show Spotify hint only when it's a preview (duration <= 30s)
+    showSpotifyHint() {
+      return this.activeSource === 'spotify' && this.duration <= 30;
+    },
+  },
+
+  template: /*html*/ `
     <div class="fixed inset-0 bg-white z-[100] flex flex-col transition-transform duration-300 ease-in-out md:hidden"
          :class="isExpanded ? 'translate-y-0' : 'translate-y-full'">
         
@@ -132,5 +157,5 @@ export default {
             </div>
         </div>
     </div>
-    `
-}
+    `,
+};

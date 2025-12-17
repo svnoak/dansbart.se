@@ -7,215 +7,237 @@ import { ref, onMounted, computed } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useApprovalsApi } from './api.js';
+import { showError } from '../../../js/hooks/useToast.js';
 
 export default {
-    setup() {
-        const { adminToken } = useAdminAuth();
-        const { showToast } = useToast();
-        const api = useApprovalsApi(adminToken);
+  setup() {
+    const { adminToken } = useAdminAuth();
+    const { showToast } = useToast();
+    const api = useApprovalsApi(adminToken);
 
-        // State
-        const view = ref('isolated'); // isolated or blocklist
-        const artists = ref([]);
-        const blocklist = ref([]);
-        const totalArtists = ref(0);
-        const totalBlocklist = ref(0);
-        const searchQuery = ref('');
-        const limit = ref(50);
-        const offset = ref(0);
-        const loading = ref(false);
-        const selectedIds = ref(new Set());
+    // State
+    const view = ref('isolated'); // isolated or blocklist
+    const artists = ref([]);
+    const blocklist = ref([]);
+    const totalArtists = ref(0);
+    const totalBlocklist = ref(0);
+    const searchQuery = ref('');
+    const limit = ref(50);
+    const offset = ref(0);
+    const loading = ref(false);
+    const selectedIds = ref(new Set());
 
-        // Computed
-        const isolatedArtists = computed(() => {
-            return artists.value.filter(a => a.is_isolated);
-        });
+    // Computed
+    const isolatedArtists = computed(() => {
+      return artists.value.filter(a => a.is_isolated);
+    });
 
-        const nonIsolatedArtists = computed(() => {
-            return artists.value.filter(a => !a.is_isolated);
-        });
+    const nonIsolatedArtists = computed(() => {
+      return artists.value.filter(a => !a.is_isolated);
+    });
 
-        const isAllIsolatedSelected = computed(() => {
-            const isolated = isolatedArtists.value;
-            if (isolated.length === 0) return false;
-            return isolated.every(a => selectedIds.value.has(a.id));
-        });
+    const isAllIsolatedSelected = computed(() => {
+      const isolated = isolatedArtists.value;
+      if (isolated.length === 0) return false;
+      return isolated.every(a => selectedIds.value.has(a.id));
+    });
 
-        const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
-        const totalPages = computed(() => Math.ceil(totalArtists.value / limit.value));
+    const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
+    const totalPages = computed(() => Math.ceil(totalArtists.value / limit.value));
 
-        // Methods
-        const loadData = async () => {
-            loading.value = true;
-            selectedIds.value.clear();
+    // Methods
+    const loadData = async () => {
+      loading.value = true;
+      selectedIds.value.clear();
 
-            try {
-                if (view.value === 'isolated') {
-                    const data = await api.loadIsolatedArtists(limit.value, offset.value, searchQuery.value);
-                    artists.value = data.items;
-                    totalArtists.value = data.total;
+      try {
+        if (view.value === 'isolated') {
+          const data = await api.loadIsolatedArtists(limit.value, offset.value, searchQuery.value);
+          artists.value = data.items;
+          totalArtists.value = data.total;
+        } else {
+          const data = await api.loadBlocklist('artist', limit.value, offset.value);
+          blocklist.value = data.items;
+          totalBlocklist.value = data.total;
+        }
+      } catch (e) {
+        showError(e.message || 'Failed to load data');
+      } finally {
+        loading.value = false;
+      }
+    };
 
-                    console.log(`Loaded ${data.items.length} artists (${isolatedArtists.value.length} isolated, ${nonIsolatedArtists.value.length} with collaborations)`);
-                } else {
-                    const data = await api.loadBlocklist('artist', limit.value, offset.value);
-                    blocklist.value = data.items;
-                    totalBlocklist.value = data.total;
+    let searchTimeout;
+    const debouncedSearch = () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        offset.value = 0;
+        loadData();
+      }, 300);
+    };
 
-                    console.log(`Loaded ${data.items.length} blocklisted artists`);
-                }
-            } catch (e) {
-                console.error('Failed to load data:', e);
-                showToast('Failed to load data', 'error');
-            } finally {
-                loading.value = false;
-            }
-        };
+    const prevPage = () => {
+      offset.value = Math.max(0, offset.value - limit.value);
+      loadData();
+    };
 
-        let searchTimeout;
-        const debouncedSearch = () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                offset.value = 0;
-                loadData();
-            }, 300);
-        };
+    const nextPage = () => {
+      offset.value += limit.value;
+      loadData();
+    };
 
-        const prevPage = () => {
-            offset.value = Math.max(0, offset.value - limit.value);
-            loadData();
-        };
+    // Selection
+    const toggleSelection = id => {
+      if (selectedIds.value.has(id)) {
+        selectedIds.value.delete(id);
+      } else {
+        selectedIds.value.add(id);
+      }
+    };
 
-        const nextPage = () => {
-            offset.value += limit.value;
-            loadData();
-        };
+    const selectAllIsolated = () => {
+      if (isAllIsolatedSelected.value) {
+        // Deselect all isolated
+        isolatedArtists.value.forEach(a => selectedIds.value.delete(a.id));
+      } else {
+        // Select all isolated
+        isolatedArtists.value.forEach(a => selectedIds.value.add(a.id));
+      }
+    };
 
-        // Selection
-        const toggleSelection = (id) => {
-            if (selectedIds.value.has(id)) {
-                selectedIds.value.delete(id);
-            } else {
-                selectedIds.value.add(id);
-            }
-        };
+    // Actions
+    const approveArtist = async artist => {
+      const confirmMsg = `Approve artist "${artist.name}"?\n\n• ${artist.pending_tracks} pending tracks will be queued for analysis`;
 
-        const selectAllIsolated = () => {
-            if (isAllIsolatedSelected.value) {
-                // Deselect all isolated
-                isolatedArtists.value.forEach(a => selectedIds.value.delete(a.id));
-            } else {
-                // Select all isolated
-                isolatedArtists.value.forEach(a => selectedIds.value.add(a.id));
-            }
-        };
+      if (!confirm(confirmMsg)) return;
 
-        // Actions
-        const approveArtist = async (artist) => {
-            const confirmMsg = `Approve artist "${artist.name}"?\n\n• ${artist.pending_tracks} pending tracks will be queued for analysis`;
+      try {
+        const data = await api.approveArtist(artist.id);
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Failed to approve artist');
+      }
+    };
 
-            if (!confirm(confirmMsg)) return;
+    const rejectArtist = async artist => {
+      const confirmMsg = `Reject and delete artist "${artist.name}"?\n\n• ${artist.total_tracks || artist.pending_tracks} tracks will be deleted\n• Artist will be added to blocklist`;
 
-            try {
-                const data = await api.approveArtist(artist.id);
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to approve artist', 'error');
-                console.error(e);
-            }
-        };
+      if (!confirm(confirmMsg)) return;
 
-        const rejectArtist = async (artist) => {
-            const confirmMsg = `Reject and delete artist "${artist.name}"?\n\n• ${artist.total_tracks || artist.pending_tracks} tracks will be deleted\n• Artist will be added to blocklist`;
+      try {
+        const data = await api.rejectArtist(artist.id, 'Rejected from quick review');
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showToast(e.message || 'Failed to reject artist');
+      }
+    };
 
-            if (!confirm(confirmMsg)) return;
+    const restoreFromBlocklist = async item => {
+      if (
+        !confirm(
+          `Remove "${item.entity_name}" from blocklist?\n\nThis will allow them to be re-ingested if discovered again.`
+        )
+      ) {
+        return;
+      }
 
-            try {
-                const data = await api.rejectArtist(artist.id, 'Rejected from quick review');
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to reject artist', 'error');
-                console.error(e);
-            }
-        };
+      try {
+        const data = await api.removeFromBlocklist(item.id);
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showToast(e.message || 'Failed to remove from blocklist');
+      }
+    };
 
-        const restoreFromBlocklist = async (item) => {
-            if (!confirm(`Remove "${item.entity_name}" from blocklist?\n\nThis will allow them to be re-ingested if discovered again.`)) {
-                return;
-            }
+    const bulkApprove = async () => {
+      const count = selectedIds.value.size;
+      if (count === 0) return;
 
-            try {
-                const data = await api.removeFromBlocklist(item.id);
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to remove from blocklist', 'error');
-                console.error(e);
-            }
-        };
+      if (
+        !confirm(
+          `✅ Approve ${count} artists?\n\nThis will:\n• Queue all their pending tracks for analysis\n• They will be processed by the analysis system\n\nContinue?`
+        )
+      ) {
+        return;
+      }
 
-        const bulkApprove = async () => {
-            const count = selectedIds.value.size;
-            if (count === 0) return;
+      loading.value = true;
+      try {
+        const ids = Array.from(selectedIds.value);
+        await api.bulkApproveArtists(ids);
+        showToast(`Approved ${count} artists`, 'success');
+        selectedIds.value.clear();
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Bulk approval failed');
+      } finally {
+        loading.value = false;
+      }
+    };
 
-            if (!confirm(`✅ Approve ${count} artists?\n\nThis will:\n• Queue all their pending tracks for analysis\n• They will be processed by the analysis system\n\nContinue?`)) {
-                return;
-            }
+    const bulkReject = async () => {
+      const count = selectedIds.value.size;
+      if (count === 0) return;
 
-            loading.value = true;
-            try {
-                const ids = Array.from(selectedIds.value);
-                await api.bulkApproveArtists(ids);
-                showToast(`Approved ${count} artists`, 'success');
-                selectedIds.value.clear();
-                loadData();
-            } catch (e) {
-                showToast('Bulk approval failed', 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
-        };
+      if (
+        !confirm(
+          `⚠️ Reject and delete ${count} artists?\n\nThis will:\n• Delete all their tracks\n• Add them to the blocklist\n• This cannot be undone\n\nContinue?`
+        )
+      ) {
+        return;
+      }
 
-        const bulkReject = async () => {
-            const count = selectedIds.value.size;
-            if (count === 0) return;
+      loading.value = true;
+      try {
+        const ids = Array.from(selectedIds.value);
+        await api.bulkRejectArtists(ids, 'Bulk rejection from quick review');
+        showToast(`Rejected ${count} artists`, 'success');
+        selectedIds.value.clear();
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Bulk rejection failed');
+      } finally {
+        loading.value = false;
+      }
+    };
 
-            if (!confirm(`⚠️ Reject and delete ${count} artists?\n\nThis will:\n• Delete all their tracks\n• Add them to the blocklist\n• This cannot be undone\n\nContinue?`)) {
-                return;
-            }
+    onMounted(() => {
+      loadData();
+    });
 
-            loading.value = true;
-            try {
-                const ids = Array.from(selectedIds.value);
-                await api.bulkRejectArtists(ids, 'Bulk rejection from quick review');
-                showToast(`Rejected ${count} artists`, 'success');
-                selectedIds.value.clear();
-                loadData();
-            } catch (e) {
-                showToast('Bulk rejection failed', 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
-        };
-
-        onMounted(() => {
-            loadData();
-        });
-
-        return {
-            view, artists, blocklist, isolatedArtists, nonIsolatedArtists,
-            totalArtists, totalBlocklist,
-            searchQuery, limit, offset, loading, selectedIds,
-            isAllIsolatedSelected, pageNumber, totalPages,
-            loadData, debouncedSearch, prevPage, nextPage,
-            toggleSelection, selectAllIsolated,
-            approveArtist, rejectArtist, bulkApprove, bulkReject, restoreFromBlocklist
-        };
-    },
-    template: /*html*/`
+    return {
+      view,
+      artists,
+      blocklist,
+      isolatedArtists,
+      nonIsolatedArtists,
+      totalArtists,
+      totalBlocklist,
+      searchQuery,
+      limit,
+      offset,
+      loading,
+      selectedIds,
+      isAllIsolatedSelected,
+      pageNumber,
+      totalPages,
+      loadData,
+      debouncedSearch,
+      prevPage,
+      nextPage,
+      toggleSelection,
+      selectAllIsolated,
+      approveArtist,
+      rejectArtist,
+      bulkApprove,
+      bulkReject,
+      restoreFromBlocklist,
+    };
+  },
+  template: /*html*/ `
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -435,5 +457,5 @@ export default {
                 </button>
             </div>
         </div>
-    `
+    `,
 };

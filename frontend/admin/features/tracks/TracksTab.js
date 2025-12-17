@@ -4,259 +4,287 @@
  * Features: Search, filter, collaboration tracking, and reject functionality
  */
 
+import { showError } from '../../../js/hooks/useToast.js';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useTracksApi } from './api.js';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 
 export default {
-    setup() {
-        const { adminToken } = useAdminAuth();
-        const { showToast } = useToast();
-        const tracksApi = useTracksApi(adminToken);
+  setup() {
+    const { adminToken } = useAdminAuth();
+    const { showToast } = useToast();
+    const tracksApi = useTracksApi(adminToken);
 
-        // State
-        const view = ref('tracks'); // tracks, albums, artists
-        const tracks = ref([]);
-        const albums = ref([]);
-        const artists = ref([]);
-        const totalItems = ref(0);
-        const searchQuery = ref('');
-        const statusFilter = ref('');
-        const flaggedFilter = ref('');
-        const limit = ref(50);
-        const offset = ref(0);
-        const loading = ref(false);
+    // State
+    const view = ref('tracks'); // tracks, albums, artists
+    const tracks = ref([]);
+    const albums = ref([]);
+    const artists = ref([]);
+    const totalItems = ref(0);
+    const searchQuery = ref('');
+    const statusFilter = ref('');
+    const flaggedFilter = ref('');
+    const limit = ref(50);
+    const offset = ref(0);
+    const loading = ref(false);
 
-        // Expanded artist details
-        const expandedArtist = ref(null);
+    // Expanded artist details
+    const expandedArtist = ref(null);
 
-        // Methods
-        const loadData = async () => {
-            loading.value = true;
-            try {
-                const params = {
-                    limit: limit.value,
-                    offset: offset.value
-                };
-
-                if (searchQuery.value) params.search = searchQuery.value;
-
-                let data;
-                if (view.value === 'tracks') {
-                    if (statusFilter.value) params.status = statusFilter.value;
-                    if (flaggedFilter.value) params.flagged = flaggedFilter.value;
-                    data = await tracksApi.loadTracks(params);
-                    tracks.value = data.items.map(t => ({ ...t, loading: false }));
-                } else if (view.value === 'albums') {
-                    data = await tracksApi.loadAlbums(params);
-                    albums.value = data.items;
-                } else if (view.value === 'artists') {
-                    data = await tracksApi.loadArtists(params);
-                    artists.value = data.items;
-                }
-
-                totalItems.value = data.total;
-            } catch (e) {
-                showToast(`Failed to load ${view.value}`, 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
+    // Methods
+    const loadData = async () => {
+      loading.value = true;
+      try {
+        const params = {
+          limit: limit.value,
+          offset: offset.value,
         };
 
-        let searchTimeout;
-        const debouncedSearch = () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                offset.value = 0;
-                loadData();
-            }, 300);
-        };
+        if (searchQuery.value) params.search = searchQuery.value;
 
-        const prevPage = () => {
-            offset.value = Math.max(0, offset.value - limit.value);
-            loadData();
-        };
+        let data;
+        if (view.value === 'tracks') {
+          if (statusFilter.value) params.status = statusFilter.value;
+          if (flaggedFilter.value) params.flagged = flaggedFilter.value;
+          data = await tracksApi.loadTracks(params);
+          tracks.value = data.items.map(t => ({ ...t, loading: false }));
+        } else if (view.value === 'albums') {
+          data = await tracksApi.loadAlbums(params);
+          albums.value = data.items;
+        } else if (view.value === 'artists') {
+          data = await tracksApi.loadArtists(params);
+          artists.value = data.items;
+        }
 
-        const nextPage = () => {
-            offset.value += limit.value;
-            loadData();
-        };
+        totalItems.value = data.total;
+      } catch {
+        showError();
+      } finally {
+        loading.value = false;
+      }
+    };
 
-        // Track actions
-        const reanalyze = async (track) => {
-            track.loading = true;
-            try {
-                const data = await tracksApi.reanalyze(track.id);
-                showToast(data.message);
-                track.status = 'PENDING';
-                window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
-            } catch (e) {
-                showToast('Re-analysis failed', 'error');
-            } finally {
-                track.loading = false;
-            }
-        };
+    let searchTimeout;
+    const debouncedSearch = () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        offset.value = 0;
+        loadData();
+      }, 300);
+    };
 
-        const reclassify = async (track) => {
-            track.loading = true;
-            try {
-                const data = await tracksApi.reclassify(track.id);
-                showToast(`${track.title} → ${data.new_style}`);
-                track.dance_style = data.new_style;
-                window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
-            } catch (e) {
-                showToast(e.message, 'error');
-            } finally {
-                track.loading = false;
-            }
-        };
+    const prevPage = () => {
+      offset.value = Math.max(0, offset.value - limit.value);
+      loadData();
+    };
 
-        const unflagTrack = async (track) => {
-            track.loading = true;
-            try {
-                await tracksApi.unflag(track.id);
-                showToast(`Unflagged: ${track.title}`);
-                loadData();
-                window.dispatchEvent(new CustomEvent('admin:track-unflagged', { detail: { track } }));
-            } catch (e) {
-                showToast('Failed to unflag track', 'error');
-            } finally {
-                track.loading = false;
-            }
-        };
+    const nextPage = () => {
+      offset.value += limit.value;
+      loadData();
+    };
 
-        const rejectTrack = async (track) => {
-            if (!confirm(`Reject and delete track "${track.title}"?\n\nThis will remove it from the database and add it to the blocklist.`)) {
-                return;
-            }
+    // Track actions
+    const reanalyze = async track => {
+      track.loading = true;
+      try {
+        const data = await tracksApi.reanalyze(track.id);
+        showToast(data.message);
+        track.status = 'PENDING';
+        window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        track.loading = false;
+      }
+    };
 
-            try {
-                const data = await tracksApi.rejectTrack(track.id, 'Rejected from admin');
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to reject track', 'error');
-            }
-        };
+    const reclassify = async track => {
+      track.loading = true;
+      try {
+        const data = await tracksApi.reclassify(track.id);
+        showToast(`${track.title} → ${data.new_style}`);
+        track.dance_style = data.new_style;
+        window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        track.loading = false;
+      }
+    };
 
-        // Artist actions
-        const toggleArtistDetails = (artist) => {
-            if (expandedArtist.value === artist.id) {
-                expandedArtist.value = null;
-            } else {
-                expandedArtist.value = artist.id;
-            }
-        };
+    const unflagTrack = async track => {
+      track.loading = true;
+      try {
+        await tracksApi.unflag(track.id);
+        showToast(`Unflagged: ${track.title}`);
+        loadData();
+        window.dispatchEvent(new CustomEvent('admin:track-unflagged', { detail: { track } }));
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        track.loading = false;
+      }
+    };
 
-        const rejectArtist = async (artist) => {
-            const confirmMsg = artist.is_isolated
-                ? `Reject and delete artist "${artist.name}"?\n\n✅ Safe to reject: This artist has no collaborations.\n\n• ${artist.total_tracks} tracks will be deleted\n• Artist will be added to blocklist`
-                : `⚠️ WARNING: Reject artist "${artist.name}"?\n\nThis artist has collaborations with:\n${artist.shared_with_artists.join(', ')}\n\n• ${artist.total_tracks} tracks will be deleted\n• ${artist.shared_tracks} are collaborations\n• Shared artists will remain in database\n\nContinue?`;
+    const rejectTrack = async track => {
+      if (
+        !confirm(
+          `Reject and delete track "${track.title}"?\n\nThis will remove it from the database and add it to the blocklist.`
+        )
+      ) {
+        return;
+      }
 
-            if (!confirm(confirmMsg)) {
-                return;
-            }
+      try {
+        const data = await tracksApi.rejectTrack(track.id, 'Rejected from admin');
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showError(e.message);
+      }
+    };
 
-            try {
-                const data = await tracksApi.rejectArtist(artist.id, 'Rejected from admin');
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to reject artist', 'error');
-                console.error(e);
-            }
-        };
+    // Artist actions
+    const toggleArtistDetails = artist => {
+      if (expandedArtist.value === artist.id) {
+        expandedArtist.value = null;
+      } else {
+        expandedArtist.value = artist.id;
+      }
+    };
 
-        // Album actions
-        const rejectAlbum = async (album) => {
-            if (!confirm(`Reject and delete album "${album.title}"?\n\n• ${album.total_tracks} tracks will be deleted\n• Album will be removed from database`)) {
-                return;
-            }
+    const rejectArtist = async artist => {
+      const confirmMsg = artist.is_isolated
+        ? `Reject and delete artist "${artist.name}"?\n\n✅ Safe to reject: This artist has no collaborations.\n\n• ${artist.total_tracks} tracks will be deleted\n• Artist will be added to blocklist`
+        : `⚠️ WARNING: Reject artist "${artist.name}"?\n\nThis artist has collaborations with:\n${artist.shared_with_artists.join(', ')}\n\n• ${artist.total_tracks} tracks will be deleted\n• ${artist.shared_tracks} are collaborations\n• Shared artists will remain in database\n\nContinue?`;
 
-            try {
-                const data = await tracksApi.rejectAlbum(album.id, 'Rejected from admin');
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to reject album', 'error');
-            }
-        };
+      if (!confirm(confirmMsg)) {
+        return;
+      }
 
-        // Helper methods
-        const statusClass = (status) => {
-            const classes = {
-                'PENDING': 'bg-yellow-600/20 text-yellow-400',
-                'PROCESSING': 'bg-blue-600/20 text-blue-400',
-                'DONE': 'bg-green-600/20 text-green-400',
-                'FAILED': 'bg-red-600/20 text-red-400'
-            };
-            return classes[status] || 'bg-gray-600/20 text-gray-400';
-        };
+      try {
+        const data = await tracksApi.rejectArtist(artist.id, 'Rejected from admin');
+        showToast(data.message);
+        loadData();
+      } catch {
+        showToast('Failed to reject artist', 'error');
+      }
+    };
 
-        const statusIcon = (status) => {
-            const icons = {
-                'PENDING': '⏳',
-                'PROCESSING': '🔄',
-                'DONE': '✅',
-                'FAILED': '❌'
-            };
-            return icons[status] || '❓';
-        };
+    // Album actions
+    const rejectAlbum = async album => {
+      if (
+        !confirm(
+          `Reject and delete album "${album.title}"?\n\n• ${album.total_tracks} tracks will be deleted\n• Album will be removed from database`
+        )
+      ) {
+        return;
+      }
 
-        const confidenceClass = (confidence) => {
-            if (confidence >= 0.9) return 'text-green-400';
-            if (confidence >= 0.75) return 'text-blue-400';
-            if (confidence >= 0.5) return 'text-yellow-400';
-            return 'text-red-400';
-        };
+      try {
+        const data = await tracksApi.rejectAlbum(album.id, 'Rejected from admin');
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showError(e.message);
+      }
+    };
 
-        // Computed
-        const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
-        const totalPages = computed(() => Math.ceil(totalItems.value / limit.value));
+    // Helper methods
+    const statusClass = status => {
+      const classes = {
+        PENDING: 'bg-yellow-600/20 text-yellow-400',
+        PROCESSING: 'bg-blue-600/20 text-blue-400',
+        DONE: 'bg-green-600/20 text-green-400',
+        FAILED: 'bg-red-600/20 text-red-400',
+      };
+      return classes[status] || 'bg-gray-600/20 text-gray-400';
+    };
 
-        // Watchers
-        watch(view, () => {
-            offset.value = 0;
-            searchQuery.value = '';
-            statusFilter.value = '';
-            flaggedFilter.value = '';
-            loadData();
-        });
+    const statusIcon = status => {
+      const icons = {
+        PENDING: '⏳',
+        PROCESSING: '🔄',
+        DONE: '✅',
+        FAILED: '❌',
+      };
+      return icons[status] || '❓';
+    };
 
-        // Event listeners for cross-feature communication
-        const handleTracksIngested = () => loadData();
-        const handleArtistApproved = () => loadData();
-        const handleTracksReclassified = () => loadData();
-        const handleSpiderComplete = () => loadData();
+    const confidenceClass = confidence => {
+      if (confidence >= 0.9) return 'text-green-400';
+      if (confidence >= 0.75) return 'text-blue-400';
+      if (confidence >= 0.5) return 'text-yellow-400';
+      return 'text-red-400';
+    };
 
-        onMounted(() => {
-            loadData();
-            window.addEventListener('admin:tracks-ingested', handleTracksIngested);
-            window.addEventListener('admin:artist-approved', handleArtistApproved);
-            window.addEventListener('admin:tracks-reclassified', handleTracksReclassified);
-            window.addEventListener('admin:spider-complete', handleSpiderComplete);
-        });
+    // Computed
+    const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
+    const totalPages = computed(() => Math.ceil(totalItems.value / limit.value));
 
-        onUnmounted(() => {
-            window.removeEventListener('admin:tracks-ingested', handleTracksIngested);
-            window.removeEventListener('admin:artist-approved', handleArtistApproved);
-            window.removeEventListener('admin:tracks-reclassified', handleTracksReclassified);
-            window.removeEventListener('admin:spider-complete', handleSpiderComplete);
-        });
+    // Watchers
+    watch(view, () => {
+      offset.value = 0;
+      searchQuery.value = '';
+      statusFilter.value = '';
+      flaggedFilter.value = '';
+      loadData();
+    });
 
-        return {
-            view, tracks, albums, artists, totalItems, searchQuery, statusFilter, flaggedFilter,
-            limit, offset, loading, expandedArtist,
-            loadData, debouncedSearch, prevPage, nextPage,
-            reanalyze, reclassify, unflagTrack, rejectTrack,
-            toggleArtistDetails, rejectArtist, rejectAlbum,
-            statusClass, statusIcon, confidenceClass,
-            pageNumber, totalPages
-        };
-    },
-    template: /*html*/`
+    // Event listeners for cross-feature communication
+    const handleTracksIngested = () => loadData();
+    const handleArtistApproved = () => loadData();
+    const handleTracksReclassified = () => loadData();
+    const handleSpiderComplete = () => loadData();
+
+    onMounted(() => {
+      loadData();
+      window.addEventListener('admin:tracks-ingested', handleTracksIngested);
+      window.addEventListener('admin:artist-approved', handleArtistApproved);
+      window.addEventListener('admin:tracks-reclassified', handleTracksReclassified);
+      window.addEventListener('admin:spider-complete', handleSpiderComplete);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('admin:tracks-ingested', handleTracksIngested);
+      window.removeEventListener('admin:artist-approved', handleArtistApproved);
+      window.removeEventListener('admin:tracks-reclassified', handleTracksReclassified);
+      window.removeEventListener('admin:spider-complete', handleSpiderComplete);
+    });
+
+    return {
+      view,
+      tracks,
+      albums,
+      artists,
+      totalItems,
+      searchQuery,
+      statusFilter,
+      flaggedFilter,
+      limit,
+      offset,
+      loading,
+      expandedArtist,
+      loadData,
+      debouncedSearch,
+      prevPage,
+      nextPage,
+      reanalyze,
+      reclassify,
+      unflagTrack,
+      rejectTrack,
+      toggleArtistDetails,
+      rejectArtist,
+      rejectAlbum,
+      statusClass,
+      statusIcon,
+      confidenceClass,
+      pageNumber,
+      totalPages,
+    };
+  },
+  template: /*html*/ `
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
             <h2 class="font-bold text-xl mb-6">📚 Library Management</h2>
 
@@ -503,5 +531,5 @@ export default {
                 </button>
             </div>
         </div>
-    `
+    `,
 };

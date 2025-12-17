@@ -1,36 +1,34 @@
 export default {
-    data() {
-        return {
-            stats: null,
-            loading: true
-        }
-    },
-    async mounted() {
-        try {
-            const res = await fetch('/api/stats');
-            this.stats = await res.json();
-        } catch (e) {
-            console.error("Failed to load stats", e);
-        } finally {
-            this.loading = false;
-        }
-    },
-    computed: {
-        lastAddedLabel() {
-            if (!this.stats || !this.stats.last_added) return '-';
-            const date = new Date(this.stats.last_added);
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  data() {
+    return {
+      stats: null,
+      loading: true,
+    };
+  },
+  async mounted() {
+    try {
+      const res = await fetch('/api/stats');
+      this.stats = await res.json();
+    } finally {
+      this.loading = false;
+    }
+  },
+  computed: {
+    lastAddedLabel() {
+      if (!this.stats || !this.stats.last_added) return '-';
+      const date = new Date(this.stats.last_added);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-            if (checkDate.getTime() === today.getTime()) return 'Idag';
-            if (checkDate.getTime() === yesterday.getTime()) return 'Igår';
-            return date.toISOString().split('T')[0];
-        }
+      if (checkDate.getTime() === today.getTime()) return 'Idag';
+      if (checkDate.getTime() === yesterday.getTime()) return 'Igår';
+      return date.toISOString().split('T')[0];
     },
-    template: /*html*/`
+  },
+  template: /*html*/ `
     <div v-if="stats" class="flex flex-wrap justify-center gap-3 mb-6 animate-fade-in">
         
         <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm text-xs font-medium text-gray-600">
@@ -49,5 +47,5 @@ export default {
         </div>
 
     </div>
-    `
-}
+    `,
+};

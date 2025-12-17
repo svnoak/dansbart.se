@@ -8,179 +8,212 @@ import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useRejectApi } from './api.js';
 import RejectionModal from './RejectionModal.js';
+import { showError } from '../../../js/hooks/useToast.js';
 
 export default {
-    components: { RejectionModal },
-    setup() {
-        const { adminToken } = useAdminAuth();
-        const { showToast } = useToast();
-        const rejectApi = useRejectApi(adminToken);
+  components: { RejectionModal },
+  setup() {
+    const { adminToken } = useAdminAuth();
+    const { showToast } = useToast();
+    const rejectApi = useRejectApi(adminToken);
 
-        // State
-        const rejectView = ref('artists'); 
-        const pendingArtists = ref([]);
-        const pendingAlbums = ref([]);
-        const blocklist = ref([]);
-        const rejectMessage = ref('');
-        const rejectError = ref(false);
-        const loading = ref(false);
+    // State
+    const rejectView = ref('artists');
+    const pendingArtists = ref([]);
+    const pendingAlbums = ref([]);
+    const blocklist = ref([]);
+    const rejectMessage = ref('');
+    const rejectError = ref(false);
+    const loading = ref(false);
 
-        // Pagination State
-        const limit = ref(50);
-        const offset = ref(0);
-        const totalItems = ref(0);
+    // Pagination State
+    const limit = ref(50);
+    const offset = ref(0);
+    const totalItems = ref(0);
 
-        // Search State
-        const searchQuery = ref('');
+    // Search State
+    const searchQuery = ref('');
 
-        // Bulk Selection State
-        const selectedIds = ref(new Set());
+    // Bulk Selection State
+    const selectedIds = ref(new Set());
 
-        // Rejection Modal (kept same as your code)
-        const rejectionModal = ref({
-            show: false,
-            artistId: null,
-            artistName: '',
-            pendingTracks: 0,
-            analyzedTracks: 0,
-            isIsolated: true,
-            sharedWith: [],
-            sharedTracks: 0,
-            confirming: false
-        });
+    // Rejection Modal (kept same as your code)
+    const rejectionModal = ref({
+      show: false,
+      artistId: null,
+      artistName: '',
+      pendingTracks: 0,
+      analyzedTracks: 0,
+      isIsolated: true,
+      sharedWith: [],
+      sharedTracks: 0,
+      confirming: false,
+    });
 
-        const loadData = async () => {
-            loading.value = true;
-            selectedIds.value.clear(); // Clear selection on page load
-            try {
-                let data;
-                if (rejectView.value === 'artists') {
-                    data = await rejectApi.loadPendingArtists(limit.value, offset.value, searchQuery.value);
-                    pendingArtists.value = data.items;
-                } else if (rejectView.value === 'albums') {
-                    data = await rejectApi.loadPendingAlbums(limit.value, offset.value);
-                    pendingAlbums.value = data.items;
-                } else {
-                    data = await rejectApi.loadBlocklist('', limit.value, offset.value);
-                    blocklist.value = data.items;
-                }
-                totalItems.value = data.total;
-                rejectMessage.value = '';
-            } catch (e) {
-                console.error(e);
-                rejectMessage.value = 'Failed to load data';
-            } finally {
-                loading.value = false;
-            }
-        };
+    const loadData = async () => {
+      loading.value = true;
+      selectedIds.value.clear(); // Clear selection on page load
+      try {
+        let data;
+        if (rejectView.value === 'artists') {
+          data = await rejectApi.loadPendingArtists(limit.value, offset.value, searchQuery.value);
+          pendingArtists.value = data.items;
+        } else if (rejectView.value === 'albums') {
+          data = await rejectApi.loadPendingAlbums(limit.value, offset.value);
+          pendingAlbums.value = data.items;
+        } else {
+          data = await rejectApi.loadBlocklist('', limit.value, offset.value);
+          blocklist.value = data.items;
+        }
+        totalItems.value = data.total;
+        rejectMessage.value = '';
+      } catch (e) {
+        rejectMessage.value = 'Failed to load data';
+        showError(e.message);
+      } finally {
+        loading.value = false;
+      }
+    };
 
-        // Pagination Methods
-        const nextPage = () => {
-            if (offset.value + limit.value < totalItems.value) {
-                offset.value += limit.value;
-                loadData();
-            }
-        };
-
-        const prevPage = () => {
-            if (offset.value > 0) {
-                offset.value = Math.max(0, offset.value - limit.value);
-                loadData();
-            }
-        };
-
-        // Bulk Selection Methods
-        const toggleSelection = (id) => {
-            if (selectedIds.value.has(id)) {
-                selectedIds.value.delete(id);
-            } else {
-                selectedIds.value.add(id);
-            }
-        };
-
-        const toggleSelectAll = () => {
-            const list = rejectView.value === 'artists' ? pendingArtists.value : pendingAlbums.value;
-            if (selectedIds.value.size === list.length) {
-                selectedIds.value.clear();
-            } else {
-                list.forEach(item => selectedIds.value.add(item.id));
-            }
-        };
-
-        const isAllSelected = computed(() => {
-            const list = rejectView.value === 'artists' ? pendingArtists.value : pendingAlbums.value;
-            return list.length > 0 && selectedIds.value.size === list.length;
-        });
-
-        // Bulk Action
-        const rejectSelected = async () => {
-            const count = selectedIds.value.size;
-            if (count === 0) return;
-
-            if (!confirm(`Are you sure you want to reject and blocklist ${count} items? This cannot be undone.`)) {
-                return;
-            }
-
-            loading.value = true;
-            try {
-                const ids = Array.from(selectedIds.value);
-                
-                // You need to add this method to your api.js
-                await fetch('/api/admin/artists/bulk-reject', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-admin-token': adminToken.value 
-                    },
-                    body: JSON.stringify({ ids: ids, reason: 'Bulk rejection' })
-                });
-
-                showToast(`Rejected ${count} items`, 'success');
-                loadData();
-            } catch (e) {
-                showToast('Bulk rejection failed', 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
-        };
-
-        // Single Rejection (Your existing logic)
-        const rejectArtist = async (artistId) => {
-            // ... your existing code ...
-            // (Just ensure you call loadData() instead of loadPendingArtists() at the end)
-        };
-
-        // Search functionality
-        const handleSearch = () => {
-            offset.value = 0; // Reset to first page when searching
-            loadData();
-        };
-
-        // Watch for view changes
-        watch(rejectView, () => {
-            offset.value = 0;
-            searchQuery.value = ''; // Clear search when switching views
-            loadData();
-        });
-
-        // Initial Load
+    // Pagination Methods
+    const nextPage = () => {
+      if (offset.value + limit.value < totalItems.value) {
+        offset.value += limit.value;
         loadData();
+      }
+    };
 
-        return {
-            rejectView, pendingArtists, pendingAlbums, blocklist,
-            rejectMessage, rejectError, rejectionModal, loading,
-            // Pagination
-            limit, offset, totalItems, nextPage, prevPage,
-            // Search
-            searchQuery, handleSearch,
-            // Bulk
-            selectedIds, toggleSelection, toggleSelectAll, isAllSelected, rejectSelected,
-            // Actions
-            loadData, rejectArtist
-        };
-    },
-    template: /*html*/`
+    const prevPage = () => {
+      if (offset.value > 0) {
+        offset.value = Math.max(0, offset.value - limit.value);
+        loadData();
+      }
+    };
+
+    // Bulk Selection Methods
+    const toggleSelection = id => {
+      if (selectedIds.value.has(id)) {
+        selectedIds.value.delete(id);
+      } else {
+        selectedIds.value.add(id);
+      }
+    };
+
+    const toggleSelectAll = () => {
+      const list = rejectView.value === 'artists' ? pendingArtists.value : pendingAlbums.value;
+      if (selectedIds.value.size === list.length) {
+        selectedIds.value.clear();
+      } else {
+        list.forEach(item => selectedIds.value.add(item.id));
+      }
+    };
+
+    const isAllSelected = computed(() => {
+      const list = rejectView.value === 'artists' ? pendingArtists.value : pendingAlbums.value;
+      return list.length > 0 && selectedIds.value.size === list.length;
+    });
+
+    // Bulk Action
+    const rejectSelected = async () => {
+      const count = selectedIds.value.size;
+      if (count === 0) return;
+
+      if (
+        !confirm(
+          `Are you sure you want to reject and blocklist ${count} items? This cannot be undone.`
+        )
+      ) {
+        return;
+      }
+
+      loading.value = true;
+      try {
+        const ids = Array.from(selectedIds.value);
+
+        // You need to add this method to your api.js
+        await fetch('/api/admin/artists/bulk-reject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken.value,
+          },
+          body: JSON.stringify({ ids: ids, reason: 'Bulk rejection' }),
+        });
+
+        showToast(`Rejected ${count} items`, 'success');
+        loadData();
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    // Single Rejection
+    const rejectArtist = async artistId => {
+      // Find the artist to show details in confirm dialog
+      const artist = pendingArtists.value.find(a => a.id === artistId);
+      if (!artist) return;
+
+      const confirmMsg = `Reject and delete artist "${artist.name}"?\n\n• ${artist.pending_tracks} tracks will be deleted\n• Artist will be added to blocklist`;
+
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const data = await rejectApi.confirmRejectArtist(artistId, 'Rejected from review tab');
+        showToast(data.message, 'success');
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Failed to reject artist');
+      }
+    };
+
+    // Search functionality
+    const handleSearch = () => {
+      offset.value = 0; // Reset to first page when searching
+      loadData();
+    };
+
+    // Watch for view changes
+    watch(rejectView, () => {
+      offset.value = 0;
+      searchQuery.value = ''; // Clear search when switching views
+      loadData();
+    });
+
+    // Initial Load
+    loadData();
+
+    return {
+      rejectView,
+      pendingArtists,
+      pendingAlbums,
+      blocklist,
+      rejectMessage,
+      rejectError,
+      rejectionModal,
+      loading,
+      // Pagination
+      limit,
+      offset,
+      totalItems,
+      nextPage,
+      prevPage,
+      // Search
+      searchQuery,
+      handleSearch,
+      // Bulk
+      selectedIds,
+      toggleSelection,
+      toggleSelectAll,
+      isAllSelected,
+      rejectSelected,
+      // Actions
+      loadData,
+      rejectArtist,
+    };
+  },
+  template: /*html*/ `
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="font-bold text-xl">🗑️ Review & Reject</h2>
@@ -331,5 +364,5 @@ export default {
                 </div>
             </div>
         </div>
-    `
+    `,
 };

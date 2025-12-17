@@ -4,51 +4,51 @@
  */
 
 export default {
-    props: {
-        show: {
-            type: Boolean,
-            required: true
-        },
-        title: {
-            type: String,
-            default: 'Confirm Action'
-        },
-        message: {
-            type: String,
-            required: true
-        },
-        confirmText: {
-            type: String,
-            default: 'Confirm'
-        },
-        cancelText: {
-            type: String,
-            default: 'Cancel'
-        },
-        confirmClass: {
-            type: String,
-            default: 'bg-indigo-600 hover:bg-indigo-500'
-        },
-        loading: {
-            type: Boolean,
-            default: false
-        }
+  props: {
+    show: {
+      type: Boolean,
+      required: true,
     },
-    emits: ['confirm', 'cancel'],
-    setup(props, { emit }) {
-        const handleConfirm = () => {
-            emit('confirm');
-        };
-
-        const handleCancel = () => {
-            if (!props.loading) {
-                emit('cancel');
-            }
-        };
-
-        return { handleConfirm, handleCancel };
+    title: {
+      type: String,
+      default: 'Confirm Action',
     },
-    template: /*html*/`
+    message: {
+      type: String,
+      required: true,
+    },
+    confirmText: {
+      type: String,
+      default: 'Confirm',
+    },
+    cancelText: {
+      type: String,
+      default: 'Cancel',
+    },
+    confirmClass: {
+      type: String,
+      default: 'bg-indigo-600 hover:bg-indigo-500',
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  emits: ['confirm', 'cancel'],
+  setup(props, { emit }) {
+    const handleConfirm = () => {
+      emit('confirm');
+    };
+
+    const handleCancel = () => {
+      if (!props.loading) {
+        emit('cancel');
+      }
+    };
+
+    return { handleConfirm, handleCancel };
+  },
+  template: /*html*/ `
         <div v-if="show" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" @click.self="handleCancel">
             <div class="bg-gray-800 rounded-lg border border-gray-700 max-w-md w-full mx-4">
                 <div class="p-4 sm:p-6">
@@ -70,5 +70,5 @@ export default {
                 </div>
             </div>
         </div>
-    `
+    `,
 };

@@ -1,20 +1,28 @@
 export default {
-    props: ['isPlaying', 'isShuffled', 'repeatMode', 'hasSpotify', 'structureMode', 'fullMode', 'activeSource'],
-    emits: ['toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump'],
+  props: [
+    'isPlaying',
+    'isShuffled',
+    'repeatMode',
+    'hasSpotify',
+    'structureMode',
+    'fullMode',
+    'activeSource',
+  ],
+  emits: ['toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump'],
 
-    computed: {
-        jumpAmount() {
-            return this.structureMode !== 'none' ? 4 : 10;
-        },
-        jumpLabel() {
-            return this.structureMode !== 'none' ? '4 Bars' : '10 Seconds';
-        },
-        isSpotifyActive() {
-            return this.activeSource === 'spotify';
-        }
+  computed: {
+    jumpAmount() {
+      return this.structureMode !== 'none' ? 4 : 10;
     },
+    jumpLabel() {
+      return this.structureMode !== 'none' ? '4 Bars' : '10 Seconds';
+    },
+    isSpotifyActive() {
+      return this.activeSource === 'spotify';
+    },
+  },
 
-    template: /*html*/`
+  template: /*html*/ `
     <div class="flex items-center justify-center w-full" 
          :class="fullMode ? 'gap-4 justify-evenly' : 'gap-2 md:gap-4'">
         
@@ -110,5 +118,5 @@ export default {
         </button>
         
     </div>
-    `
-}
+    `,
+};

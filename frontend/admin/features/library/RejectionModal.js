@@ -6,142 +6,145 @@
 import { ref, computed, watch } from 'vue';
 
 export default {
-    props: {
-        show: Boolean,
-        entityType: String, // 'artist' or 'album'
-        entity: Object, // The main entity being rejected
-        collaborationData: Object // Data about collaborations
-    },
-    emits: ['close', 'confirm'],
-    setup(props, { emit }) {
-        // Selected items for rejection
-        const selectedArtists = ref(new Set());
-        const selectedAlbums = ref(new Set());
-        const reason = ref('');
+  props: {
+    show: Boolean,
+    entityType: String, // 'artist' or 'album'
+    entity: Object, // The main entity being rejected
+    collaborationData: Object, // Data about collaborations
+  },
+  emits: ['close', 'confirm'],
+  setup(props, { emit }) {
+    // Selected items for rejection
+    const selectedArtists = ref(new Set());
+    const selectedAlbums = ref(new Set());
+    const reason = ref('');
 
-        // Reset selections when modal opens with new data
-        watch(() => props.show, (newVal) => {
-            if (newVal) {
-                // Pre-select the main entity
-                if (props.entityType === 'artist' && props.entity) {
-                    selectedArtists.value = new Set([props.entity.id]);
-                } else if (props.entityType === 'album' && props.entity) {
-                    selectedAlbums.value = new Set([props.entity.id]);
-                }
-                reason.value = 'Rejected from library';
-            } else {
-                selectedArtists.value.clear();
-                selectedAlbums.value.clear();
-                reason.value = '';
-            }
+    // Reset selections when modal opens with new data
+    watch(
+      () => props.show,
+      newVal => {
+        if (newVal) {
+          // Pre-select the main entity
+          if (props.entityType === 'artist' && props.entity) {
+            selectedArtists.value = new Set([props.entity.id]);
+          } else if (props.entityType === 'album' && props.entity) {
+            selectedAlbums.value = new Set([props.entity.id]);
+          }
+          reason.value = 'Rejected from library';
+        } else {
+          selectedArtists.value.clear();
+          selectedAlbums.value.clear();
+          reason.value = '';
+        }
+      }
+    );
+
+    // Computed properties
+    const collaboratingArtists = computed(() => {
+      if (!props.collaborationData || !props.collaborationData.artists) return [];
+      return props.collaborationData.artists;
+    });
+
+    const collaboratingAlbums = computed(() => {
+      if (!props.collaborationData || !props.collaborationData.albums) return [];
+      return props.collaborationData.albums;
+    });
+
+    const totalTracksToDelete = computed(() => {
+      let total = 0;
+
+      // Add tracks from selected artists
+      collaboratingArtists.value.forEach(artist => {
+        if (selectedArtists.value.has(artist.id)) {
+          total += artist.track_count || 0;
+        }
+      });
+
+      // Note: tracks from albums are typically already counted in artist tracks
+      // Only add if album rejection is separate from artist
+      if (props.entityType === 'album') {
+        collaboratingAlbums.value.forEach(album => {
+          if (selectedAlbums.value.has(album.id)) {
+            total += album.track_count || 0;
+          }
         });
+      }
 
-        // Computed properties
-        const collaboratingArtists = computed(() => {
-            if (!props.collaborationData || !props.collaborationData.artists) return [];
-            return props.collaborationData.artists;
-        });
+      return total;
+    });
 
-        const collaboratingAlbums = computed(() => {
-            if (!props.collaborationData || !props.collaborationData.albums) return [];
-            return props.collaborationData.albums;
-        });
+    const hasSelections = computed(() => {
+      return selectedArtists.value.size > 0 || selectedAlbums.value.size > 0;
+    });
 
-        const totalTracksToDelete = computed(() => {
-            let total = 0;
+    // Methods
+    const toggleArtist = artistId => {
+      // Prevent deselecting the main entity
+      if (props.entityType === 'artist' && artistId === props.entity.id) {
+        return;
+      }
 
-            // Add tracks from selected artists
-            collaboratingArtists.value.forEach(artist => {
-                if (selectedArtists.value.has(artist.id)) {
-                    total += artist.track_count || 0;
-                }
-            });
+      if (selectedArtists.value.has(artistId)) {
+        selectedArtists.value.delete(artistId);
+      } else {
+        selectedArtists.value.add(artistId);
+      }
+    };
 
-            // Note: tracks from albums are typically already counted in artist tracks
-            // Only add if album rejection is separate from artist
-            if (props.entityType === 'album') {
-                collaboratingAlbums.value.forEach(album => {
-                    if (selectedAlbums.value.has(album.id)) {
-                        total += album.track_count || 0;
-                    }
-                });
-            }
+    const toggleAlbum = albumId => {
+      // Prevent deselecting the main entity
+      if (props.entityType === 'album' && albumId === props.entity.id) {
+        return;
+      }
 
-            return total;
-        });
+      if (selectedAlbums.value.has(albumId)) {
+        selectedAlbums.value.delete(albumId);
+      } else {
+        selectedAlbums.value.add(albumId);
+      }
+    };
 
-        const hasSelections = computed(() => {
-            return selectedArtists.value.size > 0 || selectedAlbums.value.size > 0;
-        });
+    const selectAllArtists = () => {
+      collaboratingArtists.value.forEach(artist => {
+        selectedArtists.value.add(artist.id);
+      });
+    };
 
-        // Methods
-        const toggleArtist = (artistId) => {
-            // Prevent deselecting the main entity
-            if (props.entityType === 'artist' && artistId === props.entity.id) {
-                return;
-            }
+    const selectAllAlbums = () => {
+      collaboratingAlbums.value.forEach(album => {
+        selectedAlbums.value.add(album.id);
+      });
+    };
 
-            if (selectedArtists.value.has(artistId)) {
-                selectedArtists.value.delete(artistId);
-            } else {
-                selectedArtists.value.add(artistId);
-            }
-        };
+    const close = () => {
+      emit('close');
+    };
 
-        const toggleAlbum = (albumId) => {
-            // Prevent deselecting the main entity
-            if (props.entityType === 'album' && albumId === props.entity.id) {
-                return;
-            }
+    const confirm = () => {
+      emit('confirm', {
+        artistIds: Array.from(selectedArtists.value),
+        albumIds: Array.from(selectedAlbums.value),
+        reason: reason.value || 'Rejected from library',
+      });
+    };
 
-            if (selectedAlbums.value.has(albumId)) {
-                selectedAlbums.value.delete(albumId);
-            } else {
-                selectedAlbums.value.add(albumId);
-            }
-        };
-
-        const selectAllArtists = () => {
-            collaboratingArtists.value.forEach(artist => {
-                selectedArtists.value.add(artist.id);
-            });
-        };
-
-        const selectAllAlbums = () => {
-            collaboratingAlbums.value.forEach(album => {
-                selectedAlbums.value.add(album.id);
-            });
-        };
-
-        const close = () => {
-            emit('close');
-        };
-
-        const confirm = () => {
-            emit('confirm', {
-                artistIds: Array.from(selectedArtists.value),
-                albumIds: Array.from(selectedAlbums.value),
-                reason: reason.value || 'Rejected from library'
-            });
-        };
-
-        return {
-            selectedArtists,
-            selectedAlbums,
-            reason,
-            collaboratingArtists,
-            collaboratingAlbums,
-            totalTracksToDelete,
-            hasSelections,
-            toggleArtist,
-            toggleAlbum,
-            selectAllArtists,
-            selectAllAlbums,
-            close,
-            confirm
-        };
-    },
-    template: /*html*/`
+    return {
+      selectedArtists,
+      selectedAlbums,
+      reason,
+      collaboratingArtists,
+      collaboratingAlbums,
+      totalTracksToDelete,
+      hasSelections,
+      toggleArtist,
+      toggleAlbum,
+      selectAllArtists,
+      selectAllAlbums,
+      close,
+      confirm,
+    };
+  },
+  template: /*html*/ `
         <div v-if="show" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" @click.self="close">
             <div class="bg-gray-800 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] flex flex-col">
                 <!-- Header -->
@@ -294,5 +297,5 @@ export default {
                 </div>
             </div>
         </div>
-    `
+    `,
 };

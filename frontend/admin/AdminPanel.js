@@ -12,32 +12,32 @@ import Toast from './shared/components/Toast.js';
 import StyleKeywordsTab from './features/style/StyleKeywordsTab.js';
 
 export default {
-    components: {
-        'library-tab': LibraryTab,
-        'ingest-tab': IngestTab,
-        'bulk-tab': BulkTab,
-        'spider-tab': SpiderTab,
-        'approvals-tab': ApprovalsTab,
-        'analytics-tab': AnalyticsTab,
-        'style-keywords-tab': StyleKeywordsTab,
-        'toast-container': Toast
-    },
-    emits: ['logout'],
-    setup(props, { emit }) {
-        const { clearToken } = useAdminAuth();
-        const activeTab = ref('library');
+  components: {
+    'library-tab': LibraryTab,
+    'ingest-tab': IngestTab,
+    'bulk-tab': BulkTab,
+    'spider-tab': SpiderTab,
+    'approvals-tab': ApprovalsTab,
+    'analytics-tab': AnalyticsTab,
+    'style-keywords-tab': StyleKeywordsTab,
+    'toast-container': Toast,
+  },
+  emits: ['logout'],
+  setup(props, { emit }) {
+    const { clearToken } = useAdminAuth();
+    const activeTab = ref('library');
 
-        const logout = () => {
-            clearToken();
-            emit('logout'); // Switches component back to LoginView
-        };
+    const logout = () => {
+      clearToken();
+      emit('logout'); // Switches component back to LoginView
+    };
 
-        return {
-            activeTab,
-            logout
-        };
-    },
-    template: `
+    return {
+      activeTab,
+      logout,
+    };
+  },
+  template: `
         <div id="admin-panel" class="max-w-6xl mx-auto">
             <h1 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">🤖 Dansbart Admin Console</h1>
 
@@ -99,5 +99,5 @@ export default {
 
             <toast-container />
         </div>
-    `
+    `,
 };

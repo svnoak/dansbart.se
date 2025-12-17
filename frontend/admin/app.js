@@ -3,30 +3,30 @@ import LoginView from './LoginView.js';
 import AdminPanel from './AdminPanel.js';
 
 export default {
-    components: {
-        LoginView,
-        AdminPanel
-    },
-    setup() {
-        // Check local storage directly on load
-        const token = ref(localStorage.getItem('admin_token') || '');
+  components: {
+    LoginView,
+    AdminPanel,
+  },
+  setup() {
+    // Check local storage directly on load
+    const token = ref(localStorage.getItem('admin_token') || '');
 
-        const handleLoginSuccess = (newToken) => {
-            token.value = newToken;
-        };
+    const handleLoginSuccess = newToken => {
+      token.value = newToken;
+    };
 
-        const handleLogout = () => {
-            localStorage.removeItem('admin_token');
-            token.value = '';
-        };
+    const handleLogout = () => {
+      localStorage.removeItem('admin_token');
+      token.value = '';
+    };
 
-        return {
-            token,
-            handleLoginSuccess,
-            handleLogout
-        };
-    },
-    template: `
+    return {
+      token,
+      handleLoginSuccess,
+      handleLogout,
+    };
+  },
+  template: `
         <div>
             <AdminPanel 
                 v-if="token" 
@@ -37,5 +37,5 @@ export default {
                 @login-success="handleLoginSuccess" 
             />
         </div>
-    `
+    `,
 };

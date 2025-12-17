@@ -1,277 +1,264 @@
-import FlagIcon from "../../icons/FlagIcon.js";
-import { trackInteraction, AnalyticsEvents } from "../../analytics.js";
-import { useFilters } from "../../hooks/filter.js";
-import { getAuthHeaders } from "../../utils/voter.js";
+import FlagIcon from '../../icons/FlagIcon.js';
+import { trackInteraction, AnalyticsEvents } from '../../analytics.js';
+import { useFilters } from '../../hooks/filter.js';
+import { getAuthHeaders } from '../../utils/voter.js';
+import { showError } from '../../hooks/useToast.js';
 
 export default {
-    props: ["track", "isOpen"],
-    emits: ["close", "refresh"],
-    components: { FlagIcon },
-    setup() {
-        const { styleTree } = useFilters();
-        return { styleTree };
+  props: ['track', 'isOpen'],
+  emits: ['close', 'refresh'],
+  components: { FlagIcon },
+  setup() {
+    const { styleTree } = useFilters();
+    return { styleTree };
+  },
+  data() {
+    return {
+      view: 'menu',
+      isSubmitting: false,
+      error: null,
+      successMessage: '',
+
+      // Correction State
+      correction: {
+        main: '',
+        style: '', // Final string sent to API
+        tempo: 'ok',
+      },
+
+      // Data
+      styleTree: {},
+      dropdownOpen: false,
+    };
+  },
+  computed: {
+    mainCategories() {
+      return Object.keys(this.styleTree).sort();
     },
-    data() {
-        return {
-            view: "menu",
-            isSubmitting: false,
-            error: null,
-            successMessage: "",
+    currentSubStyles() {
+      if (!this.correction.main) return [];
+      return this.styleTree[this.correction.main] || [];
+    },
 
-            // Correction State
-            correction: {
-                main: "",
-                style: "", // Final string sent to API
-                tempo: "ok",
-            },
+    // Helpers
+    youtubeLink() {
+      if (!this.track || !this.track.playback_links) return null;
+      return this.track.playback_links.find(l => {
+        if (l.platform === 'youtube') return true;
+        const url = l.deep_link || (typeof l === 'string' ? l : '');
+        return url.includes('youtube') || url.includes('youtu.be');
+      });
+    },
+    hasStyle() {
+      return (
+        this.track?.dance_style &&
+        this.track.dance_style !== 'Unknown' &&
+        this.track.dance_style !== 'Unclassified'
+      );
+    },
+    hasTempo() {
+      return (this.track?.tempo || this.track?.tempo_category) && this.track?.effective_bpm > 0;
+    },
+    tempoLabel() {
+      if (!this.track) return '';
+      if (this.track.tempo?.label) return this.track.tempo.label;
+      const labels = {
+        Slow: 'Långsamt',
+        SlowMed: 'Lugnt',
+        Medium: 'Lagom',
+        Fast: 'Snabbt',
+        Turbo: 'Väldigt snabbt',
+      };
+      return labels[this.track.tempo_category] || '';
+    },
+  },
+  watch: {
+    isOpen(newVal) {
+      if (newVal) {
+        this.view = 'menu';
+        this.error = null;
+        this.isSubmitting = false;
+        this.resetCorrection();
+        trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_OPENED, this.track?.id);
+      }
+    },
+  },
+  methods: {
+    async loadStyles() {
+      try {
+        const res = await fetch('/api/styles/tree');
+        if (res.ok) this.styleTree = await res.json();
+      } catch {
+        showError();
+      }
+    },
+    resetCorrection() {
+      this.correction.main = this.track?.dance_style || '';
+      this.correction.style = this.track?.sub_style || this.track?.dance_style || '';
+      this.correction.tempo = 'ok';
+    },
+    toggleDropdown() {
+      this.dropdownOpen = !this.dropdownOpen;
+    },
 
-            // Data
-            styleTree: {},
-            dropdownOpen: false,
+    // --- NEW SELECTION LOGIC ---
+
+    // Generic Select Main (Used by both ASK and FIX flows)
+    selectMain(cat, flowType) {
+      // flowType is 'ask' or 'fix'
+      this.correction.main = cat;
+      this.dropdownOpen = false;
+
+      const subs = this.styleTree[cat];
+
+      if (!subs || subs.length === 0) {
+        // No substyles -> Go straight to tempo
+        this.correction.style = cat;
+        this.view = flowType === 'fix' ? 'fix_tempo' : 'ask_tempo';
+      } else {
+        // Has substyles -> Go to sub step
+        this.view = flowType === 'fix' ? 'fix_sub' : 'ask_sub';
+      }
+    },
+
+    // Generic Select Sub
+    selectSub(sub, flowType) {
+      this.correction.style = sub;
+      this.dropdownOpen = false;
+      this.view = flowType === 'fix' ? 'fix_tempo' : 'ask_tempo';
+    },
+
+    // --- SUBMISSION ---
+    async submitNotFolk() {
+      this.isSubmitting = true;
+      try {
+        const response = await fetch(`/api/tracks/${this.track.id}/flag`, {
+          method: 'POST',
+        });
+        if (!response.ok) throw new Error('Kunde inte rapportera');
+        trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, {
+          reason: 'not_folk_music',
+        });
+        this.finish('Rapporterad som ej folkmusik');
+      } catch (e) {
+        this.error = e.message;
+        this.isSubmitting = false;
+      }
+    },
+    async submitBrokenLink(reason) {
+      const link = this.youtubeLink;
+      if (!link) {
+        this.error = 'Ingen länk';
+        return;
+      }
+      this.isSubmitting = true;
+      try {
+        await fetch(`/api/links/${link.id}/report?reason=${reason}`, {
+          method: 'PATCH',
+        });
+        trackInteraction(
+          reason === 'wrong_track'
+            ? AnalyticsEvents.LINK_REPORTED_WRONG_TRACK
+            : AnalyticsEvents.LINK_REPORTED_BROKEN,
+          this.track.id,
+          { link_id: link.id }
+        );
+        this.finish(reason === 'wrong_track' ? 'Rapporterad: Fel låt' : 'Rapporterad: Trasig länk');
+      } catch {
+        this.error = 'Kunde inte skicka';
+        this.isSubmitting = false;
+      }
+    },
+
+    // Submit Style + Tempo (Used by Fix Flow)
+    async submitStyleTempo() {
+      if (!this.correction.style) {
+        this.error = 'Välj stil';
+        return;
+      }
+      this.isSubmitting = true;
+      try {
+        const payload = {
+          style: this.correction.style,
+          main_style: this.correction.main || this.correction.style,
+          tempo_correction: this.correction.tempo,
         };
+
+        const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error('Fel');
+        const data = await res.json();
+
+        if (data.updates) Object.assign(this.track, data.updates);
+        trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, {
+          reason: 'style_correction',
+          ...payload,
+        });
+
+        this.finish('Tack för att du bidrar till att göra sidan bättre!');
+      } catch (e) {
+        this.error = e.message;
+        this.isSubmitting = false;
+      }
     },
-    computed: {
-        mainCategories() {
-            return Object.keys(this.styleTree).sort();
-        },
-        currentSubStyles() {
-            if (!this.correction.main) return [];
-            return this.styleTree[this.correction.main] || [];
-        },
 
-        // Helpers
-        youtubeLink() {
-            if (!this.track || !this.track.playback_links) return null;
-            return this.track.playback_links.find((l) => {
-                if (l.platform === "youtube") return true;
-                const url = l.deep_link || (typeof l === "string" ? l : "");
-                return url.includes("youtube") || url.includes("youtu.be");
-            });
-        },
-        hasStyle() {
-            return (
-                this.track?.dance_style &&
-                this.track.dance_style !== "Unknown" &&
-                this.track.dance_style !== "Unclassified"
-            );
-        },
-        hasTempo() {
-            return (
-                (this.track?.tempo || this.track?.tempo_category) &&
-                this.track?.effective_bpm > 0
-            );
-        },
-        tempoLabel() {
-            if (!this.track) return "";
-            if (this.track.tempo?.label) return this.track.tempo.label;
-            const labels = {
-                Slow: "Långsamt",
-                SlowMed: "Lugnt",
-                Medium: "Lagom",
-                Fast: "Snabbt",
-                Turbo: "Väldigt snabbt",
-            };
-            return labels[this.track.tempo_category] || "";
-        },
+    // Submit Tempo Category (Used by Ask Flow)
+    submitTempoSelection(tempoCategory) {
+      const map = {
+        Slow: 'Långsamt',
+        SlowMed: 'Lugnt',
+        Medium: 'Lagom',
+        Fast: 'Snabbt',
+        Turbo: 'Väldigt snabbt',
+      };
+      this.correction.tempo = 'ok';
+      this.tempoCategorySelection = map[tempoCategory] || 'Lagom';
+      this.submitStyleTempoWithCategory();
     },
-    watch: {
-        isOpen(newVal) {
-            if (newVal) {
-                this.view = "menu";
-                this.error = null;
-                this.isSubmitting = false;
-                this.resetCorrection();
-                trackInteraction(
-                    AnalyticsEvents.MODAL_FLAG_TRACK_OPENED,
-                    this.track?.id
-                );
-            }
-        },
+    async submitStyleTempoWithCategory() {
+      if (!this.correction.style) {
+        this.error = 'Välj stil';
+        return;
+      }
+      this.isSubmitting = true;
+      try {
+        const payload = {
+          style: this.correction.style,
+          tempo_correction: 'ok',
+          tempo_category: this.tempoCategorySelection,
+        };
+        const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Fel');
+        const data = await res.json();
+        if (data.updates) Object.assign(this.track, data.updates);
+        trackInteraction(AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED, this.track.id, {
+          reason: 'style_correction',
+          ...payload,
+        });
+        this.finish('Tack för att du bidrar till att göra sidan bättre!');
+      } catch (e) {
+        this.error = e.message;
+        this.isSubmitting = false;
+      }
     },
-    methods: {
-        async loadStyles() {
-            try {
-                const res = await fetch("/api/styles/tree");
-                if (res.ok) this.styleTree = await res.json();
-            } catch (e) {
-                this.styleTree = { Polska: ["Hambo", "Slängpolska"] };
-            }
-        },
-        resetCorrection() {
-            this.correction.main = this.track?.dance_style || "";
-            this.correction.style = this.track?.sub_style || this.track?.dance_style || "";
-            this.correction.tempo = "ok";
-        },
-        toggleDropdown() {
-            this.dropdownOpen = !this.dropdownOpen;
-        },
-
-        // --- NEW SELECTION LOGIC ---
-
-        // Generic Select Main (Used by both ASK and FIX flows)
-        selectMain(cat, flowType) {
-            // flowType is 'ask' or 'fix'
-            this.correction.main = cat;
-            this.dropdownOpen = false;
-
-            const subs = this.styleTree[cat];
-
-            if (!subs || subs.length === 0) {
-                // No substyles -> Go straight to tempo
-                this.correction.style = cat;
-                this.view = flowType === "fix" ? "fix_tempo" : "ask_tempo";
-            } else {
-                // Has substyles -> Go to sub step
-                this.view = flowType === "fix" ? "fix_sub" : "ask_sub";
-            }
-        },
-
-        // Generic Select Sub
-        selectSub(sub, flowType) {
-            this.correction.style = sub;
-            this.dropdownOpen = false;
-            this.view = flowType === "fix" ? "fix_tempo" : "ask_tempo";
-        },
-
-        // --- SUBMISSION ---
-        async submitNotFolk() {
-            this.isSubmitting = true;
-            try {
-                const response = await fetch(`/api/tracks/${this.track.id}/flag`, {
-                    method: "POST",
-                });
-                if (!response.ok) throw new Error("Kunde inte rapportera");
-                trackInteraction(
-                    AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED,
-                    this.track.id,
-                    { reason: "not_folk_music" }
-                );
-                this.finish("Rapporterad som ej folkmusik");
-            } catch (e) {
-                this.error = e.message;
-                this.isSubmitting = false;
-            }
-        },
-        async submitBrokenLink(reason) {
-            const link = this.youtubeLink;
-            if (!link) {
-                this.error = "Ingen länk";
-                return;
-            }
-            this.isSubmitting = true;
-            try {
-                await fetch(`/api/links/${link.id}/report?reason=${reason}`, {
-                    method: "PATCH",
-                });
-                trackInteraction(
-                    reason === "wrong_track"
-                        ? AnalyticsEvents.LINK_REPORTED_WRONG_TRACK
-                        : AnalyticsEvents.LINK_REPORTED_BROKEN,
-                    this.track.id,
-                    { link_id: link.id }
-                );
-                this.finish(
-                    reason === "wrong_track"
-                        ? "Rapporterad: Fel låt"
-                        : "Rapporterad: Trasig länk"
-                );
-            } catch (e) {
-                this.error = "Kunde inte skicka";
-                this.isSubmitting = false;
-            }
-        },
-
-        // Submit Style + Tempo (Used by Fix Flow)
-        async submitStyleTempo() {
-            if (!this.correction.style) {
-                this.error = "Välj stil";
-                return;
-            }
-            this.isSubmitting = true;
-            try {
-                const payload = {
-                    style: this.correction.style,
-                    main_style: this.correction.main || this.correction.style,
-                    tempo_correction: this.correction.tempo,
-                };
-
-                const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
-                    method: "POST",
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(payload),
-                });
-
-                if (!res.ok) throw new Error("Fel");
-                const data = await res.json();
-
-                if (data.updates) Object.assign(this.track, data.updates);
-                trackInteraction(
-                    AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED,
-                    this.track.id,
-                    { reason: "style_correction", ...payload }
-                );
-
-                this.finish("Tack för att du bidrar till att göra sidan bättre!");
-            } catch (e) {
-                this.error = e.message;
-                this.isSubmitting = false;
-            }
-        },
-
-        // Submit Tempo Category (Used by Ask Flow)
-        submitTempoSelection(tempoCategory) {
-            const map = {
-                Slow: "Långsamt",
-                SlowMed: "Lugnt",
-                Medium: "Lagom",
-                Fast: "Snabbt",
-                Turbo: "Väldigt snabbt",
-            };
-            this.correction.tempo = "ok";
-            this.tempoCategorySelection = map[tempoCategory] || "Lagom";
-            this.submitStyleTempoWithCategory();
-        },
-        async submitStyleTempoWithCategory() {
-            if (!this.correction.style) {
-                this.error = "Välj stil";
-                return;
-            }
-            this.isSubmitting = true;
-            try {
-                const payload = {
-                    style: this.correction.style,
-                    tempo_correction: "ok",
-                    tempo_category: this.tempoCategorySelection,
-                };
-                const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
-                    method: "POST",
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(payload),
-                });
-                if (!res.ok) throw new Error("Fel");
-                const data = await res.json();
-                if (data.updates) Object.assign(this.track, data.updates);
-                trackInteraction(
-                    AnalyticsEvents.MODAL_FLAG_TRACK_SUBMITTED,
-                    this.track.id,
-                    { reason: "style_correction", ...payload }
-                );
-                this.finish("Tack för att du bidrar till att göra sidan bättre!");
-            } catch (e) {
-                this.error = e.message;
-                this.isSubmitting = false;
-            }
-        },
-        finish(message) {
-            this.successMessage = message;
-            this.view = "success";
-            setTimeout(() => {
-                this.$emit("refresh");
-                this.$emit("close");
-            }, 1500);
-        },
+    finish(message) {
+      this.successMessage = message;
+      this.view = 'success';
+      setTimeout(() => {
+        this.$emit('refresh');
+        this.$emit('close');
+      }, 1500);
     },
-    template: /*html*/ `
+  },
+  template: /*html*/ `
     <div v-if="isOpen" class="fixed inset-0 z-[70] flex items-center justify-center p-4 font-sans">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" @click="$emit('close')"></div>
 

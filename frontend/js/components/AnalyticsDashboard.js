@@ -3,41 +3,43 @@
  * Displays comprehensive analytics about site usage, track plays, and user interactions
  */
 
+import { showError } from '../hooks/useToast.js';
+
 export default {
-    data() {
-        return {
-            loading: true,
-            error: null,
-            days: 30,
-            analytics: null
-        }
-    },
-    mounted() {
-        this.fetchAnalytics();
-    },
-    methods: {
-        async fetchAnalytics() {
-            this.loading = true;
-            this.error = null;
+  data() {
+    return {
+      loading: true,
+      error: null,
+      days: 30,
+      analytics: null,
+    };
+  },
+  mounted() {
+    this.fetchAnalytics();
+  },
+  methods: {
+    async fetchAnalytics() {
+      this.loading = true;
+      this.error = null;
 
-            try {
-                const response = await fetch(`/api/analytics/dashboard?days=${this.days}`);
-                if (!response.ok) throw new Error('Failed to fetch analytics');
+      try {
+        const response = await fetch(`/api/analytics/dashboard?days=${this.days}`);
+        if (!response.ok) throw new Error('Failed to fetch analytics');
 
-                this.analytics = await response.json();
-            } catch (e) {
-                this.error = e.message;
-                console.error('Analytics fetch error:', e);
-            } finally {
-                this.loading = false;
-            }
-        },
-        changeDays(newDays) {
-            this.days = newDays;
-            this.fetchAnalytics();
-        }
+        this.analytics = await response.json();
+      } catch (e) {
+        this.error = e.message;
+        showError(e.message);
+      } finally {
+        this.loading = false;
+      }
     },
-    template: /*html*/`
+    changeDays(newDays) {
+      this.days = newDays;
+      this.fetchAnalytics();
+    },
+  },
+  template: /*html*/ `
     <div class="max-w-7xl mx-auto p-6 space-y-6">
         <div class="flex justify-between items-center">
             <h1 class="text-3xl font-bold text-white">Analytics Dashboard</h1>
@@ -253,5 +255,5 @@ export default {
             </div>
         </div>
     </div>
-    `
+    `,
 };

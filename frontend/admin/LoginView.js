@@ -1,48 +1,48 @@
 import { ref, onMounted } from 'vue';
 
 export default {
-    emits: ['login-success'],
-    setup(props, { emit }) {
-        const token = ref('');
-        const authError = ref('');
-        const loading = ref(false);
+  emits: ['login-success'],
+  setup(props, { emit }) {
+    const token = ref('');
+    const authError = ref('');
+    const loading = ref(false);
 
-        const authenticate = async () => {
-            loading.value = true;
-            authError.value = '';
+    const authenticate = async () => {
+      loading.value = true;
+      authError.value = '';
 
-            try {
-                // Adjust this API endpoint if needed
-                const res = await fetch('/api/admin/tracks?limit=1', {
-                    headers: { 'x-admin-token': token.value }
-                });
-
-                if (!res.ok) throw new Error('Invalid token');
-
-                localStorage.setItem('admin_token', token.value);
-                
-                // CRITICAL: Emit event instead of window.location.href
-                emit('login-success', token.value);
-            } catch (e) {
-                authError.value = 'Authentication failed. Check your token.';
-            } finally {
-                loading.value = false;
-            }
-        };
-
-        onMounted(() => {
-            // Optional: Auto-submit if the input is pre-filled by browser
-            if (token.value) authenticate();
+      try {
+        // Adjust this API endpoint if needed
+        const res = await fetch('/api/admin/tracks?limit=1', {
+          headers: { 'x-admin-token': token.value },
         });
 
-        return {
-            token,
-            authError,
-            loading,
-            authenticate
-        };
-    },
-    template: `
+        if (!res.ok) throw new Error('Invalid token');
+
+        localStorage.setItem('admin_token', token.value);
+
+        // CRITICAL: Emit event instead of window.location.href
+        emit('login-success', token.value);
+      } catch {
+        authError.value = 'Authentication failed. Check your token.';
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    onMounted(() => {
+      // Optional: Auto-submit if the input is pre-filled by browser
+      if (token.value) authenticate();
+    });
+
+    return {
+      token,
+      authError,
+      loading,
+      authenticate,
+    };
+  },
+  template: `
         <div class="max-w-md mx-auto mt-10">
             <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
                 <h2 class="font-bold mb-4">🔐 Authentication</h2>
@@ -65,5 +65,5 @@ export default {
                 <p v-if="authError" class="mt-2 text-red-400 text-sm">{{ authError }}</p>
             </div>
         </div>
-    `
+    `,
 };

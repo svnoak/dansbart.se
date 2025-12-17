@@ -1,333 +1,371 @@
 import { trackInteraction, AnalyticsEvents } from '../../analytics.js';
 import { useFilters } from '../../hooks/filter.js';
 import { getAuthHeaders } from '../../utils/voter.js';
+import { showError } from '../../hooks/useToast.js';
 
 export default {
-    props: ['track', 'isPlaying'],
-    emits: ['edit'],
-    setup() {
-        const { styleTree } = useFilters();
-        return { styleTree };
+  props: ['track', 'isPlaying'],
+  emits: ['edit'],
+  setup() {
+    const { styleTree } = useFilters();
+    return { styleTree };
+  },
+  data() {
+    return {
+      step: 'hidden',
+      mode: 'correction',
+      pendingSecondary: null,
+
+      correction: {
+        main: '',
+        style: '',
+        tempo: 'ok',
+      },
+      isSubmitting: false,
+      styleTree: {},
+
+      // Timers
+      showDelayTimer: null,
+      autoDismissTimer: null,
+      playbackStartTime: null,
+
+      // UI
+      dropdownOpen: false,
+    };
+  },
+  mounted() {
+    document.addEventListener('click', this.closeDropdownHandler);
+  },
+  beforeUnmount() {
+    this.clearTimers();
+    document.removeEventListener('click', this.closeDropdownHandler);
+  },
+  watch: {
+    'track.id': {
+      immediate: true,
+      handler(newId, oldId) {
+        if (newId !== oldId) {
+          this.clearTimers();
+          this.step = 'hidden';
+          this.playbackStartTime = null;
+          this.mode = 'correction';
+          this.resetForm();
+        }
+      },
     },
-    data() {
+    isPlaying: {
+      immediate: true, // ← ADD THIS!
+      handler(playing) {
+        if (!this.track) {
+          return;
+        }
+
+        // Don't process if we're already showing a step (user is interacting)
+        if (this.step !== 'hidden' && this.step !== 'verify') {
+          return;
+        }
+
+        const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
+        if (hasFeedback) {
+          this.step = 'hidden';
+          return;
+        }
+
+        if (playing && !this.playbackStartTime) {
+          this.playbackStartTime = Date.now();
+          this.clearTimers();
+
+          const trackIdAtStart = this.track.id;
+          this.showDelayTimer = setTimeout(() => {
+            if (this.track?.id === trackIdAtStart && this.isPlaying) {
+              this.determineInitialStep();
+              this.startAutoDismiss();
+            }
+          }, 7000);
+        } else if (!playing && this.step === 'hidden') {
+          this.clearTimers();
+        }
+      },
+    },
+  },
+  computed: {
+    mainCategories() {
+      return Object.keys(this.styleTree).sort();
+    },
+    currentSubStyles() {
+      if (!this.correction.main) return [];
+      return this.styleTree[this.correction.main] || [];
+    },
+    hasStyle() {
+      return (
+        this.track?.dance_style &&
+        this.track.dance_style !== 'Unknown' &&
+        this.track.dance_style !== 'Unclassified'
+      );
+    },
+    hasTempo() {
+      return (this.track?.tempo || this.track?.tempo_category) && this.track?.effective_bpm > 0;
+    },
+    tempoLabel() {
+      if (!this.track) return '';
+      if (this.track.tempo?.label) return this.track.tempo.label;
+      const labels = {
+        Slow: 'Långsamt',
+        SlowMed: 'Lugnt',
+        Medium: 'Lagom',
+        Fast: 'Snabbt',
+        Turbo: 'Väldigt snabbt',
+      };
+      return labels[this.track.tempo_category] || '';
+    },
+    secondaryTempoLabel() {
+      if (!this.pendingSecondary) return '';
+      if (this.pendingSecondary.tempo?.label)
+        return this.pendingSecondary.tempo.label.toLowerCase();
+      return '';
+    },
+    unconfirmedSecondary() {
+      if (!this.track?.secondary_styles) return [];
+      return this.track.secondary_styles.filter(s => s.confirmations < 3);
+    },
+    colorClasses() {
+      if (this.mode === 'addition')
         return {
-            step: 'hidden',
-            mode: 'correction',
-            pendingSecondary: null,
-            
-            correction: { 
-                main: '', 
-                style: '',
-                tempo: 'ok' 
-            },
-            isSubmitting: false,
-            styleTree: {},
-            
-            // Timers
-            showDelayTimer: null,
-            autoDismissTimer: null,
-            playbackStartTime: null,
-            
-            // UI
-            dropdownOpen: false
+          bg: 'bg-teal-600',
+          bgDark: 'bg-teal-700',
+          btn: 'bg-teal-800 hover:bg-teal-900',
+          text: 'text-teal-700',
+          textLight: 'text-teal-200',
+        };
+      return {
+        bg: 'bg-indigo-600',
+        bgDark: 'bg-indigo-700',
+        btn: 'bg-indigo-800 hover:bg-indigo-900',
+        text: 'text-indigo-700',
+        textLight: 'text-indigo-300',
+      };
+    },
+  },
+  methods: {
+    async loadStyles() {
+      try {
+        const res = await fetch('/api/styles/tree');
+        if (res.ok) this.styleTree = await res.json();
+      } catch {
+        showError();
+      }
+    },
+    clearTimers() {
+      if (this.showDelayTimer) clearTimeout(this.showDelayTimer);
+      if (this.autoDismissTimer) clearTimeout(this.autoDismissTimer);
+    },
+    startAutoDismiss() {
+      // Auto-dismiss after 20 seconds if no interaction
+      this.autoDismissTimer = setTimeout(() => {
+        if (this.step === 'verify') {
+          // Track abandonment
+          trackInteraction(AnalyticsEvents.NUDGE_DISMISSED, this.track?.id, {
+            reason: 'auto_timeout',
+          });
+          this.step = 'hidden';
         }
+      }, 20000);
     },
-    mounted() {
-        document.addEventListener('click', this.closeDropdownHandler);
+    resetForm() {
+      this.correction.main = '';
+      this.correction.style = this.track?.dance_style || '';
+      this.correction.tempo = 'ok';
     },
-    beforeUnmount() {
-        this.clearTimers();
-        document.removeEventListener('click', this.closeDropdownHandler);
+    closeDropdownHandler(e) {
+      if (this.dropdownOpen && !e.target.closest('.relative')) this.dropdownOpen = false;
     },
-    watch: {
-        'track.id': {
-            immediate: true,
-            handler(newId, oldId) {
-                console.log('Track changed:', { newId, oldId, isPlaying: this.isPlaying });
-                if (newId !== oldId) {
-                    this.clearTimers();
-                    this.step = 'hidden';
-                    this.playbackStartTime = null;
-                    this.mode = 'correction';
-                    this.resetForm();
-                }
-            }
-        },
-        isPlaying: {
-            immediate: true, // ← ADD THIS!
-            handler(playing, oldPlaying) {
-                console.log('isPlaying watcher fired:', { 
-                    playing, 
-                    oldPlaying,
-                    track: this.track?.id,
-                    step: this.step,
-                    playbackStartTime: this.playbackStartTime,
-                    hasFeedback: localStorage.getItem(`fb_${this.track?.id}`)
-                });
-                
-                if (!this.track) {
-                    console.log('No track, returning');
-                    return;
-                }
-                
-                // Don't process if we're already showing a step (user is interacting)
-                if (this.step !== 'hidden' && this.step !== 'verify') {
-                    console.log('Step not hidden/verify, returning');
-                    return;
-                }
-                
-                const hasFeedback = localStorage.getItem(`fb_${this.track.id}`);
-                if (hasFeedback) {
-                    console.log('Already has feedback, hiding');
-                    this.step = 'hidden';
-                    return;
-                }
 
-                if (playing && !this.playbackStartTime) {
-                    console.log("✅ Starting nudge timer for track:", this.track.id);
-                    this.playbackStartTime = Date.now();
-                    this.clearTimers();
-                    
-                    const trackIdAtStart = this.track.id;
-                    this.showDelayTimer = setTimeout(() => {
-                        console.log('Timer fired! Checking conditions:', {
-                            currentTrackId: this.track?.id,
-                            trackIdAtStart,
-                            isPlaying: this.isPlaying,
-                            match: this.track?.id === trackIdAtStart
-                        });
-                        if (this.track?.id === trackIdAtStart && this.isPlaying) {
-                            console.log('✅ Showing nudge!');
-                            this.determineInitialStep();
-                            this.startAutoDismiss();
-                        }
-                    }, 7000);
-                } else if (!playing && this.step === 'hidden') {
-                    console.log('Playback paused, clearing timers');
-                    this.clearTimers();
-                }
-            }
-        }
-    },
-    computed: {
-        mainCategories() {
-            return Object.keys(this.styleTree).sort();
-        },
-        currentSubStyles() {
-            if (!this.correction.main) return [];
-            return this.styleTree[this.correction.main] || [];
-        },
-        hasStyle() { return this.track?.dance_style && this.track.dance_style !== 'Unknown' && this.track.dance_style !== 'Unclassified'; },
-        hasTempo() { return (this.track?.tempo || this.track?.tempo_category) && this.track?.effective_bpm > 0; },
-        tempoLabel() {
-            if (!this.track) return '';
-            if (this.track.tempo?.label) return this.track.tempo.label;
-            const labels = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
-            return labels[this.track.tempo_category] || '';
-        },
-        secondaryTempoLabel() {
-            if (!this.pendingSecondary) return '';
-            if (this.pendingSecondary.tempo?.label) return this.pendingSecondary.tempo.label.toLowerCase();
-            return '';
-        },
-        unconfirmedSecondary() {
-            if (!this.track?.secondary_styles) return [];
-            return this.track.secondary_styles.filter(s => s.confirmations < 3);
-        },
-        colorClasses() {
-            if (this.mode === 'addition') return { bg: 'bg-teal-600', bgDark: 'bg-teal-700', btn: 'bg-teal-800 hover:bg-teal-900', text: 'text-teal-700', textLight: 'text-teal-200' };
-            return { bg: 'bg-indigo-600', bgDark: 'bg-indigo-700', btn: 'bg-indigo-800 hover:bg-indigo-900', text: 'text-indigo-700', textLight: 'text-indigo-300' };
-        }
-    },
-    methods: {
-        async loadStyles() {
-            try {
-                const res = await fetch('/api/styles/tree');
-                if (res.ok) this.styleTree = await res.json();
-            } catch (e) {
-                this.styleTree = { "Polska": ["Hambo", "Slängpolska"], "Vals": [] };
-            }
-        },
-        clearTimers() {
-            if (this.showDelayTimer) clearTimeout(this.showDelayTimer);
-            if (this.autoDismissTimer) clearTimeout(this.autoDismissTimer);
-        },
-        startAutoDismiss() {
-            // Auto-dismiss after 20 seconds if no interaction
-            this.autoDismissTimer = setTimeout(() => {
-                if (this.step === 'verify') {
-                    // Track abandonment
-                    trackInteraction(AnalyticsEvents.NUDGE_DISMISSED, this.track?.id, {
-                        reason: 'auto_timeout'
-                    });
-                    this.step = 'hidden';
-                }
-            }, 20000);
-        },
-        resetForm() {
-            this.correction.main = '';
-            this.correction.style = this.track?.dance_style || "";
-            this.correction.tempo = 'ok';
-        },
-        closeDropdownHandler(e) {
-            if (this.dropdownOpen && !e.target.closest('.relative')) this.dropdownOpen = false;
-        },
-        
-        // --- SELECTION LOGIC ---
-        
-        selectMain(mainStyle) {
-            this.correction.main = mainStyle;
-            this.dropdownOpen = false;
-            
-            const subs = this.styleTree[mainStyle];
-            
-            // If no substyles, the Main Style IS the Style
-            if (!subs || subs.length === 0) {
-                this.correction.style = mainStyle;
-                this.step = (this.mode === 'addition' || this.step.startsWith('fix')) ? 'fix-tempo' : 'ask-tempo';
-            } else {
-                this.step = (this.mode === 'addition' || this.step.startsWith('fix')) ? 'fix-sub' : 'ask-sub';
-            }
-        },
-        
-        selectSub(subStyle) {
-            this.correction.style = subStyle;
-            this.dropdownOpen = false;
-            this.step = (this.mode === 'addition' || this.step.startsWith('fix')) ? 'fix-tempo' : 'ask-tempo';
-        },
+    // --- SELECTION LOGIC ---
 
-        startCorrection() {
-            this.clearTimers();
-            this.mode = 'correction';
-            this.step = 'fix-main';
-        },
-        startAddition() {
-            this.clearTimers();
-            this.mode = 'addition';
-            this.correction.main = '';
-            this.correction.style = '';
-            this.step = 'fix-main';
-        },
-        determineInitialStep() {
-            trackInteraction(AnalyticsEvents.NUDGE_SHOWN, this.track?.id, { has_style: this.hasStyle, has_tempo: this.hasTempo });
-            if (!this.hasStyle && !this.hasTempo) {
-                this.mode = 'correction';
-                this.step = 'ask-main';
-            } else if (this.hasStyle && !this.hasTempo) {
-                this.step = 'verify-style-only';
-            } else {
-                this.step = 'verify';
-            }
-        },
-        confirmVerify() {
-            const specificStyle = this.track.sub_style || this.track.dance_style;
-            this.submit({
-                style: specificStyle,
-                main_style: this.track.dance_style,
-                tempo_correction: 'ok'
-            }).then(() => {
-                this.showSecondaryConfirm();
-            });
-        },
-        confirmStyleOnly() {
-            this.clearTimers();
-            this.correction.style = this.track.dance_style;
-            this.step = 'ask-tempo';
-        },
-        rejectStyleOnly() {
-            this.clearTimers();
-            this.mode = 'correction';
-            this.correction.style = '';
-            this.correction.main = '';
-            this.step = 'ask-main';
-        },
-        submitFix() {
-            this.submit({
-                style: this.correction.style,
-                main_style: this.correction.main || this.correction.style,
-                tempo_correction: this.correction.tempo
-            }, 'success');
-        },
-        submitTempoSelection(tempoCategory) {
-            const categoryMap = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
-            this.submit({ 
-                style: this.correction.style, 
-                main_style: this.correction.main || this.correction.style,
-                tempo_correction: 'ok', 
-                tempo_category: categoryMap[tempoCategory] || 'Lagom'
-            }, 'success');
-        },
-        
-        async submit(payload, nextState = null) {
-            this.clearTimers();
-            this.isSubmitting = true;
-            try {
-                const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (res.ok && data.updates) Object.assign(this.track, data.updates);
-                localStorage.setItem(`fb_${this.track.id}`, 'true');
-                if (nextState === 'bonus') this.step = 'bonus';
-                else if (nextState === 'success') { this.step = 'success'; setTimeout(() => { this.step = 'hidden'; }, 2500); }
-            } catch(e) { this.step = 'hidden'; } 
-            finally { this.isSubmitting = false; }
-        },
-        
-        toggleDropdown() { this.dropdownOpen = !this.dropdownOpen; },
-        
-        // Secondary logic
-        showSecondaryConfirm() {
-            if (this.unconfirmedSecondary.length > 0) {
-                this.pendingSecondary = this.unconfirmedSecondary[0];
-                this.step = 'confirm-secondary';
-            } else { this.step = 'bonus'; }
-        },
-        async confirmSecondary() {
-            if (!this.pendingSecondary) return;
-            this.clearTimers();
-            this.isSubmitting = true;
-            
-            try {
-                const res = await fetch(`/api/tracks/${this.track.id}/confirm-secondary`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        style: this.pendingSecondary.style, 
-                        tempo_correction: 'ok' 
-                    })
-                });
-                
-                if (res.ok) {
-                    const data = await res.json();
-                    // Update the local secondary style confirmation count
-                    if (data.updates && this.track.secondary_styles) {
-                        const sec = this.track.secondary_styles.find(s => s.style === this.pendingSecondary.style);
-                        if (sec) {
-                            sec.confirmations = data.updates.confirmations;
-                        }
-                    }
-                }
-                
-                localStorage.setItem(`fb_${this.track.id}`, 'true');
-                this.step = 'success';
-                setTimeout(() => { this.step = 'hidden'; }, 2500);
-                
-            } catch(e) {
-                console.error(e);
-                this.step = 'hidden';
-            } finally {
-                this.isSubmitting = false;
-            }
-        },
-        rejectSecondary() { 
-            this.pendingSecondary = null;
-            this.step = 'bonus';
-        }
+    selectMain(mainStyle) {
+      this.correction.main = mainStyle;
+      this.dropdownOpen = false;
+
+      const subs = this.styleTree[mainStyle];
+
+      // If no substyles, the Main Style IS the Style
+      if (!subs || subs.length === 0) {
+        this.correction.style = mainStyle;
+        this.step =
+          this.mode === 'addition' || this.step.startsWith('fix') ? 'fix-tempo' : 'ask-tempo';
+      } else {
+        this.step = this.mode === 'addition' || this.step.startsWith('fix') ? 'fix-sub' : 'ask-sub';
+      }
     },
-    template: /*html*/`
+
+    selectSub(subStyle) {
+      this.correction.style = subStyle;
+      this.dropdownOpen = false;
+      this.step =
+        this.mode === 'addition' || this.step.startsWith('fix') ? 'fix-tempo' : 'ask-tempo';
+    },
+
+    startCorrection() {
+      this.clearTimers();
+      this.mode = 'correction';
+      this.step = 'fix-main';
+    },
+    startAddition() {
+      this.clearTimers();
+      this.mode = 'addition';
+      this.correction.main = '';
+      this.correction.style = '';
+      this.step = 'fix-main';
+    },
+    determineInitialStep() {
+      trackInteraction(AnalyticsEvents.NUDGE_SHOWN, this.track?.id, {
+        has_style: this.hasStyle,
+        has_tempo: this.hasTempo,
+      });
+      if (!this.hasStyle && !this.hasTempo) {
+        this.mode = 'correction';
+        this.step = 'ask-main';
+      } else if (this.hasStyle && !this.hasTempo) {
+        this.step = 'verify-style-only';
+      } else {
+        this.step = 'verify';
+      }
+    },
+    confirmVerify() {
+      const specificStyle = this.track.sub_style || this.track.dance_style;
+      this.submit({
+        style: specificStyle,
+        main_style: this.track.dance_style,
+        tempo_correction: 'ok',
+      }).then(() => {
+        this.showSecondaryConfirm();
+      });
+    },
+    confirmStyleOnly() {
+      this.clearTimers();
+      this.correction.style = this.track.dance_style;
+      this.step = 'ask-tempo';
+    },
+    rejectStyleOnly() {
+      this.clearTimers();
+      this.mode = 'correction';
+      this.correction.style = '';
+      this.correction.main = '';
+      this.step = 'ask-main';
+    },
+    submitFix() {
+      this.submit(
+        {
+          style: this.correction.style,
+          main_style: this.correction.main || this.correction.style,
+          tempo_correction: this.correction.tempo,
+        },
+        'success'
+      );
+    },
+    submitTempoSelection(tempoCategory) {
+      const categoryMap = {
+        Slow: 'Långsamt',
+        SlowMed: 'Lugnt',
+        Medium: 'Lagom',
+        Fast: 'Snabbt',
+        Turbo: 'Väldigt snabbt',
+      };
+      this.submit(
+        {
+          style: this.correction.style,
+          main_style: this.correction.main || this.correction.style,
+          tempo_correction: 'ok',
+          tempo_category: categoryMap[tempoCategory] || 'Lagom',
+        },
+        'success'
+      );
+    },
+
+    async submit(payload, nextState = null) {
+      this.clearTimers();
+      this.isSubmitting = true;
+      try {
+        const res = await fetch(`/api/tracks/${this.track.id}/feedback`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.updates) Object.assign(this.track, data.updates);
+        localStorage.setItem(`fb_${this.track.id}`, 'true');
+        if (nextState === 'bonus') this.step = 'bonus';
+        else if (nextState === 'success') {
+          this.step = 'success';
+          setTimeout(() => {
+            this.step = 'hidden';
+          }, 2500);
+        }
+      } catch {
+        this.step = 'hidden';
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
+
+    toggleDropdown() {
+      this.dropdownOpen = !this.dropdownOpen;
+    },
+
+    // Secondary logic
+    showSecondaryConfirm() {
+      if (this.unconfirmedSecondary.length > 0) {
+        this.pendingSecondary = this.unconfirmedSecondary[0];
+        this.step = 'confirm-secondary';
+      } else {
+        this.step = 'bonus';
+      }
+    },
+    async confirmSecondary() {
+      if (!this.pendingSecondary) return;
+      this.clearTimers();
+      this.isSubmitting = true;
+
+      try {
+        const res = await fetch(`/api/tracks/${this.track.id}/confirm-secondary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            style: this.pendingSecondary.style,
+            tempo_correction: 'ok',
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Update the local secondary style confirmation count
+          if (data.updates && this.track.secondary_styles) {
+            const sec = this.track.secondary_styles.find(
+              s => s.style === this.pendingSecondary.style
+            );
+            if (sec) {
+              sec.confirmations = data.updates.confirmations;
+            }
+          }
+        }
+
+        localStorage.setItem(`fb_${this.track.id}`, 'true');
+        this.step = 'success';
+        setTimeout(() => {
+          this.step = 'hidden';
+        }, 2500);
+      } catch {
+        this.step = 'hidden';
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
+    rejectSecondary() {
+      this.pendingSecondary = null;
+      this.step = 'bonus';
+    },
+  },
+  template: /*html*/ `
     <transition enter-active-class="transition-opacity duration-200" leave-active-class="transition-opacity duration-150" enter-from-class="opacity-0" leave-to-class="opacity-0">
         <div v-if="step !== 'hidden'" class="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans">
             
@@ -483,5 +521,5 @@ export default {
 
         </div>
     </transition>
-    `
-}
+    `,
+};

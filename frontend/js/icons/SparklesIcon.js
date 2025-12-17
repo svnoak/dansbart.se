@@ -1,5 +1,5 @@
 export default {
-    template: `
+  template: `
     <svg width="800px" height="800px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <title>sparkles_fill</title>
     <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
@@ -15,5 +15,5 @@ export default {
         </g>
     </g>
 </svg>
-    `
-}
+    `,
+};

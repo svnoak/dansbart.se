@@ -1,19 +1,19 @@
 import { useConsent } from '../consent.js';
 
 export default {
-    setup() {
-        const { revokeConsent } = useConsent();
+  setup() {
+    const { revokeConsent } = useConsent();
 
-        const openCookieSettings = () => {
-            revokeConsent();
-        };
+    const openCookieSettings = () => {
+      revokeConsent();
+    };
 
-        return {
-            openCookieSettings
-        };
-    },
+    return {
+      openCookieSettings,
+    };
+  },
 
-    template: /*html*/`
+  template: /*html*/ `
     <footer class="bg-gray-100 border-t border-gray-200 mt-16">
         <div class="max-w-4xl mx-auto px-4 py-4">
             <!-- Desktop Layout -->
@@ -52,5 +52,5 @@ export default {
             </div>
         </div>
     </footer>
-    `
+    `,
 };

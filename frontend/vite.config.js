@@ -13,16 +13,16 @@ export default defineConfig({
         admin: resolve(__dirname, 'admin/index.html'),
         privacy: resolve(__dirname, 'privacy.html'),
         terms: resolve(__dirname, 'terms.html'),
-        help: resolve(__dirname, 'help.html')
-      }
+        help: resolve(__dirname, 'help.html'),
+      },
     },
     minify: 'esbuild',
-    sourcemap: false
+    sourcemap: false,
   },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'js'),
-      'vue': 'vue/dist/vue.esm-bundler.js'
-    }
-  }
+      vue: 'vue/dist/vue.esm-bundler.js',
+    },
+  },
 });

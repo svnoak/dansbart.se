@@ -3,46 +3,48 @@
  * Displays comprehensive analytics about site usage, track plays, and user interactions
  */
 
+import { showError } from '../../../js/hooks/useToast';
+
 export default {
-    data() {
-        return {
-            loading: true,
-            error: null,
-            days: 30,
-            analytics: null
-        }
-    },
-    mounted() {
-        this.fetchAnalytics();
-    },
-    methods: {
-        async fetchAnalytics() {
-            this.loading = true;
-            this.error = null;
+  data() {
+    return {
+      loading: true,
+      error: null,
+      days: 30,
+      analytics: null,
+    };
+  },
+  mounted() {
+    this.fetchAnalytics();
+  },
+  methods: {
+    async fetchAnalytics() {
+      this.loading = true;
+      this.error = null;
 
-            try {
-                const token = localStorage.getItem('admin_token');
-                const response = await fetch(`/api/admin/analytics/dashboard?days=${this.days}`, {
-                    headers: {
-                        'X-Admin-Token': token
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to fetch analytics');
+      try {
+        const token = localStorage.getItem('admin_token');
+        const response = await fetch(`/api/admin/analytics/dashboard?days=${this.days}`, {
+          headers: {
+            'X-Admin-Token': token,
+          },
+        });
+        if (!response.ok) throw new Error('Failed to fetch analytics');
 
-                this.analytics = await response.json();
-            } catch (e) {
-                this.error = e.message;
-                console.error('Analytics fetch error:', e);
-            } finally {
-                this.loading = false;
-            }
-        },
-        changeDays(newDays) {
-            this.days = newDays;
-            this.fetchAnalytics();
-        }
+        this.analytics = await response.json();
+      } catch (e) {
+        this.error = e.message;
+        showError(e.message);
+      } finally {
+        this.loading = false;
+      }
     },
-    template: /*html*/`
+    changeDays(newDays) {
+      this.days = newDays;
+      this.fetchAnalytics();
+    },
+  },
+  template: /*html*/ `
     <div class="space-y-4 sm:space-y-6">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 class="text-xl sm:text-2xl font-bold text-white">📊 Analytics Dashboard</h2>
@@ -294,5 +296,5 @@ export default {
             </div>
         </div>
     </div>
-    `
+    `,
 };

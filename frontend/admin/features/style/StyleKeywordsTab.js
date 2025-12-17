@@ -3,206 +3,218 @@
  * Manage classification keywords and mappings
  */
 
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useToast } from '../../shared/composables/useToast.js';
 import { useStyleKeywordsApi } from './api.js';
+import { showError } from '../../../js/hooks/useToast.js';
 
 export default {
-    name: 'StyleKeywordsTab',
-    setup() {
-        const { adminToken } = useAdminAuth();
-        const { showToast } = useToast();
-        const api = useStyleKeywordsApi(adminToken);
+  name: 'StyleKeywordsTab',
+  setup() {
+    const { adminToken } = useAdminAuth();
+    const { showToast } = useToast();
+    const api = useStyleKeywordsApi(adminToken);
 
-        // Data
-        const keywords = ref([]);
-        const stats = ref(null);
-        const loading = ref(false);
-        
-        // Filters & Pagination
-        const filters = reactive({
-            search: '',
-            mainStyle: '',
-            isActive: '' // Empty string = all
-        });
-        const pagination = reactive({
-            limit: 50,
-            offset: 0,
-            total: 0
-        });
+    // Data
+    const keywords = ref([]);
+    const stats = ref(null);
+    const loading = ref(false);
 
-        // Form / Modal State
-        const showModal = ref(false);
-        const formMode = ref('create'); // 'create' or 'edit'
-        const isSubmitting = ref(false);
-        const form = reactive({
-            id: null,
-            keyword: '',
-            main_style: '',
-            sub_style: '',
-            is_active: true
-        });
+    // Filters & Pagination
+    const filters = reactive({
+      search: '',
+      mainStyle: '',
+      isActive: '', // Empty string = all
+    });
+    const pagination = reactive({
+      limit: 50,
+      offset: 0,
+      total: 0,
+    });
 
-        // --- Fetching Data ---
+    // Form / Modal State
+    const showModal = ref(false);
+    const formMode = ref('create'); // 'create' or 'edit'
+    const isSubmitting = ref(false);
+    const form = reactive({
+      id: null,
+      keyword: '',
+      main_style: '',
+      sub_style: '',
+      is_active: true,
+    });
 
-        const fetchStats = async () => {
-            try {
-                stats.value = await api.getStats();
-            } catch (e) {
-                console.error("Failed to load stats", e);
-            }
+    // --- Fetching Data ---
+
+    const fetchStats = async () => {
+      try {
+        stats.value = await api.getStats();
+      } catch (e) {
+        showError(e.message || 'Failed to fetch stats');
+      }
+    };
+
+    const fetchKeywords = async () => {
+      loading.value = true;
+      try {
+        const params = {
+          search: filters.search,
+          main_style: filters.mainStyle,
+          is_active: filters.isActive,
+          limit: pagination.limit,
+          offset: pagination.offset,
         };
 
-        const fetchKeywords = async () => {
-            loading.value = true;
-            try {
-                const params = {
-                    search: filters.search,
-                    main_style: filters.mainStyle,
-                    is_active: filters.isActive,
-                    limit: pagination.limit,
-                    offset: pagination.offset
-                };
-                
-                const data = await api.getKeywords(params);
-                
-                // Handle different response structures if necessary, usually standard paginated response
-                keywords.value = data.items || [];
-                pagination.total = data.total || 0;
-            } catch (e) {
-                showToast(e.message || 'Failed to fetch keywords', 'error');
-            } finally {
-                loading.value = false;
-            }
+        const data = await api.getKeywords(params);
+
+        // Handle different response structures if necessary, usually standard paginated response
+        keywords.value = data.items || [];
+        pagination.total = data.total || 0;
+      } catch (e) {
+        showToast(e.message || 'Failed to fetch keywords', 'error');
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const refreshAll = () => {
+      pagination.offset = 0;
+      fetchKeywords();
+      fetchStats();
+    };
+
+    // --- Actions ---
+
+    const handleCacheInvalidate = async () => {
+      try {
+        await api.invalidateCache();
+        showToast('Classifier cache invalidated', 'success');
+        fetchStats(); // Refresh stats (cache hit/miss info might update)
+      } catch (e) {
+        showError(e.message || 'Failed to invalidate cache');
+      }
+    };
+
+    const handleDelete = async id => {
+      if (!confirm('Are you sure you want to delete this keyword?')) return;
+      try {
+        await api.deleteKeyword(id);
+        showToast('Keyword deleted', 'success');
+        fetchKeywords();
+        fetchStats();
+      } catch (e) {
+        showError(e.message || 'Delete failed');
+      }
+    };
+
+    const handleToggleActive = async kw => {
+      try {
+        kw.is_active = !kw.is_active;
+
+        await api.updateKeyword(kw.id, { is_active: kw.is_active });
+        showToast(`Keyword ${kw.is_active ? 'activated' : 'deactivated'}`, 'success');
+        fetchStats();
+      } catch (e) {
+        kw.is_active = !kw.is_active; // Revert on fail
+        showError(e.message || 'Status update failed');
+      }
+    };
+
+    // --- Form Handling ---
+
+    const openCreateForm = () => {
+      form.id = null;
+      form.keyword = '';
+      form.main_style = '';
+      form.sub_style = '';
+      form.is_active = true;
+      formMode.value = 'create';
+      showModal.value = true;
+    };
+
+    const openEditForm = kw => {
+      form.id = kw.id;
+      form.keyword = kw.keyword;
+      form.main_style = kw.main_style;
+      form.sub_style = kw.sub_style || '';
+      form.is_active = kw.is_active;
+      formMode.value = 'edit';
+      showModal.value = true;
+    };
+
+    const submitForm = async () => {
+      isSubmitting.value = true;
+      try {
+        const payload = {
+          keyword: form.keyword,
+          main_style: form.main_style,
+          sub_style: form.sub_style || null,
+          is_active: form.is_active,
         };
 
-        const refreshAll = () => {
-            pagination.offset = 0;
-            fetchKeywords();
-            fetchStats();
-        };
+        if (formMode.value === 'create') {
+          await api.createKeyword(payload);
+          showToast('Keyword created', 'success');
+        } else {
+          await api.updateKeyword(form.id, payload);
+          showToast('Keyword updated', 'success');
+        }
 
-        // --- Actions ---
+        showModal.value = false;
+        fetchKeywords();
+        fetchStats();
+      } catch (e) {
+        showToast(e.detail || e.message || 'Save failed', 'error');
+      } finally {
+        isSubmitting.value = false;
+      }
+    };
 
-        const handleCacheInvalidate = async () => {
-            try {
-                await api.invalidateCache();
-                showToast('Classifier cache invalidated', 'success');
-                fetchStats(); // Refresh stats (cache hit/miss info might update)
-            } catch (e) {
-                showToast(e.message || 'Failed to invalidate cache', 'error');
-            }
-        };
+    // --- Pagination ---
 
-        const handleDelete = async (id) => {
-            if (!confirm('Are you sure you want to delete this keyword?')) return;
-            try {
-                await api.deleteKeyword(id);
-                showToast('Keyword deleted', 'success');
-                fetchKeywords();
-                fetchStats();
-            } catch (e) {
-                showToast(e.message || 'Delete failed', 'error');
-            }
-        };
+    const nextPage = () => {
+      if (pagination.offset + pagination.limit < pagination.total) {
+        pagination.offset += pagination.limit;
+        fetchKeywords();
+      }
+    };
 
-        const handleToggleActive = async (kw) => {
-            try {
-                // Optimistic UI update
-                const originalState = kw.is_active;
-                kw.is_active = !kw.is_active;
+    const prevPage = () => {
+      if (pagination.offset > 0) {
+        pagination.offset = Math.max(0, pagination.offset - pagination.limit);
+        fetchKeywords();
+      }
+    };
 
-                await api.updateKeyword(kw.id, { is_active: kw.is_active });
-                showToast(`Keyword ${kw.is_active ? 'activated' : 'deactivated'}`, 'success');
-                fetchStats();
-            } catch (e) {
-                kw.is_active = !kw.is_active; // Revert on fail
-                showToast('Status update failed', 'error');
-            }
-        };
+    onMounted(() => {
+      fetchStats();
+      fetchKeywords();
+    });
 
-        // --- Form Handling ---
-
-        const openCreateForm = () => {
-            form.id = null;
-            form.keyword = '';
-            form.main_style = '';
-            form.sub_style = '';
-            form.is_active = true;
-            formMode.value = 'create';
-            showModal.value = true;
-        };
-
-        const openEditForm = (kw) => {
-            form.id = kw.id;
-            form.keyword = kw.keyword;
-            form.main_style = kw.main_style;
-            form.sub_style = kw.sub_style || '';
-            form.is_active = kw.is_active;
-            formMode.value = 'edit';
-            showModal.value = true;
-        };
-
-        const submitForm = async () => {
-            isSubmitting.value = true;
-            try {
-                const payload = {
-                    keyword: form.keyword,
-                    main_style: form.main_style,
-                    sub_style: form.sub_style || null,
-                    is_active: form.is_active
-                };
-
-                if (formMode.value === 'create') {
-                    await api.createKeyword(payload);
-                    showToast('Keyword created', 'success');
-                } else {
-                    await api.updateKeyword(form.id, payload);
-                    showToast('Keyword updated', 'success');
-                }
-                
-                showModal.value = false;
-                fetchKeywords();
-                fetchStats();
-            } catch (e) {
-                showToast(e.detail || e.message || 'Save failed', 'error');
-            } finally {
-                isSubmitting.value = false;
-            }
-        };
-
-        // --- Pagination ---
-        
-        const nextPage = () => {
-            if (pagination.offset + pagination.limit < pagination.total) {
-                pagination.offset += pagination.limit;
-                fetchKeywords();
-            }
-        };
-
-        const prevPage = () => {
-            if (pagination.offset > 0) {
-                pagination.offset = Math.max(0, pagination.offset - pagination.limit);
-                fetchKeywords();
-            }
-        };
-
-        onMounted(() => {
-            fetchStats();
-            fetchKeywords();
-        });
-
-        return {
-            keywords, stats, loading, filters, pagination,
-            showModal, formMode, form, isSubmitting,
-            refreshAll, fetchKeywords,
-            handleCacheInvalidate, handleDelete, handleToggleActive,
-            openCreateForm, openEditForm, submitForm,
-            nextPage, prevPage
-        };
-    },
-    template: /*html*/`
+    return {
+      keywords,
+      stats,
+      loading,
+      filters,
+      pagination,
+      showModal,
+      formMode,
+      form,
+      isSubmitting,
+      refreshAll,
+      fetchKeywords,
+      handleCacheInvalidate,
+      handleDelete,
+      handleToggleActive,
+      openCreateForm,
+      openEditForm,
+      submitForm,
+      nextPage,
+      prevPage,
+    };
+  },
+  template: /*html*/ `
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -372,5 +384,5 @@ export default {
                 </div>
             </div>
         </div>
-    `
+    `,
 };

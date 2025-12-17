@@ -4,25 +4,25 @@
  */
 
 export default {
-    props: {
-        modalData: {
-            type: Object,
-            required: true
-        }
+  props: {
+    modalData: {
+      type: Object,
+      required: true,
     },
-    emits: ['confirm', 'cancel'],
-    setup(props, { emit }) {
-        const handleConfirm = () => {
-            emit('confirm');
-        };
+  },
+  emits: ['confirm', 'cancel'],
+  setup(props, { emit }) {
+    const handleConfirm = () => {
+      emit('confirm');
+    };
 
-        const handleCancel = () => {
-            emit('cancel');
-        };
+    const handleCancel = () => {
+      emit('cancel');
+    };
 
-        return { handleConfirm, handleCancel };
-    },
-    template: /*html*/`
+    return { handleConfirm, handleCancel };
+  },
+  template: /*html*/ `
         <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div class="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div class="p-6">
@@ -81,5 +81,5 @@ export default {
                 </div>
             </div>
         </div>
-    `
+    `,
 };

@@ -54,21 +54,21 @@ export async function trackSession() {
     await fetch(`${API_BASE}/analytics/session`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         session_id: sessionId,
         user_agent: navigator.userAgent,
-        is_returning: isReturning
-      })
+        is_returning: isReturning,
+      }),
     });
 
     // Mark as returning for next visit
     if (!isReturning) {
       markAsReturningVisitor();
     }
-  } catch (error) {
-    console.error('Failed to track session:', error);
+  } catch {
+    // Ignore errors
   }
 }
 
@@ -86,17 +86,17 @@ export async function trackPlayback(trackId, platform, durationSeconds, complete
     await fetch(`${API_BASE}/analytics/track/playback/${trackId}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         platform,
         session_id: sessionId,
         duration_seconds: Math.floor(durationSeconds),
-        completed
-      })
+        completed,
+      }),
     });
-  } catch (error) {
-    console.error('Failed to track playback:', error);
+  } catch {
+    // Ignore errors
   }
 }
 
@@ -113,17 +113,17 @@ export async function trackInteraction(eventType, trackId = null, eventData = nu
     await fetch(`${API_BASE}/analytics/track/interaction`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         event_type: eventType,
         track_id: trackId,
         event_data: eventData,
-        session_id: sessionId
-      })
+        session_id: sessionId,
+      }),
     });
-  } catch (error) {
-    console.error('Failed to track interaction:', error);
+  } catch {
+    // Ignore errors
   }
 }
 
@@ -184,7 +184,7 @@ export function createPlaybackTracker(trackId, platform) {
 
     hasReachedThreshold() {
       return this.getListenTime() >= PLAY_THRESHOLD_SECONDS;
-    }
+    },
   };
 
   return tracker;
@@ -213,5 +213,5 @@ export const AnalyticsEvents = {
 
   // Voting events
   STRUCTURE_VOTED_UP: 'structure_voted_up',
-  STRUCTURE_VOTED_DOWN: 'structure_voted_down'
+  STRUCTURE_VOTED_DOWN: 'structure_voted_down',
 };

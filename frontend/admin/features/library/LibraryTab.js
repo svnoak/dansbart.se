@@ -9,493 +9,544 @@ import { useToast } from '../../shared/composables/useToast.js';
 import { useLibraryApi } from './api.js';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import RejectionModal from './RejectionModal.js';
+import { showError } from '../../../js/hooks/useToast.js';
 
 export default {
-    components: {
-        RejectionModal
-    },
-    setup() {
-        const { adminToken } = useAdminAuth();
-        const { showToast } = useToast();
-        const api = useLibraryApi(adminToken);
+  components: {
+    RejectionModal,
+  },
+  setup() {
+    const { adminToken } = useAdminAuth();
+    const { showToast } = useToast();
+    const api = useLibraryApi(adminToken);
 
-        // State
-        const view = ref('artists'); // tracks, albums, artists, blocklist
-        const tracks = ref([]);
-        const albums = ref([]);
-        const artists = ref([]);
-        const blocklist = ref([]);
-        const totalItems = ref(0);
-        const searchQuery = ref('');
-        const statusFilter = ref('all'); // all, pending, analyzed
-        const trackStatusFilter = ref(''); // PENDING, PROCESSING, DONE, FAILED
-        const flaggedFilter = ref('');
-        const isolatedFilter = ref(''); // For filtering isolated/non-isolated entities
-        const rejectedFilter = ref(''); // For filtering rejected entities
-        const artistFilter = ref(''); // Filter tracks/albums by artist ID
-        const albumFilter = ref(''); // Filter tracks by album ID
-        const limit = ref(50);
-        const offset = ref(0);
-        const loading = ref(false);
+    // State
+    const view = ref('artists'); // tracks, albums, artists, blocklist
+    const tracks = ref([]);
+    const albums = ref([]);
+    const artists = ref([]);
+    const blocklist = ref([]);
+    const totalItems = ref(0);
+    const searchQuery = ref('');
+    const statusFilter = ref('all'); // all, pending, analyzed
+    const trackStatusFilter = ref(''); // PENDING, PROCESSING, DONE, FAILED
+    const flaggedFilter = ref('');
+    const isolatedFilter = ref(''); // For filtering isolated/non-isolated entities
+    const rejectedFilter = ref(''); // For filtering rejected entities
+    const artistFilter = ref(''); // Filter tracks/albums by artist ID
+    const albumFilter = ref(''); // Filter tracks by album ID
+    const limit = ref(50);
+    const offset = ref(0);
+    const loading = ref(false);
 
-        // For displaying selected artist/album name
-        const selectedArtistName = ref('');
-        const selectedAlbumName = ref('');
+    // For displaying selected artist/album name
+    const selectedArtistName = ref('');
+    const selectedAlbumName = ref('');
 
-        // Bulk selection
-        const selectedIds = ref(new Set());
+    // Bulk selection
+    const selectedIds = ref(new Set());
 
-        // Expanded artist details
-        const expandedArtist = ref(null);
+    // Expanded artist details
+    const expandedArtist = ref(null);
 
-        // Rejection modal state
-        const showRejectionModal = ref(false);
-        const rejectionEntity = ref(null);
-        const rejectionEntityType = ref('artist');
-        const collaborationData = ref(null);
+    // Rejection modal state
+    const showRejectionModal = ref(false);
+    const rejectionEntity = ref(null);
+    const rejectionEntityType = ref('artist');
+    const collaborationData = ref(null);
 
-        // Computed
-        const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
-        const totalPages = computed(() => Math.ceil(totalItems.value / limit.value));
+    // Computed
+    const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
+    const totalPages = computed(() => Math.ceil(totalItems.value / limit.value));
 
-        const isAllSelected = computed(() => {
-            const currentList = view.value === 'artists' ? artists.value : albums.value;
-            return currentList.length > 0 && selectedIds.value.size === currentList.length;
-        });
+    const isAllSelected = computed(() => {
+      const currentList = view.value === 'artists' ? artists.value : albums.value;
+      return currentList.length > 0 && selectedIds.value.size === currentList.length;
+    });
 
-        // Methods
-        const loadData = async () => {
-            loading.value = true;
-            selectedIds.value.clear(); // Clear selection on load
+    // Methods
+    const loadData = async () => {
+      loading.value = true;
+      selectedIds.value.clear(); // Clear selection on load
 
-            try {
-                const params = {
-                    limit: limit.value,
-                    offset: offset.value
-                };
-
-                if (searchQuery.value) params.search = searchQuery.value;
-
-                let data;
-
-                if (view.value === 'tracks') {
-                    if (trackStatusFilter.value) params.status = trackStatusFilter.value;
-                    if (flaggedFilter.value) params.flagged = flaggedFilter.value;
-                    if (artistFilter.value) params.artist_id = artistFilter.value;
-                    if (albumFilter.value) params.album_id = albumFilter.value;
-                    data = await api.loadTracks(params);
-                    tracks.value = data.items.map(t => ({ ...t, loading: false }));
-
-                } else if (view.value === 'albums') {
-                    if (artistFilter.value) params.artist_id = artistFilter.value;
-                    if (statusFilter.value === 'pending') {
-                        data = await api.loadPendingAlbums(limit.value, offset.value);
-                    } else {
-                        data = await api.loadAlbums(params);
-                    }
-                    albums.value = data.items;
-
-                } else if (view.value === 'artists') {
-                    if (isolatedFilter.value) params.isolated = isolatedFilter.value;
-                    if (statusFilter.value === 'pending') {
-                        data = await api.loadPendingArtists(limit.value, offset.value, searchQuery.value);
-                    } else {
-                        data = await api.loadArtists(params);
-                    }
-                    artists.value = data.items;
-
-                } else if (view.value === 'blocklist') {
-                    data = await api.loadBlocklist('', limit.value, offset.value);
-                    blocklist.value = data.items;
-                }
-
-                totalItems.value = data.total;
-            } catch (e) {
-                showToast(`Failed to load ${view.value}`, 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
+      try {
+        const params = {
+          limit: limit.value,
+          offset: offset.value,
         };
 
-        let searchTimeout;
-        const debouncedSearch = () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                offset.value = 0;
-                loadData();
-            }, 300);
-        };
+        if (searchQuery.value) params.search = searchQuery.value;
 
-        const prevPage = () => {
-            offset.value = Math.max(0, offset.value - limit.value);
-            loadData();
-        };
+        let data;
 
-        const nextPage = () => {
-            offset.value += limit.value;
-            loadData();
-        };
+        if (view.value === 'tracks') {
+          if (trackStatusFilter.value) params.status = trackStatusFilter.value;
+          if (flaggedFilter.value) params.flagged = flaggedFilter.value;
+          if (artistFilter.value) params.artist_id = artistFilter.value;
+          if (albumFilter.value) params.album_id = albumFilter.value;
+          data = await api.loadTracks(params);
+          tracks.value = data.items.map(t => ({ ...t, loading: false }));
+        } else if (view.value === 'albums') {
+          if (artistFilter.value) params.artist_id = artistFilter.value;
+          if (statusFilter.value === 'pending') {
+            data = await api.loadPendingAlbums(limit.value, offset.value);
+          } else {
+            data = await api.loadAlbums(params);
+          }
+          albums.value = data.items;
+        } else if (view.value === 'artists') {
+          if (isolatedFilter.value) params.isolated = isolatedFilter.value;
+          if (statusFilter.value === 'pending') {
+            data = await api.loadPendingArtists(limit.value, offset.value, searchQuery.value);
+          } else {
+            data = await api.loadArtists(params);
+          }
+          artists.value = data.items;
+        } else if (view.value === 'blocklist') {
+          data = await api.loadBlocklist('', limit.value, offset.value);
+          blocklist.value = data.items;
+        }
 
-        // Filter helpers
-        const filterByArtist = (artistId, artistName) => {
-            artistFilter.value = artistId;
-            selectedArtistName.value = artistName;
-            albumFilter.value = ''; // Clear album filter
-            selectedAlbumName.value = '';
-            offset.value = 0;
+        totalItems.value = data.total;
+      } catch {
+        showError(`Failed to load ${view.value}`);
+      } finally {
+        loading.value = false;
+      }
+    };
 
-            // Switch to appropriate view
-            if (view.value === 'artists') {
-                view.value = 'albums'; // Show albums for this artist
-            }
+    let searchTimeout;
+    const debouncedSearch = () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        offset.value = 0;
+        loadData();
+      }, 300);
+    };
 
-            loadData();
-        };
+    const prevPage = () => {
+      offset.value = Math.max(0, offset.value - limit.value);
+      loadData();
+    };
 
-        const filterByAlbum = (albumId, albumName) => {
-            albumFilter.value = albumId;
-            selectedAlbumName.value = albumName;
-            offset.value = 0;
-            view.value = 'tracks'; // Switch to tracks view
-            loadData();
-        };
+    const nextPage = () => {
+      offset.value += limit.value;
+      loadData();
+    };
 
-        const clearFilters = () => {
-            artistFilter.value = '';
-            albumFilter.value = '';
-            selectedArtistName.value = '';
-            selectedAlbumName.value = '';
-            offset.value = 0;
-            loadData();
-        };
+    // Filter helpers
+    const filterByArtist = (artistId, artistName) => {
+      artistFilter.value = artistId;
+      selectedArtistName.value = artistName;
+      albumFilter.value = ''; // Clear album filter
+      selectedAlbumName.value = '';
+      offset.value = 0;
 
-        // Bulk selection
-        const toggleSelection = (id) => {
-            if (selectedIds.value.has(id)) {
-                selectedIds.value.delete(id);
-            } else {
-                selectedIds.value.add(id);
-            }
-        };
+      // Switch to appropriate view
+      if (view.value === 'artists') {
+        view.value = 'albums'; // Show albums for this artist
+      }
 
-        const toggleSelectAll = () => {
-            const currentList = view.value === 'artists' ? artists.value : albums.value;
-            if (selectedIds.value.size === currentList.length) {
-                selectedIds.value.clear();
-            } else {
-                currentList.forEach(item => selectedIds.value.add(item.id));
-            }
-        };
+      loadData();
+    };
 
-        const bulkReject = async () => {
-            const count = selectedIds.value.size;
-            if (count === 0) return;
+    const filterByAlbum = (albumId, albumName) => {
+      albumFilter.value = albumId;
+      selectedAlbumName.value = albumName;
+      offset.value = 0;
+      view.value = 'tracks'; // Switch to tracks view
+      loadData();
+    };
 
-            const itemType = view.value === 'artists' ? 'artists' : 'albums';
-            if (!confirm(`⚠️ Reject and delete ${count} ${itemType}?\n\nThis will:\n• Delete all their tracks\n• Add them to the blocklist\n• This cannot be undone\n\nContinue?`)) {
-                return;
-            }
+    const clearFilters = () => {
+      artistFilter.value = '';
+      albumFilter.value = '';
+      selectedArtistName.value = '';
+      selectedAlbumName.value = '';
+      offset.value = 0;
+      loadData();
+    };
 
-            loading.value = true;
-            try {
-                const ids = Array.from(selectedIds.value);
+    // Bulk selection
+    const toggleSelection = id => {
+      if (selectedIds.value.has(id)) {
+        selectedIds.value.delete(id);
+      } else {
+        selectedIds.value.add(id);
+      }
+    };
 
-                if (view.value === 'artists') {
-                    await api.bulkRejectArtists(ids, 'Bulk rejection from library');
-                    showToast(`Rejected ${count} artists`, 'success');
-                } else {
-                    // Reject albums one by one (no bulk endpoint yet)
-                    for (const id of ids) {
-                        await api.rejectAlbum(id, 'Bulk rejection from library');
-                    }
-                    showToast(`Rejected ${count} albums`, 'success');
-                }
+    const toggleSelectAll = () => {
+      const currentList = view.value === 'artists' ? artists.value : albums.value;
+      if (selectedIds.value.size === currentList.length) {
+        selectedIds.value.clear();
+      } else {
+        currentList.forEach(item => selectedIds.value.add(item.id));
+      }
+    };
 
-                loadData();
-            } catch (e) {
-                showToast('Bulk rejection failed', 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
-        };
+    const bulkReject = async () => {
+      const count = selectedIds.value.size;
+      if (count === 0) return;
 
-        // Track actions
-        const reanalyze = async (track) => {
-            track.loading = true;
-            try {
-                const data = await api.reanalyzeTrack(track.id);
-                showToast(data.message);
-                track.status = 'PENDING';
-                window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
-            } catch (e) {
-                showToast('Re-analysis failed', 'error');
-            } finally {
-                track.loading = false;
-            }
-        };
+      const itemType = view.value === 'artists' ? 'artists' : 'albums';
+      if (
+        !confirm(
+          `⚠️ Reject and delete ${count} ${itemType}?\n\nThis will:\n• Delete all their tracks\n• Add them to the blocklist\n• This cannot be undone\n\nContinue?`
+        )
+      ) {
+        return;
+      }
 
-        const reclassify = async (track) => {
-            track.loading = true;
-            try {
-                const data = await api.reclassifyTrack(track.id);
-                showToast(`${track.title} → ${data.new_style}`);
-                track.dance_style = data.new_style;
-                window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
-            } catch (e) {
-                showToast(e.message, 'error');
-            } finally {
-                track.loading = false;
-            }
-        };
+      loading.value = true;
+      try {
+        const ids = Array.from(selectedIds.value);
 
-        const unflagTrack = async (track) => {
-            track.loading = true;
-            try {
-                await api.unflagTrack(track.id);
-                showToast(`Unflagged: ${track.title}`);
-                loadData();
-                window.dispatchEvent(new CustomEvent('admin:track-unflagged', { detail: { track } }));
-            } catch (e) {
-                showToast('Failed to unflag track', 'error');
-            } finally {
-                track.loading = false;
-            }
-        };
+        if (view.value === 'artists') {
+          await api.bulkRejectArtists(ids, 'Bulk rejection from library');
+          showToast(`Rejected ${count} artists`, 'success');
+        } else {
+          // Reject albums one by one (no bulk endpoint yet)
+          for (const id of ids) {
+            await api.rejectAlbum(id, 'Bulk rejection from library');
+          }
+          showToast(`Rejected ${count} albums`, 'success');
+        }
 
-        const rejectTrack = async (track) => {
-            if (!confirm(`Reject and delete track "${track.title}"?\n\nThis will remove it from the database and add it to the blocklist.`)) {
-                return;
-            }
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Bulk rejection failed');
+      } finally {
+        loading.value = false;
+      }
+    };
 
-            try {
-                const data = await api.rejectTrack(track.id, 'Rejected from library');
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to reject track', 'error');
-            }
-        };
+    // Track actions
+    const reanalyze = async track => {
+      track.loading = true;
+      try {
+        const data = await api.reanalyzeTrack(track.id);
+        showToast(data.message);
+        track.status = 'PENDING';
+        window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
+      } catch (e) {
+        showError(e.message || 'Re-analysis failed');
+      } finally {
+        track.loading = false;
+      }
+    };
 
-        // Artist actions
-        const toggleArtistDetails = (artist) => {
-            if (expandedArtist.value === artist.id) {
-                expandedArtist.value = null;
-            } else {
-                expandedArtist.value = artist.id;
-            }
-        };
+    const reclassify = async track => {
+      track.loading = true;
+      try {
+        const data = await api.reclassifyTrack(track.id);
+        showToast(`${track.title} → ${data.new_style}`);
+        track.dance_style = data.new_style;
+        window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
+      } catch (e) {
+        showError(e.message || 'Reclassification failed');
+      } finally {
+        track.loading = false;
+      }
+    };
 
-        const approveArtist = async (artist) => {
-            const confirmMsg = `Approve artist "${artist.name}"?\n\n• ${artist.pending_tracks} pending tracks will be queued for analysis`;
-            if (!confirm(confirmMsg)) return;
+    const unflagTrack = async track => {
+      track.loading = true;
+      try {
+        await api.unflagTrack(track.id);
+        showToast(`Unflagged: ${track.title}`);
+        loadData();
+        window.dispatchEvent(new CustomEvent('admin:track-unflagged', { detail: { track } }));
+      } catch (e) {
+        showError(e.message || 'Failed to unflag track');
+      } finally {
+        track.loading = false;
+      }
+    };
 
-            try {
-                const data = await api.approveArtist(artist.id);
-                showToast(data.message);
-                loadData();
-                window.dispatchEvent(new CustomEvent('admin:artist-approved'));
-            } catch (e) {
-                showToast('Failed to approve artist', 'error');
-                console.error(e);
-            }
-        };
+    const rejectTrack = async track => {
+      if (
+        !confirm(
+          `Reject and delete track "${track.title}"?\n\nThis will remove it from the database and add it to the blocklist.`
+        )
+      ) {
+        return;
+      }
 
-        const bulkApprove = async () => {
-            const count = selectedIds.value.size;
-            if (count === 0) return;
+      try {
+        const data = await api.rejectTrack(track.id, 'Rejected from library');
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Failed to reject track');
+      }
+    };
 
-            if (!confirm(`✅ Approve ${count} artists?\n\nThis will:\n• Queue all their pending tracks for analysis\n• They will be processed by the analysis system\n\nContinue?`)) {
-                return;
-            }
+    // Artist actions
+    const toggleArtistDetails = artist => {
+      if (expandedArtist.value === artist.id) {
+        expandedArtist.value = null;
+      } else {
+        expandedArtist.value = artist.id;
+      }
+    };
 
-            loading.value = true;
-            try {
-                const ids = Array.from(selectedIds.value);
-                await api.bulkApproveArtists(ids);
-                showToast(`Approved ${count} artists`, 'success');
-                selectedIds.value.clear();
-                loadData();
-                window.dispatchEvent(new CustomEvent('admin:artist-approved'));
-            } catch (e) {
-                showToast('Bulk approval failed', 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
-        };
+    const approveArtist = async artist => {
+      const confirmMsg = `Approve artist "${artist.name}"?\n\n• ${artist.pending_tracks} pending tracks will be queued for analysis`;
+      if (!confirm(confirmMsg)) return;
 
-        const rejectArtist = async (artist) => {
-            // Open the enhanced rejection modal
-            rejectionEntity.value = artist;
-            rejectionEntityType.value = 'artist';
+      try {
+        const data = await api.approveArtist(artist.id);
+        showToast(data.message);
+        loadData();
+        window.dispatchEvent(new CustomEvent('admin:artist-approved'));
+      } catch (e) {
+        showError(e.message || 'Failed to approve artist');
+      }
+    };
 
-            try {
-                // Fetch collaboration network data
-                const networkData = await api.getCollaborationNetwork(artist.id);
-                collaborationData.value = networkData;
-                showRejectionModal.value = true;
-            } catch (e) {
-                showToast('Failed to load collaboration data', 'error');
-                console.error(e);
-            }
-        };
+    const bulkApprove = async () => {
+      const count = selectedIds.value.size;
+      if (count === 0) return;
 
-        const closeRejectionModal = () => {
-            showRejectionModal.value = false;
-            rejectionEntity.value = null;
-            collaborationData.value = null;
-        };
+      if (
+        !confirm(
+          `✅ Approve ${count} artists?\n\nThis will:\n• Queue all their pending tracks for analysis\n• They will be processed by the analysis system\n\nContinue?`
+        )
+      ) {
+        return;
+      }
 
-        const confirmRejection = async (selections) => {
-            loading.value = true;
-            showRejectionModal.value = false;
+      loading.value = true;
+      try {
+        const ids = Array.from(selectedIds.value);
+        await api.bulkApproveArtists(ids);
+        showToast(`Approved ${count} artists`, 'success');
+        selectedIds.value.clear();
+        loadData();
+        window.dispatchEvent(new CustomEvent('admin:artist-approved'));
+      } catch (e) {
+        showError(e.message || 'Bulk approval failed');
+      } finally {
+        loading.value = false;
+      }
+    };
 
-            try {
-                const data = await api.rejectNetwork(
-                    selections.artistIds,
-                    selections.albumIds,
-                    selections.reason
-                );
-                showToast(data.message || 'Network rejected successfully', 'success');
-                loadData();
-            } catch (e) {
-                showToast('Failed to reject network', 'error');
-                console.error(e);
-            } finally {
-                loading.value = false;
-            }
-        };
+    const rejectArtist = async artist => {
+      // Open the enhanced rejection modal
+      rejectionEntity.value = artist;
+      rejectionEntityType.value = 'artist';
 
-        // Album actions
-        const rejectAlbum = async (album) => {
-            if (!confirm(`Reject and delete album "${album.title}"?\n\n• ${album.total_tracks} tracks will be deleted\n• Album will be removed from database`)) {
-                return;
-            }
+      try {
+        // Fetch collaboration network data
+        const networkData = await api.getCollaborationNetwork(artist.id);
+        collaborationData.value = networkData;
+        showRejectionModal.value = true;
+      } catch (e) {
+        showError(e.message || 'Failed to load collaboration data');
+      }
+    };
 
-            try {
-                const data = await api.rejectAlbum(album.id, 'Rejected from library');
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to reject album', 'error');
-            }
-        };
+    const closeRejectionModal = () => {
+      showRejectionModal.value = false;
+      rejectionEntity.value = null;
+      collaborationData.value = null;
+    };
 
-        // Blocklist actions
-        const removeFromBlocklist = async (item) => {
-            if (!confirm(`Remove "${item.entity_name}" from blocklist?\n\nThis will allow it to be re-ingested if discovered again.`)) {
-                return;
-            }
+    const confirmRejection = async selections => {
+      loading.value = true;
+      showRejectionModal.value = false;
 
-            try {
-                const data = await api.removeFromBlocklist(item.id);
-                showToast(data.message);
-                loadData();
-            } catch (e) {
-                showToast('Failed to remove from blocklist', 'error');
-            }
-        };
+      try {
+        const data = await api.rejectNetwork(
+          selections.artistIds,
+          selections.albumIds,
+          selections.reason
+        );
+        showToast(data.message || 'Network rejected successfully', 'success');
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Network rejection failed');
+      } finally {
+        loading.value = false;
+      }
+    };
 
-        // Helper methods
-        const statusClass = (status) => {
-            const classes = {
-                'PENDING': 'bg-yellow-600/20 text-yellow-400',
-                'PROCESSING': 'bg-blue-600/20 text-blue-400',
-                'DONE': 'bg-green-600/20 text-green-400',
-                'FAILED': 'bg-red-600/20 text-red-400'
-            };
-            return classes[status] || 'bg-gray-600/20 text-gray-400';
-        };
+    // Album actions
+    const rejectAlbum = async album => {
+      if (
+        !confirm(
+          `Reject and delete album "${album.title}"?\n\n• ${album.total_tracks} tracks will be deleted\n• Album will be removed from database`
+        )
+      ) {
+        return;
+      }
 
-        const statusIcon = (status) => {
-            const icons = {
-                'PENDING': '⏳',
-                'PROCESSING': '🔄',
-                'DONE': '✅',
-                'FAILED': '❌'
-            };
-            return icons[status] || '❓';
-        };
+      try {
+        const data = await api.rejectAlbum(album.id, 'Rejected from library');
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Failed to reject album');
+      }
+    };
 
-        const confidenceClass = (confidence) => {
-            if (confidence >= 0.9) return 'text-green-400';
-            if (confidence >= 0.75) return 'text-blue-400';
-            if (confidence >= 0.5) return 'text-yellow-400';
-            return 'text-red-400';
-        };
+    // Blocklist actions
+    const removeFromBlocklist = async item => {
+      if (
+        !confirm(
+          `Remove "${item.entity_name}" from blocklist?\n\nThis will allow it to be re-ingested if discovered again.`
+        )
+      ) {
+        return;
+      }
 
-        // Watchers
-        watch(view, (newView, oldView) => {
-            // Only clear filters if manually switching tabs (not from filter functions)
-            // Check if we're switching to a view that doesn't match our current filters
-            if (oldView && newView !== 'tracks' && albumFilter.value) {
-                // Switching away from tracks view while album filter is set - keep it
-                return;
-            }
-            if (oldView && newView !== 'tracks' && newView !== 'albums' && artistFilter.value) {
-                // Switching away from albums/tracks while artist filter is set - keep it
-                return;
-            }
+      try {
+        const data = await api.removeFromBlocklist(item.id);
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Failed to remove from blocklist');
+      }
+    };
 
-            offset.value = 0;
-            searchQuery.value = '';
-            statusFilter.value = 'all';
-            trackStatusFilter.value = '';
-            flaggedFilter.value = '';
-            isolatedFilter.value = '';
-            rejectedFilter.value = '';
-            selectedIds.value.clear();
-            expandedArtist.value = null;
-            loadData();
-        });
+    // Helper methods
+    const statusClass = status => {
+      const classes = {
+        PENDING: 'bg-yellow-600/20 text-yellow-400',
+        PROCESSING: 'bg-blue-600/20 text-blue-400',
+        DONE: 'bg-green-600/20 text-green-400',
+        FAILED: 'bg-red-600/20 text-red-400',
+      };
+      return classes[status] || 'bg-gray-600/20 text-gray-400';
+    };
 
-        watch(statusFilter, () => {
-            offset.value = 0;
-            loadData();
-        });
+    const statusIcon = status => {
+      const icons = {
+        PENDING: '⏳',
+        PROCESSING: '🔄',
+        DONE: '✅',
+        FAILED: '❌',
+      };
+      return icons[status] || '❓';
+    };
 
-        // Event listeners
-        const handleTracksIngested = () => loadData();
-        const handleArtistApproved = () => loadData();
-        const handleTracksReclassified = () => loadData();
-        const handleSpiderComplete = () => loadData();
+    const confidenceClass = confidence => {
+      if (confidence >= 0.9) return 'text-green-400';
+      if (confidence >= 0.75) return 'text-blue-400';
+      if (confidence >= 0.5) return 'text-yellow-400';
+      return 'text-red-400';
+    };
 
-        onMounted(() => {
-            loadData();
-            window.addEventListener('admin:tracks-ingested', handleTracksIngested);
-            window.addEventListener('admin:artist-approved', handleArtistApproved);
-            window.addEventListener('admin:tracks-reclassified', handleTracksReclassified);
-            window.addEventListener('admin:spider-complete', handleSpiderComplete);
-        });
+    // Watchers
+    watch(view, (newView, oldView) => {
+      // Only clear filters if manually switching tabs (not from filter functions)
+      // Check if we're switching to a view that doesn't match our current filters
+      if (oldView && newView !== 'tracks' && albumFilter.value) {
+        // Switching away from tracks view while album filter is set - keep it
+        return;
+      }
+      if (oldView && newView !== 'tracks' && newView !== 'albums' && artistFilter.value) {
+        // Switching away from albums/tracks while artist filter is set - keep it
+        return;
+      }
 
-        onUnmounted(() => {
-            window.removeEventListener('admin:tracks-ingested', handleTracksIngested);
-            window.removeEventListener('admin:artist-approved', handleArtistApproved);
-            window.removeEventListener('admin:tracks-reclassified', handleTracksReclassified);
-            window.removeEventListener('admin:spider-complete', handleSpiderComplete);
-        });
+      offset.value = 0;
+      searchQuery.value = '';
+      statusFilter.value = 'all';
+      trackStatusFilter.value = '';
+      flaggedFilter.value = '';
+      isolatedFilter.value = '';
+      rejectedFilter.value = '';
+      selectedIds.value.clear();
+      expandedArtist.value = null;
+      loadData();
+    });
 
-        return {
-            view, tracks, albums, artists, blocklist, totalItems,
-            searchQuery, statusFilter, trackStatusFilter, flaggedFilter,
-            isolatedFilter, rejectedFilter,
-            artistFilter, albumFilter, selectedArtistName, selectedAlbumName,
-            limit, offset, loading, expandedArtist, selectedIds,
-            loadData, debouncedSearch, prevPage, nextPage,
-            filterByArtist, filterByAlbum, clearFilters,
-            toggleSelection, toggleSelectAll, isAllSelected, bulkReject, bulkApprove,
-            reanalyze, reclassify, unflagTrack, rejectTrack,
-            toggleArtistDetails, approveArtist, rejectArtist, rejectAlbum, removeFromBlocklist,
-            statusClass, statusIcon, confidenceClass,
-            pageNumber, totalPages,
-            // Rejection modal
-            showRejectionModal, rejectionEntity, rejectionEntityType, collaborationData,
-            closeRejectionModal, confirmRejection
-        };
-    },
-    template: /*html*/`
+    watch(statusFilter, () => {
+      offset.value = 0;
+      loadData();
+    });
+
+    // Event listeners
+    const handleTracksIngested = () => loadData();
+    const handleArtistApproved = () => loadData();
+    const handleTracksReclassified = () => loadData();
+    const handleSpiderComplete = () => loadData();
+
+    onMounted(() => {
+      loadData();
+      window.addEventListener('admin:tracks-ingested', handleTracksIngested);
+      window.addEventListener('admin:artist-approved', handleArtistApproved);
+      window.addEventListener('admin:tracks-reclassified', handleTracksReclassified);
+      window.addEventListener('admin:spider-complete', handleSpiderComplete);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('admin:tracks-ingested', handleTracksIngested);
+      window.removeEventListener('admin:artist-approved', handleArtistApproved);
+      window.removeEventListener('admin:tracks-reclassified', handleTracksReclassified);
+      window.removeEventListener('admin:spider-complete', handleSpiderComplete);
+    });
+
+    return {
+      view,
+      tracks,
+      albums,
+      artists,
+      blocklist,
+      totalItems,
+      searchQuery,
+      statusFilter,
+      trackStatusFilter,
+      flaggedFilter,
+      isolatedFilter,
+      rejectedFilter,
+      artistFilter,
+      albumFilter,
+      selectedArtistName,
+      selectedAlbumName,
+      limit,
+      offset,
+      loading,
+      expandedArtist,
+      selectedIds,
+      loadData,
+      debouncedSearch,
+      prevPage,
+      nextPage,
+      filterByArtist,
+      filterByAlbum,
+      clearFilters,
+      toggleSelection,
+      toggleSelectAll,
+      isAllSelected,
+      bulkReject,
+      bulkApprove,
+      reanalyze,
+      reclassify,
+      unflagTrack,
+      rejectTrack,
+      toggleArtistDetails,
+      approveArtist,
+      rejectArtist,
+      rejectAlbum,
+      removeFromBlocklist,
+      statusClass,
+      statusIcon,
+      confidenceClass,
+      pageNumber,
+      totalPages,
+      // Rejection modal
+      showRejectionModal,
+      rejectionEntity,
+      rejectionEntityType,
+      collaborationData,
+      closeRejectionModal,
+      confirmRejection,
+    };
+  },
+  template: /*html*/ `
         <div class="bg-gray-800 p-3 sm:p-6 rounded-lg border border-gray-700">
             <!-- Rejection Modal -->
             <RejectionModal
@@ -889,5 +940,5 @@ export default {
                 </button>
             </div>
         </div>
-    `
+    `,
 };

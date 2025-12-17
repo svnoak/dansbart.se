@@ -4,42 +4,64 @@ import PlayerControls from './PlayerControls.js';
 import ProgressBar from './ProgressBar.js';
 
 export default {
-    props: [
-        'currentTrack', 'availableVersions', 'currentVersionIndex',
-        'isPlaying', 'isShuffled', 'repeatMode',
-        'structureMode', 'activeSource',
-        'visualTime', 'duration',
-        'isExpanded', 'hasYt', 'hasSpot', // passed from parent
-        'fmtCurrent', 'fmtDuration', 'breakpoints'
-    ],
-    emits: [
-        'expand', 'set-source', 'cycle-version',
-        'toggle-structure-mode', 'seek',
-        'toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump',
-        'open-structure-editor', 'add-breakpoint', 'clear-breakpoints',
-        'jump-to-breakpoint', 'update-breakpoint', 'remove-breakpoint'
-    ],
-    components: { SmartNudge, SectionVoting, PlayerControls, ProgressBar },
+  props: [
+    'currentTrack',
+    'availableVersions',
+    'currentVersionIndex',
+    'isPlaying',
+    'isShuffled',
+    'repeatMode',
+    'structureMode',
+    'activeSource',
+    'visualTime',
+    'duration',
+    'isExpanded',
+    'hasYt',
+    'hasSpot', // passed from parent
+    'fmtCurrent',
+    'fmtDuration',
+    'breakpoints',
+  ],
+  emits: [
+    'expand',
+    'set-source',
+    'cycle-version',
+    'toggle-structure-mode',
+    'seek',
+    'toggle-play',
+    'next',
+    'prev',
+    'shuffle',
+    'toggle-repeat',
+    'jump',
+    'open-structure-editor',
+    'add-breakpoint',
+    'clear-breakpoints',
+    'jump-to-breakpoint',
+    'update-breakpoint',
+    'remove-breakpoint',
+  ],
+  components: { SmartNudge, SectionVoting, PlayerControls, ProgressBar },
 
-    computed: {
-        structureButtonLabel() {
-            if (this.structureMode === 'bars') return 'Visa repriser';
-            if (this.structureMode === 'sections') return 'Dölj';
-            return 'Visa takter';
-        },
-        // Calculate the bottom offset for elements above the player
-        nudgeBottomOffset() {
-            const playerHeight = 80;
-            const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
-            return playerHeight + progressBarHeight + 12; // 12px margin
-        },
-        // Show Spotify hint only when it's a preview (duration <= 30s)
-        showSpotifyHint() {
-            return this.activeSource === 'spotify' && this.duration <= 30;
-        }
+  computed: {
+    structureButtonLabel() {
+      if (this.structureMode === 'bars') return 'Visa repriser';
+      if (this.structureMode === 'sections') return 'Dölj';
+      return 'Visa takter';
     },
+    // Calculate the bottom offset for elements above the player
+    nudgeBottomOffset() {
+      const playerHeight = 80;
+      const progressBarHeight = this.structureMode !== 'none' ? 32 : 6;
+      return playerHeight + progressBarHeight + 12; // 12px margin
+    },
+    // Show Spotify hint only when it's a preview (duration <= 30s)
+    showSpotifyHint() {
+      return this.activeSource === 'spotify' && this.duration <= 30;
+    },
+  },
 
-    template: /*html*/`
+  template: /*html*/ `
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col transition-all duration-300"
          :class="isExpanded ? 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto' : 'opacity-100'">
          
@@ -117,5 +139,5 @@ export default {
              </div>
         </div>
     </div>
-    `
-}
+    `,
+};

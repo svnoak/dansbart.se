@@ -1,44 +1,44 @@
 export default {
-    props: ['track', 'isOpen'],
-    emits: ['close', 'refresh'],
-    data() {
-        return {
-            url: '',
-            isSubmitting: false,
-            error: null
+  props: ['track', 'isOpen'],
+  emits: ['close', 'refresh'],
+  data() {
+    return {
+      url: '',
+      isSubmitting: false,
+      error: null,
+    };
+  },
+  methods: {
+    async submit() {
+      if (!this.url) return;
+      this.isSubmitting = true;
+      this.error = null;
+
+      try {
+        const res = await fetch(`/api/tracks/${this.track.id}/links`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: this.url }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          this.error = data.detail || 'Failed to add link';
+        } else {
+          alert('Tack! Länken har lagts till.');
+          this.$emit('refresh'); // Tell parent to reload track
+          this.$emit('close');
+          this.url = '';
         }
+      } catch {
+        this.error = 'Network error';
+      } finally {
+        this.isSubmitting = false;
+      }
     },
-    methods: {
-        async submit() {
-            if (!this.url) return;
-            this.isSubmitting = true;
-            this.error = null;
-
-            try {
-                const res = await fetch(`/api/tracks/${this.track.id}/links`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: this.url })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    this.error = data.detail || "Failed to add link";
-                } else {
-                    alert("Tack! Länken har lagts till.");
-                    this.$emit('refresh'); // Tell parent to reload track
-                    this.$emit('close');
-                    this.url = '';
-                }
-            } catch (e) {
-                this.error = "Network error";
-            } finally {
-                this.isSubmitting = false;
-            }
-        }
-    },
-    template: /*html*/`
+  },
+  template: /*html*/ `
     <div v-if="isOpen" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="$emit('close')"></div>
         
@@ -71,5 +71,5 @@ export default {
             </div>
         </div>
     </div>
-    `
-}
+    `,
+};

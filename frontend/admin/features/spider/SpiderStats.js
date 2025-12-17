@@ -4,13 +4,13 @@
  */
 
 export default {
-    props: {
-        stats: {
-            type: Object,
-            default: null
-        }
+  props: {
+    stats: {
+      type: Object,
+      default: null,
     },
-    template: /*html*/`
+  },
+  template: /*html*/ `
         <div v-if="stats" class="mb-6 p-4 bg-gray-900 rounded border border-gray-700 max-w-2xl">
             <h3 class="font-medium mb-3">Overall Statistics</h3>
             <div class="grid grid-cols-2 gap-4 text-sm">
@@ -33,5 +33,5 @@ export default {
                 </div>
             </div>
         </div>
-    `
+    `,
 };

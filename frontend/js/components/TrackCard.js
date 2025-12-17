@@ -1,21 +1,21 @@
-import AddLinkModal from "./modals/AddLinkModal.js";
-import FlagTrackModal from "./modals/FlagTrackModal.js";
-import SparklesIcon from "../icons/SparklesIcon.js";
-import FlagIcon from "../icons/FlagIcon.js";
+import AddLinkModal from './modals/AddLinkModal.js';
+import FlagTrackModal from './modals/FlagTrackModal.js';
+import SparklesIcon from '../icons/SparklesIcon.js';
+import FlagIcon from '../icons/FlagIcon.js';
 
 export default {
-    props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
-    emits: ['play', 'stop', 'refresh', 'filter-style'],
-    components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
-    
-    data() {
-        return {
-            showLinkModal: false,
-            showFlagModal: false
-        }
-    },
+  props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
+  emits: ['play', 'stop', 'refresh', 'filter-style'],
+  components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
 
-    template: /*html*/`
+  data() {
+    return {
+      showLinkModal: false,
+      showFlagModal: false,
+    };
+  },
+
+  template: /*html*/ `
     <div class="card bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-100 flex flex-row items-center justify-between gap-3 sm:gap-4 transition-all hover:shadow-md group w-full max-w-full overflow-hidden">
         
         <div class="flex-1 min-w-0 overflow-hidden">
@@ -173,73 +173,86 @@ export default {
         ></flag-track-modal>
     </div>
     `,
-    computed: {
-        hasValidStyle() {
-             return this.track.dance_style && 
-                    this.track.dance_style !== 'Unknown' && 
-                    this.track.dance_style !== 'Unclassified';
-        },
-        hasSubStyle() {
-            // Checks if sub_style exists and is different from main style
-            return this.track.sub_style && 
-                   this.track.sub_style !== this.track.dance_style;
-        },
-        // ... (Rest of computed properties: artistDisplayString, links, etc. remain the same)
-        artistDisplayString() {
-            if (!this.track.artists || this.track.artists.length === 0) return 'Okänd artist';
-            const primary = this.track.artists.filter(a => a.role === 'primary').map(a => a.name);
-            const feat = this.track.artists.filter(a => a.role === 'featured').map(a => a.name);
-            let text = primary.join(', ');
-            if (feat.length > 0) text += ' feat. ' + feat.join(', ');
-            if (!text) text = this.track.artists.map(a => a.name).join(', ');
-            return text;
-        },
-        hasYouTube() { return this.getLink('youtube'); },
-        hasSpotify() { return this.getLink('spotify'); },
-        isCurrent() { return this.currentTrack?.id === this.track.id; },
-        primarySource() {
-            if (this.hasYouTube) return 'youtube';
-            if (this.hasSpotify) return 'spotify';
-            return null;
-        },
-        playButtonTitle() {
-            if (this.isCurrent && this.isPlaying) return 'Pausa';
-            if (this.isCurrent && !this.isPlaying) return 'Spela'
-            return 'Spela upp';
-        },
-        formattedDuration() {
-            const ms = this.track.duration;
-            if (!ms) return null;
-            const min = Math.floor(ms / 60000);
-            const sec = ((ms % 60000) / 1000).toFixed(0);
-            return min + ":" + (sec < 10 ? '0' : '') + sec;
-        },
-        tempoLabel() {
-            if (!this.track) return '';
-            if (!this.hasValidStyle) return 'Tempo?';
-            if (this.track.tempo && this.track.tempo.label) return this.track.tempo.label;
-            const labels = { 'Slow': 'Långsamt', 'SlowMed': 'Lugnt', 'Medium': 'Lagom', 'Fast': 'Snabbt', 'Turbo': 'Väldigt snabbt' };
-            return labels[this.track.tempo_category] || 'Lagom';
-        }
+  computed: {
+    hasValidStyle() {
+      return (
+        this.track.dance_style &&
+        this.track.dance_style !== 'Unknown' &&
+        this.track.dance_style !== 'Unclassified'
+      );
     },
-    methods: {
-        getLink(type) {
-            if (!this.track.playback_links) return null;
-            return this.track.playback_links.find(l => {
-                if (l.platform) return l.platform === type;
-                const url = l.deep_link || (typeof l === 'string' ? l : null);
-                if (!url) return false;
-                return type === 'spotify' ? url.includes('spotify') : !url.includes('spotify');
-            });
-        },
-        playPrimary() {
-            if (this.isCurrent && this.isPlaying) {
-                this.$emit('stop');
-            } else if (this.isCurrent && !this.isPlaying) {
-                this.$emit('play', this.track, this.primarySource);
-            } else if (this.primarySource) {
-                this.$emit('play', this.track, this.primarySource);
-            }
-        },
-    }
+    hasSubStyle() {
+      // Checks if sub_style exists and is different from main style
+      return this.track.sub_style && this.track.sub_style !== this.track.dance_style;
+    },
+    // ... (Rest of computed properties: artistDisplayString, links, etc. remain the same)
+    artistDisplayString() {
+      if (!this.track.artists || this.track.artists.length === 0) return 'Okänd artist';
+      const primary = this.track.artists.filter(a => a.role === 'primary').map(a => a.name);
+      const feat = this.track.artists.filter(a => a.role === 'featured').map(a => a.name);
+      let text = primary.join(', ');
+      if (feat.length > 0) text += ' feat. ' + feat.join(', ');
+      if (!text) text = this.track.artists.map(a => a.name).join(', ');
+      return text;
+    },
+    hasYouTube() {
+      return this.getLink('youtube');
+    },
+    hasSpotify() {
+      return this.getLink('spotify');
+    },
+    isCurrent() {
+      return this.currentTrack?.id === this.track.id;
+    },
+    primarySource() {
+      if (this.hasYouTube) return 'youtube';
+      if (this.hasSpotify) return 'spotify';
+      return null;
+    },
+    playButtonTitle() {
+      if (this.isCurrent && this.isPlaying) return 'Pausa';
+      if (this.isCurrent && !this.isPlaying) return 'Spela';
+      return 'Spela upp';
+    },
+    formattedDuration() {
+      const ms = this.track.duration;
+      if (!ms) return null;
+      const min = Math.floor(ms / 60000);
+      const sec = ((ms % 60000) / 1000).toFixed(0);
+      return min + ':' + (sec < 10 ? '0' : '') + sec;
+    },
+    tempoLabel() {
+      if (!this.track) return '';
+      if (!this.hasValidStyle) return 'Tempo?';
+      if (this.track.tempo && this.track.tempo.label) return this.track.tempo.label;
+      const labels = {
+        Slow: 'Långsamt',
+        SlowMed: 'Lugnt',
+        Medium: 'Lagom',
+        Fast: 'Snabbt',
+        Turbo: 'Väldigt snabbt',
+      };
+      return labels[this.track.tempo_category] || 'Lagom';
+    },
+  },
+  methods: {
+    getLink(type) {
+      if (!this.track.playback_links) return null;
+      return this.track.playback_links.find(l => {
+        if (l.platform) return l.platform === type;
+        const url = l.deep_link || (typeof l === 'string' ? l : null);
+        if (!url) return false;
+        return type === 'spotify' ? url.includes('spotify') : !url.includes('spotify');
+      });
+    },
+    playPrimary() {
+      if (this.isCurrent && this.isPlaying) {
+        this.$emit('stop');
+      } else if (this.isCurrent && !this.isPlaying) {
+        this.$emit('play', this.track, this.primarySource);
+      } else if (this.primarySource) {
+        this.$emit('play', this.track, this.primarySource);
+      }
+    },
+  },
 };

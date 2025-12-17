@@ -4,28 +4,28 @@
  */
 
 export default {
-    props: {
-        history: {
-            type: Array,
-            default: () => []
-        }
+  props: {
+    history: {
+      type: Array,
+      default: () => [],
     },
-    // Add 'block-artist' here so Vue knows it's a custom event
-    emits: ['refresh', 'block-artist'], 
-    setup(props, { emit }) {
-        const formatDate = (dateStr) => {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-        };
+  },
+  // Add 'block-artist' here so Vue knows it's a custom event
+  emits: ['refresh', 'block-artist'],
+  setup(props, { emit }) {
+    const formatDate = dateStr => {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    };
 
-        const handleRefresh = () => {
-            emit('refresh');
-        };
+    const handleRefresh = () => {
+      emit('refresh');
+    };
 
-        return { formatDate, handleRefresh };
-    },
-    template: /*html*/`
+    return { formatDate, handleRefresh };
+  },
+  template: /*html*/ `
         <div class="bg-gray-900 rounded border border-gray-700">
             <div class="p-4 border-b border-gray-700 flex justify-between items-center">
                 <h3 class="font-medium">Recent Crawls</h3>
@@ -89,5 +89,5 @@ export default {
                 </table>
             </div>
         </div>
-    `
+    `,
 };
