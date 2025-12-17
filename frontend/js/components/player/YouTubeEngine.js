@@ -20,6 +20,9 @@ export default {
       ytPlayer: null,
       timer: null,
       apiInitialized: false,
+      playerReady: false,
+      pendingVideoId: null, // Store video ID if we need to wait for player to be ready
+      shouldAutoplay: false, // Flag to track if we should autoplay after loading
     };
   },
 
@@ -41,12 +44,23 @@ export default {
   watch: {
     videoId(newId) {
       if (newId && this.activeSource === 'youtube') {
-        this.$nextTick(() => this.loadVideo(newId));
+        if (this.playerReady) {
+          this.$nextTick(() => this.loadVideo(newId));
+        } else {
+          // Player not ready yet, store for later
+          this.pendingVideoId = newId;
+        }
       }
     },
     activeSource(newSource) {
       if (newSource === 'youtube') {
-        if (this.videoId) this.loadVideo(this.videoId);
+        if (this.videoId) {
+          if (this.playerReady) {
+            this.loadVideo(this.videoId);
+          } else {
+            this.pendingVideoId = this.videoId;
+          }
+        }
       } else {
         // Pause internally if parent switches source
         if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
@@ -98,14 +112,27 @@ export default {
         playerVars: { autoplay: 1, controls: 0, disablekb: 1 },
         events: {
           onReady: e => {
+            this.playerReady = true;
             this.$emit('ready');
-            if (this.videoId && this.activeSource === 'youtube') {
+
+            // If we have a pending video ID (from deep link), load and play it now
+            if (this.pendingVideoId && this.activeSource === 'youtube') {
+              this.shouldAutoplay = true; // Set flag to autoplay when video is cued
+              e.target.loadVideoById(this.pendingVideoId);
+              this.pendingVideoId = null;
+            } else if (this.videoId && this.activeSource === 'youtube') {
               e.target.loadVideoById(this.videoId);
             }
           },
           onStateChange: e => {
             // FIX: Emit directly, don't call 'this.onYtStateChange'
             this.$emit('state-change', e.data);
+
+            // If video is cued (state 5) and we should autoplay, start playing
+            if (e.data === YT.PlayerState.CUED && this.shouldAutoplay) {
+              this.shouldAutoplay = false;
+              e.target.playVideo();
+            }
 
             if (e.data === YT.PlayerState.PLAYING) this.startTimer();
             else this.stopTimer();
