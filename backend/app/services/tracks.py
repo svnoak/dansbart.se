@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.core.models import StyleKeyword, DanceMovementFeedback, TrackDanceStyle
+from app.core.models import DanceMovementFeedback, TrackDanceStyle
 from app.core.music_theory import get_tempo_description
 from app.repository.track import TrackRepository
 
@@ -103,43 +103,54 @@ class TrackService:
 
     def get_style_hierarchy(self):
         """
-        Returns a tree of styles based on ACTUAL DATA in TrackDanceStyle.
-        Now looks at both 'dance_style' (Main) and 'sub_style' (Sub).
+        Returns a tree of styles combining:
+        - Main styles from StyleKeyword table (all possible categories)
+        - Sub-styles from TrackDanceStyle table (what actually exists in tracks)
+
+        Returns: {"Polska": ["Slängpolska", "Hambo"], "Schottis": ["Reinländer"], ...}
         """
-        # 1. Fetch all unique pairs of (Main, Sub) that exist in your DB
-        used_combinations = (
-            self.db.query(TrackDanceStyle.dance_style, TrackDanceStyle.sub_style)
-            .filter(TrackDanceStyle.confidence > 0.5) # Filter out noise
+        from app.core.models import StyleKeyword
+
+        # 1. Get all unique main_style values from StyleKeyword table
+        main_styles = (
+            self.db.query(StyleKeyword.main_style)
+            .filter(StyleKeyword.is_active == True)
             .distinct()
             .all()
         )
 
-        # used_combinations will look like:
-        # [('Schottis', 'Reinländer'), ('Polska', 'Pols'), ('Schottis', None)]
+        # 2. Initialize hierarchy with all main styles
+        hierarchy = {main[0]: set() for main in main_styles}
 
-        hierarchy = {}
+        # 3. For each main style, find actual sub-styles that exist in tracks
+        for main_style in hierarchy.keys():
+            # Get all sub_styles where dance_style matches this main_style
+            sub_styles = (
+                self.db.query(TrackDanceStyle.sub_style)
+                .filter(
+                    TrackDanceStyle.dance_style == main_style,
+                    TrackDanceStyle.sub_style.isnot(None),
+                    TrackDanceStyle.confidence > 0.3
+                )
+                .distinct()
+                .all()
+            )
 
-        for main, sub in used_combinations:
-            if not main: continue
+            # Add the sub-styles to the hierarchy
+            for sub in sub_styles:
+                if sub[0]:  # sub is a tuple like ('Reinländer',)
+                    hierarchy[main_style].add(sub[0])
 
-            # Initialize the list for this Main Category if new
-            if main not in hierarchy:
-                hierarchy[main] = set()
-
-            # If a sub_style exists for this row, add it to the list
-            if sub:
-                hierarchy[main].add(sub)
-
-        # 2. Sort lists for the frontend
-        return {k: sorted(list(v)) for k, v in hierarchy.items()}
+        # 4. Sort sub-style lists and convert sets to lists
+        return {k: sorted(list(v)) for k, v in sorted(hierarchy.items())}
 
     def get_playable_tracks(
-        self, 
+        self,
         main_style: str = None,
         sub_style: str = None,
         style_confirmed: bool = False,
-        min_bpm: int = None, 
-        max_bpm: int = None, 
+        min_bpm: int = None,
+        max_bpm: int = None,
         min_tempo: int = None,
         max_tempo: int = None,
         search: str = None,
@@ -147,7 +158,11 @@ class TrackService:
         vocals: str = None,
         min_duration: int = None,
         max_duration: int = None,
-        limit: int = 20, 
+        min_bounciness: float = None,
+        max_bounciness: float = None,
+        min_articulation: float = None,
+        max_articulation: float = None,
+        limit: int = 20,
         offset: int = 0
     ):
         """
@@ -156,36 +171,31 @@ class TrackService:
         
         # 1. PREPARE STYLE LOGIC
         exact_style = None
-        allowed_styles = None
-        
+        exact_main_style = None
+
         if sub_style:
-            # User wants a specific dance. Ignore Main Category logic.
+            # User wants a specific sub-style dance (e.g., "Reinländer")
             exact_style = sub_style
-        
+
         elif main_style:
-            # User wants a whole family.
-            keywords = self.db.query(StyleKeyword).filter(
-                StyleKeyword.main_style.ilike(main_style)
-            ).all()
-            
-            style_set = {main_style} 
-            for kw in keywords:
-                if kw.sub_style: style_set.add(kw.sub_style)
-                # Also add the keyword if it acts as a style name (e.g. "Rørospols")
-                style_set.add(kw.keyword)
-                
-            allowed_styles = list(style_set)
+            # User wants all tracks from a main category (e.g., "Schottis")
+            # We'll filter by dance_style matching the main_style exactly
+            exact_main_style = main_style
 
         # 2. CALL REPO
         tracks, base_total = self.repo.search_playable_tracks(
             exact_style=exact_style,
-            allowed_styles=allowed_styles,
+            exact_main_style=exact_main_style,
             style_confirmed=style_confirmed,
             min_bpm=min_bpm,
             max_bpm=max_bpm,
             min_duration_ms=min_duration * 1000 if min_duration else None,
             max_duration_ms=max_duration * 1000 if max_duration else None,
             vocals=vocals,
+            min_bounciness=min_bounciness,
+            max_bounciness=max_bounciness,
+            min_articulation=min_articulation,
+            max_articulation=max_articulation,
             search=search,
             source=source,
             limit=limit,

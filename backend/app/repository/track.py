@@ -47,20 +47,24 @@ class TrackRepository(BaseRepository[Track]):
         self,
         # Style Filters
         exact_style: str = None,          # Priority 1: Specific Sub-style (Strict match)
-        allowed_styles: List[str] = None, # Priority 2: Main Category (List of allowed variants)
+        exact_main_style: str = None,     # Priority 2: Main Category (e.g., "Polska", "Schottis")
         style_confirmed: bool = False,
-        
+
         # Audio Filters
         min_bpm: int = None,
         max_bpm: int = None,
         min_duration_ms: int = None,
         max_duration_ms: int = None,
         vocals: str = None, # 'instrumental' or 'vocals'
-        
+        min_bounciness: float = None,
+        max_bounciness: float = None,
+        min_articulation: float = None,
+        max_articulation: float = None,
+
         # Meta Filters
         search: str = None,
         source: str = None,
-        
+
         # Pagination
         limit: int = 20,
         offset: int = 0
@@ -88,19 +92,19 @@ class TrackRepository(BaseRepository[Track]):
         # 2. Apply Style Filters (Strict Hierarchy)
         if exact_style:
             # User wants a specific Sub-Style (e.g. "Reinländer")
-            # We check both columns just to be safe, but primarily 'sub_style'
+            # We check both columns: sub_style first, then dance_style as fallback
             query = query.filter(
                 or_(
                     TrackDanceStyle.sub_style == exact_style,
                     TrackDanceStyle.dance_style == exact_style
                 )
             )
-            
-        elif allowed_styles:
-            # Case B: User selected a Category (e.g. "Polska")
-            # We match ANY style that belongs to this family
-            query = query.filter(TrackDanceStyle.dance_style.in_(allowed_styles))
-            
+
+        elif exact_main_style:
+            # User selected a Main Category (e.g. "Polska", "Schottis")
+            # Match all tracks where dance_style equals the main category
+            query = query.filter(TrackDanceStyle.dance_style == exact_main_style)
+
         # Common Confidence Filter (Applied to whatever style logic above was used)
         if style_confirmed:
             query = query.filter(TrackDanceStyle.confidence >= 0.98)
@@ -110,7 +114,7 @@ class TrackRepository(BaseRepository[Track]):
             query = query.filter(TrackDanceStyle.effective_bpm >= min_bpm)
         if max_bpm:
             query = query.filter(TrackDanceStyle.effective_bpm <= max_bpm)
-            
+
         if min_duration_ms:
             query = query.filter(Track.duration_ms >= min_duration_ms)
         if max_duration_ms:
@@ -120,6 +124,16 @@ class TrackRepository(BaseRepository[Track]):
             query = query.filter(Track.has_vocals == False)
         elif vocals == 'vocals':
             query = query.filter(Track.has_vocals == True)
+
+        # Audio feature filters
+        if min_bounciness is not None:
+            query = query.filter(Track.bounciness >= min_bounciness)
+        if max_bounciness is not None:
+            query = query.filter(Track.bounciness <= max_bounciness)
+        if min_articulation is not None:
+            query = query.filter(Track.articulation >= min_articulation)
+        if max_articulation is not None:
+            query = query.filter(Track.articulation <= max_articulation)
 
         # 4. Apply Text/Meta Search
         if search:

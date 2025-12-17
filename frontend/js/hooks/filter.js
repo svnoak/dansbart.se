@@ -105,5 +105,12 @@ export function useFilters() {
     getRangeLeftPct,
     getRangeWidthPct,
     handleFilterStyle,
+    // Audio feature filters
+    minBounciness,
+    maxBounciness,
+    bouncinessEnabled,
+    minArticulation,
+    maxArticulation,
+    articulationEnabled,
   };
 }

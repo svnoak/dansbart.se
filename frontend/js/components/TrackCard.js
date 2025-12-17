@@ -140,7 +140,7 @@ export default {
                     <span>Rapportera</span>
                 </button>
 
-                <button @click.stop="shareTrack" class="text-xs text-gray-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Dela spår">
+                <button @click.stop="shareTrack" class="text-xs text-gray-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Dela låt">
                     <span>🔗</span>
                     <span>Dela</span>
                 </button>

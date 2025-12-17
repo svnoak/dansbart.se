@@ -56,6 +56,10 @@ def get_tracks(
     vocals: str = Query(None, description="Filter vocals: 'instrumental' or 'vocals'"),
     min_duration: int = Query(None, description="Minimum duration in seconds"),
     max_duration: int = Query(None, description="Maximum duration in seconds"),
+    min_bounciness: float = Query(None, ge=0, le=1, description="Minimum bounciness (0-1)"),
+    max_bounciness: float = Query(None, ge=0, le=1, description="Maximum bounciness (0-1)"),
+    min_articulation: float = Query(None, ge=0, le=1, description="Minimum articulation (0-1)"),
+    max_articulation: float = Query(None, ge=0, le=1, description="Maximum articulation (0-1)"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -74,6 +78,10 @@ def get_tracks(
         vocals=vocals,
         min_duration=min_duration,
         max_duration=max_duration,
+        min_bounciness=min_bounciness,
+        max_bounciness=max_bounciness,
+        min_articulation=min_articulation,
+        max_articulation=max_articulation,
         limit=limit,
         offset=offset
     )

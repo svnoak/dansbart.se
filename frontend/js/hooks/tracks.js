@@ -3,7 +3,19 @@ import { useFilters } from './filter.js';
 import { showError } from './useToast.js';
 
 export function useTracks() {
-  const { filters, targetTempo, tempoEnabled, computedMin, computedMax } = useFilters();
+  const {
+    filters,
+    targetTempo,
+    tempoEnabled,
+    computedMin,
+    computedMax,
+    minBounciness,
+    maxBounciness,
+    bouncinessEnabled,
+    minArticulation,
+    maxArticulation,
+    articulationEnabled
+  } = useFilters();
 
   const tracks = ref([]);
   const loading = ref(false);
@@ -41,6 +53,16 @@ export function useTracks() {
       if (tempoEnabled.value) {
         params.append('min_bpm', computedMin.value);
         params.append('max_bpm', computedMax.value);
+      }
+
+      if (bouncinessEnabled.value) {
+        params.append('min_bounciness', minBounciness.value);
+        params.append('max_bounciness', maxBounciness.value);
+      }
+
+      if (articulationEnabled.value) {
+        params.append('min_articulation', minArticulation.value);
+        params.append('max_articulation', maxArticulation.value);
       }
 
       params.append('limit', limit);
@@ -96,6 +118,12 @@ export function useTracks() {
       () => filters.value.styleConfirmed,
       () => filters.value.minDuration,
       () => filters.value.maxDuration,
+      () => minBounciness.value,
+      () => maxBounciness.value,
+      () => bouncinessEnabled.value,
+      () => minArticulation.value,
+      () => maxArticulation.value,
+      () => articulationEnabled.value,
     ],
     () => {
       // Debounce filter changes

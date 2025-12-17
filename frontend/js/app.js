@@ -79,10 +79,9 @@ const app = createApp({
 
         // Load full track list in background
         trackLogic.fetchTracks();
-      } catch (error) {
-        console.error('Failed to load track:', error);
+      } catch {
         // Show error toast and fall back to normal flow
-        showError('Spåret kunde inte hittas');
+        showError('Låten kunde inte hittas');
         trackLogic.fetchTracks();
       }
     };
@@ -130,6 +129,12 @@ const app = createApp({
       computedMin: filterLogic.computedMin,
       computedMax: filterLogic.computedMax,
       handleFilterStyle: filterLogic.handleFilterStyle,
+      minBounciness: filterLogic.minBounciness,
+      maxBounciness: filterLogic.maxBounciness,
+      bouncinessEnabled: filterLogic.bouncinessEnabled,
+      minArticulation: filterLogic.minArticulation,
+      maxArticulation: filterLogic.maxArticulation,
+      articulationEnabled: filterLogic.articulationEnabled,
       handlePlay,
       togglePlay,
       scrollTrigger,

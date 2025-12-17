@@ -100,6 +100,55 @@ export default {
               </div>
             </div>
 
+            <div class="border-t border-gray-200 pt-3">
+              <button @click="advancedExpanded = !advancedExpanded" class="w-full flex items-center justify-between text-xs font-medium text-gray-600 hover:text-gray-800">
+                <span>Avancerad sökning</span>
+                <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': advancedExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+
+              <transition name="slide">
+                <div v-if="advancedExpanded" class="mt-3 space-y-4">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <label class="text-xs font-medium text-gray-600">Studsighet</label>
+                      <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" v-model="localBouncinessEnabled" @change="$emit('update:bouncinessEnabled', localBouncinessEnabled)" class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                    <div :class="{ 'opacity-40 pointer-events-none': !localBouncinessEnabled }">
+                      <div class="flex gap-2 items-center mb-2">
+                        <span class="text-xs text-gray-500">Mjuk</span>
+                        <input type="range" v-model.number="localMinBounciness" @input="emitBounciness" min="0" max="1" step="0.1" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                        <span class="text-xs text-gray-500">Studsig</span>
+                      </div>
+                      <div class="text-center text-xs text-gray-500">{{ localMinBounciness.toFixed(1) }} - {{ localMaxBounciness.toFixed(1) }}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <label class="text-xs font-medium text-gray-600">Artikulation</label>
+                      <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" v-model="localArticulationEnabled" @change="$emit('update:articulationEnabled', localArticulationEnabled)" class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                    <div :class="{ 'opacity-40 pointer-events-none': !localArticulationEnabled }">
+                      <div class="flex gap-2 items-center mb-2">
+                        <span class="text-xs text-gray-500">Flytande</span>
+                        <input type="range" v-model.number="localMinArticulation" @input="emitArticulation" min="0" max="1" step="0.1" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                        <span class="text-xs text-gray-500">Tydlig</span>
+                      </div>
+                      <div class="text-center text-xs text-gray-500">{{ localMinArticulation.toFixed(1) }} - {{ localMaxArticulation.toFixed(1) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </transition>
+            </div>
+
             <button v-if="activeFilterCount > 0" @click="clearAllFilters" class="w-full py-2 text-sm text-red-600 hover:text-red-700 font-medium">Rensa alla filter</button>
           </div>
         </transition>
@@ -178,6 +227,55 @@ export default {
           </div>
         </div>
 
+        <div class="border-t border-gray-100 pt-4">
+          <button @click="advancedExpanded = !advancedExpanded" class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 mb-3">
+            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': advancedExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <span>Avancerad sökning</span>
+          </button>
+
+          <transition name="slide">
+            <div v-if="advancedExpanded" class="flex flex-wrap gap-4 items-end">
+              <div class="min-w-[200px]">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs font-medium text-gray-600">Studsighet</label>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" v-model="localBouncinessEnabled" @change="$emit('update:bouncinessEnabled', localBouncinessEnabled)" class="sr-only peer">
+                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                <div class="flex gap-3 items-center" :class="{ 'opacity-40 pointer-events-none': !localBouncinessEnabled }">
+                  <span class="text-xs text-gray-400">Mjuk</span>
+                  <div class="relative flex-1">
+                    <input type="range" v-model.number="localMinBounciness" @input="emitBounciness" min="0" max="1" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                  </div>
+                  <span class="text-xs text-gray-400">Studsig</span>
+                  <span class="text-sm whitespace-nowrap" :class="localBouncinessEnabled ? 'text-gray-600' : 'text-gray-400'">{{ localMinBounciness.toFixed(1) }}-{{ localMaxBounciness.toFixed(1) }}</span>
+                </div>
+              </div>
+
+              <div class="min-w-[200px]">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs font-medium text-gray-600">Artikulation</label>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" v-model="localArticulationEnabled" @change="$emit('update:articulationEnabled', localArticulationEnabled)" class="sr-only peer">
+                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                <div class="flex gap-3 items-center" :class="{ 'opacity-40 pointer-events-none': !localArticulationEnabled }">
+                  <span class="text-xs text-gray-400">Flytande</span>
+                  <div class="relative flex-1">
+                    <input type="range" v-model.number="localMinArticulation" @input="emitArticulation" min="0" max="1" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                  </div>
+                  <span class="text-xs text-gray-400">Tydlig</span>
+                  <span class="text-sm whitespace-nowrap" :class="localArticulationEnabled ? 'text-gray-600' : 'text-gray-400'">{{ localMinArticulation.toFixed(1) }}-{{ localMaxArticulation.toFixed(1) }}</span>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </div>
+
         <div v-if="activeFilterCount > 0" class="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-100">
           <span class="text-xs text-gray-500">Aktiva filter:</span>
           
@@ -215,7 +313,17 @@ export default {
             {{ computedMin }}-{{ computedMax }} BPM
             <button @click="clearTempo" class="hover:text-blue-900">×</button>
           </span>
-          
+
+          <span v-if="localBouncinessEnabled" class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+            Studsighet: {{ localMinBounciness.toFixed(1) }}-{{ localMaxBounciness.toFixed(1) }}
+            <button @click="clearBounciness" class="hover:text-purple-900">×</button>
+          </span>
+
+          <span v-if="localArticulationEnabled" class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+            Artikulation: {{ localMinArticulation.toFixed(1) }}-{{ localMaxArticulation.toFixed(1) }}
+            <button @click="clearArticulation" class="hover:text-purple-900">×</button>
+          </span>
+
           <button @click="clearAllFilters" class="ml-2 text-xs text-red-600 hover:text-red-700 font-medium">Rensa alla</button>
         </div>
       </div>
@@ -237,6 +345,13 @@ export default {
     tempoEnabled: { type: Boolean, default: false },
     computedMin: { type: Number, default: 120 },
     computedMax: { type: Number, default: 140 },
+    // Audio feature filters
+    minBounciness: { type: Number, default: null },
+    maxBounciness: { type: Number, default: null },
+    bouncinessEnabled: { type: Boolean, default: false },
+    minArticulation: { type: Number, default: null },
+    maxArticulation: { type: Number, default: null },
+    articulationEnabled: { type: Boolean, default: false },
   },
   emits: [
     'update:mainStyle',
@@ -249,10 +364,17 @@ export default {
     'update:maxDuration',
     'update:targetTempo',
     'update:tempoEnabled',
+    'update:minBounciness',
+    'update:maxBounciness',
+    'update:bouncinessEnabled',
+    'update:minArticulation',
+    'update:maxArticulation',
+    'update:articulationEnabled',
   ],
   data() {
     return {
       isExpanded: false,
+      advancedExpanded: false,
       localMainStyle: this.mainStyle,
       localSubStyle: this.subStyle,
       localSearch: this.search,
@@ -262,6 +384,12 @@ export default {
       localDuration: this.getDurationPreset(),
       localTargetTempo: this.targetTempo,
       localTempoEnabled: this.tempoEnabled,
+      localMinBounciness: this.minBounciness || 0,
+      localMaxBounciness: this.maxBounciness || 1,
+      localBouncinessEnabled: this.bouncinessEnabled,
+      localMinArticulation: this.minArticulation || 0,
+      localMaxArticulation: this.maxArticulation || 1,
+      localArticulationEnabled: this.articulationEnabled,
       searchTimeout: null,
     };
   },
@@ -280,6 +408,8 @@ export default {
       if (this.localSubStyle) count++; // Count sub
       if (this.localDuration) count++;
       if (this.localTempoEnabled) count++;
+      if (this.localBouncinessEnabled) count++;
+      if (this.localArticulationEnabled) count++;
       return count;
     },
     durationLabel() {
@@ -423,6 +553,22 @@ export default {
       this.localTempoEnabled = false;
       this.$emit('update:tempoEnabled', false);
     },
+    clearBounciness() {
+      this.localBouncinessEnabled = false;
+      this.$emit('update:bouncinessEnabled', false);
+    },
+    clearArticulation() {
+      this.localArticulationEnabled = false;
+      this.$emit('update:articulationEnabled', false);
+    },
+    emitBounciness() {
+      this.$emit('update:minBounciness', this.localMinBounciness);
+      this.$emit('update:maxBounciness', this.localMaxBounciness);
+    },
+    emitArticulation() {
+      this.$emit('update:minArticulation', this.localMinArticulation);
+      this.$emit('update:maxArticulation', this.localMaxArticulation);
+    },
     clearAllFilters() {
       this.clearSearch();
       this.clearSource();
@@ -432,6 +578,8 @@ export default {
       this.clearSubStyle();
       this.clearDuration();
       this.clearTempo();
+      this.clearBounciness();
+      this.clearArticulation();
     },
   },
 };
