@@ -22,6 +22,15 @@ const targetTempo = ref(130);
 const tempoEnabled = ref(false);
 const tempoWindow = 10;
 
+// Audio feature filters
+const minBounciness = ref(null);
+const maxBounciness = ref(null);
+const bouncinessEnabled = ref(false);
+
+const minArticulation = ref(null);
+const maxArticulation = ref(null);
+const articulationEnabled = ref(false);
+
 // --- ACTIONS ---
 const fetchStyleTree = async () => {
   if (isLoaded.value || isLoading.value) return;

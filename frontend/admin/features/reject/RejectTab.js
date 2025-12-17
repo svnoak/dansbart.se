@@ -5,16 +5,14 @@
 
 import { ref, watch, computed } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
 import { useRejectApi } from './api.js';
 import RejectionModal from './RejectionModal.js';
-import { showError } from '../../../js/hooks/useToast.js';
+import { showError, showToast } from '../../../js/hooks/useToast.js';
 
 export default {
   components: { RejectionModal },
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const rejectApi = useRejectApi(adminToken);
 
     // State

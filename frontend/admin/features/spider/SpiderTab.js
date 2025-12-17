@@ -5,12 +5,11 @@
 
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
 import { useSpiderApi } from './api.js';
 import { useRejectApi } from '../reject/api.js';
 import SpiderStats from './SpiderStats.js';
 import SpiderHistory from './SpiderHistory.js';
-import { showError } from '../../../js/hooks/useToast.js';
+import { showError, showToast } from '../../../js/hooks/useToast.js';
 
 export default {
   components: {
@@ -19,7 +18,6 @@ export default {
   },
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const spiderApi = useSpiderApi(adminToken);
     const rejectApi = useRejectApi(adminToken);
 

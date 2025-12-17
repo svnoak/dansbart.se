@@ -5,11 +5,10 @@
  */
 
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
 import { useLibraryApi } from './api.js';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import RejectionModal from './RejectionModal.js';
-import { showError } from '../../../js/hooks/useToast.js';
+import { showError, showToast } from '../../../js/hooks/useToast.js';
 
 export default {
   components: {
@@ -17,7 +16,6 @@ export default {
   },
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const api = useLibraryApi(adminToken);
 
     // State

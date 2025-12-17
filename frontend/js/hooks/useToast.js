@@ -3,16 +3,18 @@
  * Manages toast notification queue with auto-dismiss
  */
 
-const toasts = { value: [] };
+import { ref } from 'vue';
+
+const toasts = ref([]);
 let toastId = 0;
 
 /**
- * Standalone helper to show error toasts
+ * Standalone helper to show toasts
  * Can be imported and used anywhere without needing the composable
  */
-export function showError(message = 'Oj, något gick fel') {
+export function showToast(message, type = 'success') {
   const id = toastId++;
-  toasts.value.push({ id, message, type: 'error' });
+  toasts.value.push({ id, message, type });
 
   setTimeout(() => {
     toasts.value = toasts.value.filter(t => t.id !== id);
@@ -20,9 +22,17 @@ export function showError(message = 'Oj, något gick fel') {
 
   window.dispatchEvent(
     new CustomEvent('admin:toast', {
-      detail: { message, type: 'error' },
+      detail: { message, type },
     })
   );
+}
+
+/**
+ * Standalone helper to show error toasts
+ * Can be imported and used anywhere without needing the composable
+ */
+export function showError(message = 'Oj, något gick fel') {
+  showToast(message, 'error');
 }
 
 export function useToast() {

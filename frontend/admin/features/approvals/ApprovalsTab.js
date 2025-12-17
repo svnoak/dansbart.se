@@ -5,14 +5,12 @@
 
 import { ref, onMounted, computed } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
 import { useApprovalsApi } from './api.js';
-import { showError } from '../../../js/hooks/useToast.js';
+import { showError, showToast } from '../../../js/hooks/useToast.js';
 
 export default {
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const api = useApprovalsApi(adminToken);
 
     // State

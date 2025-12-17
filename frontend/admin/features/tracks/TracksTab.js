@@ -6,14 +6,13 @@
 
 import { showError } from '../../../js/hooks/useToast.js';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
+import { showToast } from '../../../js/hooks/useToast.js';
 import { useTracksApi } from './api.js';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 
 export default {
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const tracksApi = useTracksApi(adminToken);
 
     // State

@@ -27,6 +27,21 @@ def get_style_tree(db: Session = Depends(get_db)):
     service = TrackService(db)
     return service.get_style_hierarchy()
 
+@router.get("/tracks/{track_id}", response_model=TrackOut)
+def get_track_by_id(
+    track_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a single track by ID for deep linking.
+    Returns full track details including dance style, tempo, and playback links.
+    """
+    service = TrackService(db)
+    track = service.get_track_by_id(track_id)
+    if not track:
+        raise HTTPException(status_code=404, detail="Track not found")
+    return track
+
 @router.get("/tracks", response_model=Page[TrackOut])
 def get_tracks(
     main_style: str = Query(None, description="Broad category (e.g., Polska)"),
@@ -50,7 +65,7 @@ def get_tracks(
         main_style=main_style,
         sub_style=sub_style,
         style_confirmed=style_confirmed,
-        min_bpm=min_bpm, 
+        min_bpm=min_bpm,
         max_bpm=max_bpm,
         min_tempo=min_tempo,
         max_tempo=max_tempo,

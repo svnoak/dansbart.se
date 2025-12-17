@@ -8,6 +8,99 @@ class TrackService:
         self.db = db
         self.repo = TrackRepository(db)
 
+    def get_track_by_id(self, track_id: str):
+        """
+        Fetches a single track by ID for deep linking.
+        Returns the same format as get_playable_tracks but for a single track.
+        """
+        from app.core.models import Track
+
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track:
+            return None
+
+        # Filter broken links
+        valid_links = [l for l in track.playback_links if l.is_working]
+        if not valid_links:
+            return None
+
+        # Get primary style
+        primary_style = next((s for s in track.dance_styles if s.is_primary), None)
+
+        if primary_style:
+            final_style = primary_style.dance_style
+            final_sub_style = primary_style.sub_style
+            final_bpm = primary_style.effective_bpm
+            final_category = primary_style.tempo_category
+            final_confidence = primary_style.confidence
+            final_confirmations = primary_style.confirmation_count
+            final_verifications = primary_style.is_user_confirmed
+        else:
+            final_style = "Unclassified"
+            final_sub_style = None
+            final_bpm = 0
+            final_category = "Unknown"
+            final_confidence = 0.0
+            final_confirmations = 0
+            final_verifications = False
+
+        # Format artists
+        sorted_artists = sorted(track.artist_links, key=lambda x: 0 if x.role == 'primary' else 1)
+        artist_list = [{"id": l.artist.id, "name": l.artist.name, "role": l.role} for l in sorted_artists]
+
+        # Format album
+        album_data = None
+        if track.album:
+            album_data = {
+                "id": track.album.id,
+                "title": track.album.title
+            }
+
+        # Get feel tags
+        style_feel_map = self._get_global_feels([final_style])
+        tags = self._refine_tags_with_physics(style_feel_map.get(final_style, []), track.bounciness)
+
+        # Secondary styles
+        secondary_styles = [
+            {
+                "style": s.dance_style,
+                "sub_style": s.sub_style,
+                "effective_bpm": s.effective_bpm,
+                "tempo": get_tempo_description(s.dance_style, s.effective_bpm),
+                "confirmations": s.confirmation_count
+            }
+            for s in track.dance_styles if not s.is_primary
+        ]
+
+        # Tempo description
+        tempo_data = get_tempo_description(final_style, final_bpm) if final_bpm else None
+
+        return {
+            "id": str(track.id),
+            "title": track.title,
+            "artists": artist_list,
+            "album": album_data,
+            "dance_style": final_style,
+            "sub_style": final_sub_style,
+            "feel_tags": tags,
+            "effective_bpm": final_bpm,
+            "tempo": tempo_data,
+            "tempo_category": final_category,
+            "style_confidence": final_confidence,
+            "is_user_confirmed": final_verifications,
+            "style_confirmations": final_confirmations,
+            "secondary_styles": secondary_styles,
+            "bars": track.bars,
+            "sections": track.sections,
+            "section_labels": track.section_labels,
+            "swing_ratio": track.swing_ratio,
+            "bounciness": track.bounciness,
+            "has_vocals": track.has_vocals,
+            "duration": track.duration_ms,
+            "version_count": len(track.structure_versions),
+            "playback_links": [{"id": str(l.id), "platform": l.platform, "deep_link": l.deep_link} for l in valid_links]
+        }
+
     def get_style_hierarchy(self):
         """
         Returns a tree of styles based on ACTUAL DATA in TrackDanceStyle.
@@ -20,19 +113,19 @@ class TrackService:
             .distinct()
             .all()
         )
-        
+
         # used_combinations will look like:
         # [('Schottis', 'Reinländer'), ('Polska', 'Pols'), ('Schottis', None)]
 
         hierarchy = {}
-        
+
         for main, sub in used_combinations:
             if not main: continue
-            
+
             # Initialize the list for this Main Category if new
             if main not in hierarchy:
                 hierarchy[main] = set()
-            
+
             # If a sub_style exists for this row, add it to the list
             if sub:
                 hierarchy[main].add(sub)

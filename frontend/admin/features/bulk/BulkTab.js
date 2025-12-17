@@ -5,13 +5,12 @@
 
 import { ref } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
+import { showToast } from '../../../js/hooks/useToast.js';
 import { useBulkApi } from './api.js';
 
 export default {
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const bulkApi = useBulkApi(adminToken);
 
     // State

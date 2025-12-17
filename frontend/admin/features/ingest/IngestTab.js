@@ -5,13 +5,12 @@
 
 import { ref } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
+import { showToast } from '../../../js/hooks/useToast.js';
 import { useIngestApi } from './api.js';
 
 export default {
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const ingestApi = useIngestApi(adminToken);
 
     // State

@@ -8,7 +8,7 @@ import BulkTab from './features/bulk/BulkTab.js';
 import SpiderTab from './features/spider/SpiderTab.js';
 import ApprovalsTab from './features/approvals/ApprovalsTab.js';
 import AnalyticsTab from './features/analytics/AnalyticsTab.js';
-import Toast from './shared/components/Toast.js';
+import Toast from '../js/components/toasts/Toast.js';
 import StyleKeywordsTab from './features/style/StyleKeywordsTab.js';
 
 export default {

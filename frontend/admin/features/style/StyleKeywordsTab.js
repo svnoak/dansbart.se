@@ -5,15 +5,13 @@
 
 import { ref, reactive, onMounted } from 'vue';
 import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
-import { useToast } from '../../shared/composables/useToast.js';
 import { useStyleKeywordsApi } from './api.js';
-import { showError } from '../../../js/hooks/useToast.js';
+import { showError, showToast } from '../../../js/hooks/useToast.js';
 
 export default {
   name: 'StyleKeywordsTab',
   setup() {
     const { adminToken } = useAdminAuth();
-    const { showToast } = useToast();
     const api = useStyleKeywordsApi(adminToken);
 
     // Data

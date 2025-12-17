@@ -3,6 +3,7 @@ import { useTracks } from './hooks/tracks.js';
 import { useFilters } from './hooks/filter.js';
 import { usePlayer } from './hooks/player.js';
 import { trackSession } from './analytics.js';
+import { showError } from './hooks/useToast.js';
 
 import './main.css';
 
@@ -66,8 +67,39 @@ const app = createApp({
       }
     };
 
+    const loadAndPlayTrack = async trackId => {
+      try {
+        const response = await fetch(`/api/tracks/${trackId}`);
+        if (!response.ok) throw new Error('Track not found');
+
+        const track = await response.json();
+
+        // Start playing this track immediately
+        playerLogic.playContext([track], 0);
+
+        // Load full track list in background
+        trackLogic.fetchTracks();
+      } catch (error) {
+        console.error('Failed to load track:', error);
+        // Show error toast and fall back to normal flow
+        showError('Spåret kunde inte hittas');
+        trackLogic.fetchTracks();
+      }
+    };
+
     onMounted(() => {
-      trackLogic.fetchTracks();
+      // Check for track deep link
+      const urlParams = new URLSearchParams(window.location.search);
+      const trackId = urlParams.get('track');
+
+      if (trackId) {
+        // Load and play specific track
+        loadAndPlayTrack(trackId);
+      } else {
+        // Normal flow: load track list
+        trackLogic.fetchTracks();
+      }
+
       trackSession();
     });
 

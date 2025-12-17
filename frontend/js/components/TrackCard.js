@@ -2,6 +2,7 @@ import AddLinkModal from './modals/AddLinkModal.js';
 import FlagTrackModal from './modals/FlagTrackModal.js';
 import SparklesIcon from '../icons/SparklesIcon.js';
 import FlagIcon from '../icons/FlagIcon.js';
+import { showToast } from '../hooks/useToast.js';
 
 export default {
   props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
@@ -138,6 +139,11 @@ export default {
                     <flag-icon class="w-3 h-3" />
                     <span>Rapportera</span>
                 </button>
+
+                <button @click.stop="shareTrack" class="text-xs text-gray-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Dela spår">
+                    <span>🔗</span>
+                    <span>Dela</span>
+                </button>
             </div>
         </div>
 
@@ -252,6 +258,28 @@ export default {
         this.$emit('play', this.track, this.primarySource);
       } else if (this.primarySource) {
         this.$emit('play', this.track, this.primarySource);
+      }
+    },
+    shareTrack() {
+      const shareUrl = `${window.location.origin}/?track=${this.track.id}`;
+
+      if (navigator.share) {
+        // Use native share on mobile
+        navigator
+          .share({
+            title: this.track.title,
+            text: `${this.track.title} - ${this.artistDisplayString}`,
+            url: shareUrl,
+          })
+          .catch(() => {
+            // User cancelled share, ignore
+          });
+      } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          // Show toast notification
+          showToast('Länk kopierad!', 'success');
+        });
       }
     },
   },
