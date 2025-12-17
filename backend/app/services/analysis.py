@@ -92,7 +92,7 @@ class AnalysisService:
             print(f"   📎 Using existing YouTube link: {existing_link.deep_link}")
             result = self.fetcher.fetch_track_audio(
                 track_id=str(track.id), 
-                query="",  # Not needed for direct download
+                query="",
                 expected_duration_ms=track.duration_ms,
                 track_title=track.title,
                 artist_name=artist_name,
@@ -131,7 +131,7 @@ class AnalysisService:
             data = self.analyzer.analyze_file(file_path, context)
 
             end_time = time.time()
-            print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.") # <-- Shows duration
+            print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.")
 
             if data:
                 # 3. SAVE RAW ANALYSIS
@@ -143,7 +143,7 @@ class AnalysisService:
 
                 # --- Basic Audio Stats ---
                 track.tempo_bpm = data.get('tempo_bpm')
-                track.duration_ms = int(result.get('duration', 0) * 1000)
+                track.duration_ms = result.get('actual_duration_ms', 0)
                 track.loudness = data.get('loudness_lufs') 
                 track.is_instrumental = data.get('is_likely_instrumental', False)
 

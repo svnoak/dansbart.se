@@ -78,7 +78,7 @@ class AdminPendingApprovalService:
 
         # Mark as approved
         artist.status = 'approved'
-        artist.reviewed_at = datetime.utcnow()
+        artist.reviewed_at = datetime.timezone.now()
 
         try:
             # Ingest the artist
