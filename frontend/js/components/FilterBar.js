@@ -178,25 +178,25 @@ export default {
           </div>
 
           <div class="flex items-center gap-2">
-              <label class="text-xs font-medium text-gray-600 mb-2 block">Sång</label>
+              <span class="text-sm text-gray-500">Sång:</span>
               <div class="flex rounded-lg overflow-hidden border border-gray-200 bg-white">
-                <button 
+                <button
                   @click="setVocals('')"
-                  class="flex-1 px-3 py-2 text-sm font-medium transition-colors"
+                  class="px-3 py-1.5 text-sm font-medium transition-colors"
                   :class="localVocals === '' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
                 >
                   Alla
                 </button>
-                <button 
+                <button
                   @click="setVocals('instrumental')"
-                  class="flex-1 px-3 py-2 text-sm font-medium transition-colors border-l border-gray-200"
+                  class="px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-200"
                   :class="localVocals === 'instrumental' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
                 >
                   🎻 Instrumental
                 </button>
-                <button 
+                <button
                   @click="setVocals('vocals')"
-                  class="flex-1 px-3 py-2 text-sm font-medium transition-colors border-l border-gray-200"
+                  class="px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-200"
                   :class="localVocals === 'vocals' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
                 >
                   🎤 Sång
