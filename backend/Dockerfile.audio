@@ -30,8 +30,11 @@ RUN pip install --no-cache-dir --upgrade pip
 # Install build dependencies first (needed for madmom compilation)
 RUN pip install --no-cache-dir numpy Cython
 
+# Copy neckenml-analyzer package (needed for -e ../neckenml-analyzer in requirements)
+COPY neckenml-analyzer /neckenml-analyzer
+
 # Install audio worker requirements
-COPY requirements.audio.txt requirements.common.txt ./
+COPY backend/requirements.audio.txt backend/requirements.common.txt ./
 RUN pip install --no-cache-dir -r requirements.audio.txt
 
 # 5. Create non-root user for running Celery
@@ -39,10 +42,10 @@ RUN useradd -m -u 1000 celeryuser && \
     chown -R celeryuser:celeryuser /app
 
 # 6. Copy Application Code
-COPY --chown=celeryuser:celeryuser . .
+COPY --chown=celeryuser:celeryuser backend/ .
 
 # 7. Copy and set up entrypoint script (for DB migrations)
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Switch to non-root user

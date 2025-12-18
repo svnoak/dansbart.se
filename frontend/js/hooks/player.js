@@ -1,6 +1,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { useConsent } from '../consent.js';
 import { createPlaybackTracker } from '../analytics.js';
+import { showError } from './useToast.js';
 
 // GLOBAL STATE
 const queue = ref([]);
@@ -33,8 +34,8 @@ const saveQueueToStorage = () => {
     const trackIds = queue.value.map(t => t.id);
     localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(trackIds));
     localStorage.setItem(QUEUE_INDEX_KEY, currentIndex.value.toString());
-  } catch (e) {
-    console.warn('Failed to save queue to localStorage:', e);
+  } catch {
+    showError();
   }
 };
 
@@ -73,8 +74,8 @@ const loadQueueFromStorage = async () => {
         currentIndex.value = validTracks.length - 1;
       }
     }
-  } catch (e) {
-    console.warn('Failed to load queue from localStorage:', e);
+  } catch {
+    showError();
   }
 };
 

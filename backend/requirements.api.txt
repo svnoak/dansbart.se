@@ -5,5 +5,8 @@
 
 -r requirements.common.txt
 
+# neckenml Analyzer - Core package only (no audio dependencies)
+-e ../neckenml-analyzer
+
 # Web Server
 uvicorn[standard]         # ASGI server for FastAPI

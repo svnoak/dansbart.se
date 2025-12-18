@@ -15,14 +15,19 @@ WORKDIR /app
 
 # 3. Install Python Dependencies
 RUN pip install --no-cache-dir --upgrade pip
-COPY requirements.api.txt requirements.common.txt ./
+
+# Copy neckenml-analyzer package (needed for -e ../neckenml-analyzer in requirements)
+COPY neckenml-analyzer /neckenml-analyzer
+
+# Install dependencies
+COPY backend/requirements.api.txt backend/requirements.common.txt ./
 RUN pip install --no-cache-dir -r requirements.api.txt
 
 # 4. Copy Application Code
-COPY . .
+COPY backend/ .
 
 # 5. Copy and set up entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
