@@ -6,7 +6,7 @@ import { showToast } from '../hooks/useToast.js';
 
 export default {
   props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
-  emits: ['play', 'stop', 'refresh', 'filter-style'],
+  emits: ['play', 'stop', 'refresh', 'filter-style', 'show-similar'],
   components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
 
   data() {
@@ -99,6 +99,9 @@ export default {
                 <span class="text-gray-500 text-xs flex items-center font-medium border border-gray-100 bg-gray-50 px-2 py-1 rounded-full whitespace-nowrap">
                     {{ tempoLabel }}
                 </span>
+
+                <span v-if="track.has_vocals" class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full flex items-center gap-1">🎤 Vocals</span>
+                <span v-else class="px-2 py-1 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full flex items-center gap-1">🎻 Instr.</span>
                 
                 <span v-if="formattedDuration" class="px-2 py-1 text-gray-400 text-xs font-mono flex items-center border border-gray-100 bg-gray-50 rounded-full">{{ formattedDuration }}</span>
             </div>
@@ -143,6 +146,11 @@ export default {
                 <button @click.stop="shareTrack" class="text-xs text-gray-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Dela låt">
                     <span>🔗</span>
                     <span>Dela</span>
+                </button>
+
+                <button @click.stop="$emit('show-similar', track.id)" class="text-xs text-gray-400 hover:text-purple-600 border border-transparent hover:border-purple-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Hitta liknande låtar">
+                    <span>🎵</span>
+                    <span>Liknande</span>
                 </button>
             </div>
         </div>

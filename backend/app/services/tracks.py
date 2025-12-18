@@ -354,5 +354,187 @@ class TrackService:
             if "Sviktande" in tags:
                 tags.remove("Sviktande")
                 tags.insert(0, "Sviktande")
-        
+
         return tags[:3]
+
+    def get_similar_tracks(self, track_id: str, limit: int = 10, style_filter: str = 'same'):
+        """
+        Find similar tracks using pgvector cosine similarity on audio embeddings.
+        Returns source track info and list of similar tracks with similarity scores.
+
+        Args:
+            track_id: The source track ID
+            limit: Number of similar tracks to return
+            style_filter: 'same' (only same style), 'similar' (mix of styles), 'any' (all styles)
+        """
+        from app.core.models import Track
+        from sqlalchemy import text
+
+        # Get the source track
+        source_track = self.get_track_by_id(track_id)
+        if not source_track:
+            return None
+
+        # Get the embedding and primary style from database
+        track_obj = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track_obj or track_obj.embedding is None:
+            return None
+
+        # Get the primary dance style for filtering
+        primary_style = next((s for s in track_obj.dance_styles if s.is_primary), None)
+        source_style = primary_style.dance_style if primary_style else None
+
+        # Format embedding as string for pgvector: '[1.0,2.0,3.0]'
+        embedding_str = '[' + ','.join(str(x) for x in track_obj.embedding) + ']'
+
+        # Build query based on style filter
+        if style_filter == 'same' and source_style:
+            # Only tracks with the same dance style
+            # Since is_primary=true, each track should appear once
+            similar_results = self.db.execute(
+                text("""
+                    SELECT t.id, (1 - (t.embedding <=> CAST(:target_embedding AS vector))) as similarity
+                    FROM tracks t
+                    INNER JOIN track_dance_styles tds ON t.id = tds.track_id
+                    WHERE t.id != :track_id
+                      AND t.embedding IS NOT NULL
+                      AND t.is_flagged = false
+                      AND t.processing_status IN ('DONE', 'FAILED')
+                      AND tds.dance_style = :source_style
+                      AND tds.is_primary = true
+                    ORDER BY t.embedding <=> CAST(:target_embedding AS vector)
+                    LIMIT :limit
+                """),
+                {
+                    "target_embedding": embedding_str,
+                    "track_id": track_id,
+                    "source_style": source_style,
+                    "limit": limit
+                }
+            ).fetchall()
+
+        elif style_filter == 'similar' and source_style:
+            # Mix: 70% same style, 30% variety
+            same_limit = int(limit * 0.7)
+            variety_limit = limit - same_limit
+
+            # Get same style tracks
+            same_style_results = self.db.execute(
+                text("""
+                    SELECT t.id, (1 - (t.embedding <=> CAST(:target_embedding AS vector))) as similarity
+                    FROM tracks t
+                    INNER JOIN track_dance_styles tds ON t.id = tds.track_id
+                    WHERE t.id != :track_id
+                      AND t.embedding IS NOT NULL
+                      AND t.is_flagged = false
+                      AND t.processing_status IN ('DONE', 'FAILED')
+                      AND tds.dance_style = :source_style
+                      AND tds.is_primary = true
+                    ORDER BY t.embedding <=> CAST(:target_embedding AS vector)
+                    LIMIT :limit
+                """),
+                {
+                    "target_embedding": embedding_str,
+                    "track_id": track_id,
+                    "source_style": source_style,
+                    "limit": same_limit
+                }
+            ).fetchall()
+
+            same_style_ids = [str(row.id) for row in same_style_results]
+
+            # Get variety tracks (excluding same style tracks we already have)
+            if same_style_ids:
+                # Build exclusion list as comma-separated string for IN clause
+                exclude_placeholders = ','.join([f':exclude_{i}' for i in range(len(same_style_ids))])
+                variety_query = f"""
+                    SELECT t.id, (1 - (t.embedding <=> CAST(:target_embedding AS vector))) as similarity
+                    FROM tracks t
+                    INNER JOIN track_dance_styles tds ON t.id = tds.track_id
+                    WHERE t.id != :track_id
+                      AND t.id NOT IN ({exclude_placeholders})
+                      AND t.embedding IS NOT NULL
+                      AND t.is_flagged = false
+                      AND t.processing_status IN ('DONE', 'FAILED')
+                      AND tds.dance_style != :source_style
+                      AND tds.is_primary = true
+                    ORDER BY t.embedding <=> CAST(:target_embedding AS vector)
+                    LIMIT :limit
+                """
+
+                params = {
+                    "target_embedding": embedding_str,
+                    "track_id": track_id,
+                    "source_style": source_style,
+                    "limit": variety_limit
+                }
+                # Add each exclude ID as a separate parameter
+                for i, exclude_id in enumerate(same_style_ids):
+                    params[f'exclude_{i}'] = exclude_id
+
+                variety_results = self.db.execute(text(variety_query), params).fetchall()
+            else:
+                # No same-style tracks found, just get variety tracks
+                variety_results = self.db.execute(
+                    text("""
+                        SELECT t.id, (1 - (t.embedding <=> CAST(:target_embedding AS vector))) as similarity
+                        FROM tracks t
+                        INNER JOIN track_dance_styles tds ON t.id = tds.track_id
+                        WHERE t.id != :track_id
+                          AND t.embedding IS NOT NULL
+                          AND t.is_flagged = false
+                          AND t.processing_status IN ('DONE', 'FAILED')
+                          AND tds.dance_style != :source_style
+                          AND tds.is_primary = true
+                        ORDER BY t.embedding <=> CAST(:target_embedding AS vector)
+                        LIMIT :limit
+                    """),
+                    {
+                        "target_embedding": embedding_str,
+                        "track_id": track_id,
+                        "source_style": source_style,
+                        "limit": variety_limit
+                    }
+                ).fetchall()
+
+            # Combine results
+            similar_results = list(same_style_results) + list(variety_results)
+
+        else:
+            # 'any' filter or no source style - pure vector similarity
+            similar_results = self.db.execute(
+                text("""
+                    SELECT id, (1 - (embedding <=> CAST(:target_embedding AS vector))) as similarity
+                    FROM tracks
+                    WHERE id != :track_id
+                      AND embedding IS NOT NULL
+                      AND is_flagged = false
+                      AND processing_status IN ('DONE', 'FAILED')
+                    ORDER BY embedding <=> CAST(:target_embedding AS vector)
+                    LIMIT :limit
+                """),
+                {
+                    "target_embedding": embedding_str,
+                    "track_id": track_id,
+                    "limit": limit
+                }
+            ).fetchall()
+
+        # Fetch full track objects for the similar tracks
+        similar_track_ids = [str(row.id) for row in similar_results]
+        similarity_scores = {str(row.id): float(row.similarity) for row in similar_results}
+
+        # Get full track data using the existing method
+        similar_tracks = []
+        for track_id_str in similar_track_ids:
+            track_data = self.get_track_by_id(track_id_str)
+            if track_data:
+                # Add similarity score to the track data
+                track_data["similarity_score"] = round(similarity_scores[track_id_str], 3)
+                similar_tracks.append(track_data)
+
+        return {
+            "source_track": source_track,
+            "similar_tracks": similar_tracks,
+            "total": len(similar_tracks)
+        }

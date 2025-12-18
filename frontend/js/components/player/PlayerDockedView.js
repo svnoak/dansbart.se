@@ -62,10 +62,10 @@ export default {
   },
 
   template: /*html*/ `
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-50 flex flex-col transition-all duration-300"
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-up z-[120] flex flex-col transition-all duration-300"
          :class="isExpanded ? 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto' : 'opacity-100'">
          
-        <div class="hidden md:flex fixed right-4 w-80 z-40 flex-col gap-2 transition-all duration-300"
+        <div class="hidden md:flex fixed right-4 w-80 z-120 flex-col gap-2 transition-all duration-300"
              :style="{ bottom: nudgeBottomOffset + 'px' }">
             <smart-nudge :track="currentTrack" :is-playing="isPlaying"></smart-nudge>
             <section-voting v-if="structureMode == 'sections'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
@@ -73,7 +73,7 @@ export default {
 
         <div class="hidden md:block relative w-full">
             <!-- Spotify hint - sits above the progress bar, hides when full track plays -->
-            <div v-if="showSpotifyHint" class="absolute -top-8 left-1/2 -translate-x-1/2 z-10">
+            <div v-if="showSpotifyHint" class="absolute -top-8 left-1/2 -translate-x-1/2 z-120">
                 <span class="text-[10px] text-gray-500 bg-green-50 px-3 py-1 rounded-full border border-green-200">
                     Klicka i Spotify-spelaren för hela låten
                 </span>
@@ -84,7 +84,7 @@ export default {
         <div class="md:hidden w-full h-1 bg-gray-200 relative">
             <div class="h-full bg-indigo-600" :style="{ width: (duration ? (visualTime/duration)*100 : 0) + '%' }"></div>
             <!-- Spotify hint for mobile docked view -->
-            <div v-if="showSpotifyHint" class="absolute -top-6 left-1/2 -translate-x-1/2 z-10">
+            <div v-if="showSpotifyHint" class="absolute -top-6 left-1/2 -translate-x-1/2 z-120">
                 <span class="text-[9px] text-gray-500 bg-green-50 px-2 py-0.5 rounded-full border border-green-200 whitespace-nowrap">
                     Klicka i Spotify-spelaren
                 </span>

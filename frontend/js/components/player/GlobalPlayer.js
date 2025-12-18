@@ -596,7 +596,7 @@ export default {
              class="fixed bg-black shadow-2xl transition-all duration-300 ease-in-out overflow-hidden border border-gray-700"
              :class="[
                  (activeSource === 'youtube' && (isPlaying || (isExpanded && windowWidth < 768))) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-                 (isExpanded && windowWidth < 768) ? 'z-[101] rounded-xl' : 'z-[60] rounded-lg'
+                 (isExpanded && windowWidth < 768) ? 'z-[101] rounded-xl' : 'z-[120] rounded-lg'
              ]"
              :style="(isExpanded && windowWidth < 768) ? {
                  top: '120px', 

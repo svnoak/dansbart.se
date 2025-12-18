@@ -176,7 +176,34 @@ export default {
               <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
-        </div>
+
+          <div class="flex items-center gap-2">
+              <label class="text-xs font-medium text-gray-600 mb-2 block">Sång</label>
+              <div class="flex rounded-lg overflow-hidden border border-gray-200 bg-white">
+                <button 
+                  @click="setVocals('')"
+                  class="flex-1 px-3 py-2 text-sm font-medium transition-colors"
+                  :class="localVocals === '' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                >
+                  Alla
+                </button>
+                <button 
+                  @click="setVocals('instrumental')"
+                  class="flex-1 px-3 py-2 text-sm font-medium transition-colors border-l border-gray-200"
+                  :class="localVocals === 'instrumental' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                >
+                  🎻 Instrumental
+                </button>
+                <button 
+                  @click="setVocals('vocals')"
+                  class="flex-1 px-3 py-2 text-sm font-medium transition-colors border-l border-gray-200"
+                  :class="localVocals === 'vocals' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                >
+                  🎤 Sång
+                </button>
+              </div>
+            </div>
+        </div>           
 
         <div v-if="!localSearch" class="flex flex-wrap gap-4 items-end">
           

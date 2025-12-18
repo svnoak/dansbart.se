@@ -86,6 +86,28 @@ def get_tracks(
         offset=offset
     )
 
+@router.get("/tracks/{track_id}/similar")
+def get_similar_tracks(
+    track_id: str,
+    limit: int = Query(10, ge=1, le=50, description="Number of similar tracks to return"),
+    style_filter: str = Query("same", description="Style filter: 'same', 'similar', or 'any'"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get tracks similar to the given track using vector embeddings.
+    Uses pgvector cosine similarity on 216-dimensional audio embeddings.
+
+    Style filters:
+    - same: Only tracks with the same dance style
+    - similar: Mix of same and related styles (70% same, 30% variety)
+    - any: All styles based purely on audio similarity
+    """
+    service = TrackService(db)
+    similar = service.get_similar_tracks(track_id, limit, style_filter)
+    if not similar:
+        raise HTTPException(status_code=404, detail="Track not found or has no embeddings")
+    return similar
+
 @router.post("/tracks/{track_id}/feedback")
 def submit_track_feedback(
     track_id: str, 

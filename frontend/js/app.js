@@ -14,6 +14,7 @@ import StatsDashboard from './components/StatsDashboard.js';
 import Header from './components/Header.js';
 import CookieConsent from './components/CookieConsent.js';
 import Toast from './components/toasts/Toast.js';
+import SimilarTracksModal from './components/SimilarTracksModal.js';
 
 const app = createApp({
   components: {
@@ -24,6 +25,7 @@ const app = createApp({
     'site-header': Header,
     'cookie-consent': CookieConsent,
     'toast-container': Toast,
+    'similar-tracks-modal': SimilarTracksModal,
   },
   setup() {
     const filterLogic = useFilters();
@@ -40,6 +42,35 @@ const app = createApp({
       if (index !== -1) {
         playerLogic.playContext(list, index, sourcePreference);
       }
+    };
+
+    // Similar Tracks Modal
+    const similarModalTrackId = ref(null);
+    const similarTracks = ref([]);
+
+    const showSimilarModal = (trackId) => {
+      similarModalTrackId.value = trackId;
+    };
+
+    const closeSimilarModal = () => {
+      similarModalTrackId.value = null;
+      similarTracks.value = [];
+    };
+
+    const handleSimilarPlay = (track, sourcePreference = null) => {
+      // For similar tracks, create a play context from the similar tracks list
+      // If the track is in the similar tracks list, use that context
+      // Otherwise, just play the single track
+      if (similarTracks.value.length > 0) {
+        const index = similarTracks.value.findIndex(t => t.id === track.id);
+        if (index !== -1) {
+          playerLogic.playContext(similarTracks.value, index, sourcePreference);
+          return;
+        }
+      }
+
+      // Fallback: play just this track
+      playerLogic.playContext([track], 0, sourcePreference);
     };
 
     const createObserver = () => {
@@ -138,6 +169,11 @@ const app = createApp({
       handlePlay,
       togglePlay,
       scrollTrigger,
+      similarModalTrackId,
+      similarTracks,
+      showSimilarModal,
+      closeSimilarModal,
+      handleSimilarPlay,
     };
   },
 });
