@@ -118,8 +118,11 @@ class ClassificationHead:
         self.model.fit(X_scaled, y)
 
         # 3. Save
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+
         joblib.dump({
-            'model': self.model, 
+            'model': self.model,
             'scaler': self.scaler,
             'version': self.FEATURE_VERSION
         }, self.model_path)

@@ -87,13 +87,18 @@ class RhythmExtractor:
         if len(beats) > 12:
             ternary_confidence = self._calculate_ternary_confidence(beats)
 
+        # Determine beats per bar based on ternary confidence
+        # High confidence (>0.65) means it's likely 3/4 time (vals, polska, hambo)
+        # Otherwise default to 4/4 time (schottis, polka, etc.)
+        beats_per_bar = 3 if ternary_confidence > 0.65 else 4
+
         # Create a simplified beat_info array [time, beat_number]
         beat_info = []
         measure_count = 1
         for t in beats:
             beat_info.append([t, measure_count])
             measure_count += 1
-            if measure_count > 4: measure_count = 1 
+            if measure_count > beats_per_bar: measure_count = 1
 
         return audio, beats, np.array(beat_info), ternary_confidence
     

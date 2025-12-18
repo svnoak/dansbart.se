@@ -3,6 +3,7 @@ from sqlalchemy import func, or_, and_
 from app.core.models import Track, TrackStyleVote, TrackDanceStyle, TrackStructureVersion, DanceMovementFeedback, TrackFeelVote, StyleKeyword
 from app.core.music_theory import categorize_tempo
 import uuid
+import numpy as np
 
 class FeedbackService:
     def __init__(self, db: Session):
@@ -11,6 +12,23 @@ class FeedbackService:
     # =========================================================================
     #  PART 1: STYLE VOTING (Genre & Tempo)
     # =========================================================================
+
+    # =========================================================================
+    #  METER DEFINITIONS
+    # =========================================================================
+
+    # Styles that use 3/4 time signature
+    TERNARY_STYLES = {
+        'vals', 'waltz', 'polska', 'pols', 'hambo', 'hamburska',
+        'mazurka', 'masurka', 'springlek', 'bondpolska',
+        'slängpolska', 'släng', 'hoppvals'
+    }
+
+    # Styles that use 4/4 or 2/4 time signature
+    BINARY_STYLES = {
+        'schottis', 'reinländer', 'snoa', 'polka',
+        'gånglåt', 'marsch'
+    }
 
     def _resolve_style_hierarchy(self, input_style: str) -> tuple[str, str | None]:
         """
@@ -168,25 +186,38 @@ class FeedbackService:
 
         # --- STEP 5: RUN ELECTION ---
         self._elect_primary_style(track.id)
-        
+
+        # --- STEP 5.5: RECALCULATE BARS IF METER CHANGED ---
+        # Check if the confirmed style requires a different time signature
+        self._recalculate_bars_for_style(track.id, final_main)
+
         self.db.commit()
 
         # --- STEP 6: RETURN WINNER ---
+        # Refresh track to get updated bars if they were recalculated
+        self.db.refresh(track)
+
         winner = self.db.query(TrackDanceStyle).filter(
             TrackDanceStyle.track_id == track.id,
             TrackDanceStyle.is_primary == True
         ).first()
 
         if winner:
+            # Get meter from analysis source if available
+            source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
+            meter = source.raw_data.get('meter', '4/4') if source else '4/4'
+
             return {
                 "dance_style": winner.dance_style,
                 "sub_style": winner.sub_style,
                 "effective_bpm": winner.effective_bpm,
                 "tempo_category": winner.tempo_category,
                 "style_confidence": 1.0,
-                "bpm_multiplier": winner.bpm_multiplier
+                "bpm_multiplier": winner.bpm_multiplier,
+                "bars": track.bars,  # Include updated bars in response
+                "meter": meter  # Include updated meter in response
             }
-        
+
         return None
 
     def _elect_primary_style(self, track_id: str):
@@ -319,6 +350,83 @@ class FeedbackService:
                 track.sections = data.get("sections")
                 track.section_labels = data.get("labels")
             self.db.commit()
+
+    def _recalculate_bars_for_style(self, track_id: str, dance_style: str) -> bool:
+        """
+        Recalculates bars when user confirms a style that requires a different time signature.
+        Uses stored beat_times from analysis to regenerate bars with correct meter.
+        Returns True if bars were recalculated, False if not needed or not possible.
+        """
+        track = self.db.query(Track).filter(Track.id == track_id).first()
+        if not track:
+            return False
+
+        # Get stored beat times from analysis
+        source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
+        if not source or 'beat_times' not in source.raw_data:
+            print(f"   ⚠️ No beat_times found for track {track_id}, cannot recalculate bars")
+            return False
+
+        beat_times = source.raw_data.get('beat_times', [])
+        if len(beat_times) < 3:
+            return False
+
+        # Determine the correct meter for this style
+        style_lower = dance_style.lower()
+        is_ternary = style_lower in self.TERNARY_STYLES
+
+        # Get current bars to check if recalculation is needed
+        current_bars = track.bars or []
+        current_meter = self._infer_meter_from_bars(current_bars, beat_times)
+
+        # Check if recalculation is needed
+        needs_recalc = (is_ternary and current_meter == 4) or (not is_ternary and current_meter == 3)
+
+        if not needs_recalc:
+            print(f"   ✓ Bars already match {dance_style} time signature ({current_meter}/4)")
+            return False
+
+        # Recalculate bars with correct meter
+        beats_per_bar = 3 if is_ternary else 4
+        new_bars = [beat_times[i] for i in range(0, len(beat_times), beats_per_bar)]
+        new_meter = f"{beats_per_bar}/4"
+
+        # Update track
+        track.bars = new_bars
+
+        # Update raw_data with new meter info
+        if source:
+            source.raw_data['meter'] = new_meter
+            source.raw_data['bars'] = new_bars
+
+        self.db.flush()
+        print(f"   ✓ Recalculated bars for {dance_style}: {current_meter}/4 → {beats_per_bar}/4 ({len(new_bars)} bars)")
+        return True
+
+    def _infer_meter_from_bars(self, bars: list[float], beat_times: list[float]) -> int:
+        """
+        Infers the current meter (3 or 4) by checking spacing between bars and beats.
+        Returns 3 for ternary, 4 for binary/quaternary.
+        """
+        if not bars or len(bars) < 2 or not beat_times or len(beat_times) < 4:
+            return 4  # Default assumption
+
+        # Calculate average beats per bar
+        beats_per_bar_samples = []
+        for i in range(len(bars) - 1):
+            bar_start = bars[i]
+            bar_end = bars[i + 1]
+            # Count beats in this bar
+            beats_in_bar = sum(1 for bt in beat_times if bar_start <= bt < bar_end)
+            if beats_in_bar > 0:
+                beats_per_bar_samples.append(beats_in_bar)
+
+        if not beats_per_bar_samples:
+            return 4
+
+        avg_beats = np.mean(beats_per_bar_samples)
+        # Round to nearest common meter
+        return 3 if avg_beats < 3.5 else 4
 
     def _linearize_bars(self, raw_taps: list[float], duration_ms: int) -> list[float]:
         if not raw_taps or len(raw_taps) < 2: return raw_taps

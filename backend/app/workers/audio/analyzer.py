@@ -193,7 +193,7 @@ class AudioAnalyzer:
 
             # --- 9. RETURN ---
             print(f"   [ANALYSIS] Returning metrics...")
-            
+
             polska_score = folk_features.get('polska_score', 0.0)
             hambo_score = folk_features.get('hambo_score', 0.0)
             bpm_stability = folk_features.get('bpm_stability', 0.0)
@@ -212,8 +212,8 @@ class AudioAnalyzer:
                 "articulation": articulation,
                 "bounciness": bounciness,
                 "avg_beat_ratios": [
-                    folk_features["r1_mean"], 
-                    folk_features["r2_mean"], 
+                    folk_features["r1_mean"],
+                    folk_features["r2_mean"],
                     folk_features["r3_mean"]
                 ],
                 "punchiness": folk_features["punchiness"],
@@ -222,6 +222,7 @@ class AudioAnalyzer:
                 "ternary_confidence": ternary_conf,
                 "meter": f"{meter_numerator}/4",
                 "bars": [float(b) for b in bars],
+                "beat_times": [float(b) for b in beat_times],  # Store for recalculation
                 "sections": [float(s) for s in sections],
                 "section_labels": section_labels,
                 "folk_authenticity_score": float(folk_auth_result['folk_authenticity_score']),
