@@ -235,6 +235,200 @@ def get_library_stats(db: Session = Depends(get_db)):
     service = StatsService(db)
     return service.get_global_stats()
 
+# ========== DISCOVERY ENDPOINTS ==========
+
+@router.get("/discovery/popular", response_model=list[TrackOut])
+def get_popular_tracks(
+    limit: int = Query(6, ge=1, le=20, description="Number of tracks to return"),
+    days: int = Query(7, ge=1, le=90, description="Days to look back for popularity"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get most played tracks with good completion rates for discovery page.
+    Uses playback analytics to surface engaging tracks.
+    """
+    analytics_service = AnalyticsService
+    track_service = TrackService(db)
+
+    # Get most played tracks with completion rate
+    analytics_data = analytics_service.get_most_played_tracks_with_completion(
+        db, limit=limit * 2, days=days  # Get 2x to filter for quality
+    )
+
+    # Filter for tracks with good completion rate (>50%)
+    quality_tracks = [
+        t for t in analytics_data
+        if t.get('completion_rate', 0) > 50
+    ][:limit]
+
+    # Get full track data
+    track_ids = [t['track_id'] for t in quality_tracks]
+    tracks = []
+    for track_id in track_ids:
+        track = track_service.get_track_by_id(track_id)
+        if track:
+            tracks.append(track)
+
+    return tracks
+
+@router.get("/discovery/recent", response_model=list[TrackOut])
+def get_recent_tracks(
+    limit: int = Query(6, ge=1, le=20, description="Number of tracks to return"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get recently added verified tracks for discovery page.
+    Only returns tracks with confirmed styles and playable links.
+    """
+    from app.core.models import Track, PlaybackLink, TrackDanceStyle, TrackArtist
+    from sqlalchemy.orm import selectinload, joinedload
+
+    track_service = TrackService(db)
+
+    track_models = db.query(Track).join(
+        Track.playback_links
+    ).join(
+        Track.dance_styles
+    ).filter(
+        PlaybackLink.is_working == True,
+        TrackDanceStyle.confidence >= 1.0,  # Verified only
+        Track.is_flagged == False
+    ).options(
+        selectinload(Track.dance_styles),
+        selectinload(Track.artist_links).joinedload(TrackArtist.artist),
+        joinedload(Track.album),
+        selectinload(Track.playback_links)
+    ).order_by(
+        Track.created_at.desc()
+    ).distinct().limit(limit).all()
+
+    # Format tracks using TrackService
+    tracks = []
+    for track_model in track_models:
+        formatted = track_service.get_track_by_id(str(track_model.id))
+        if formatted:
+            tracks.append(formatted)
+
+    return tracks
+
+@router.get("/discovery/curated", response_model=list[TrackOut])
+def get_curated_tracks(
+    limit: int = Query(6, ge=1, le=20, description="Number of tracks to return"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get high-quality curated tracks for discovery page.
+    Criteria: verified style, audio analysis complete, sorted by popularity.
+    """
+    from app.core.models import Track, TrackPlayback, PlaybackLink, TrackDanceStyle, TrackArtist
+    from sqlalchemy import func
+    from sqlalchemy.orm import selectinload, joinedload
+
+    track_service = TrackService(db)
+
+    # Query for high-quality tracks sorted by play count
+    from sqlalchemy import desc
+
+    play_counts = db.query(
+        TrackPlayback.track_id,
+        func.count(TrackPlayback.id).label('plays')
+    ).group_by(TrackPlayback.track_id).subquery()
+
+    # Get qualifying track IDs with play counts in SELECT for proper ordering with DISTINCT
+    track_ids_query = db.query(
+        Track.id,
+        func.coalesce(play_counts.c.plays, 0).label('play_count')
+    ).join(
+        Track.playback_links
+    ).join(
+        Track.dance_styles
+    ).outerjoin(
+        play_counts, Track.id == play_counts.c.track_id
+    ).filter(
+        PlaybackLink.is_working == True,
+        TrackDanceStyle.confidence == 1.0,  # User-confirmed only
+        Track.is_flagged == False,
+        Track.bounciness != None,  # Has audio analysis
+        Track.articulation != None
+    ).distinct().order_by(
+        desc('play_count')
+    ).limit(limit)
+
+    track_ids = [row[0] for row in track_ids_query.all()]
+
+    # Fetch full tracks with eager loading
+    track_models = db.query(Track).filter(
+        Track.id.in_(track_ids)
+    ).options(
+        selectinload(Track.dance_styles),
+        selectinload(Track.artist_links).joinedload(TrackArtist.artist),
+        joinedload(Track.album),
+        selectinload(Track.playback_links)
+    ).all()
+
+    # Sort by original order
+    track_dict = {str(t.id): t for t in track_models}
+    track_models = [track_dict[str(tid)] for tid in track_ids if str(tid) in track_dict]
+
+    # Format tracks using TrackService
+    tracks = []
+    for track_model in track_models:
+        formatted = track_service.get_track_by_id(str(track_model.id))
+        if formatted:
+            tracks.append(formatted)
+
+    return tracks
+
+@router.get("/discovery/by-style")
+def get_style_overview(db: Session = Depends(get_db)):
+    """
+    Get overview of all dance styles with track counts for explorer cards.
+    Returns styles sorted by popularity (track count).
+    """
+    from app.core.models import Track, PlaybackLink, TrackDanceStyle
+    from sqlalchemy import func
+
+    service = TrackService(db)
+
+    # Get track counts per style
+    style_counts = db.query(
+        TrackDanceStyle.dance_style,
+        func.count(Track.id.distinct()).label('count')
+    ).join(
+        TrackDanceStyle.track
+    ).join(
+        Track.playback_links
+    ).filter(
+        PlaybackLink.is_working == True,
+        TrackDanceStyle.dance_style != None,
+        Track.is_flagged == False
+    ).group_by(
+        TrackDanceStyle.dance_style
+    ).all()
+
+    # Get style hierarchy
+    tree = service.get_style_hierarchy()
+
+    # Build result with counts
+    result = []
+    count_map = {style: count for style, count in style_counts}
+
+    for main_style, sub_styles in tree.items():
+        # Count includes main style + all sub styles
+        total = count_map.get(main_style, 0)
+        for sub in sub_styles:
+            total += count_map.get(sub, 0)
+
+        if total > 0:  # Only include styles with tracks
+            result.append({
+                "style": main_style,
+                "sub_styles": sub_styles,
+                "track_count": total
+            })
+
+    # Sort by track count descending
+    return sorted(result, key=lambda x: x['track_count'], reverse=True)
+
 # --- NEW & UPDATED STRUCTURE ROUTES ---
 @router.post("/tracks/{track_id}/structure")
 def submit_structure_proposal(

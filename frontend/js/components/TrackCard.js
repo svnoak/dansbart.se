@@ -6,7 +6,7 @@ import { showToast } from '../hooks/useToast.js';
 
 export default {
   props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
-  emits: ['play', 'stop', 'refresh', 'filter-style', 'show-similar'],
+  emits: ['play', 'stop', 'refresh', 'filter-style', 'show-similar', 'add-to-queue'],
   components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
 
   data() {
@@ -151,6 +151,13 @@ export default {
                 <button @click.stop="$emit('show-similar', track.id)" class="text-xs text-gray-400 hover:text-purple-600 border border-transparent hover:border-purple-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Hitta liknande låtar">
                     <span>🎵</span>
                     <span>Liknande</span>
+                </button>
+
+                <button @click.stop="$emit('add-to-queue', track)" class="text-xs text-gray-400 hover:text-green-600 border border-transparent hover:border-green-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Lägg till i kö">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span>Kö</span>
                 </button>
             </div>
         </div>

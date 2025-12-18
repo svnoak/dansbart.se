@@ -3,7 +3,7 @@ import { useTracks } from './hooks/tracks.js';
 import { useFilters } from './hooks/filter.js';
 import { usePlayer } from './hooks/player.js';
 import { trackSession } from './analytics.js';
-import { showError } from './hooks/useToast.js';
+import { showError, showToast } from './hooks/useToast.js';
 
 import './main.css';
 
@@ -15,6 +15,7 @@ import Header from './components/Header.js';
 import CookieConsent from './components/CookieConsent.js';
 import Toast from './components/toasts/Toast.js';
 import SimilarTracksModal from './components/SimilarTracksModal.js';
+import DiscoveryPage from './components/DiscoveryPage.js';
 
 const app = createApp({
   components: {
@@ -26,12 +27,16 @@ const app = createApp({
     'cookie-consent': CookieConsent,
     'toast-container': Toast,
     'similar-tracks-modal': SimilarTracksModal,
+    'discovery-page': DiscoveryPage,
   },
   setup() {
     const filterLogic = useFilters();
     const trackLogic = useTracks();
     const playerLogic = usePlayer();
     const { togglePlay } = playerLogic;
+
+    // Page routing state
+    const currentPage = ref('discovery');
 
     const scrollTrigger = ref(null);
     let observer = null;
@@ -42,6 +47,12 @@ const app = createApp({
       if (index !== -1) {
         playerLogic.playContext(list, index, sourcePreference);
       }
+    };
+
+    // Discovery tracks play handler
+    const handleDiscoveryPlay = (track, sourcePreference = null) => {
+      // Just play the single track (discovery tracks aren't meant to be a playlist)
+      playerLogic.playContext([track], 0, sourcePreference);
     };
 
     // Similar Tracks Modal
@@ -55,6 +66,16 @@ const app = createApp({
     const closeSimilarModal = () => {
       similarModalTrackId.value = null;
       similarTracks.value = [];
+    };
+
+    // Queue management
+    const addToQueue = (track) => {
+      const success = playerLogic.addToQueue(track);
+      if (success) {
+        showToast(`"${track.title}" tillagd i kön`, 'success');
+      } else {
+        showToast(`"${track.title}" finns redan i kön`, 'info');
+      }
     };
 
     const handleSimilarPlay = (track, sourcePreference = null) => {
@@ -117,18 +138,91 @@ const app = createApp({
       }
     };
 
-    onMounted(() => {
-      // Check for track deep link
+    // Sync filters to URL
+    const syncFiltersToURL = () => {
+      const url = new URL(window.location);
+      const filterParams = filterLogic.filtersToQueryParams();
+
+      // Clear existing filter params and add new ones
+      const keysToKeep = ['page', 'track'];
+      const newParams = new URLSearchParams();
+      keysToKeep.forEach(key => {
+        if (url.searchParams.has(key)) {
+          newParams.set(key, url.searchParams.get(key));
+        }
+      });
+
+      // Add filter params
+      filterParams.forEach((value, key) => {
+        newParams.set(key, value);
+      });
+
+      url.search = newParams.toString();
+      window.history.replaceState({}, '', url);
+    };
+
+    // Navigation functions
+    const navigateToSearch = (filters = {}) => {
+      currentPage.value = 'search';
+      Object.assign(filterLogic.filters.value, filters);
+
+      const url = new URL(window.location);
+      url.searchParams.set('page', 'search');
+
+      // Add filter params to URL
+      const filterParams = filterLogic.filtersToQueryParams();
+      filterParams.forEach((value, key) => {
+        url.searchParams.set(key, value);
+      });
+
+      window.history.pushState({}, '', url);
+      trackLogic.fetchTracks();
+    };
+
+    onMounted(async () => {
+      // Load saved queue from localStorage
+      await playerLogic.loadQueueFromStorage();
+
+      // Check for track deep link or page parameter
       const urlParams = new URLSearchParams(window.location.search);
       const trackId = urlParams.get('track');
+      const page = urlParams.get('page');
+
+      // Load filters from URL if present
+      filterLogic.loadFiltersFromQueryParams(urlParams);
 
       if (trackId) {
-        // Load and play specific track
+        // Track deep link - show search view and play track
+        currentPage.value = 'search';
         loadAndPlayTrack(trackId);
-      } else {
-        // Normal flow: load track list
+      } else if (page === 'search') {
+        // Navigate to search page
+        currentPage.value = 'search';
         trackLogic.fetchTracks();
+      } else {
+        // Default to discovery page
+        currentPage.value = 'discovery';
       }
+
+      // Handle browser back/forward
+      window.addEventListener('popstate', () => {
+        const params = new URLSearchParams(window.location.search);
+        const pageParam = params.get('page');
+        const trackParam = params.get('track');
+
+        // Load filters from URL on navigation
+        filterLogic.loadFiltersFromQueryParams(params);
+
+        if (trackParam) {
+          currentPage.value = 'search';
+          loadAndPlayTrack(trackParam);
+        } else if (pageParam === 'search') {
+          currentPage.value = 'search';
+          trackLogic.fetchTracks();
+        } else {
+          currentPage.value = 'discovery';
+        }
+      });
 
       trackSession();
     });
@@ -150,6 +244,27 @@ const app = createApp({
       if (el) createObserver();
     });
 
+    // Watch filters and sync to URL (only on search page)
+    watch(
+      () => [
+        filterLogic.filters.value,
+        filterLogic.targetTempo.value,
+        filterLogic.tempoEnabled.value,
+        filterLogic.minBounciness.value,
+        filterLogic.maxBounciness.value,
+        filterLogic.bouncinessEnabled.value,
+        filterLogic.minArticulation.value,
+        filterLogic.maxArticulation.value,
+        filterLogic.articulationEnabled.value,
+      ],
+      () => {
+        if (currentPage.value === 'search') {
+          syncFiltersToURL();
+        }
+      },
+      { deep: true }
+    );
+
     return {
       ...trackLogic,
       ...playerLogic,
@@ -167,6 +282,7 @@ const app = createApp({
       maxArticulation: filterLogic.maxArticulation,
       articulationEnabled: filterLogic.articulationEnabled,
       handlePlay,
+      handleDiscoveryPlay,
       togglePlay,
       scrollTrigger,
       similarModalTrackId,
@@ -174,6 +290,9 @@ const app = createApp({
       showSimilarModal,
       closeSimilarModal,
       handleSimilarPlay,
+      currentPage,
+      navigateToSearch,
+      addToQueue,
     };
   },
 });

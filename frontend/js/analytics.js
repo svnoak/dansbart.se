@@ -214,4 +214,11 @@ export const AnalyticsEvents = {
   // Voting events
   STRUCTURE_VOTED_UP: 'structure_voted_up',
   STRUCTURE_VOTED_DOWN: 'structure_voted_down',
+
+  // Discovery page events
+  DISCOVERY_PAGE_VIEW: 'discovery_page_view',
+  DISCOVERY_SECTION_VIEW: 'discovery_section_view',
+  DISCOVERY_TRACK_PLAY: 'discovery_track_play',
+  DISCOVERY_STYLE_CLICK: 'discovery_style_click',
+  DISCOVERY_TO_SEARCH: 'discovery_to_search',
 };

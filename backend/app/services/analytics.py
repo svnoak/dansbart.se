@@ -547,3 +547,103 @@ class AnalyticsService:
             "wrong_track_reports": sum(count for event_type, count in link_breakdown if 'wrong' in event_type),
             "structure_spam_reports": query_structure_reports.scalar() or 0
         }
+
+    # ========== DISCOVERY PAGE ANALYTICS ==========
+
+    @staticmethod
+    def get_discovery_stats(db: Session, days: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Get analytics for the discovery page feature.
+
+        Args:
+            db: Database session
+            days: Optional number of days to look back
+
+        Returns:
+            Dict with discovery page engagement metrics
+        """
+        query = db.query(UserInteraction)
+
+        if days:
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            query = query.filter(UserInteraction.created_at >= cutoff_date)
+
+        # Count page views
+        page_views = query.filter(
+            UserInteraction.event_type == 'discovery_page_view'
+        ).count()
+
+        # Count style clicks
+        style_clicks = query.filter(
+            UserInteraction.event_type == 'discovery_style_click'
+        ).count()
+
+        # Count navigations to search
+        to_search = query.filter(
+            UserInteraction.event_type == 'discovery_to_search'
+        ).count()
+
+        # Count track plays from discovery
+        track_plays = query.filter(
+            UserInteraction.event_type == 'discovery_track_play'
+        ).count()
+
+        # Get most clicked styles
+        style_click_data = db.query(
+            UserInteraction.event_data['style'].astext.label('style'),
+            func.count(UserInteraction.id).label('clicks')
+        ).filter(
+            UserInteraction.event_type == 'discovery_style_click'
+        )
+
+        if days:
+            style_click_data = style_click_data.filter(
+                UserInteraction.created_at >= cutoff_date
+            )
+
+        most_clicked_styles = style_click_data.group_by(
+            UserInteraction.event_data['style'].astext
+        ).order_by(
+            func.count(UserInteraction.id).desc()
+        ).limit(5).all()
+
+        # Get section play breakdown
+        section_plays = db.query(
+            UserInteraction.event_data['section'].astext.label('section'),
+            func.count(UserInteraction.id).label('plays')
+        ).filter(
+            UserInteraction.event_type == 'discovery_track_play'
+        )
+
+        if days:
+            section_plays = section_plays.filter(
+                UserInteraction.created_at >= cutoff_date
+            )
+
+        section_breakdown = section_plays.group_by(
+            UserInteraction.event_data['section'].astext
+        ).all()
+
+        # Calculate conversion rate (page views to search)
+        conversion_rate = round((to_search / page_views * 100) if page_views > 0 else 0, 2)
+
+        # Calculate engagement rate (page views to any interaction)
+        total_interactions = style_clicks + to_search + track_plays
+        engagement_rate = round((total_interactions / page_views * 100) if page_views > 0 else 0, 2)
+
+        return {
+            "page_views": page_views,
+            "style_clicks": style_clicks,
+            "navigations_to_search": to_search,
+            "track_plays": track_plays,
+            "conversion_rate": conversion_rate,
+            "engagement_rate": engagement_rate,
+            "most_clicked_styles": [
+                {"style": style, "clicks": clicks}
+                for style, clicks in most_clicked_styles
+            ],
+            "section_breakdown": [
+                {"section": section or "unknown", "plays": plays}
+                for section, plays in section_breakdown
+            ]
+        }

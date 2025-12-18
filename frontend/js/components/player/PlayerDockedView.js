@@ -21,6 +21,7 @@ export default {
     'fmtCurrent',
     'fmtDuration',
     'breakpoints',
+    'queueCount',
   ],
   emits: [
     'expand',
@@ -40,6 +41,7 @@ export default {
     'jump-to-breakpoint',
     'update-breakpoint',
     'remove-breakpoint',
+    'open-queue',
   ],
   components: { SmartNudge, SectionVoting, PlayerControls, ProgressBar },
 
@@ -125,7 +127,7 @@ export default {
              </div>
 
              <div class="flex justify-end md:justify-center w-1/3 md:w-1/3">
-                <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="false" :active-source="activeSource" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)"></player-controls>
+                <player-controls :is-playing="isPlaying" :is-shuffled="isShuffled" :repeat-mode="repeatMode" :has-spotify="activeSource === 'spotify'" :structure-mode="structureMode" :full-mode="false" :active-source="activeSource" :queue-count="queueCount" @toggle-play="$emit('toggle-play')" @next="$emit('next')" @prev="$emit('prev')" @shuffle="$emit('shuffle')" @toggle-repeat="$emit('toggle-repeat')" @jump="$emit('jump', $event)" @open-queue="$emit('open-queue')"></player-controls>
              </div>
              
              <div class="hidden md:flex w-1/3 justify-end items-center gap-2">

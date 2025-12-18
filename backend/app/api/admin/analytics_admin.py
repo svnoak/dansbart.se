@@ -37,7 +37,8 @@ def get_analytics_dashboard(
         "platform_stats": AnalyticsService.get_platform_usage_stats(db, days=days),
         "nudge_abandonment": AnalyticsService.get_nudge_abandonment_rate(db, days=days),
         "modal_abandonment": AnalyticsService.get_modal_abandonment_rate(db, days=days),
-        "reports": AnalyticsService.get_report_stats(db, days=days)
+        "reports": AnalyticsService.get_report_stats(db, days=days),
+        "discovery": AnalyticsService.get_discovery_stats(db, days=days)
     }
 
 @router.get("/visitors")
@@ -139,3 +140,15 @@ def get_report_analytics(
     Get statistics on all types of reports (admin-only).
     """
     return AnalyticsService.get_report_stats(db, days=days)
+
+@router.get("/discovery")
+def get_discovery_analytics(
+    days: int = Query(30, description="Number of days to look back"),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get analytics for the discovery page feature (admin-only).
+    Includes page views, style clicks, conversions, and engagement metrics.
+    """
+    return AnalyticsService.get_discovery_stats(db, days=days)

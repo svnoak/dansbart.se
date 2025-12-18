@@ -14,77 +14,97 @@
       <site-header></site-header>
 
       <div class="px-4 py-6 sm:p-8">
-        <div class="max-w-4xl mx-auto mb-8 text-center">
-          <stats-dashboard></stats-dashboard>
+        <!-- Discovery Page View -->
+        <div v-if="currentPage === 'discovery'">
+          <discovery-page
+            :current-track="currentTrack"
+            :is-playing="isPlaying"
+            :is-spotify-mode="activeSource === 'spotify'"
+            @play="handleDiscoveryPlay"
+            @stop="togglePlay"
+            @navigate-to-search="navigateToSearch"
+            @refresh="fetchTracks"
+            @filter-style="handleFilterStyle"
+            @show-similar="showSimilarModal"
+            @add-to-queue="addToQueue"
+          ></discovery-page>
         </div>
 
-        <filter-bar
-          v-model:main-style="filters.mainStyle"
-          v-model:sub-style="filters.subStyle"
-          v-model:search="filters.search"
-          v-model:source="filters.source"
-          v-model:vocals="filters.vocals"
-          v-model:style-confirmed="filters.styleConfirmed"
-          v-model:min-duration="filters.minDuration"
-          v-model:max-duration="filters.maxDuration"
-          v-model:target-tempo="targetTempo"
-          v-model:tempo-enabled="tempoEnabled"
-          v-model:min-bounciness="minBounciness"
-          v-model:max-bounciness="maxBounciness"
-          v-model:bounciness-enabled="bouncinessEnabled"
-          v-model:min-articulation="minArticulation"
-          v-model:max-articulation="maxArticulation"
-          v-model:articulation-enabled="articulationEnabled"
-          :computed-min="computedMin"
-          :computed-max="computedMax"
-          :style-tree="styleTree"
-          @filter-style="handleFilterStyle"
-        ></filter-bar>
+        <!-- Search Page View (existing) -->
+        <div v-else>
+          <div class="max-w-4xl mx-auto mb-8 text-center">
+            <stats-dashboard></stats-dashboard>
+          </div>
 
-        <div class="max-w-4xl mx-auto">
-          <div v-if="loading" class="text-center py-12">Loading...</div>
+          <filter-bar
+            v-model:main-style="filters.mainStyle"
+            v-model:sub-style="filters.subStyle"
+            v-model:search="filters.search"
+            v-model:source="filters.source"
+            v-model:vocals="filters.vocals"
+            v-model:style-confirmed="filters.styleConfirmed"
+            v-model:min-duration="filters.minDuration"
+            v-model:max-duration="filters.maxDuration"
+            v-model:target-tempo="targetTempo"
+            v-model:tempo-enabled="tempoEnabled"
+            v-model:min-bounciness="minBounciness"
+            v-model:max-bounciness="maxBounciness"
+            v-model:bounciness-enabled="bouncinessEnabled"
+            v-model:min-articulation="minArticulation"
+            v-model:max-articulation="maxArticulation"
+            v-model:articulation-enabled="articulationEnabled"
+            :computed-min="computedMin"
+            :computed-max="computedMax"
+            :style-tree="styleTree"
+            @filter-style="handleFilterStyle"
+          ></filter-bar>
 
-          <div v-else class="grid gap-4">
-            <track-card
-              v-for="track in tracks"
-              :key="track.id"
-              :track="track"
-              :current-track="currentTrack"
-              :is-spotify-mode="activeSource === 'spotify'"
-              :is-playing="isPlaying"
-              @play="handlePlay"
-              @stop="togglePlay"
-              @refresh="fetchTracks"
-              @filter-style="handleFilterStyle"
-              @show-similar="showSimilarModal"
-            ></track-card>
+          <div class="max-w-4xl mx-auto">
+            <div v-if="loading" class="text-center py-12">Loading...</div>
 
-            <div
-              ref="scrollTrigger"
-              class="py-8 text-center w-full"
-              style="min-height: 50px; display: block"
-            >
-              <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
-                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                    fill="none"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                <span>Laddar fler...</span>
-              </div>
-              <div v-else-if="!hasMore && tracks.length > 0" class="text-gray-400 text-sm">
-                Inga fler låtar att visa
+            <div v-else class="grid gap-4">
+              <track-card
+                v-for="track in tracks"
+                :key="track.id"
+                :track="track"
+                :current-track="currentTrack"
+                :is-spotify-mode="activeSource === 'spotify'"
+                :is-playing="isPlaying"
+                @play="handlePlay"
+                @stop="togglePlay"
+                @refresh="fetchTracks"
+                @filter-style="handleFilterStyle"
+                @show-similar="showSimilarModal"
+                @add-to-queue="addToQueue"
+              ></track-card>
+
+              <div
+                ref="scrollTrigger"
+                class="py-8 text-center w-full"
+                style="min-height: 50px; display: block"
+              >
+                <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
+                  <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                      fill="none"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                  <span>Laddar fler...</span>
+                </div>
+                <div v-else-if="!hasMore && tracks.length > 0" class="text-gray-400 text-sm">
+                  Inga fler låtar att visa
+                </div>
               </div>
             </div>
           </div>

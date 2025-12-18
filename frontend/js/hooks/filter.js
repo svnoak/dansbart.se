@@ -95,6 +95,71 @@ export function useFilters() {
     }
   };
 
+  // Serialize filters to URL query parameters
+  const filtersToQueryParams = () => {
+    const params = new URLSearchParams();
+
+    if (filters.value.mainStyle) params.set('style', filters.value.mainStyle);
+    if (filters.value.subStyle) params.set('subStyle', filters.value.subStyle);
+    if (filters.value.search) params.set('q', filters.value.search);
+    if (filters.value.source) params.set('source', filters.value.source);
+    if (filters.value.vocals) params.set('vocals', filters.value.vocals);
+    if (filters.value.styleConfirmed) params.set('confirmed', '1');
+    if (filters.value.minDuration) params.set('minDur', filters.value.minDuration);
+    if (filters.value.maxDuration) params.set('maxDur', filters.value.maxDuration);
+
+    if (tempoEnabled.value && targetTempo.value) {
+      params.set('tempo', targetTempo.value);
+    }
+
+    if (bouncinessEnabled.value) {
+      if (minBounciness.value !== null) params.set('minBounce', minBounciness.value);
+      if (maxBounciness.value !== null) params.set('maxBounce', maxBounciness.value);
+    }
+
+    if (articulationEnabled.value) {
+      if (minArticulation.value !== null) params.set('minArt', minArticulation.value);
+      if (maxArticulation.value !== null) params.set('maxArt', maxArticulation.value);
+    }
+
+    return params;
+  };
+
+  // Load filters from URL query parameters
+  const loadFiltersFromQueryParams = (params) => {
+    if (params.has('style')) filters.value.mainStyle = params.get('style');
+    if (params.has('subStyle')) filters.value.subStyle = params.get('subStyle');
+    if (params.has('q')) filters.value.search = params.get('q');
+    if (params.has('source')) filters.value.source = params.get('source');
+    if (params.has('vocals')) filters.value.vocals = params.get('vocals');
+    if (params.has('confirmed')) filters.value.styleConfirmed = params.get('confirmed') === '1';
+    if (params.has('minDur')) filters.value.minDuration = parseInt(params.get('minDur'));
+    if (params.has('maxDur')) filters.value.maxDuration = parseInt(params.get('maxDur'));
+
+    if (params.has('tempo')) {
+      targetTempo.value = parseInt(params.get('tempo'));
+      tempoEnabled.value = true;
+    }
+
+    if (params.has('minBounce')) {
+      minBounciness.value = parseFloat(params.get('minBounce'));
+      bouncinessEnabled.value = true;
+    }
+    if (params.has('maxBounce')) {
+      maxBounciness.value = parseFloat(params.get('maxBounce'));
+      bouncinessEnabled.value = true;
+    }
+
+    if (params.has('minArt')) {
+      minArticulation.value = parseFloat(params.get('minArt'));
+      articulationEnabled.value = true;
+    }
+    if (params.has('maxArt')) {
+      maxArticulation.value = parseFloat(params.get('maxArt'));
+      articulationEnabled.value = true;
+    }
+  };
+
   return {
     filters,
     styleTree,
@@ -112,5 +177,8 @@ export function useFilters() {
     minArticulation,
     maxArticulation,
     articulationEnabled,
+    // URL sync functions
+    filtersToQueryParams,
+    loadFiltersFromQueryParams,
   };
 }

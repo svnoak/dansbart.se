@@ -38,6 +38,7 @@ export default [
         performance: 'readonly',
         Event: 'readonly',
         YT: 'readonly',
+        URL: 'readonly',
       },
     },
   },

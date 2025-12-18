@@ -7,8 +7,9 @@ export default {
     'structureMode',
     'fullMode',
     'activeSource',
+    'queueCount',
   ],
-  emits: ['toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump'],
+  emits: ['toggle-play', 'next', 'prev', 'shuffle', 'toggle-repeat', 'jump', 'open-queue'],
 
   computed: {
     jumpAmount() {
@@ -111,12 +112,36 @@ export default {
                 <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
             </svg>
 
-            <span v-if="repeatMode === 'one'" 
+            <span v-if="repeatMode === 'one'"
                   class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-indigo-700">
                 1
             </span>
         </button>
-        
+
+        <!-- Queue -->
+        <button @click="$emit('open-queue')"
+            class="group relative w-8 h-8 items-center justify-center transition-colors"
+            :class="[
+                queueCount > 0 ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600',
+                fullMode ? 'flex' : 'hidden md:flex'
+            ]"
+            title="Visa kö">
+
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+
+            <span v-if="queueCount > 0"
+                  class="absolute -top-1 -right-1 text-[10px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 leading-none rounded-full min-w-[18px] text-center">
+                {{ queueCount }}
+            </span>
+        </button>
+
     </div>
     `,
 };

@@ -23,12 +23,76 @@ const currentVideoId = ref(null);
 const isRestricted = ref(false);
 const playbackTracker = ref(null); // Analytics tracker for current playback
 
+// Queue persistence helpers
+const QUEUE_STORAGE_KEY = 'dansbart_queue';
+const QUEUE_INDEX_KEY = 'dansbart_queue_index';
+
+const saveQueueToStorage = () => {
+  try {
+    // Only save track IDs to keep storage lightweight
+    const trackIds = queue.value.map(t => t.id);
+    localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(trackIds));
+    localStorage.setItem(QUEUE_INDEX_KEY, currentIndex.value.toString());
+  } catch (e) {
+    console.warn('Failed to save queue to localStorage:', e);
+  }
+};
+
+const loadQueueFromStorage = async () => {
+  try {
+    const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
+    const storedIndex = localStorage.getItem(QUEUE_INDEX_KEY);
+
+    if (!stored) return;
+
+    const trackIds = JSON.parse(stored);
+    if (!Array.isArray(trackIds) || trackIds.length === 0) return;
+
+    // Fetch full track data for each ID
+    const tracks = await Promise.all(
+      trackIds.map(async id => {
+        try {
+          const res = await fetch(`/api/tracks/${id}`);
+          if (!res.ok) return null;
+          return await res.json();
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    // Filter out any failed fetches
+    const validTracks = tracks.filter(t => t !== null);
+
+    if (validTracks.length > 0) {
+      queue.value = validTracks;
+      currentIndex.value = storedIndex ? parseInt(storedIndex) : -1;
+
+      // Ensure index is within bounds
+      if (currentIndex.value >= validTracks.length) {
+        currentIndex.value = validTracks.length - 1;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load queue from localStorage:', e);
+  }
+};
+
 export function usePlayer() {
   watch(consentStatus, async newStatus => {
     if (newStatus === 'granted' && currentTrack.value) {
       await nextTick();
       loadCurrentTrack();
     }
+  });
+
+  // Watch queue and save to localStorage whenever it changes
+  watch(queue, () => {
+    saveQueueToStorage();
+  }, { deep: true });
+
+  watch(currentIndex, () => {
+    saveQueueToStorage();
   });
 
   // --- HELPERS ---
@@ -225,6 +289,80 @@ export function usePlayer() {
     currentVideoId.value = null;
   };
 
+  // Queue management functions
+  const addToQueue = (track) => {
+    // Check if track is already in queue
+    if (queue.value.some(t => t.id === track.id)) {
+      return false; // Already in queue
+    }
+    queue.value.push(track);
+    return true;
+  };
+
+  const removeFromQueue = (index) => {
+    if (index < 0 || index >= queue.value.length) return;
+
+    // If removing the current track, stop playback
+    if (index === currentIndex.value) {
+      isPlaying.value = false;
+      currentVideoId.value = null;
+      // Move to next track if available
+      if (queue.value.length > 1) {
+        if (index < queue.value.length - 1) {
+          // Current index stays the same, but track changes
+          queue.value.splice(index, 1);
+          loadCurrentTrack();
+        } else {
+          // Was last track, move back one
+          currentIndex.value--;
+          queue.value.splice(index, 1);
+        }
+      } else {
+        // Was the only track
+        queue.value.splice(index, 1);
+        currentIndex.value = -1;
+      }
+    } else {
+      // Adjust currentIndex if necessary
+      if (index < currentIndex.value) {
+        currentIndex.value--;
+      }
+      queue.value.splice(index, 1);
+    }
+  };
+
+  const moveInQueue = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= queue.value.length) return;
+    if (toIndex < 0 || toIndex >= queue.value.length) return;
+
+    const track = queue.value[fromIndex];
+    queue.value.splice(fromIndex, 1);
+    queue.value.splice(toIndex, 0, track);
+
+    // Update currentIndex if needed
+    if (currentIndex.value === fromIndex) {
+      currentIndex.value = toIndex;
+    } else if (fromIndex < currentIndex.value && toIndex >= currentIndex.value) {
+      currentIndex.value--;
+    } else if (fromIndex > currentIndex.value && toIndex <= currentIndex.value) {
+      currentIndex.value++;
+    }
+  };
+
+  const clearQueue = () => {
+    queue.value = [];
+    currentIndex.value = -1;
+    isPlaying.value = false;
+    currentVideoId.value = null;
+  };
+
+  const jumpToQueueIndex = (index) => {
+    if (index < 0 || index >= queue.value.length) return;
+    currentIndex.value = index;
+    loadCurrentTrack();
+  };
+
   return {
     currentTrack,
     currentVideoId,
@@ -245,5 +383,14 @@ export function usePlayer() {
     getSpotifyId,
     repeatMode,
     cycleRepeatMode,
+    // Queue management
+    queue,
+    currentIndex,
+    addToQueue,
+    removeFromQueue,
+    moveInQueue,
+    clearQueue,
+    jumpToQueueIndex,
+    loadQueueFromStorage,
   };
 }

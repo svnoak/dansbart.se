@@ -2,6 +2,7 @@ import YouTubeEngine from './YouTubeEngine.js';
 import SpotifyEngine from './SpotifyEngine.js';
 import StructureEditor from '../modals/StructureEditor.js';
 import BrokenLinkToast from '../toasts/BrokenLinkToast.js';
+import QueueManager from './QueueManager.js';
 import { usePlayer } from '../../hooks/player.js';
 import { useConsent } from '../../consent.js';
 
@@ -15,6 +16,7 @@ export default {
     SpotifyEngine,
     StructureEditor,
     BrokenLinkToast,
+    QueueManager,
     PlayerMobileView,
     PlayerDockedView,
   },
@@ -51,6 +53,7 @@ export default {
       potentialBrokenState: null, // For broken link toast
       isLoadingVideo: false, // Track when we're loading a new video
       breakpoints: [], // Array of timestamps for practice breakpoints
+      showQueueManager: false, // Queue manager visibility
     };
   },
   mounted() {
@@ -535,6 +538,7 @@ export default {
             :fmt-current="fmtCurrent"
             :fmt-duration="fmtDuration"
             :breakpoints="breakpoints"
+            :queue-count="queue.length"
             @close="isExpanded = false"
             @set-source="setSource"
             @cycle-version="cycleVersion"
@@ -554,6 +558,7 @@ export default {
             @jump-to-breakpoint="jumpToBreakpoint"
             @update-breakpoint="updateBreakpoint"
             @remove-breakpoint="removeBreakpoint"
+            @open-queue="showQueueManager = true"
         ></player-mobile-view>
 
         <player-docked-view
@@ -573,6 +578,7 @@ export default {
             :fmt-current="fmtCurrent"
             :fmt-duration="fmtDuration"
             :breakpoints="breakpoints"
+            :queue-count="queue.length"
             @expand="isExpanded = true"
             @set-source="setSource"
             @cycle-version="cycleVersion"
@@ -590,6 +596,7 @@ export default {
             @jump-to-breakpoint="jumpToBreakpoint"
             @update-breakpoint="updateBreakpoint"
             @remove-breakpoint="removeBreakpoint"
+            @open-queue="showQueueManager = true"
         ></player-docked-view>
 
         <div ref="videoContainer"
@@ -665,6 +672,18 @@ export default {
             :structure-mode="structureMode"
             @close="potentialBrokenState = null"
         ></broken-link-toast>
+
+        <!-- Queue Manager -->
+        <queue-manager
+            :is-open="showQueueManager"
+            :queue="queue"
+            :current-index="currentIndex"
+            @close="showQueueManager = false"
+            @jump-to="jumpToQueueIndex"
+            @remove="removeFromQueue"
+            @move="moveInQueue"
+            @clear="clearQueue"
+        ></queue-manager>
 
     </div>
     `,
