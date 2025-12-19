@@ -30,9 +30,6 @@ RUN pip install --no-cache-dir --upgrade pip
 # Install build dependencies first (needed for madmom compilation)
 RUN pip install --no-cache-dir numpy Cython
 
-# Copy neckenml-analyzer package (needed for -e ../neckenml-analyzer in requirements)
-COPY neckenml-analyzer /neckenml-analyzer
-
 # Install audio worker requirements
 COPY backend/requirements.audio.txt backend/requirements.common.txt ./
 RUN pip install --no-cache-dir -r requirements.audio.txt

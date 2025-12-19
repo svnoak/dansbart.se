@@ -27,7 +27,6 @@ dansbart.se/
 │   │   ├── services/    # Business logic
 │   │   └── workers/     # Celery task workers
 │   └── Dockerfile.*     # Container definitions
-├── neckenml-analyzer/    # Open-source ML analysis engine (Git submodule)
 └── docker-compose.yml    # Service orchestration
 ```
 
@@ -70,28 +69,22 @@ NeckenML Analyzer is an MIT-licensed Python package that provides:
 - **Community**: Improvements from researchers and developers
 - **Credibility**: Verifiable, non-black-box AI
 
-Dansbart.se uses NeckenML Analyzer as its analysis engine while keeping audio acquisition and user-facing features proprietary.
+Dansbart.se uses NeckenML Analyzer (installed via PyPI) as its analysis engine while keeping audio acquisition and user-facing features proprietary.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- Git (with submodule support)
+- Git
 - 4GB+ RAM recommended
 
 ### Installation
 
-1. **Clone the repository with submodules:**
+1. **Clone the repository:**
    ```bash
-   git clone --recurse-submodules https://github.com/svnoak/dansbart.se.git
+   git clone https://github.com/svnoak/dansbart.se.git
    cd dansbart.se
-   ```
-
-   Or if already cloned:
-   ```bash
-   git submodule init
-   git submodule update
    ```
 
 2. **Set up environment variables:**
@@ -166,8 +159,6 @@ dansbart.se/
 │   ├── requirements.*.txt
 │   ├── Dockerfile.api     # Backend API container
 │   └── Dockerfile.audio   # Audio worker container
-├── neckenml-analyzer/     # Git submodule (open-source)
-│   └── neckenml/          # Analysis engine
 └── docker-compose.yml
 ```
 
@@ -186,34 +177,6 @@ docker-compose up worker-audio db redis
 # All workers
 docker-compose up worker-audio worker-light
 ```
-
-### Making Changes to NeckenML Analyzer
-
-NeckenML Analyzer is a Git submodule. To make changes:
-
-```bash
-# Navigate to submodule
-cd neckenml-analyzer
-
-# Create feature branch
-git checkout -b feature/your-feature
-
-# Make changes and test
-# ...
-
-# Commit and push to neckenml-analyzer repo
-git add .
-git commit -m "feat: Your feature"
-git push origin feature/your-feature
-
-# After merge, update dansbart.se reference
-cd ..
-git submodule update --remote neckenml-analyzer
-git add neckenml-analyzer
-git commit -m "Update neckenml-analyzer to latest"
-```
-
-See [SETUP_NECKENML_REPO.md](SETUP_NECKENML_REPO.md) for detailed submodule workflow.
 
 ### Database Migrations
 
@@ -236,10 +199,6 @@ docker-compose exec backend pytest
 
 # Frontend tests
 docker-compose exec frontend npm run test
-
-# NeckenML Analyzer tests
-cd neckenml-analyzer
-pytest
 ```
 
 ## Deployment
@@ -297,9 +256,9 @@ This separation allows horizontal scaling: multiple audio workers for ML tasks, 
 
 **Dansbart.se Application**: Proprietary (not open source)
 
-**NeckenML Analyzer**: MIT License - see [neckenml-analyzer/LICENSE](neckenml-analyzer/LICENSE)
+**NeckenML Analyzer**: MIT License - see the [NeckenML repository](https://github.com/svnoak/neckenml-analyzer/blob/main/LICENSE)
 
-The open-source analysis engine can be used independently under MIT license. The dansbart.se application integrates this engine with proprietary features.
+The open-source analysis engine can be used independently under MIT license. The dansbart.se application uses the PyPI package and integrates this engine with proprietary features.
 
 ## Contributing
 
@@ -307,7 +266,7 @@ The open-source analysis engine can be used independently under MIT license. The
 This is a proprietary application. Contributions are not currently accepted.
 
 ### To NeckenML Analyzer
-The ML analysis engine is open source! See the [NeckenML Contributing Guide](neckenml-analyzer/CONTRIBUTING.md) for:
+The ML analysis engine is open source! See the [NeckenML Contributing Guide](https://github.com/svnoak/neckenml-analyzer/blob/main/CONTRIBUTING.md) for:
 - Reporting bugs and suggesting features
 - Development setup
 - Coding standards

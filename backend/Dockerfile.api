@@ -16,9 +16,6 @@ WORKDIR /app
 # 3. Install Python Dependencies
 RUN pip install --no-cache-dir --upgrade pip
 
-# Copy neckenml-analyzer package (needed for -e ../neckenml-analyzer in requirements)
-COPY neckenml-analyzer /neckenml-analyzer
-
 # Install dependencies
 COPY backend/requirements.api.txt backend/requirements.common.txt ./
 RUN pip install --no-cache-dir -r requirements.api.txt

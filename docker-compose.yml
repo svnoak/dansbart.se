@@ -6,7 +6,6 @@ services:
     platform: linux/amd64
     volumes:
       - ./backend:/app
-      - ./neckenml-analyzer:/neckenml-analyzer
     env_file:
       - ./backend/.env
     depends_on:
@@ -51,7 +50,6 @@ services:
     command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio
     volumes:
       - ./backend:/app
-      - ./neckenml-analyzer:/neckenml-analyzer
     env_file:
       - ./backend/.env
     environment:

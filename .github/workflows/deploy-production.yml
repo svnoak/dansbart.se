@@ -22,10 +22,8 @@ jobs:
         service: [frontend, backend]
 
     steps:
-      - name: Checkout code with submodules
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive  # Include neckenml-analyzer submodule
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -74,10 +72,8 @@ jobs:
             dockerfile: Dockerfile.workers
 
     steps:
-      - name: Checkout code with submodules
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive  # Include neckenml-analyzer submodule
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -102,7 +98,7 @@ jobs:
       - name: Build and push ${{ matrix.worker.name }} image
         uses: docker/build-push-action@v5
         with:
-          context: .  # Root context to include neckenml-analyzer submodule
+          context: .
           file: ./backend/${{ matrix.worker.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
