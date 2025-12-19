@@ -131,19 +131,23 @@ class AnalysisService:
             print(f"   [TIME] Starting CPU-intensive analysis...")
             start_time = time.time()
 
-            # 2. ANALYZE (MusiCNN + Madmom)
+            # 2. ANALYZE (MusiCNN + Madmom) with ARTIFACT PERSISTENCE
             context = f"{track.title} {artist_name} {album_name}"
-            data = self.analyzer.analyze_file(file_path, context)
+            result = self.analyzer.analyze_file(file_path, context, return_artifacts=True)
 
             end_time = time.time()
             print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.")
 
-            if data:
-                # 3. SAVE RAW ANALYSIS
+            if result:
+                # Extract features and artifacts
+                data = result["features"]           # Derived features
+                artifacts = result["raw_artifacts"]  # Raw Madmom/MusiCNN/etc outputs
+
+                # 3. SAVE RAW ARTIFACTS (enables fast re-analysis!)
                 self.repo.add_analysis(
                     track_id=track.id,
-                    source_type="hybrid_ml_v2",
-                    raw_data=data
+                    source_type="neckenml_analyzer",  # New source type
+                    raw_data=artifacts  # Store artifacts, not features!
                 )
 
                 # --- Basic Audio Stats ---

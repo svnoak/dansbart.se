@@ -281,8 +281,9 @@ def trigger_reclassification(
     if not track:
         raise HTTPException(status_code=404, detail="Track not found")
     
-    # Check if we have analysis data
-    source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
+    # Check if we have analysis data (support both old and new formats)
+    source = next((s for s in track.analysis_sources
+                  if s.source_type in ['neckenml_analyzer', 'hybrid_ml_v2']), None)
     if not source:
         raise HTTPException(status_code=400, detail="No analysis data found. Run full re-analysis instead.")
 

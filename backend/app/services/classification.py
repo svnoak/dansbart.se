@@ -1,13 +1,34 @@
 from sqlalchemy.orm import Session
 from app.core.models import Track, AnalysisSource, TrackDanceStyle
-from app.workers.synthesis.style_classifier import StyleClassifier
+from neckenml.classifier import StyleClassifier
+from neckenml import compute_derived_features
+from app.core.music_theory import categorize_tempo
+from app.services.style_keywords_cache import get_sorted_keywords
 from app.repository import track
 
 class ClassificationService:
     def __init__(self, db: Session):
         self.db = db
-        # Pass db session to classifier for keyword lookups
-        self.classifier = StyleClassifier(db=db)
+        # Pass db session and callback functions to classifier
+        self.classifier = StyleClassifier(
+            db=db,
+            categorize_tempo_fn=categorize_tempo,
+            get_keywords_fn=get_sorted_keywords
+        )
+
+    def _get_features_from_source(self, source: AnalysisSource) -> dict:
+        """
+        Extracts features from an AnalysisSource, handling both:
+        - Old format (source_type='hybrid_ml_v2'): raw_data contains features directly
+        - New format (source_type='neckenml_analyzer'): raw_data contains artifacts
+        """
+        if source.source_type == "neckenml_analyzer":
+            # New format: compute features from artifacts
+            print(f"   ⚡ Computing features from stored artifacts (fast!)")
+            return compute_derived_features(source.raw_data)
+        else:
+            # Old format: raw_data IS the features
+            return source.raw_data
 
     def _save_predictions(self, track, predictions):
         try:
@@ -45,10 +66,10 @@ class ClassificationService:
         """
         print("🔄 Re-evaluating library with new intelligence...")
         
-        # 1. Get all tracks that have analysis data
+        # 1. Get all tracks that have analysis data (both old and new formats)
         tracks = (self.db.query(Track)
                   .join(AnalysisSource)
-                  .filter(AnalysisSource.source_type == 'hybrid_ml_v2')
+                  .filter(AnalysisSource.source_type.in_(['neckenml_analyzer', 'hybrid_ml_v2']))
                   .all())
         
         updated_count = 0
@@ -63,11 +84,16 @@ class ClassificationService:
                 continue 
 
             # --- THE RE-CLASSIFICATION ---
-            source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
+            # Support both old (hybrid_ml_v2) and new (neckenml_analyzer) formats
+            source = next((s for s in track.analysis_sources
+                          if s.source_type in ['neckenml_analyzer', 'hybrid_ml_v2']), None)
             if not source: continue
 
-            # 1. Ask the Brain 
-            predictions = self.classifier.classify(track, source.raw_data)
+            # 1. Get features (compute from artifacts if new format)
+            features = self._get_features_from_source(source)
+
+            # 2. Ask the Brain
+            predictions = self.classifier.classify(track, features)
             
             # 2. Save 
             self._save_predictions(track, predictions)
@@ -90,26 +116,27 @@ class ClassificationService:
                 return
 
         # 2. Get Analysis Data (Optimization applied here)
-        data_to_use = analysis_data
-        
-        if not data_to_use:
-            # Fallback: Fetch from DB if not provided directly
-            source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
-            if source:
-                data_to_use = source.raw_data
+        features = analysis_data
 
-        if not data_to_use:
+        if not features:
+            # Fallback: Fetch from DB if not provided directly
+            source = next((s for s in track.analysis_sources
+                          if s.source_type in ['neckenml_analyzer', 'hybrid_ml_v2']), None)
+            if source:
+                features = self._get_features_from_source(source)
+
+        if not features:
             print(f"   ⚠️ No analysis data found for {track.title}")
             return
 
         # 3. Update Vocals flag (Descriptive)
         # We rely on the analysis data for this, not just the DB column
-        is_instrumental = data_to_use.get('is_likely_instrumental', True)
+        is_instrumental = features.get('is_likely_instrumental', True)
         track.has_vocals = not is_instrumental
         self.db.add(track)
 
         # 4. Run The Brain
-        predictions = self.classifier.classify(track, data_to_use)
+        predictions = self.classifier.classify(track, features)
 
         # 5. Save
         self._save_predictions(track, predictions)
