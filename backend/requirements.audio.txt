@@ -5,17 +5,18 @@
 
 -r requirements.common.txt
 
-# Audio Analysis & Feature Extraction (HEAVY)
-librosa                   # Audio feature extraction & analysis
-essentia-tensorflow       # Audio fingerprinting & MusiCNN embeddings
-Cython                    # Required for compiling madmom
-git+https://github.com/CPJKU/madmom.git  # Beat tracking & onset detection
-scipy                     # Scientific computing for audio processing
-numpy                     # Numerical operations
+# neckenml Analyzer - Open Source Analysis & Classification Engine (core only)
+-e ../neckenml-analyzer
 
-# Audio File Handling
-yt-dlp                    # YouTube audio downloader
+# Audio dependencies (installed separately due to build requirements)
+essentia-tensorflow>=2.1b6.dev0
+librosa>=0.9.0
+git+https://github.com/CPJKU/madmom.git  # Needs Cython pre-installed
+soundfile>=0.10.0
+
+# Audio File Handling (PROPRIETARY - Not in neckenml-analyzer)
+yt-dlp                    # YouTube audio downloader (PROPRIETARY)
 mutagen                   # Audio metadata & duration verification
 
-# Music Theory (used by StyleClassifier)
+# Music Theory (used by StyleClassifier - may be removed if not needed)
 music21                   # Music theory and notation analysis

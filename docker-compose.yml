@@ -1,11 +1,12 @@
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.api
+      context: .
+      dockerfile: backend/Dockerfile.api
     platform: linux/amd64
     volumes:
-      - ./backend:/app  # Syncs your local folder to Docker (Live Code Editing)
+      - ./backend:/app
+      - ./neckenml-analyzer:/neckenml-analyzer
     env_file:
       - ./backend/.env
     depends_on:
@@ -13,7 +14,6 @@ services:
       - redis
     ports:
       - "8000:8000"
-    # This keeps the container running so we can exec commands into it
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -45,12 +45,13 @@ services:
   # Audio Worker (Heavy ML models)
   worker-audio:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.audio
+      context: .
+      dockerfile: backend/Dockerfile.audio
     platform: linux/amd64
     command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio
     volumes:
       - ./backend:/app
+      - ./neckenml-analyzer:/neckenml-analyzer
     env_file:
       - ./backend/.env
     environment:

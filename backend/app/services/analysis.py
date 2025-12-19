@@ -2,17 +2,22 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.models import Track, PlaybackLink, TrackStructureVersion, TrackArtist
 from app.repository.analysis import AnalysisRepository
 from app.workers.audio.fetcher import AudioFetcher
-from app.workers.audio.analyzer import AudioAnalyzer
-from app.services.classification import ClassificationService 
+from neckenml import AudioAnalyzer
+from app.services.classification import ClassificationService
 from app.core.database import SessionLocal
 import time
+import os
 
 class AnalysisService:
     def __init__(self, db: Session):
         self.db = db
         self.repo = AnalysisRepository(db)
-        self.fetcher = AudioFetcher()
-        self.analyzer = AudioAnalyzer()
+        self.fetcher = AudioFetcher()  # No db parameter needed
+
+        # Use neckenml-analyzer (without audio_source since we fetch manually with YouTube fetcher)
+        model_dir = os.getenv('neckenml_MODEL_DIR', '/app/app/workers/audio/models')
+        self.analyzer = AudioAnalyzer(audio_source=None, model_dir=model_dir)
+
         self.classifier_service = ClassificationService(db)
 
     def analyze_track_by_id(self, track_id: str):
@@ -126,19 +131,23 @@ class AnalysisService:
             print(f"   [TIME] Starting CPU-intensive analysis...")
             start_time = time.time()
 
-            # 2. ANALYZE (MusiCNN + Madmom)
+            # 2. ANALYZE (MusiCNN + Madmom) with ARTIFACT PERSISTENCE
             context = f"{track.title} {artist_name} {album_name}"
-            data = self.analyzer.analyze_file(file_path, context)
+            result = self.analyzer.analyze_file(file_path, context, return_artifacts=True)
 
             end_time = time.time()
             print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.")
 
-            if data:
-                # 3. SAVE RAW ANALYSIS
+            if result:
+                # Extract features and artifacts
+                data = result["features"]           # Derived features
+                artifacts = result["raw_artifacts"]  # Raw Madmom/MusiCNN/etc outputs
+
+                # 3. SAVE RAW ARTIFACTS (enables fast re-analysis!)
                 self.repo.add_analysis(
                     track_id=track.id,
-                    source_type="hybrid_ml_v2",
-                    raw_data=data
+                    source_type="neckenml_analyzer",  # New source type
+                    raw_data=artifacts  # Store artifacts, not features!
                 )
 
                 # --- Basic Audio Stats ---
