@@ -18,19 +18,19 @@ WORKDIR /app
 RUN pip install --no-cache-dir --upgrade pip
 
 # Install light worker requirements
-COPY requirements.workers.txt requirements.common.txt ./
+COPY backend/requirements.workers.txt backend/requirements.common.txt ./
 RUN pip install --no-cache-dir -r requirements.workers.txt
 
-# 4. Create non-root user for running Celery
+# 4. Copy Application Code
+COPY backend/ .
+
+# 5. Copy and set up entrypoint script (for DB migrations)
+COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# 6. Create non-root user for running Celery
 RUN useradd -m -u 1000 celeryuser && \
     chown -R celeryuser:celeryuser /app
-
-# 5. Copy Application Code
-COPY --chown=celeryuser:celeryuser . .
-
-# 6. Copy and set up entrypoint script (for DB migrations)
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
 
 # Switch to non-root user
 USER celeryuser
