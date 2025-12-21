@@ -16,15 +16,16 @@ export default {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
-          <button 
+          <button
             @click="isExpanded = !isExpanded"
             class="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
             :class="{ 'bg-blue-50 border-blue-300': activeFilterCount > 0 }"
-          >
-            <svg class="w-5 h-5" :class="activeFilterCount > 0 ? 'text-blue-600' : 'text-gray-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            :aria-expanded="isExpanded"
+            :aria-label="isExpanded ? 'Stäng filter' : 'Visa filter' + (activeFilterCount > 0 ? ' (' + activeFilterCount + ' aktiva)' : '')">
+            <svg class="w-5 h-5" :class="activeFilterCount > 0 ? 'text-blue-600' : 'text-gray-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
             </svg>
-            <span v-if="activeFilterCount > 0" class="bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ activeFilterCount }}</span>
+            <span v-if="activeFilterCount > 0" class="bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full" aria-hidden="true">{{ activeFilterCount }}</span>
           </button>
         </div>
 
@@ -33,11 +34,21 @@ export default {
             
             <div>
               <label class="text-xs font-medium text-gray-600 mb-2 block">Källa</label>
-              <div class="flex gap-2">
-                <button @click="toggleSource('spotify')" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors" :class="localSource === 'spotify' ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'">
+              <div class="flex gap-2" role="group" aria-label="Välj musikkälla">
+                <button
+                  @click="toggleSource('spotify')"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                  :class="localSource === 'spotify' ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'"
+                  :aria-pressed="localSource === 'spotify'"
+                  aria-label="Visa endast Spotify-låtar">
                   <span>Spotify</span>
                 </button>
-                <button @click="toggleSource('youtube')" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors" :class="localSource === 'youtube' ? 'bg-red-100 text-red-700 border-2 border-red-400' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'">
+                <button
+                  @click="toggleSource('youtube')"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                  :class="localSource === 'youtube' ? 'bg-red-100 text-red-700 border-2 border-red-400' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'"
+                  :aria-pressed="localSource === 'youtube'"
+                  aria-label="Visa endast YouTube-låtar">
                   <span>YouTube</span>
                 </button>
               </div>
@@ -46,24 +57,24 @@ export default {
             <template v-if="!localSearch">
               
               <div>
-                <label class="text-xs font-medium text-gray-600 mb-2 block">Kategori</label>
-                <select v-model="localMainStyle" @change="onMainStyleChange" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500">
+                <label for="mobile-category-select" class="text-xs font-medium text-gray-600 mb-2 block">Kategori</label>
+                <select id="mobile-category-select" v-model="localMainStyle" @change="onMainStyleChange" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500" aria-label="Filtrera på dansstilskategori">
                   <option value="">Alla Kategorier</option>
                   <option v-for="(subStyles, main) in styleTree" :key="main" :value="main">{{ main }}</option>
                 </select>
               </div>
 
               <div>
-                <label class="text-xs font-medium text-gray-600 mb-2 block">Specifik Dans</label>
-                <select v-model="localSubStyle" @change="onSubStyleChange" :disabled="!localMainStyle" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400">
+                <label for="mobile-substyle-select" class="text-xs font-medium text-gray-600 mb-2 block">Specifik Dans</label>
+                <select id="mobile-substyle-select" v-model="localSubStyle" @change="onSubStyleChange" :disabled="!localMainStyle" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400" aria-label="Filtrera på specifik dansstil">
                   <option value="">{{ localMainStyle ? 'Alla ' + localMainStyle + ' varianter' : 'Välj kategori först' }}</option>
                   <option v-for="style in availableSubStyles" :key="style" :value="style">{{ style }}</option>
                 </select>
               </div>
 
               <div>
-                <label class="text-xs font-medium text-gray-600 mb-2 block">Längd</label>
-                <select v-model="localDuration" @change="emitDuration" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500">
+                <label for="mobile-duration-select" class="text-xs font-medium text-gray-600 mb-2 block">Längd</label>
+                <select id="mobile-duration-select" v-model="localDuration" @change="emitDuration" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500" aria-label="Filtrera på låtlängd">
                   <option value="">Alla längder</option>
                   <option value="short">Kort (&lt; 3 min)</option>
                   <option value="medium">Medium (3-5 min)</option>
@@ -74,8 +85,8 @@ export default {
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <label class="text-xs font-medium text-gray-600">Tempo</label>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" v-model="localTempoEnabled" @change="$emit('update:tempoEnabled', localTempoEnabled)" class="sr-only peer">
+                  <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localTempoEnabled = !localTempoEnabled; $emit('update:tempoEnabled', localTempoEnabled)" @keydown.space.prevent="localTempoEnabled = !localTempoEnabled; $emit('update:tempoEnabled', localTempoEnabled)">
+                    <input type="checkbox" v-model="localTempoEnabled" @change="$emit('update:tempoEnabled', localTempoEnabled)" class="sr-only peer" aria-label="Aktivera tempofilter" tabindex="0">
                     <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
@@ -93,17 +104,21 @@ export default {
             <div>
               <div class="flex items-center justify-between">
                 <label class="text-xs font-medium text-gray-600">Bekräftad dansstil</label>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" v-model="localStyleConfirmed" @change="$emit('update:styleConfirmed', localStyleConfirmed)" class="sr-only peer">
+                <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localStyleConfirmed = !localStyleConfirmed; $emit('update:styleConfirmed', localStyleConfirmed)" @keydown.space.prevent="localStyleConfirmed = !localStyleConfirmed; $emit('update:styleConfirmed', localStyleConfirmed)">
+                  <input type="checkbox" v-model="localStyleConfirmed" @change="$emit('update:styleConfirmed', localStyleConfirmed)" class="sr-only peer" aria-label="Bekräftad dansstil" tabindex="0">
                   <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
             </div>
 
             <div class="border-t border-gray-200 pt-3">
-              <button @click="advancedExpanded = !advancedExpanded" class="w-full flex items-center justify-between text-xs font-medium text-gray-600 hover:text-gray-800">
+              <button
+                @click="advancedExpanded = !advancedExpanded"
+                class="w-full flex items-center justify-between text-xs font-medium text-gray-600 hover:text-gray-800"
+                :aria-expanded="advancedExpanded"
+                aria-label="Växla avancerad sökning">
                 <span>Avancerad sökning</span>
-                <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': advancedExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': advancedExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
@@ -113,8 +128,8 @@ export default {
                   <div>
                     <div class="flex items-center justify-between mb-2">
                       <label class="text-xs font-medium text-gray-600">Studsighet</label>
-                      <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" v-model="localBouncinessEnabled" @change="$emit('update:bouncinessEnabled', localBouncinessEnabled)" class="sr-only peer">
+                      <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localBouncinessEnabled = !localBouncinessEnabled; $emit('update:bouncinessEnabled', localBouncinessEnabled)" @keydown.space.prevent="localBouncinessEnabled = !localBouncinessEnabled; $emit('update:bouncinessEnabled', localBouncinessEnabled)">
+                        <input type="checkbox" v-model="localBouncinessEnabled" @change="$emit('update:bouncinessEnabled', localBouncinessEnabled)" class="sr-only peer" aria-label="Aktivera studsighetsfilter" tabindex="0">
                         <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -131,8 +146,8 @@ export default {
                   <div>
                     <div class="flex items-center justify-between mb-2">
                       <label class="text-xs font-medium text-gray-600">Artikulation</label>
-                      <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" v-model="localArticulationEnabled" @change="$emit('update:articulationEnabled', localArticulationEnabled)" class="sr-only peer">
+                      <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localArticulationEnabled = !localArticulationEnabled; $emit('update:articulationEnabled', localArticulationEnabled)" @keydown.space.prevent="localArticulationEnabled = !localArticulationEnabled; $emit('update:articulationEnabled', localArticulationEnabled)">
+                        <input type="checkbox" v-model="localArticulationEnabled" @change="$emit('update:articulationEnabled', localArticulationEnabled)" class="sr-only peer" aria-label="Aktivera artikulationsfilter" tabindex="0">
                         <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -163,43 +178,56 @@ export default {
         </div>
 
         <div class="flex flex-wrap gap-4 items-center">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2" role="group" aria-label="Välj musikkälla">
             <span class="text-sm text-gray-500">Källa:</span>
-            <button @click="toggleSource('spotify')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors" :class="localSource === 'spotify' ? 'bg-green-100 text-green-700 ring-2 ring-green-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">Spotify</button>
-            <button @click="toggleSource('youtube')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors" :class="localSource === 'youtube' ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">YouTube</button>
+            <button
+              @click="toggleSource('spotify')"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="localSource === 'spotify' ? 'bg-green-100 text-green-700 ring-2 ring-green-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+              :aria-pressed="localSource === 'spotify'"
+              aria-label="Visa endast Spotify-låtar">Spotify</button>
+            <button
+              @click="toggleSource('youtube')"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="localSource === 'youtube' ? 'bg-red-100 text-red-700 ring-2 ring-red-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+              :aria-pressed="localSource === 'youtube'"
+              aria-label="Visa endast YouTube-låtar">YouTube</button>
           </div>
 
           <div class="flex items-center gap-2">
             <span class="text-sm text-gray-500">Bekräftad dansstil:</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" v-model="localStyleConfirmed" @change="$emit('update:styleConfirmed', localStyleConfirmed)" class="sr-only peer">
+            <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localStyleConfirmed = !localStyleConfirmed; $emit('update:styleConfirmed', localStyleConfirmed)" @keydown.space.prevent="localStyleConfirmed = !localStyleConfirmed; $emit('update:styleConfirmed', localStyleConfirmed)">
+              <input type="checkbox" v-model="localStyleConfirmed" @change="$emit('update:styleConfirmed', localStyleConfirmed)" class="sr-only peer" aria-label="Bekräftad dansstil" tabindex="0">
               <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
 
           <div class="flex items-center gap-2">
               <span class="text-sm text-gray-500">Sång:</span>
-              <div class="flex rounded-lg overflow-hidden border border-gray-200 bg-white">
+              <div class="flex rounded-lg overflow-hidden border border-gray-200 bg-white" role="group" aria-label="Filtrera på sång eller instrumental">
                 <button
                   @click="setVocals('')"
                   class="px-3 py-1.5 text-sm font-medium transition-colors"
                   :class="localVocals === '' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
-                >
+                  :aria-pressed="localVocals === ''"
+                  aria-label="Visa alla låtar">
                   Alla
                 </button>
                 <button
                   @click="setVocals('instrumental')"
                   class="px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-200"
                   :class="localVocals === 'instrumental' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
-                >
-                  🎻 Instrumental
+                  :aria-pressed="localVocals === 'instrumental'"
+                  aria-label="Visa endast instrumentala låtar">
+                  <span aria-hidden="true">🎻</span> Instrumental
                 </button>
                 <button
                   @click="setVocals('vocals')"
                   class="px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-200"
                   :class="localVocals === 'vocals' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
-                >
-                  🎤 Sång
+                  :aria-pressed="localVocals === 'vocals'"
+                  aria-label="Visa endast låtar med sång">
+                  <span aria-hidden="true">🎤</span> Sång
                 </button>
               </div>
             </div>
@@ -208,24 +236,24 @@ export default {
         <div v-if="!localSearch" class="flex flex-wrap gap-4 items-end">
           
           <div class="min-w-[160px]">
-            <label class="text-xs font-medium text-gray-600 mb-1 block">Kategori</label>
-            <select v-model="localMainStyle" @change="onMainStyleChange" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500">
+            <label for="desktop-category-select" class="text-xs font-medium text-gray-600 mb-1 block">Kategori</label>
+            <select id="desktop-category-select" v-model="localMainStyle" @change="onMainStyleChange" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500" aria-label="Filtrera på dansstilskategori">
               <option value="">Alla Kategorier</option>
               <option v-for="(subStyles, main) in styleTree" :key="main" :value="main">{{ main }}</option>
             </select>
           </div>
 
           <div class="min-w-[160px]">
-            <label class="text-xs font-medium text-gray-600 mb-1 block">Specifik Dans</label>
-            <select v-model="localSubStyle" @change="onSubStyleChange" :disabled="!localMainStyle" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400">
+            <label for="desktop-substyle-select" class="text-xs font-medium text-gray-600 mb-1 block">Specifik Dans</label>
+            <select id="desktop-substyle-select" v-model="localSubStyle" @change="onSubStyleChange" :disabled="!localMainStyle" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400" aria-label="Filtrera på specifik dansstil">
               <option value="">{{ localMainStyle ? 'Alla ' + localMainStyle + ' varianter' : 'Välj kategori först' }}</option>
               <option v-for="style in availableSubStyles" :key="style" :value="style">{{ style }}</option>
             </select>
           </div>
 
           <div class="min-w-[140px]">
-            <label class="text-xs font-medium text-gray-600 mb-1 block">Längd</label>
-            <select v-model="localDuration" @change="emitDuration" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <label for="desktop-duration-select" class="text-xs font-medium text-gray-600 mb-1 block">Längd</label>
+            <select id="desktop-duration-select" v-model="localDuration" @change="emitDuration" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" aria-label="Filtrera på låtlängd">
               <option value="">Alla längder</option>
               <option value="short">Kort (&lt; 3 min)</option>
               <option value="medium">Medium (3-5 min)</option>
@@ -236,8 +264,8 @@ export default {
           <div class="flex-1 min-w-[200px]">
             <div class="flex items-center justify-between mb-1">
               <label class="text-xs font-medium text-gray-600">Tempo</label>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" v-model="localTempoEnabled" @change="$emit('update:tempoEnabled', localTempoEnabled)" class="sr-only peer">
+              <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localTempoEnabled = !localTempoEnabled; $emit('update:tempoEnabled', localTempoEnabled)" @keydown.space.prevent="localTempoEnabled = !localTempoEnabled; $emit('update:tempoEnabled', localTempoEnabled)">
+                <input type="checkbox" v-model="localTempoEnabled" @change="$emit('update:tempoEnabled', localTempoEnabled)" class="sr-only peer" aria-label="Aktivera tempofilter" tabindex="0">
                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -255,8 +283,12 @@ export default {
         </div>
 
         <div class="border-t border-gray-100 pt-4">
-          <button @click="advancedExpanded = !advancedExpanded" class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 mb-3">
-            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': advancedExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button
+            @click="advancedExpanded = !advancedExpanded"
+            class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 mb-3"
+            :aria-expanded="advancedExpanded"
+            aria-label="Växla avancerad sökning">
+            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': advancedExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
             <span>Avancerad sökning</span>
@@ -267,8 +299,8 @@ export default {
               <div class="min-w-[200px]">
                 <div class="flex items-center justify-between mb-1">
                   <label class="text-xs font-medium text-gray-600">Studsighet</label>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" v-model="localBouncinessEnabled" @change="$emit('update:bouncinessEnabled', localBouncinessEnabled)" class="sr-only peer">
+                  <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localBouncinessEnabled = !localBouncinessEnabled; $emit('update:bouncinessEnabled', localBouncinessEnabled)" @keydown.space.prevent="localBouncinessEnabled = !localBouncinessEnabled; $emit('update:bouncinessEnabled', localBouncinessEnabled)">
+                    <input type="checkbox" v-model="localBouncinessEnabled" @change="$emit('update:bouncinessEnabled', localBouncinessEnabled)" class="sr-only peer" aria-label="Aktivera studsighetsfilter" tabindex="0">
                     <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
@@ -285,8 +317,8 @@ export default {
               <div class="min-w-[200px]">
                 <div class="flex items-center justify-between mb-1">
                   <label class="text-xs font-medium text-gray-600">Artikulation</label>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" v-model="localArticulationEnabled" @change="$emit('update:articulationEnabled', localArticulationEnabled)" class="sr-only peer">
+                  <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localArticulationEnabled = !localArticulationEnabled; $emit('update:articulationEnabled', localArticulationEnabled)" @keydown.space.prevent="localArticulationEnabled = !localArticulationEnabled; $emit('update:articulationEnabled', localArticulationEnabled)">
+                    <input type="checkbox" v-model="localArticulationEnabled" @change="$emit('update:articulationEnabled', localArticulationEnabled)" class="sr-only peer" aria-label="Aktivera artikulationsfilter" tabindex="0">
                     <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
@@ -529,7 +561,13 @@ export default {
       this.$emit('update:source', this.localSource);
     },
     setVocals(value) {
-      this.localVocals = value;
+      // If clicking the same non-empty value, toggle it off (back to "Alla")
+      // If clicking "Alla" (empty string), always set to "Alla"
+      if (value === '') {
+        this.localVocals = '';
+      } else {
+        this.localVocals = this.localVocals === value ? '' : value;
+      }
       this.$emit('update:vocals', this.localVocals);
     },
     toggleTempoEnabled() {

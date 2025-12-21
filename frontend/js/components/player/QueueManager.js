@@ -108,25 +108,29 @@ export default {
       v-if="isOpen"
       class="fixed inset-0 bg-black/50 z-[150] transition-opacity"
       @click="handleClose"
+      aria-hidden="true"
     ></div>
 
     <!-- Slide-out Panel -->
     <div
       class="fixed top-0 right-0 h-full w-full md:w-96 bg-white shadow-2xl z-[151] transform transition-transform duration-300 ease-in-out flex flex-col"
       :class="isOpen ? 'translate-x-0' : 'translate-x-full'"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="queue-title"
     >
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
         <div>
-          <h2 class="text-lg font-bold text-gray-900">Kö</h2>
-          <p class="text-sm text-gray-600">{{ queueCount }} låt{{ queueCount !== 1 ? 'ar' : '' }}</p>
+          <h2 id="queue-title" class="text-lg font-bold text-gray-900">Kö</h2>
+          <p class="text-sm text-gray-600" aria-live="polite">{{ queueCount }} låt{{ queueCount !== 1 ? 'ar' : '' }}</p>
         </div>
         <button
           @click="handleClose"
           class="p-2 hover:bg-gray-200 rounded-full transition-colors"
-          aria-label="Stäng"
+          aria-label="Stäng kö"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
@@ -144,7 +148,7 @@ export default {
         </div>
 
         <!-- Queue Items -->
-        <div v-else class="py-2">
+        <div v-else class="py-2" role="list" aria-label="Låtar i kön">
           <div
             v-for="(track, index) in queue"
             :key="track.id + '_' + index"
@@ -154,6 +158,8 @@ export default {
             @dragover="handleDragOver(index, $event)"
             @dragleave="handleDragLeave()"
             @drop="handleDrop(index, $event)"
+            role="listitem"
+            :aria-label="'Position ' + (index + 1) + ': ' + track.title + ' av ' + getArtistNames(track) + (index === currentIndex ? ', spelar nu' : '')"
             class="group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-all cursor-move"
             :class="{
               'bg-indigo-50': index === currentIndex,
@@ -163,7 +169,7 @@ export default {
             }"
           >
             <!-- Drag Handle -->
-            <div class="flex-shrink-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="flex-shrink-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-16h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
               </svg>
@@ -185,6 +191,11 @@ export default {
             <div
               @click="handleJumpTo(index)"
               class="flex-1 min-w-0 cursor-pointer"
+              role="button"
+              tabindex="0"
+              @keydown.enter="handleJumpTo(index)"
+              @keydown.space.prevent="handleJumpTo(index)"
+              :aria-label="'Hoppa till ' + track.title"
             >
               <h3 class="font-medium text-gray-900 truncate text-sm">
                 {{ track.title }}
@@ -201,9 +212,9 @@ export default {
             <button
               @click.stop="handleRemove(index)"
               class="flex-shrink-0 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded transition-all"
-              aria-label="Ta bort"
+              :aria-label="'Ta bort ' + track.title + ' från kön'"
             >
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </button>
@@ -216,6 +227,7 @@ export default {
         <button
           @click="handleClear"
           class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+          aria-label="Rensa hela kön"
         >
           Rensa kö
         </button>

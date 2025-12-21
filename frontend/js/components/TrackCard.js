@@ -120,41 +120,53 @@ export default {
             </p>
 
             <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500">
-                <button v-if="hasSpotify" @click="$emit('play', track, 'spotify')" 
-                        class="flex items-center gap-1 hover:text-[#1DB954] transition-colors" 
-                        :class="{ 'text-[#1DB954] font-bold': isCurrent && isSpotifyMode }">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg> 
+                <button v-if="hasSpotify" @click="$emit('play', track, 'spotify')"
+                        class="flex items-center gap-1 hover:text-[#1DB954] transition-colors"
+                        :class="{ 'text-[#1DB954] font-bold': isCurrent && isSpotifyMode }"
+                        :aria-label="'Spela på Spotify: ' + track.title">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
                     <span>Spotify</span>
                 </button>
-                
-                <button v-if="hasYouTube" @click="$emit('play', track, 'youtube')" 
-                        class="flex items-center gap-1 hover:text-red-600 transition-colors" 
-                        :class="{ 'text-red-600 font-bold': isCurrent && !isSpotifyMode }">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg> 
+
+                <button v-if="hasYouTube" @click="$emit('play', track, 'youtube')"
+                        class="flex items-center gap-1 hover:text-red-600 transition-colors"
+                        :class="{ 'text-red-600 font-bold': isCurrent && !isSpotifyMode }"
+                        :aria-label="'Spela på YouTube: ' + track.title">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
                     <span>YouTube</span>
                 </button>
 
-                <button v-if="!hasYouTube" @click="showLinkModal = true" class="text-xs text-gray-400 hover:text-red-500 border border-transparent hover:border-red-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1">
+                <button v-if="!hasYouTube" @click="showLinkModal = true"
+                        class="text-xs text-gray-400 hover:text-red-500 border border-transparent hover:border-red-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+                        :aria-label="'Lägg till YouTube-länk för ' + track.title">
                     <span>+ Lägg till länk</span>
                 </button>
 
-                <button @click="showFlagModal = true" class="text-xs text-gray-400 hover:text-amber-600 border border-transparent hover:border-amber-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1">
-                    <flag-icon class="w-3 h-3" />
+                <button @click="showFlagModal = true"
+                        class="text-xs text-gray-400 hover:text-amber-600 border border-transparent hover:border-amber-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+                        :aria-label="'Rapportera problem med ' + track.title">
+                    <flag-icon class="w-3 h-3" aria-hidden="true" />
                     <span>Rapportera</span>
                 </button>
 
-                <button @click.stop="shareTrack" class="text-xs text-gray-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Dela låt">
-                    <span>🔗</span>
+                <button @click.stop="shareTrack"
+                        class="text-xs text-gray-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+                        :aria-label="'Dela ' + track.title">
+                    <span aria-hidden="true">🔗</span>
                     <span>Dela</span>
                 </button>
 
-                <button @click.stop="$emit('show-similar', track.id)" class="text-xs text-gray-400 hover:text-purple-600 border border-transparent hover:border-purple-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Hitta liknande låtar">
-                    <span>🎵</span>
+                <button @click.stop="$emit('show-similar', track.id)"
+                        class="text-xs text-gray-400 hover:text-purple-600 border border-transparent hover:border-purple-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+                        :aria-label="'Hitta liknande låtar som ' + track.title">
+                    <span aria-hidden="true">🎵</span>
                     <span>Liknande</span>
                 </button>
 
-                <button @click.stop="$emit('add-to-queue', track)" class="text-xs text-gray-400 hover:text-green-600 border border-transparent hover:border-green-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="Lägg till i kö">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button @click.stop="$emit('add-to-queue', track)"
+                        class="text-xs text-gray-400 hover:text-green-600 border border-transparent hover:border-green-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+                        :aria-label="'Lägg till ' + track.title + ' i kö'">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
                     <span>Kö</span>
@@ -163,19 +175,20 @@ export default {
         </div>
 
         <div class="shrink-0 pt-1">
-            <button 
+            <button
                 @click.stop="playPrimary"
                 :disabled="!primarySource"
                 class="w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100"
                 :class="[
-                    !primarySource ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 
-                    (isCurrent && isPlaying) ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' : 
+                    !primarySource ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
+                    (isCurrent && isPlaying) ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' :
                     'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 shadow-md hover:shadow-lg'
                 ]"
+                :aria-label="!primarySource ? 'Ingen spelare tillgänglig för ' + track.title : (isCurrent && isPlaying) ? 'Pausa ' + track.title : 'Spela ' + track.title"
                 :title="playButtonTitle"
             >
-                <svg v-if="isCurrent && isPlaying" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /> </svg>
-                <svg v-else class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                <svg v-if="isCurrent && isPlaying" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /> </svg>
+                <svg v-else class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
             </button>
         </div>
 

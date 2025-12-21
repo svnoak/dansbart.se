@@ -54,6 +54,7 @@ export default {
       isLoadingVideo: false, // Track when we're loading a new video
       breakpoints: [], // Array of timestamps for practice breakpoints
       showQueueManager: false, // Queue manager visibility
+      liveRegionMessage: '', // For screen reader announcements
     };
   },
   mounted() {
@@ -71,6 +72,7 @@ export default {
     window.addEventListener('touchmove', this.onDrag, { passive: false });
     window.addEventListener('touchend', this.stopDrag);
     window.addEventListener('resize', this.onResize);
+    window.addEventListener('keydown', this.handleKeyDown);
   },
 
   beforeUnmount() {
@@ -81,6 +83,7 @@ export default {
     window.removeEventListener('touchmove', this.onDrag);
     window.removeEventListener('touchend', this.stopDrag);
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('keydown', this.handleKeyDown);
   },
 
   watch: {
@@ -94,6 +97,9 @@ export default {
         val ? this.$refs.spotifyEngine.resume() : this.$refs.spotifyEngine.pause();
       }
       if (val) this.lastTick = performance.now();
+
+      // Announce playback state change
+      this.liveRegionMessage = val ? 'Spelar' : 'Pausad';
     },
     activeSource(newVal, oldVal) {
       // Check for potential broken link: switching from youtube to spotify within 5 seconds
@@ -128,11 +134,16 @@ export default {
     },
     'currentTrack.id': {
       immediate: true,
-      handler(newId) {
+      handler(newId, oldId) {
         if (newId) {
           this.fetchVersions(newId);
           this.ytPlayStartTime = null; // Reset on track change
           this.loadBreakpoints(newId); // Load breakpoints for new track
+
+          // Announce track change
+          if (oldId && newId !== oldId && this.currentTrack) {
+            this.liveRegionMessage = `Nu spelar: ${this.currentTrack.title} av ${this.trackArtist}`;
+          }
         }
       },
     },
@@ -513,6 +524,63 @@ export default {
       }
       this.handleSeek(time);
     },
+    handleKeyDown(e) {
+      // Don't handle if user is typing in an input, textarea, select, or contenteditable
+      const target = e.target;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Space: Play/Pause
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this.togglePlay();
+      }
+      // Arrow Left: Rewind 5 seconds
+      else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        let newTime = this.visualTime - 5;
+        if (newTime < 0) newTime = 0;
+        this.handleSeek(newTime);
+      }
+      // Arrow Right: Forward 5 seconds
+      else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        let newTime = this.visualTime + 5;
+        if (newTime > this.duration) newTime = this.duration;
+        this.handleSeek(newTime);
+      }
+      // Arrow Down or Shift+N: Next track
+      else if (e.code === 'ArrowDown' || (e.shiftKey && e.code === 'KeyN')) {
+        e.preventDefault();
+        this.nextTrack();
+      }
+      // Arrow Up or Shift+P: Previous track
+      else if (e.code === 'ArrowUp' || (e.shiftKey && e.code === 'KeyP')) {
+        e.preventDefault();
+        this.prevTrack();
+      }
+      // S: Toggle shuffle
+      else if (e.code === 'KeyS' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        this.toggleShuffle();
+      }
+      // R: Toggle repeat
+      else if (e.code === 'KeyR' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        this.handleToggleRepeat();
+      }
+      // Q: Toggle queue
+      else if (e.code === 'KeyQ' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        this.showQueueManager = !this.showQueueManager;
+      }
+    },
   },
 
   template: /*html*/ `
@@ -684,6 +752,14 @@ export default {
             @move="moveInQueue"
             @clear="clearQueue"
         ></queue-manager>
+
+        <!-- Live region for screen reader announcements -->
+        <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            class="sr-only"
+        >{{ liveRegionMessage }}</div>
 
     </div>
     `,

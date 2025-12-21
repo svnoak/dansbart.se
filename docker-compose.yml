@@ -67,8 +67,8 @@ services:
   # Light Worker (Discovery, Ingestion, No ML)
   worker-light:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.workers
+      context: .
+      dockerfile: backend/Dockerfile.workers
     platform: linux/amd64
     command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q light
     volumes:

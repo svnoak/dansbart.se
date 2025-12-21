@@ -213,14 +213,17 @@ export default {
 
   template: /*html*/ `
     <div class="w-full bg-gray-200 relative group cursor-pointer select-none transition-all duration-200"
+         role="group"
+         aria-label="Tidslinje och framsteg"
          :class="structureMode !== 'none' ? 'h-8 mt-[-16px]' : 'h-1.5'">
-        
+
         <template v-if="structureMode === 'sections'">
             <div v-for="(block, i) in sectionBlocks" :key="'sec-'+i"
                  class="absolute top-0 h-full border-l border-indigo-400/50 pointer-events-none flex items-center justify-center text-[9px] font-bold text-indigo-700 overflow-hidden"
                  :class="block.color"
-                 :style="{ left: block.left + '%', width: block.width + '%' }">
-                 <span v-if="block.width > 5">{{ block.label }}</span>
+                 :style="{ left: block.left + '%', width: block.width + '%' }"
+                 role="presentation">
+                 <span v-if="block.width > 5" aria-hidden="true">{{ block.label }}</span>
             </div>
         </template>
 
@@ -252,11 +255,11 @@ export default {
              :style="{ width: progressPercent + '%' }">
         </div>
         
-        <input 
-            type="range" 
-            min="0" 
-            :max="duration || 100" 
-            :value="currentTime" 
+        <input
+            type="range"
+            min="0"
+            :max="duration || 100"
+            :value="currentTime"
             @mousedown="isDragging = true"
             @mouseup="isDragging = false"
             @touchstart="isDragging = true"
@@ -264,6 +267,11 @@ export default {
             @input="onInput"
             @change="onChange"
             :disabled="disabled"
+            :aria-label="'Spola i låten, nuvarande position: ' + Math.floor(currentTime) + ' sekunder'"
+            :aria-valuemin="0"
+            :aria-valuemax="duration || 100"
+            :aria-valuenow="currentTime"
+            :aria-valuetext="Math.floor(currentTime / 60) + ' minuter ' + Math.floor(currentTime % 60) + ' sekunder'"
             class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20 disabled:cursor-not-allowed"
         >
         

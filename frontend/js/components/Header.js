@@ -43,21 +43,39 @@ export default {
                     </a> -->
 
                     <!-- Dropdown menu for legal/settings -->
-                    <div class="relative group">
-                        <button class="text-gray-700 hover:text-indigo-600 font-medium transition-colors flex items-center space-x-1">
+                    <div class="relative desktop-menu-container" @keydown="handleMenuKeydown">
+                        <button
+                            @click="toggleDesktopMenu"
+                            class="text-gray-700 hover:text-indigo-600 font-medium transition-colors flex items-center space-x-1"
+                            :aria-expanded="desktopMenuOpen"
+                            aria-haspopup="true"
+                            aria-label="Öppna mer-menyn">
                             <span>Mer</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': desktopMenuOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                            <a href="/privacy.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg">
+                        <div
+                            v-show="desktopMenuOpen"
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200"
+                            role="menu"
+                            aria-label="Mer-meny">
+                            <a href="/privacy.html"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
+                               role="menuitem">
                                 Integritetspolicy
                             </a>
-                            <a href="/terms.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" :class="{ 'rounded-b-lg': !consentStatus }">
+                            <a href="/terms.html"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                               :class="{ 'rounded-b-lg': !consentStatus }"
+                               role="menuitem">
                                 Användarvillkor
                             </a>
-                            <button v-if="consentStatus" @click="openCookieSettings" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg">
+                            <button
+                                v-if="consentStatus"
+                                @click="openCookieSettings"
+                                class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg"
+                                role="menuitem">
                                 Cookie-inställningar
                             </button>
                         </div>
@@ -65,8 +83,12 @@ export default {
                 </nav>
 
                 <!-- Mobile menu button -->
-                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-gray-700 hover:text-indigo-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button
+                    @click="mobileMenuOpen = !mobileMenuOpen"
+                    class="md:hidden text-gray-700 hover:text-indigo-600"
+                    :aria-expanded="mobileMenuOpen"
+                    :aria-label="mobileMenuOpen ? 'Stäng mobilmeny' : 'Öppna mobilmeny'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -129,6 +151,31 @@ export default {
   data() {
     return {
       mobileMenuOpen: false,
+      desktopMenuOpen: false,
     };
+  },
+
+  methods: {
+    toggleDesktopMenu() {
+      this.desktopMenuOpen = !this.desktopMenuOpen;
+    },
+    closeDesktopMenu() {
+      this.desktopMenuOpen = false;
+    },
+    handleMenuKeydown(e) {
+      // Close on Escape
+      if (e.key === 'Escape') {
+        this.closeDesktopMenu();
+      }
+    },
+  },
+
+  mounted() {
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (this.desktopMenuOpen && !e.target.closest('.desktop-menu-container')) {
+        this.closeDesktopMenu();
+      }
+    });
   },
 };
