@@ -60,6 +60,8 @@ def get_tracks(
     max_bounciness: float = Query(None, ge=0, le=1, description="Maximum bounciness (0-1)"),
     min_articulation: float = Query(None, ge=0, le=1, description="Minimum articulation (0-1)"),
     max_articulation: float = Query(None, ge=0, le=1, description="Maximum articulation (0-1)"),
+    sort: str = Query("confidence", description="Field to sort by: confidence, created_at, bpm, etc."),
+    order: str = Query("desc", description="Direction: asc or desc"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -82,6 +84,8 @@ def get_tracks(
         max_bounciness=max_bounciness,
         min_articulation=min_articulation,
         max_articulation=max_articulation,
+        sort_by=sort,
+        sort_order=order,
         limit=limit,
         offset=offset
     )
@@ -122,6 +126,7 @@ def submit_track_feedback(
         style=feedback.style,
         tempo_correction=feedback.tempo_correction,
         tempo_category=feedback.tempo_category,
+        manual_bpm=feedback.manual_bpm,
         explicit_main_style=feedback.main_style,
         voter_id=x_voter_id
     )

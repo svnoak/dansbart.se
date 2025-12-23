@@ -11,6 +11,7 @@ import PlayerDockedView from './PlayerDockedView.js';
 import { showError } from '../../hooks/useToast.js';
 
 export default {
+  props: ['currentPage'],
   components: {
     YouTubeEngine,
     SpotifyEngine,
@@ -587,6 +588,7 @@ export default {
     <div v-if="currentTrack">
     
         <player-mobile-view
+            :current-page="currentPage"
             :current-track="currentTrack"
             :available-versions="availableVersions"
             :current-version-index="currentVersionIndex"
@@ -630,6 +632,7 @@ export default {
         ></player-mobile-view>
 
         <player-docked-view
+            :current-page="currentPage"
             :current-track="currentTrack"
             :available-versions="availableVersions"
             :current-version-index="currentVersionIndex"

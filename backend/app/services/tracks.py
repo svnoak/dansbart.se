@@ -162,6 +162,8 @@ class TrackService:
         max_bounciness: float = None,
         min_articulation: float = None,
         max_articulation: float = None,
+        sort_by: str = "confidence",
+        sort_order: str = "desc",
         limit: int = 20,
         offset: int = 0
     ):
@@ -198,6 +200,8 @@ class TrackService:
             max_articulation=max_articulation,
             search=search,
             source=source,
+            sort_by=sort_by,
+            sort_order=sort_order,
             limit=limit,
             offset=offset
         )
@@ -311,9 +315,6 @@ class TrackService:
             })
 
         total_count = base_total - filtered_count if (min_tempo or max_tempo) else base_total
-
-        # Sort: User Confirmed > High Confidence
-        results.sort(key=lambda x: (not x["is_user_confirmed"], not x["style_confirmations"], -x["style_confidence"]))
 
         return {
             "items": results,

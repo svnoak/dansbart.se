@@ -5,7 +5,7 @@ import { getAuthHeaders } from '../../utils/voter.js';
 import { showError } from '../../hooks/useToast.js';
 
 export default {
-  props: ['track', 'isOpen'],
+  props: ['track', 'isOpen', 'excludeCorrection'],
   emits: ['close', 'refresh'],
   components: { FlagIcon },
   setup() {
@@ -273,7 +273,7 @@ export default {
 
             <div v-if="view === 'menu'" class="flex flex-col gap-3">
                 <p class="text-sm text-gray-600 mb-1">Vad är fel med den här låten?</p>
-                <button @click="view = hasStyle && hasTempo ? 'verify_style_tempo' : (hasStyle ? 'verify_style_only' : 'ask_main')" class="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left group">
+                <button v-if="!excludeCorrection" @click="view = hasStyle && hasTempo ? 'verify_style_tempo' : (hasStyle ? 'verify_style_only' : 'ask_main')" class="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left group">
                     <div class="bg-gray-100 group-hover:bg-white text-gray-500 group-hover:text-indigo-600 p-2.5 rounded-full">
                         <svg
                             class="w-6 h-6"

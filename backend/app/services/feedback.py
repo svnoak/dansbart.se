@@ -75,6 +75,7 @@ class FeedbackService:
         voter_id: str,
         tempo_category: str | None = None, 
         explicit_main_style: str | None = None,
+        manual_bpm: float | None = None,
     ) -> dict | None:
         track = self.db.query(Track).filter(Track.id == track_id).first()
         if not track: return None
@@ -115,14 +116,29 @@ class FeedbackService:
         self.db.flush()
 
         # --- STEP 2: CALCULATE METRICS ---
-        new_multiplier = 1.0
-        if tempo_correction == "half": new_multiplier = 0.5
-        elif tempo_correction == "double": new_multiplier = 2.0
-        
         source = next((s for s in track.analysis_sources if s.source_type == 'hybrid_ml_v2'), None)
         raw_bpm = source.raw_data.get('tempo_bpm', 0) if source else 0
-        effective_bpm = int(raw_bpm * new_multiplier)
+
+        if raw_bpm > 0:
+            # CASE A: Analyzer has data. TRUST IT.
+            # We only apply the multiplier (correction), never the manual tap.
+            new_multiplier = 1.0
+            if tempo_correction == "half": new_multiplier = 0.5
+            elif tempo_correction == "double": new_multiplier = 2.0
+            
+            effective_bpm = int(raw_bpm * new_multiplier)
+            
+        elif manual_bpm and manual_bpm > 0:
+            # CASE B: Analyzer failed or is missing. Use User Tap.
+            effective_bpm = int(manual_bpm)
+            new_multiplier = 1.0 # Tapped tempo is considered "1x"
+            
+        else:
+            # CASE C: No data exists.
+            effective_bpm = 0
+            new_multiplier = 1.0
         
+        # Calculate Category (Slow/Fast) based on the final effective BPM
         if tempo_category and tempo_category in ("Slow", "Medium", "Fast", "Turbo"):
             category = tempo_category
         else:

@@ -71,6 +71,7 @@ class FeedbackIn(BaseModel):
     main_style: str | None = None # e.g. Boda
     tempo_correction: str # "ok", "half", "double"
     tempo_category: str | None = None  # Direct category: "Slow", "Medium", "Fast", "Turbo"
+    manual_bpm: float | None = None
 
 class StructureIn(BaseModel):
     bars: Optional[List[float]] = None

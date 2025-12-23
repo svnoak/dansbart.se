@@ -11,7 +11,10 @@
   </head>
   <body class="overflow-x-hidden bg-gray-50">
     <div id="app" class="min-h-screen pb-40 font-sans overflow-x-hidden">
-      <site-header></site-header>
+      <site-header 
+        :current-page="currentPage" 
+        @navigate="navigateToPage">
+      </site-header>
 
       <div class="px-4 py-6 sm:p-8">
         <!-- Discovery Page View -->
@@ -28,6 +31,15 @@
             @show-similar="showSimilarModal"
             @add-to-queue="addToQueue"
           ></discovery-page>
+        </div>
+
+        <div v-else-if="currentPage === 'classify'">
+            <classify-page
+                :current-track="currentTrack"
+                :is-playing="isPlaying"
+                @play="handleDiscoveryPlay" 
+                @stop="togglePlay"
+            ></classify-page>
         </div>
 
         <!-- Search Page View (existing) -->
@@ -111,7 +123,9 @@
         </div>
       </div>
 
-      <global-player></global-player>
+      <global-player 
+        :current-page="currentPage"
+      ></global-player>
       <cookie-consent></cookie-consent>
       <toast-container></toast-container>
       <similar-tracks-modal

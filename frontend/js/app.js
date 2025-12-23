@@ -16,6 +16,7 @@ import CookieConsent from './components/CookieConsent.js';
 import Toast from './components/toasts/Toast.js';
 import SimilarTracksModal from './components/SimilarTracksModal.js';
 import DiscoveryPage from './components/DiscoveryPage.js';
+import ClassifyPage from './components/ClassifyPage.js';
 
 const app = createApp({
   components: {
@@ -28,6 +29,7 @@ const app = createApp({
     'toast-container': Toast,
     'similar-tracks-modal': SimilarTracksModal,
     'discovery-page': DiscoveryPage,
+    'classify-page': ClassifyPage,
   },
   setup() {
     const filterLogic = useFilters();
@@ -40,6 +42,19 @@ const app = createApp({
 
     const scrollTrigger = ref(null);
     let observer = null;
+
+    const navigateToPage = (page) => {
+        currentPage.value = page;
+        
+        // Update URL
+        const url = new URL(window.location);
+        url.searchParams.set('page', page);
+        
+        // Remove track parameter if switching pages to avoid confusion
+        url.searchParams.delete('track');
+        
+        window.history.pushState({}, '', url);
+    };
 
     const handlePlay = (track, sourcePreference = null) => {
       const list = trackLogic.tracks.value;
@@ -192,13 +207,13 @@ const app = createApp({
       filterLogic.loadFiltersFromQueryParams(urlParams);
 
       if (trackId) {
-        // Track deep link - show search view and play track
         currentPage.value = 'search';
         loadAndPlayTrack(trackId);
       } else if (page === 'search') {
-        // Navigate to search page
         currentPage.value = 'search';
         trackLogic.fetchTracks();
+      } else if (page === 'classify') {
+        currentPage.value = 'classify';
       } else {
         // Default to discovery page
         currentPage.value = 'discovery';
@@ -292,6 +307,7 @@ const app = createApp({
       handleSimilarPlay,
       currentPage,
       navigateToSearch,
+      navigateToPage,
       addToQueue,
     };
   },

@@ -1,6 +1,16 @@
 import { useConsent } from '../consent.js';
 
 export default {
+  props: {
+    currentPage: {
+      type: String,
+      default: 'discovery'
+    }
+  },
+  
+  emits: ['navigate'],
+
+  // FIX: Remove arguments entirely since they aren't used in the JS logic
   setup() {
     const { consentStatus, revokeConsent } = useConsent();
 
@@ -18,7 +28,6 @@ export default {
     <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <!-- Logo/Brand -->
                 <div class="flex items-center">
                     <a href="/" class="flex items-center space-x-2">
                         <span class="text-2xl">🎻</span>
@@ -26,23 +35,25 @@ export default {
                     </a>
                 </div>
 
-                <!-- Desktop Navigation -->
                 <nav class="hidden md:flex items-center space-x-8">
-                    <a href="/" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
+                    <a href="/" 
+                       @click.prevent="$emit('navigate', 'discovery')"
+                       class="font-medium transition-colors"
+                       :class="currentPage === 'discovery' ? 'text-indigo-600' : 'text-gray-700 hover:text-indigo-600'">
                         Hem
                     </a>
+
+                    <button 
+                       @click="$emit('navigate', 'classify')"
+                       class="font-medium transition-colors focus:outline-none"
+                       :class="currentPage === 'classify' ? 'text-indigo-600' : 'text-gray-700 hover:text-indigo-600'">
+                        Hjälp till
+                    </button>
+
                     <a href="/help.html" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
                         Hjälp
                     </a>
-                    <!-- Placeholder for future pages -->
-                    <!-- <a href="/feedback" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
-                        Feedback
-                    </a>
-                    <a href="/login" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
-                        Logga in
-                    </a> -->
 
-                    <!-- Dropdown menu for legal/settings -->
                     <div class="relative desktop-menu-container" @keydown="handleMenuKeydown">
                         <button
                             @click="toggleDesktopMenu"
@@ -82,7 +93,6 @@ export default {
                     </div>
                 </nav>
 
-                <!-- Mobile menu button -->
                 <button
                     @click="mobileMenuOpen = !mobileMenuOpen"
                     class="md:hidden text-gray-700 hover:text-indigo-600"
@@ -95,23 +105,26 @@ export default {
                 </button>
             </div>
 
-            <!-- Mobile Navigation -->
             <Transition name="slide-down">
                 <div v-if="mobileMenuOpen" class="md:hidden py-4 border-t border-gray-200">
                     <div class="flex flex-col space-y-3">
-                        <a href="/" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
+                        <a href="/" 
+                           @click.prevent="$emit('navigate', 'discovery'); mobileMenuOpen = false"
+                           class="font-medium py-2"
+                           :class="currentPage === 'discovery' ? 'text-indigo-600' : 'text-gray-700 hover:text-indigo-600'">
                             Hem
                         </a>
+                        
+                        <button 
+                           @click="$emit('navigate', 'classify'); mobileMenuOpen = false"
+                           class="text-left font-medium py-2 focus:outline-none"
+                           :class="currentPage === 'classify' ? 'text-indigo-600' : 'text-gray-700 hover:text-indigo-600'">
+                            Hjälp till
+                        </button>
+
                         <a href="/help.html" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
                             Hjälp
                         </a>
-                        <!-- Placeholder for future pages -->
-                        <!-- <a href="/feedback" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
-                            Feedback
-                        </a>
-                        <a href="/login" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
-                            Logga in
-                        </a> -->
 
                         <div class="border-t border-gray-200 pt-3 mt-3">
                             <a href="/privacy.html" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">
@@ -163,7 +176,6 @@ export default {
       this.desktopMenuOpen = false;
     },
     handleMenuKeydown(e) {
-      // Close on Escape
       if (e.key === 'Escape') {
         this.closeDesktopMenu();
       }
@@ -171,7 +183,6 @@ export default {
   },
 
   mounted() {
-    // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
       if (this.desktopMenuOpen && !e.target.closest('.desktop-menu-container')) {
         this.closeDesktopMenu();

@@ -65,6 +65,10 @@ class TrackRepository(BaseRepository[Track]):
         search: str = None,
         source: str = None,
 
+        # Sorting
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+
         # Pagination
         limit: int = 20,
         offset: int = 0
@@ -76,7 +80,40 @@ class TrackRepository(BaseRepository[Track]):
         
         # 1. Base Query with Joins (Outer join to ensure we get tracks even if style is weird)
         query = self.db.query(Track).outerjoin(Track.dance_styles)
+
+        # 2. Strict Primary Filter
+        # Unless we are searching for a specific sub-style (which might be secondary),
+        # we filter by Primary Only to prevent duplicates and ensure sorting applies to the main identity.
+        if not exact_style and not exact_main_style:
+            query = query.filter(
+                or_(
+                    TrackDanceStyle.is_primary == True,
+                    TrackDanceStyle.id == None
+                )
+            )
         
+        # 3. Sorting Logic
+        sort_columns = {
+            "created_at": Track.created_at,
+            "title": Track.title,
+            "duration": Track.duration_ms,
+            "confidence": TrackDanceStyle.confidence,
+            "bpm": TrackDanceStyle.effective_bpm,
+            "bounciness": Track.bounciness,
+        }
+
+        col = sort_columns.get(sort_by, Track.created_at)
+
+        if sort_order.lower() == "asc":
+            # For confidence/BPM, we want nulls first when sorting ASC to find "unclassified" tracks
+            query = query.order_by(col.asc().nullsfirst())
+        else:
+            query = query.order_by(col.desc().nullslast())
+
+        # Secondary sort to ensure consistent pagination
+        if sort_by != "id":
+            query = query.order_by(Track.id.asc())
+
         # Base Filtering
         query = query.filter(
             or_(
@@ -89,7 +126,7 @@ class TrackRepository(BaseRepository[Track]):
         )
         query = query.filter(Track.is_flagged == False)
 
-        # 2. Apply Style Filters (Strict Hierarchy)
+        # 4. Apply Style Filters (Strict Hierarchy)
         if exact_style:
             # User wants a specific Sub-Style (e.g. "Reinländer")
             # We check both columns: sub_style first, then dance_style as fallback
@@ -109,7 +146,7 @@ class TrackRepository(BaseRepository[Track]):
         if style_confirmed:
             query = query.filter(TrackDanceStyle.confidence >= 0.98)
 
-        # 3. Apply Audio Filters
+        # 5. Apply Audio Filters
         if min_bpm:
             query = query.filter(TrackDanceStyle.effective_bpm >= min_bpm)
         if max_bpm:
@@ -135,32 +172,29 @@ class TrackRepository(BaseRepository[Track]):
         if max_articulation is not None:
             query = query.filter(Track.articulation <= max_articulation)
 
-        # 4. Apply Text/Meta Search
+        # 6. Apply Text/Meta Search
         if search:
-            # Search Title OR Artist Name OR Album Title
-            query = query.join(Track.artist_links).join(TrackArtist.artist).outerjoin(Track.album).filter(
+            search_str = f"%{search}%"
+            query = query.outerjoin(Track.album).filter(
                 or_(
-                    Track.title.ilike(f"%{search}%"),
-                    Artist.name.ilike(f"%{search}%"),
-                    Album.title.ilike(f"%{search}%")
+                    Track.title.ilike(search_str),
+                    Album.title.ilike(search_str),
+                    Track.artist_links.any(
+                        TrackArtist.artist.has(Artist.name.ilike(search_str))
+                    )
                 )
             )
-
         if source:
             query = query.join(Track.playback_links).filter(
                 PlaybackLink.platform == source,
                 PlaybackLink.is_working == True
             )
 
-        # 5. Eager Loading & Execution
         # Use full eager load to avoid N+1 queries during formatting
-        query = query.options(*self.get_eager_load_full()).distinct()
-        
-        # Count total (before pagination)
-        # Note: count() on distinct query can be tricky, but this is usually sufficient for pagination
+        query = query.options(*self.get_eager_load_full())
+
         total = query.count()
-        
-        # Fetch Page
+
         items = query.offset(offset).limit(limit).all()
         
         return items, total

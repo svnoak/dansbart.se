@@ -6,6 +6,7 @@ import ProgressBar from './ProgressBar.js';
 
 export default {
   props: [
+    'currentPage',
     'currentTrack',
     'availableVersions',
     'currentVersionIndex',
@@ -98,7 +99,7 @@ export default {
             <div class="flex-1 min-h-[20px]"></div>
 
             <div class="mb-4 shrink-0">
-                <smart-nudge :key="'nudge-' + currentTrack.id" :track="currentTrack" :is-playing="isPlaying" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
+                <smart-nudge v-if="currentPage !== 'classify'" :key="'nudge-' + currentTrack.id" :track="currentTrack" :is-playing="isPlaying" @visibility-change="$emit('nudge-visibility', $event)"></smart-nudge>
                 <section-voting v-if="structureMode == 'sections'" :track="currentTrack" :active-version="availableVersions[currentVersionIndex]" @open-structure-editor="$emit('open-structure-editor')"></section-voting>
                 <broken-link-toast 
                     :broken-state="brokenState" 
