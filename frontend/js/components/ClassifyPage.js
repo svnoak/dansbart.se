@@ -165,11 +165,11 @@ export default {
                             >
                                 <span v-if="tappedBpm > 0" class="flex flex-col items-center leading-none">
                                     <span class="text-2xl font-black">{{ Math.round(tappedBpm) }}</span>
-                                    <span class="text-[10px] uppercase font-bold text-gray-400">BPM (Tappa mer)</span>
+                                    <span class="text-[10px] uppercase font-bold text-gray-400">BPM (Tryck här)</span>
                                 </span>
                                 <span v-else class="flex flex-col items-center">
                                     <span class="text-xl">👆</span>
-                                    <span class="text-xs uppercase font-bold mt-1">Tappa takten</span>
+                                    <span class="text-xs uppercase font-bold mt-1">Tryck i takten</span>
                                 </span>
                             </button>
                             

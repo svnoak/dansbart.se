@@ -51,7 +51,7 @@ export default {
                     </button>
 
                     <a href="/help.html" class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
-                        Hjälp
+                        FAQ
                     </a>
 
                     <div class="relative desktop-menu-container" @keydown="handleMenuKeydown">
