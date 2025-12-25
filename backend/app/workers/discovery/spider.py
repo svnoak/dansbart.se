@@ -6,7 +6,6 @@ from app.workers.ingestion.spotify import SpotifyIngestor
 from app.repository.track import TrackRepository
 from app.core.models import Track, ArtistCrawlLog, RejectionLog, PendingArtistApproval
 from app.services.genre_classifier import GenreClassifier
-from app.workers.tasks import analyze_track_task
 
 
 class DiscoverySpider:
@@ -191,6 +190,8 @@ class DiscoverySpider:
                 # Queue tracks for analysis
                 if track_ids:
                     print(f"      ⚙️  Scheduling {len(track_ids)} tracks for analysis...")
+                    # Lazy import to avoid loading heavy ML dependencies
+                    from app.workers.tasks import analyze_track_task
                     for tid in track_ids:
                         analyze_track_task.delay(tid)
 
@@ -557,6 +558,8 @@ class DiscoverySpider:
             # Queue tracks for analysis
             if track_ids:
                 print(f"         ⚙️  Scheduling {len(track_ids)} tracks for analysis...")
+                # Lazy import to avoid loading heavy ML dependencies
+                from app.workers.tasks import analyze_track_task
                 for tid in track_ids:
                     analyze_track_task.delay(tid)
 

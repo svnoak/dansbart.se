@@ -8,11 +8,13 @@ import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useLibraryApi } from './api.js';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import RejectionModal from './RejectionModal.js';
+import InlinePlayer from '../../shared/components/InlinePlayer.js';
 import { showError, showToast } from '../../../js/hooks/useToast.js';
 
 export default {
   components: {
     RejectionModal,
+    InlinePlayer,
   },
   setup() {
     const { adminToken } = useAdminAuth();
@@ -827,6 +829,7 @@ export default {
                 <table class="w-full text-left">
                     <thead class="text-xs uppercase text-gray-500 border-b border-gray-700">
                         <tr>
+                            <th class="py-2 px-2">Play</th>
                             <th class="py-2 px-2">Title</th>
                             <th class="py-2 px-2">Artist</th>
                             <th class="py-2 px-2">Album</th>
@@ -840,6 +843,12 @@ export default {
                     <tbody>
                         <tr v-for="track in tracks" :key="track.id"
                             class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                            <td class="py-2 px-2">
+                                <InlinePlayer
+                                    :playback-links="track.playback_links || []"
+                                    :track-title="track.title"
+                                />
+                            </td>
                             <td class="py-2 px-2 max-w-xs truncate" :title="track.title">
                                 {{ track.title }}
                             </td>

@@ -28,21 +28,31 @@ class AdminArtistListItem(BaseModel):
     class Config:
         from_attributes = True
 
+class PlaybackLinkOut(BaseModel):
+    platform: str
+    deep_link: str
+    is_working: bool
+
+    class Config:
+        from_attributes = True
+
 class AdminTrackListItem(BaseModel):
     id: UUID
     title: str
     artists: List[str]
     album_title: Optional[str] = None
     album_id: Optional[UUID] = None
-    
+
     status: str
     dance_style: Optional[str] = None
     confidence: Optional[float] = None
-    
+
     created_at: Optional[datetime] = None
     is_flagged: bool = False
     flagged_at: Optional[datetime] = None
     flag_reason: Optional[str] = None
+
+    playback_links: List[PlaybackLinkOut] = []
 
     class Config:
         from_attributes = True

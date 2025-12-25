@@ -71,6 +71,16 @@ class AdminTrackService:
             primary_style = next((s for s in track.dance_styles if s.is_primary), None)
             artist_names = [link.artist.name for link in track.artist_links] if track.artist_links else []
 
+            # Include playback links for admin preview
+            playback_links = [
+                {
+                    "platform": link.platform,
+                    "deep_link": link.deep_link,
+                    "is_working": link.is_working
+                }
+                for link in track.playback_links if link.is_working
+            ]
+
             items.append({
                 "id": str(track.id),
                 "title": track.title,
@@ -83,7 +93,8 @@ class AdminTrackService:
                 "created_at": track.created_at.isoformat() if track.created_at else None,
                 "is_flagged": track.is_flagged,
                 "flagged_at": track.flagged_at.isoformat() if track.flagged_at else None,
-                "flag_reason": track.flag_reason
+                "flag_reason": track.flag_reason,
+                "playback_links": playback_links
             })
 
         return build_paginated_response(items, total, limit, offset)
