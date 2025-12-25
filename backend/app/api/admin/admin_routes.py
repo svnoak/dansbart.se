@@ -516,6 +516,7 @@ def get_spider_stats(
 class RejectRequest(BaseModel):
     reason: str = "Not relevant"
     dry_run: bool = False  # If true, preview what would be deleted without actually deleting
+    delete_content: bool = True  # If true, delete content. If false, only block from spider.
 
 @router.get("/pending/artists")
 def get_pending_artists(
@@ -588,7 +589,7 @@ def reject_artist(
     """
     service = AdminArtistService(db)
     try:
-        result = service.reject_artist(artist_id, req.reason, req.dry_run)
+        result = service.reject_artist(artist_id, req.reason, req.dry_run, req.delete_content)
         if not req.dry_run:
             db.commit()
         return result
@@ -749,6 +750,7 @@ def get_artist_isolation_status(
 class BulkRejectRequest(BaseModel):
     ids: list[str]
     reason: str = "Bulk rejection"
+    delete_content: bool = True  # If true, delete content. If false, only block from spider.
 
 @router.post("/artists/bulk-reject")
 def bulk_reject_artists(
@@ -761,7 +763,7 @@ def bulk_reject_artists(
     """
     service = AdminArtistService(db)
     try:
-        result = service.bulk_reject_artists(req.ids, req.reason)
+        result = service.bulk_reject_artists(req.ids, req.reason, req.delete_content)
         db.commit()
         return result
     except Exception as e:

@@ -66,20 +66,20 @@ export function useLibraryApi(token) {
     return res.json();
   };
 
-  const rejectArtist = async (artistId, reason) => {
+  const rejectArtist = async (artistId, reason, deleteContent = true) => {
     const res = await fetchWithAuth(`/api/admin/artists/${artistId}/reject`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, delete_content: deleteContent }),
     });
     return res.json();
   };
 
-  const bulkRejectArtists = async (ids, reason = 'Bulk rejection') => {
+  const bulkRejectArtists = async (ids, reason = 'Bulk rejection', deleteContent = true) => {
     const res = await fetchWithAuth('/api/admin/artists/bulk-reject', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids, reason }),
+      body: JSON.stringify({ ids, reason, delete_content: deleteContent }),
     });
     return res.json();
   };

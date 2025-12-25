@@ -171,15 +171,17 @@ class AdminArtistService:
         self,
         artist_id: str,
         reason: str,
-        dry_run: bool = False
+        dry_run: bool = False,
+        delete_content: bool = True
     ) -> dict:
         """
-        Reject an artist and delete pending tracks.
+        Reject an artist and optionally delete content.
 
         Args:
             artist_id: Artist ID to reject
             reason: Reason for rejection
             dry_run: If True, preview without making changes
+            delete_content: If True, delete tracks/albums/artist. If False, only block from spider.
 
         Returns:
             Status dict with operation results
@@ -214,13 +216,14 @@ class AdminArtistService:
         if dry_run:
             return {
                 "status": "dry_run",
-                "message": f"DRY RUN: Would reject artist '{artist_name}'",
+                "message": f"DRY RUN: Would {'block' if not delete_content else 'reject'} artist '{artist_name}'",
                 "preview": {
                     "artist_name": artist_name,
                     "spotify_id": spotify_id,
-                    "would_delete_pending_tracks": len(pending_tracks),
+                    "delete_content": delete_content,
+                    "would_delete_pending_tracks": len(pending_tracks) if delete_content else 0,
                     "would_keep_analyzed_tracks": len(analyzed_tracks),
-                    "would_delete_artist": remaining_tracks_count == 0,
+                    "would_delete_artist": remaining_tracks_count == 0 and delete_content,
                     "would_blocklist": spotify_id is not None,
                     "isolation_info": isolation_info,
                     "sample_pending_tracks": [
@@ -244,30 +247,45 @@ class AdminArtistService:
                 entity_type='artist',
                 spotify_id=spotify_id,
                 name=artist_name,
-                reason=reason
+                reason=reason,
+                deleted_content=delete_content
             )
 
-        # Delete pending tracks
-        for track in pending_tracks:
-            self.db.query(PlaybackLink).filter(
-                PlaybackLink.track_id == track.id
-            ).delete()
-            self.db.delete(track)
+        # Only delete content if requested
+        if delete_content:
+            # Delete pending tracks
+            for track in pending_tracks:
+                self.db.query(PlaybackLink).filter(
+                    PlaybackLink.track_id == track.id
+                ).delete()
+                self.db.delete(track)
 
-        # Delete artist if no remaining tracks
-        if remaining_tracks_count == 0:
-            self.db.delete(artist)
+            # Delete artist if no remaining tracks
+            if remaining_tracks_count == 0:
+                self.db.delete(artist)
 
         self.db.flush()
 
-        return {
-            "status": "success",
-            "message": f"Artist '{artist_name}' rejected. Deleted {len(pending_tracks)} pending tracks.",
-            "artist_deleted": remaining_tracks_count == 0,
-            "kept_tracks": len(analyzed_tracks),
-            "blocklisted": spotify_id is not None,
-            "isolation_info": isolation_info
-        }
+        if delete_content:
+            return {
+                "status": "success",
+                "message": f"Artist '{artist_name}' rejected. Deleted {len(pending_tracks)} pending tracks.",
+                "artist_deleted": remaining_tracks_count == 0,
+                "kept_tracks": len(analyzed_tracks),
+                "blocklisted": spotify_id is not None,
+                "delete_content": True,
+                "isolation_info": isolation_info
+            }
+        else:
+            return {
+                "status": "success",
+                "message": f"Artist '{artist_name}' blocked from spider. No content deleted.",
+                "artist_deleted": False,
+                "kept_tracks": len(analyzed_tracks) + len(pending_tracks),
+                "blocklisted": spotify_id is not None,
+                "delete_content": False,
+                "isolation_info": isolation_info
+            }
 
     def approve_artist(self, artist_id: str) -> dict:
         """
@@ -356,7 +374,7 @@ class AdminArtistService:
             "errors": errors
         }
 
-    def bulk_reject_artists(self, artist_ids: list[str], reason: str) -> dict:
+    def bulk_reject_artists(self, artist_ids: list[str], reason: str, delete_content: bool = True) -> dict:
         """
         Reject multiple artists at once.
 
@@ -380,29 +398,32 @@ class AdminArtistService:
                         entity_type='artist',
                         spotify_id=artist.spotify_id,
                         name=artist.name,
-                        reason=reason
+                        reason=reason,
+                        deleted_content=delete_content
                     )
 
-                # Delete pending tracks
-                pending_tracks = self.db.query(Track).join(TrackArtist).filter(
-                    TrackArtist.artist_id == artist.id,
-                    Track.processing_status == "PENDING"
-                ).all()
+                # Only delete content if requested
+                if delete_content:
+                    # Delete pending tracks
+                    pending_tracks = self.db.query(Track).join(TrackArtist).filter(
+                        TrackArtist.artist_id == artist.id,
+                        Track.processing_status == "PENDING"
+                    ).all()
 
-                for track in pending_tracks:
-                    self.db.query(PlaybackLink).filter(
-                        PlaybackLink.track_id == track.id
-                    ).delete()
-                    self.db.delete(track)
+                    for track in pending_tracks:
+                        self.db.query(PlaybackLink).filter(
+                            PlaybackLink.track_id == track.id
+                        ).delete()
+                        self.db.delete(track)
 
-                # Delete artist if no tracks left
-                remaining_tracks = self.db.query(Track).join(TrackArtist).filter(
-                    TrackArtist.artist_id == artist.id,
-                    Track.processing_status != "PENDING"
-                ).count()
+                    # Delete artist if no tracks left
+                    remaining_tracks = self.db.query(Track).join(TrackArtist).filter(
+                        TrackArtist.artist_id == artist.id,
+                        Track.processing_status != "PENDING"
+                    ).count()
 
-                if remaining_tracks == 0:
-                    self.db.delete(artist)
+                    if remaining_tracks == 0:
+                        self.db.delete(artist)
 
                 success_count += 1
 

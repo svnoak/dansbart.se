@@ -276,6 +276,11 @@ class RejectionLog(Base):
     reason: Mapped[str | None] = mapped_column(String, nullable=True)
     rejected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # Was content deleted when rejected?
+    # False = block-only (prevent spider crawling but keep existing content)
+    # True = full rejection (deleted all content)
+    deleted_content: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default='true')
+
     # Additional context
     additional_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # Store genre, artist info, etc.
 

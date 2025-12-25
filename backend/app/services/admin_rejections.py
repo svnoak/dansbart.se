@@ -20,7 +20,8 @@ class AdminRejectionService:
         spotify_id: str,
         name: str,
         reason: str,
-        additional_data: dict = None
+        additional_data: dict = None,
+        deleted_content: bool = True
     ) -> RejectionLog:
         """
         Add an entity to the rejection blocklist.
@@ -32,6 +33,7 @@ class AdminRejectionService:
             name: Display name of the entity
             reason: Reason for rejection
             additional_data: Optional additional metadata
+            deleted_content: Whether content was deleted (True) or just blocked (False)
 
         Returns:
             Created or existing RejectionLog
@@ -41,7 +43,8 @@ class AdminRejectionService:
             spotify_id=spotify_id,
             name=name,
             reason=reason,
-            additional_data=additional_data
+            additional_data=additional_data,
+            deleted_content=deleted_content
         )
 
     def check_if_blocked(self, spotify_id: str, entity_type: str) -> bool:

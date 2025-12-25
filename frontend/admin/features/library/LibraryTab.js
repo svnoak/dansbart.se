@@ -356,15 +356,26 @@ export default {
       showRejectionModal.value = false;
 
       try {
-        const data = await api.rejectNetwork(
-          selections.artistIds,
-          selections.albumIds,
-          selections.reason
-        );
-        showToast(data.message || 'Network rejected successfully', 'success');
+        // If only artists and no albums, use bulk reject (supports block-only mode)
+        if (selections.artistIds.length > 0 && selections.albumIds.length === 0) {
+          const data = await api.bulkRejectArtists(
+            selections.artistIds,
+            selections.reason,
+            selections.deleteContent
+          );
+          showToast(data.message || 'Artists rejected successfully', 'success');
+        } else {
+          // Use network rejection for complex cases (always deletes for now)
+          const data = await api.rejectNetwork(
+            selections.artistIds,
+            selections.albumIds,
+            selections.reason
+          );
+          showToast(data.message || 'Network rejected successfully', 'success');
+        }
         loadData();
       } catch (e) {
-        showError(e.message || 'Network rejection failed');
+        showError(e.message || 'Rejection failed');
       } finally {
         loading.value = false;
       }

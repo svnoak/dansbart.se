@@ -147,7 +147,7 @@ export default {
       }
     };
 
-    // Single Rejection
+    // Single Rejection with delete
     const rejectArtist = async artistId => {
       // Find the artist to show details in confirm dialog
       const artist = pendingArtists.value.find(a => a.id === artistId);
@@ -158,11 +158,30 @@ export default {
       if (!confirm(confirmMsg)) return;
 
       try {
-        const data = await rejectApi.confirmRejectArtist(artistId, 'Rejected from review tab');
+        const data = await rejectApi.confirmRejectArtist(artistId, 'Rejected from review tab', true);
         showToast(data.message, 'success');
         loadData();
       } catch (e) {
         showError(e.message || 'Failed to reject artist');
+      }
+    };
+
+    // Block Only (no deletion)
+    const blockArtist = async artistId => {
+      // Find the artist to show details in confirm dialog
+      const artist = pendingArtists.value.find(a => a.id === artistId);
+      if (!artist) return;
+
+      const confirmMsg = `Block artist "${artist.name}" from spider crawling?\n\n• No content will be deleted\n• Artist will be added to blocklist\n• Future spider crawls will skip this artist`;
+
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const data = await rejectApi.confirmRejectArtist(artistId, 'Blocked from spider crawling', false);
+        showToast(data.message, 'success');
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Failed to block artist');
       }
     };
 
@@ -209,6 +228,7 @@ export default {
       // Actions
       loadData,
       rejectArtist,
+      blockArtist,
     };
   },
   template: /*html*/ `
@@ -292,7 +312,10 @@ export default {
                             </div>
                         </div>
 
-                        <button @click="rejectArtist(artist.id)" class="text-gray-500 hover:text-red-400 p-2" title="Reject individual">
+                        <button @click="blockArtist(artist.id)" class="text-gray-500 hover:text-yellow-400 px-2 py-1 text-xs border border-gray-600 rounded hover:border-yellow-500" title="Block from spider (keep content)">
+                            🚫 Block
+                        </button>
+                        <button @click="rejectArtist(artist.id)" class="text-gray-500 hover:text-red-400 p-2" title="Reject and delete">
                             🗑️
                         </button>
                     </div>
@@ -335,7 +358,15 @@ export default {
 
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
-                                <div class="font-bold text-sm">{{ item.entity_name }}</div>
+                                <div class="flex items-center gap-2">
+                                    <div class="font-bold text-sm">{{ item.entity_name }}</div>
+                                    <span v-if="!item.deleted_content" class="text-xs bg-yellow-900/30 text-yellow-300 px-2 py-0.5 rounded border border-yellow-700" title="Content kept, only blocked from spider">
+                                        🚫 Block Only
+                                    </span>
+                                    <span v-else class="text-xs bg-red-900/30 text-red-300 px-2 py-0.5 rounded border border-red-700" title="Content was deleted">
+                                        🗑️ Deleted
+                                    </span>
+                                </div>
                                 <div class="text-xs text-gray-400 mt-1">
                                     Type: {{ item.entity_type }} • Reason: {{ item.reason }}
                                 </div>

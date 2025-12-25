@@ -149,6 +149,13 @@ export default {
         </button>
       </div>
 
+      <!-- Style Explorer Section -->
+      <style-explorer
+        :styles="styleOverview"
+        :loading="loading.styles"
+        @style-click="handleStyleClick"
+      ></style-explorer>
+
       <!-- Playlists Section -->
       <playlist-section
         :playlists="playlists"
@@ -160,13 +167,6 @@ export default {
         @stop="$emit('stop')"
         @view-all="handleViewAllPlaylist"
       ></playlist-section>
-
-      <!-- Style Explorer Section -->
-      <style-explorer
-        :styles="styleOverview"
-        :loading="loading.styles"
-        @style-click="handleStyleClick"
-      ></style-explorer>
 
       <!-- Popular Tracks Section -->
       <popular-section

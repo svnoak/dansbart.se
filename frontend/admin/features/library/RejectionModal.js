@@ -18,6 +18,7 @@ export default {
     const selectedArtists = ref(new Set());
     const selectedAlbums = ref(new Set());
     const reason = ref('');
+    const deleteContent = ref(true); // true = delete, false = block only
 
     // Reset selections when modal opens with new data
     watch(
@@ -31,10 +32,12 @@ export default {
             selectedAlbums.value = new Set([props.entity.id]);
           }
           reason.value = 'Rejected from library';
+          deleteContent.value = true;
         } else {
           selectedArtists.value.clear();
           selectedAlbums.value.clear();
           reason.value = '';
+          deleteContent.value = true;
         }
       }
     );
@@ -125,6 +128,7 @@ export default {
         artistIds: Array.from(selectedArtists.value),
         albumIds: Array.from(selectedAlbums.value),
         reason: reason.value || 'Rejected from library',
+        deleteContent: deleteContent.value,
       });
     };
 
@@ -132,6 +136,7 @@ export default {
       selectedArtists,
       selectedAlbums,
       reason,
+      deleteContent,
       collaboratingArtists,
       collaboratingAlbums,
       totalTracksToDelete,
@@ -262,6 +267,25 @@ export default {
                         </div>
                     </div>
 
+                    <!-- Action Mode Selector -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2">Action Mode</label>
+                        <div class="flex gap-3">
+                            <button @click="deleteContent = false"
+                                    :class="!deleteContent ? 'bg-yellow-600 border-yellow-500' : 'bg-gray-700 border-gray-600'"
+                                    class="flex-1 border-2 rounded p-3 text-left hover:bg-opacity-80 transition-colors">
+                                <div class="font-bold text-sm mb-1">🚫 Block Only</div>
+                                <div class="text-xs opacity-80">Keep content, block from spider</div>
+                            </button>
+                            <button @click="deleteContent = true"
+                                    :class="deleteContent ? 'bg-red-600 border-red-500' : 'bg-gray-700 border-gray-600'"
+                                    class="flex-1 border-2 rounded p-3 text-left hover:bg-opacity-80 transition-colors">
+                                <div class="font-bold text-sm mb-1">🗑️ Delete All</div>
+                                <div class="text-xs opacity-80">Delete content and block</div>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Reason Input -->
                     <div class="mb-4">
                         <label class="block text-sm font-bold mb-2">Rejection Reason (Optional)</label>
@@ -275,10 +299,12 @@ export default {
                     <div class="bg-amber-900/20 border border-amber-700/30 rounded p-4">
                         <div class="font-bold mb-2">Summary:</div>
                         <ul class="text-sm text-gray-300 space-y-1">
-                            <li>• <span class="font-bold">{{ selectedArtists.size }}</span> artist(s) will be rejected and blocklisted</li>
-                            <li>• <span class="font-bold">{{ selectedAlbums.size }}</span> album(s) will be deleted</li>
-                            <li>• Approximately <span class="font-bold">{{ totalTracksToDelete }}</span> track(s) will be deleted</li>
-                            <li class="text-red-400">• This action cannot be undone</li>
+                            <li>• <span class="font-bold">{{ selectedArtists.size }}</span> artist(s) will be {{ deleteContent ? 'rejected and deleted' : 'blocked from spider' }}</li>
+                            <li v-if="deleteContent">• <span class="font-bold">{{ selectedAlbums.size }}</span> album(s) will be deleted</li>
+                            <li v-if="deleteContent">• Approximately <span class="font-bold">{{ totalTracksToDelete }}</span> track(s) will be deleted</li>
+                            <li v-if="!deleteContent" class="text-yellow-400">• Content will be kept in library</li>
+                            <li v-if="!deleteContent" class="text-yellow-400">• Future spider crawls will skip these artists</li>
+                            <li v-if="deleteContent" class="text-red-400">• This action cannot be undone</li>
                         </ul>
                     </div>
                 </div>
@@ -291,8 +317,9 @@ export default {
                     </button>
                     <button @click="confirm"
                             :disabled="!hasSelections"
-                            class="bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded font-bold">
-                        🗑️ Reject Selected ({{ selectedArtists.size + selectedAlbums.size }})
+                            :class="deleteContent ? 'bg-red-600 hover:bg-red-500' : 'bg-yellow-600 hover:bg-yellow-500'"
+                            class="disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded font-bold">
+                        {{ deleteContent ? '🗑️ Delete' : '🚫 Block' }} Selected ({{ selectedArtists.size + selectedAlbums.size }})
                     </button>
                 </div>
             </div>

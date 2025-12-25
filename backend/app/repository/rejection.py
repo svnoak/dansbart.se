@@ -28,7 +28,8 @@ class RejectionRepository(BaseRepository[RejectionLog]):
         spotify_id: str,
         name: str,
         reason: str,
-        additional_data: dict = None
+        additional_data: dict = None,
+        deleted_content: bool = True
     ) -> RejectionLog:
         """
         Add an entity to the rejection blocklist.
@@ -40,6 +41,7 @@ class RejectionRepository(BaseRepository[RejectionLog]):
             name: Display name of the entity
             reason: Reason for rejection
             additional_data: Optional additional metadata
+            deleted_content: Whether content was deleted (True) or just blocked (False)
 
         Returns:
             Created or existing RejectionLog
@@ -55,7 +57,8 @@ class RejectionRepository(BaseRepository[RejectionLog]):
             spotify_id=spotify_id,
             entity_name=name,
             reason=reason,
-            additional_data=additional_data or {}
+            additional_data=additional_data or {},
+            deleted_content=deleted_content
         )
 
     def is_blocked(self, spotify_id: str, entity_type: str) -> bool:
@@ -150,6 +153,7 @@ class RejectionRepository(BaseRepository[RejectionLog]):
                 "spotify_id": rejection.spotify_id,
                 "reason": rejection.reason,
                 "rejected_at": rejection.rejected_at.isoformat(),
+                "deleted_content": rejection.deleted_content,
                 "additional_data": rejection.additional_data
             })
 
@@ -266,6 +270,7 @@ class RejectionRepository(BaseRepository[RejectionLog]):
                 "spotify_id": rejection.spotify_id,
                 "reason": rejection.reason,
                 "rejected_at": rejection.rejected_at.isoformat(),
+                "deleted_content": rejection.deleted_content,
                 "additional_data": rejection.additional_data
             })
 
