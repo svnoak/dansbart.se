@@ -61,27 +61,30 @@ class ClassificationService:
     def reclassify_library(self):
         """
         Loops through ALL tracks in the library.
-        If a track is NOT confirmed by a user, we re-run the classification 
+        If a track is NOT confirmed by a user, we re-run the classification
         using the latest AI Brain.
+
+        Returns:
+            dict: Statistics about the reclassification (updated, skipped)
         """
         print("🔄 Re-evaluating library with new intelligence...")
-        
+
         # 1. Get all tracks that have analysis data (both old and new formats)
         tracks = (self.db.query(Track)
                   .join(AnalysisSource)
                   .filter(AnalysisSource.source_type.in_(['neckenml_analyzer', 'hybrid_ml_v2']))
                   .all())
-        
+
         updated_count = 0
         skipped_count = 0
-        
+
         for track in tracks:
             # --- THE SAFETY LOCK ---
             is_locked = any(s.is_user_confirmed for s in track.dance_styles)
-            
+
             if is_locked:
                 skipped_count += 1
-                continue 
+                continue
 
             # --- THE RE-CLASSIFICATION ---
             # Support both old (hybrid_ml_v2) and new (neckenml_analyzer) formats
@@ -94,15 +97,17 @@ class ClassificationService:
 
             # 2. Ask the Brain
             predictions = self.classifier.classify(track, features)
-            
-            # 2. Save 
+
+            # 2. Save
             self._save_predictions(track, predictions)
-            
+
             updated_count += 1
-            
+
         print(f"✅ Re-classification complete.")
         print(f"   - Updated: {updated_count} tracks (AI refined)")
         print(f"   - Skipped: {skipped_count} tracks (User locked)")
+
+        return {"updated": updated_count, "skipped": skipped_count}
 
     def classify_track_immediately(self, track: Track, analysis_data: dict = None):
         """

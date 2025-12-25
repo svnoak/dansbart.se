@@ -107,6 +107,44 @@ def spider_backfill_task(max_artists: int = 20, discover_from_albums: bool = Tru
         db.close()
 
 
+@celery_app.task(acks_late=True, time_limit=7200, queue='light')
+def reclassify_library_task():
+    """
+    Background task for reclassifying all tracks in the library.
+
+    This can take a long time on large libraries, so it's better to run as a background task
+    rather than blocking the API server. The task uses the latest AI classification model
+    to re-evaluate all tracks that haven't been user-confirmed.
+
+    Returns:
+        dict: Statistics about the reclassification (updated, skipped)
+    """
+    print(f"🧠 RECLASSIFY: Starting library reclassification")
+
+    db = SessionLocal()
+    try:
+        from app.services.classification import ClassificationService
+
+        classifier = ClassificationService(db)
+
+        # Run the reclassification (respects user-confirmed styles)
+        stats = classifier.reclassify_library()
+
+        db.commit()
+
+        print(f"✅ RECLASSIFY: Library reclassification complete")
+        print(f"   - Updated: {stats['updated']} tracks")
+        print(f"   - Skipped: {stats['skipped']} tracks (user-confirmed)")
+        return stats
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ RECLASSIFY FAILED: {e}")
+        raise
+    finally:
+        db.close()
+
+
 @celery_app.task(acks_late=True, queue='light')
 def cleanup_orphaned_tracks_task(stuck_threshold_minutes: int = 30):
     """

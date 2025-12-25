@@ -47,6 +47,7 @@ celery_app.conf.update(
         'app.workers.tasks_light.spider_crawl_search_task': {'queue': 'light'},
         'app.workers.tasks_light.spider_backfill_task': {'queue': 'light'},
         'app.workers.tasks_light.cleanup_orphaned_tracks_task': {'queue': 'light'},
+        'app.workers.tasks_light.reclassify_library_task': {'queue': 'light'},
 
         # Backwards compatibility for tasks imported from old tasks.py
         'app.workers.tasks.analyze_track_task': {'queue': 'audio'},

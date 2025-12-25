@@ -309,17 +309,18 @@ def trigger_reclassify_all(
     db: Session = Depends(get_db)
 ):
     """
-    Re-runs classification on ALL tracks (useful after updating classification logic).
+    Queues a background task to re-run classification on ALL tracks.
+    This is better than running synchronously since it can take a long time on large libraries.
     """
 
-    # Lazy import to avoid loading worker deps
-    from app.services.classification import ClassificationService
-    classifier = ClassificationService(db)
-    classifier.reclassify_library()
-    
+    # Queue the reclassification as a background task
+    from app.workers.tasks_light import reclassify_library_task
+    task = reclassify_library_task.delay()
+
     return {
-        "status": "success",
-        "message": "Library reclassification complete"
+        "status": "queued",
+        "message": "Library reclassification task queued",
+        "task_id": task.id
     }
 
 

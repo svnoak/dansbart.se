@@ -15,7 +15,7 @@ class TrackService:
         """
         from app.core.models import Track
 
-        track = self.db.query(Track).filter(Track.id == track_id).first()
+        track = self.db.query(Track).options(*self.repo.get_eager_load_full()).filter(Track.id == track_id).first()
         if not track:
             return None
 
@@ -122,26 +122,23 @@ class TrackService:
         # 2. Initialize hierarchy with all main styles
         hierarchy = {main[0]: set() for main in main_styles}
 
-        # 3. For each main style, find actual sub-styles that exist in tracks
-        for main_style in hierarchy.keys():
-            # Get all sub_styles where dance_style matches this main_style
-            sub_styles = (
-                self.db.query(TrackDanceStyle.sub_style)
-                .filter(
-                    TrackDanceStyle.dance_style == main_style,
-                    TrackDanceStyle.sub_style.isnot(None),
-                    TrackDanceStyle.confidence > 0.3
-                )
-                .distinct()
-                .all()
+        # 3. Get ALL sub-styles in a single query (optimized from N+1 queries)
+        all_sub_styles = (
+            self.db.query(TrackDanceStyle.dance_style, TrackDanceStyle.sub_style)
+            .filter(
+                TrackDanceStyle.sub_style.isnot(None),
+                TrackDanceStyle.confidence > 0.3
             )
+            .distinct()
+            .all()
+        )
 
-            # Add the sub-styles to the hierarchy
-            for sub in sub_styles:
-                if sub[0]:  # sub is a tuple like ('Reinländer',)
-                    hierarchy[main_style].add(sub[0])
+        # 4. Group sub-styles by main style
+        for dance_style, sub_style in all_sub_styles:
+            if dance_style in hierarchy and sub_style:
+                hierarchy[dance_style].add(sub_style)
 
-        # 4. Sort sub-style lists and convert sets to lists
+        # 5. Sort sub-style lists and convert sets to lists
         return {k: sorted(list(v)) for k, v in sorted(hierarchy.items())}
 
     def get_playable_tracks(
