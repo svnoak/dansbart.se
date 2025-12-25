@@ -114,3 +114,75 @@ class VisitorSessionIn(BaseModel):
     session_id: str
     user_agent: Optional[str] = None
     is_returning: bool = False
+
+# ========== ARTIST & ALBUM DETAIL SCHEMAS ==========
+
+class ArtistAlbumOut(BaseModel):
+    """Album info for artist detail view"""
+    id: UUID
+    title: str
+    release_date: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ArtistDetailOut(BaseModel):
+    """Artist detail response with albums"""
+    id: UUID
+    name: str
+    is_verified: bool = False
+    total_tracks: int
+    albums: List[ArtistAlbumOut]
+
+    class Config:
+        from_attributes = True
+
+class AlbumArtistOut(BaseModel):
+    """Artist info for album detail view"""
+    id: UUID
+    name: str
+
+    class Config:
+        from_attributes = True
+
+class AlbumDetailOut(BaseModel):
+    """Album detail response with all contributing artists"""
+    id: UUID
+    title: str
+    artist_id: Optional[UUID] = None
+    artist_name: Optional[str] = None
+    all_artists: List[AlbumArtistOut]
+    release_date: Optional[str] = None
+    total_tracks: int
+
+    class Config:
+        from_attributes = True
+
+class ArtistListItemOut(BaseModel):
+    """Artist list item with stats"""
+    id: UUID
+    name: str
+    is_verified: bool = False
+    total_tracks: int
+    done_tracks: int
+    pending_tracks: int
+    failed_tracks: int
+
+    class Config:
+        from_attributes = True
+
+class AlbumListItemOut(BaseModel):
+    """Album list item with stats"""
+    id: UUID
+    title: str
+    artist_name: Optional[str] = None
+    artist_id: Optional[UUID] = None
+    all_artists: List[str]
+    release_date: Optional[str] = None
+    total_tracks: int
+    done_tracks: int
+    pending_tracks: int
+    failed_tracks: int
+
+    class Config:
+        from_attributes = True

@@ -6,7 +6,7 @@ import { showToast } from '../hooks/useToast.js';
 
 export default {
   props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
-  emits: ['play', 'stop', 'refresh', 'filter-style', 'show-similar', 'add-to-queue'],
+  emits: ['play', 'stop', 'refresh', 'filter-style', 'show-similar', 'add-to-queue', 'navigate-to-artist', 'navigate-to-album'],
   components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
 
   data() {
@@ -107,16 +107,30 @@ export default {
             </div>
             
             <h3 class="font-bold text-lg text-gray-900 leading-tight mb-1 truncate">{{ track.title }}</h3>
-            
-            <p class="text-gray-600 text-sm mb-1 truncate flex items-center gap-1">
-                <span class="font-medium text-gray-700">
-                    {{ artistDisplayString }}
-                </span>
+
+            <p class="text-gray-600 text-sm mb-1 truncate">
+                <template v-if="track.artists && track.artists.length > 0">
+                    <template v-for="(artist, index) in track.artists" :key="artist.id || index">
+                        <a
+                            v-if="artist.id"
+                            @click.stop.prevent="$emit('navigate-to-artist', artist.id)"
+                            href="#"
+                            class="font-medium text-gray-700 hover:text-primary-600 hover:underline cursor-pointer"
+                        >{{ artist.name }}</a>
+                        <span v-else class="font-medium text-gray-700">{{ artist.name }}</span>
+                        <span v-if="index < track.artists.length - 1" class="text-gray-500">, </span>
+                    </template>
+                </template>
+                <span v-else class="font-medium text-gray-700">{{ artistDisplayString }}</span>
             </p>
-            <p class="text-gray-600 text-sm mb-3 truncate flex items-center gap-1">                
-                <span v-if="track.album" class="italic text-gray-500">
-                    {{ track.album.title }}
-                </span>
+            <p v-if="track.album" class="text-gray-600 text-sm mb-3 truncate">
+                <a
+                    v-if="track.album.id"
+                    @click.stop.prevent="$emit('navigate-to-album', track.album.id)"
+                    href="#"
+                    class="italic text-gray-500 hover:text-primary-600 hover:underline cursor-pointer"
+                >{{ track.album.title }}</a>
+                <span v-else class="italic text-gray-500">{{ track.album.title }}</span>
             </p>
 
             <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500">

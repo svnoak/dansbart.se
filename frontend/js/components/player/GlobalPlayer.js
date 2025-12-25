@@ -629,6 +629,8 @@ export default {
             @update-breakpoint="updateBreakpoint"
             @remove-breakpoint="removeBreakpoint"
             @open-queue="showQueueManager = true"
+            @navigate-to-artist="$emit('navigate-to-artist', $event)"
+            @navigate-to-album="$emit('navigate-to-album', $event)"
         ></player-mobile-view>
 
         <player-docked-view

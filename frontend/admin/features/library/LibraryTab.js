@@ -610,11 +610,11 @@ export default {
                     <option value="analyzed">✅ Analyzed Only</option>
                 </select>
 
-                <!-- Isolated Filter (Artists) -->
+                <!-- Collaboration Filter (Artists) -->
                 <select v-if="view === 'artists'" v-model="isolatedFilter" @change="loadData"
                         class="bg-gray-900 border border-gray-600 rounded p-2 text-white text-sm">
                     <option value="">All Artists</option>
-                    <option value="true">✅ Isolated Only</option>
+                    <option value="true">Solo Artists Only</option>
                     <option value="false">🤝 With Collaborations</option>
                 </select>
 
@@ -705,11 +705,8 @@ export default {
                                     </div>
 
                                     <div class="flex gap-2 mt-1">
-                                        <span v-if="artist.is_isolated" class="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">
-                                            ✅ Isolated
-                                        </span>
-                                        <span v-else class="text-xs bg-amber-600/20 text-amber-400 px-2 py-0.5 rounded">
-                                            🤝 {{ artist.shared_tracks }} collaborations
+                                        <span v-if="!artist.is_isolated" class="text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded border border-blue-600/30">
+                                            🤝 {{ artist.shared_tracks }} collaboration{{ artist.shared_tracks !== 1 ? 's' : '' }}
                                         </span>
                                     </div>
                                 </div>

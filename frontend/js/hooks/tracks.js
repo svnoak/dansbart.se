@@ -124,8 +124,12 @@ export function useTracks() {
       () => minArticulation.value,
       () => maxArticulation.value,
       () => articulationEnabled.value,
+      () => filters.value.searchType,
     ],
     () => {
+      // Only fetch tracks when searchType is 'tracks'
+      if (filters.value.searchType !== 'tracks') return;
+
       // Debounce filter changes
       clearTimeout(timeout);
       timeout = setTimeout(() => fetchTracks(false), 400);

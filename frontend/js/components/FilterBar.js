@@ -9,14 +9,25 @@ export default {
               v-model="localSearch"
               @input="debouncedSearch"
               type="text"
-              placeholder="Sök låtnamn..."
-              class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              :placeholder="searchPlaceholder"
+              class="w-full pl-10 pr-24 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             />
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
+            <!-- Search Type Dropdown (Mobile) -->
+            <select
+              v-model="localSearchType"
+              @change="$emit('update:searchType', localSearchType)"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              aria-label="Söktyp">
+              <option value="tracks">Låtar</option>
+              <option value="artists">Artister</option>
+              <option value="albums">Album</option>
+            </select>
           </div>
           <button
+            v-if="localSearchType === 'tracks'"
             @click="isExpanded = !isExpanded"
             class="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
             :class="{ 'bg-blue-50 border-blue-300': activeFilterCount > 0 }"
@@ -31,8 +42,8 @@ export default {
 
         <transition name="slide">
           <div v-if="isExpanded" class="bg-gray-50 rounded-xl p-4 space-y-4">
-            
-            <div>
+
+            <div v-if="localSearchType === 'tracks'">
               <label class="text-xs font-medium text-gray-600 mb-2 block">Källa</label>
               <div class="flex gap-2" role="group" aria-label="Välj musikkälla">
                 <button
@@ -54,7 +65,7 @@ export default {
               </div>
             </div>
 
-            <template v-if="!localSearch">
+            <template v-if="!localSearch && localSearchType === 'tracks'">
               
               <div>
                 <label for="mobile-category-select" class="text-xs font-medium text-gray-600 mb-2 block">Kategori</label>
@@ -171,13 +182,23 @@ export default {
 
       <div class="hidden md:block space-y-4">
         <div class="relative">
-          <input v-model="localSearch" @input="debouncedSearch" type="text" placeholder="Sök låtnamn..." class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <input v-model="localSearch" @input="debouncedSearch" type="text" :placeholder="searchPlaceholder" class="w-full pl-12 pr-32 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
+          <!-- Search Type Dropdown (Desktop) -->
+          <select
+            v-model="localSearchType"
+            @change="$emit('update:searchType', localSearchType)"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            aria-label="Söktyp">
+            <option value="tracks">Låtar</option>
+            <option value="artists">Artister</option>
+            <option value="albums">Album</option>
+          </select>
         </div>
 
-        <div class="flex flex-wrap gap-4 items-center">
+        <div v-if="localSearchType === 'tracks'" class="flex flex-wrap gap-4 items-center">
           <div class="flex items-center gap-2" role="group" aria-label="Välj musikkälla">
             <span class="text-sm text-gray-500">Källa:</span>
             <button
@@ -231,9 +252,9 @@ export default {
                 </button>
               </div>
             </div>
-        </div>           
+        </div>
 
-        <div v-if="!localSearch" class="flex flex-wrap gap-4 items-end">
+        <div v-if="!localSearch && localSearchType === 'tracks'" class="flex flex-wrap gap-4 items-end">
           
           <div class="min-w-[160px]">
             <label for="desktop-category-select" class="text-xs font-medium text-gray-600 mb-1 block">Kategori</label>
@@ -282,7 +303,7 @@ export default {
           </div>
         </div>
 
-        <div class="border-t border-gray-100 pt-4">
+        <div v-if="localSearchType === 'tracks'" class="border-t border-gray-100 pt-4">
           <button
             @click="advancedExpanded = !advancedExpanded"
             class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-800 mb-3"
@@ -395,6 +416,7 @@ export default {
     subStyle: { type: String, default: '' },
     // Removed 'style' and 'styles' props
     search: { type: String, default: '' },
+    searchType: { type: String, default: 'tracks' },
     source: { type: String, default: '' },
     vocals: { type: String, default: '' },
     styleConfirmed: { type: Boolean, default: false },
@@ -416,6 +438,7 @@ export default {
     'update:mainStyle',
     'update:subStyle',
     'update:search',
+    'update:searchType',
     'update:source',
     'update:vocals',
     'update:styleConfirmed',
@@ -437,6 +460,7 @@ export default {
       localMainStyle: this.mainStyle,
       localSubStyle: this.subStyle,
       localSearch: this.search,
+      localSearchType: this.searchType,
       localSource: this.source,
       localVocals: this.vocals,
       localStyleConfirmed: this.styleConfirmed,
@@ -453,6 +477,11 @@ export default {
     };
   },
   computed: {
+    searchPlaceholder() {
+      if (this.localSearchType === 'artists') return 'Sök artist...';
+      if (this.localSearchType === 'albums') return 'Sök album...';
+      return 'Sök låtnamn...';
+    },
     availableSubStyles() {
       if (!this.localMainStyle || !this.styleTree[this.localMainStyle]) return [];
       return this.styleTree[this.localMainStyle];
@@ -503,6 +532,9 @@ export default {
     search(val) {
       this.localSearch = val;
     },
+    searchType(val) {
+      this.localSearchType = val;
+    },
     source(val) {
       this.localSource = val;
     },
@@ -541,6 +573,10 @@ export default {
     clearSubStyle() {
       this.localSubStyle = '';
       this.onSubStyleChange();
+    },
+    setSearchType(type) {
+      this.localSearchType = type;
+      this.$emit('update:searchType', type);
     },
     // ... rest of the existing methods ...
     getDurationPreset() {

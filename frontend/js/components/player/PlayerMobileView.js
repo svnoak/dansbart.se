@@ -48,6 +48,8 @@ export default {
     'update-breakpoint',
     'remove-breakpoint',
     'open-queue',
+    'navigate-to-artist',
+    'navigate-to-album',
   ],
   components: { SmartNudge, SectionVoting, BrokenLinkToast, PlayerControls, ProgressBar },
 
@@ -91,8 +93,30 @@ export default {
 
             <div class="mb-2 shrink-0">
                 <h2 class="text-2xl font-extrabold text-gray-900 leading-tight mb-0.5">{{ currentTrack.title }}</h2>
-                <p class="text-lg text-indigo-600 font-bold">{{ trackArtist }}</p>
-                <p v-if="trackAlbum" class="text-sm text-gray-500 font-medium truncate mb-2">{{ trackAlbum }}</p>
+                <p class="text-lg text-indigo-600 font-bold">
+                    <template v-if="currentTrack.artists && currentTrack.artists.length > 0">
+                        <template v-for="(artist, index) in currentTrack.artists" :key="artist.id || index">
+                            <a
+                                v-if="artist.id"
+                                @click.stop.prevent="$emit('navigate-to-artist', artist.id)"
+                                href="#"
+                                class="hover:underline cursor-pointer"
+                            >{{ artist.name }}</a>
+                            <span v-else>{{ artist.name }}</span>
+                            <span v-if="index < currentTrack.artists.length - 1">, </span>
+                        </template>
+                    </template>
+                    <span v-else>{{ trackArtist }}</span>
+                </p>
+                <p v-if="trackAlbum" class="text-sm text-gray-500 font-medium truncate mb-2">
+                    <a
+                        v-if="currentTrack.album && currentTrack.album.id"
+                        @click.stop.prevent="$emit('navigate-to-album', currentTrack.album.id)"
+                        href="#"
+                        class="hover:underline cursor-pointer"
+                    >{{ trackAlbum }}</a>
+                    <span v-else>{{ trackAlbum }}</span>
+                </p>
                 <span v-if="currentTrack.dance_style" class="inline-block bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs uppercase tracking-wide font-bold">{{ currentTrack.dance_style }}</span>
             </div>
 

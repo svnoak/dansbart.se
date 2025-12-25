@@ -27,11 +27,11 @@ export default {
 
     // Computed
     const isolatedArtists = computed(() => {
-      return artists.value.filter(a => a.is_isolated);
+      return artists.value.filter(a => !a.is_verified);
     });
 
     const nonIsolatedArtists = computed(() => {
-      return artists.value.filter(a => !a.is_isolated);
+      return artists.value.filter(a => a.is_verified);
     });
 
     const isAllIsolatedSelected = computed(() => {
@@ -241,7 +241,7 @@ export default {
                 <div>
                     <h2 class="font-bold text-xl">⚡ Quick Review Queue</h2>
                     <p class="text-sm text-gray-400 mt-1">
-                        {{ view === 'isolated' ? 'Isolated artists - safe to bulk delete (no collaborations)' : 'Blocklist - restore artists that were rejected by mistake' }}
+                        {{ view === 'isolated' ? 'Unverified artists - will not be auto-ingested until approved' : 'Blocklist - restore artists that were rejected by mistake' }}
                     </p>
                 </div>
 
@@ -264,7 +264,7 @@ export default {
                 <button @click="view = 'isolated'; loadData();"
                         :class="view === 'isolated' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
                         class="px-4 py-2 rounded text-sm font-medium transition-colors">
-                    ✅ Isolated Artists
+                    ⏳ Unverified Artists
                 </button>
                 <button @click="view = 'blocklist'; loadData();"
                         :class="view === 'blocklist' ? 'bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600'"
@@ -292,8 +292,8 @@ export default {
 
             <!-- Stats - Isolated View -->
             <div v-if="view === 'isolated'" class="flex gap-4 mb-4 text-sm">
-                <span class="text-green-400">✅ {{ isolatedArtists.length }} Isolated</span>
-                <span class="text-amber-400" v-if="nonIsolatedArtists.length > 0">🤝 {{ nonIsolatedArtists.length }} With Collaborations</span>
+                <span class="text-amber-400">⏳ {{ isolatedArtists.length }} Unverified</span>
+                <span class="text-green-400" v-if="nonIsolatedArtists.length > 0">✅ {{ nonIsolatedArtists.length }} Verified</span>
                 <span class="text-gray-400">Total: {{ totalArtists }}</span>
             </div>
 
@@ -322,23 +322,23 @@ export default {
 
             <!-- Artists List - Isolated View -->
             <div v-else-if="view === 'isolated'">
-                <!-- Isolated Artists Section -->
+                <!-- Unverified Artists Section -->
                 <div v-if="isolatedArtists.length > 0" class="mb-6">
-                    <div class="flex items-center gap-3 p-2 bg-green-900/20 border border-green-700/30 rounded-t mb-2">
+                    <div class="flex items-center gap-3 p-2 bg-amber-900/20 border border-amber-700/30 rounded-t mb-2">
                         <input type="checkbox" :checked="isAllIsolatedSelected" @change="selectAllIsolated"
                                class="w-4 h-4 rounded border-gray-600 bg-gray-700">
-                        <span class="text-xs text-green-400 uppercase font-bold">✅ Select All Isolated ({{ isolatedArtists.length }})</span>
-                        <span class="text-xs text-gray-500">Safe to bulk delete - no collaborations</span>
+                        <span class="text-xs text-amber-400 uppercase font-bold">⏳ Select All Unverified ({{ isolatedArtists.length }})</span>
+                        <span class="text-xs text-gray-500">Not auto-ingested - require manual review</span>
                     </div>
 
                     <div class="space-y-2">
                         <div v-for="artist in isolatedArtists" :key="artist.id"
-                             class="p-3 bg-gray-900 rounded border border-green-700/30 flex items-center gap-3 hover:bg-gray-800/50">
+                             class="p-3 bg-gray-900 rounded border border-amber-700/30 flex items-center gap-3 hover:bg-gray-800/50">
 
                             <input type="checkbox"
                                    :checked="selectedIds.has(artist.id)"
                                    @change="toggleSelection(artist.id)"
-                                   class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-green-600 focus:ring-green-500">
+                                   class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-amber-600 focus:ring-amber-500">
 
                             <img v-if="artist.image_url" :src="artist.image_url" class="w-10 h-10 rounded object-cover">
                             <div v-else class="w-10 h-10 bg-gray-800 rounded flex items-center justify-center text-lg">👤</div>
@@ -349,8 +349,8 @@ export default {
                                     {{ artist.total_tracks || artist.pending_tracks }} tracks
                                     <span v-if="artist.pending_tracks" class="text-yellow-400">({{ artist.pending_tracks }} pending)</span>
                                 </div>
-                                <span class="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded inline-block mt-1">
-                                    ✅ Isolated - Safe to approve or delete
+                                <span class="text-xs bg-amber-600/20 text-amber-400 px-2 py-0.5 rounded inline-block mt-1">
+                                    ⏳ Unverified - Awaiting approval
                                 </span>
                             </div>
 
@@ -368,16 +368,16 @@ export default {
                     </div>
                 </div>
 
-                <!-- Non-Isolated Artists Section -->
+                <!-- Verified Artists Section -->
                 <div v-if="nonIsolatedArtists.length > 0">
-                    <div class="p-2 bg-amber-900/20 border border-amber-700/30 rounded-t mb-2">
-                        <span class="text-xs text-amber-400 uppercase font-bold">⚠️ Artists With Collaborations ({{ nonIsolatedArtists.length }})</span>
-                        <span class="text-xs text-gray-500 ml-2">Review carefully - may affect other artists</span>
+                    <div class="p-2 bg-green-900/20 border border-green-700/30 rounded-t mb-2">
+                        <span class="text-xs text-green-400 uppercase font-bold">✅ Verified Artists ({{ nonIsolatedArtists.length }})</span>
+                        <span class="text-xs text-gray-500 ml-2">Already approved - will be auto-ingested</span>
                     </div>
 
                     <div class="space-y-2">
                         <div v-for="artist in nonIsolatedArtists" :key="artist.id"
-                             class="p-3 bg-gray-900 rounded border border-amber-700/30 flex items-center gap-3">
+                             class="p-3 bg-gray-900 rounded border border-green-700/30 flex items-center gap-3">
 
                             <img v-if="artist.image_url" :src="artist.image_url" class="w-10 h-10 rounded object-cover">
                             <div v-else class="w-10 h-10 bg-gray-800 rounded flex items-center justify-center text-lg">👤</div>
@@ -389,7 +389,10 @@ export default {
                                     <span v-if="artist.pending_tracks" class="text-yellow-400">({{ artist.pending_tracks }} pending)</span>
                                 </div>
                                 <div class="flex gap-2 mt-1">
-                                    <span class="text-xs bg-amber-600/20 text-amber-400 px-2 py-0.5 rounded">
+                                    <span class="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">
+                                        ✅ Verified
+                                    </span>
+                                    <span v-if="artist.shared_tracks > 0" class="text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded">
                                         🤝 {{ artist.shared_tracks }} collaborations
                                     </span>
                                 </div>

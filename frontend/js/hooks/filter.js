@@ -11,6 +11,7 @@ const filters = ref({
   mainStyle: '',
   subStyle: '',
   search: '',
+  searchType: 'tracks', // 'tracks', 'artists', or 'albums'
   source: '',
   vocals: '',
   styleConfirmed: false,
@@ -102,6 +103,7 @@ export function useFilters() {
     if (filters.value.mainStyle) params.set('style', filters.value.mainStyle);
     if (filters.value.subStyle) params.set('subStyle', filters.value.subStyle);
     if (filters.value.search) params.set('q', filters.value.search);
+    if (filters.value.searchType && filters.value.searchType !== 'tracks') params.set('searchType', filters.value.searchType);
     if (filters.value.source) params.set('source', filters.value.source);
     if (filters.value.vocals) params.set('vocals', filters.value.vocals);
     if (filters.value.styleConfirmed) params.set('confirmed', '1');
@@ -130,6 +132,7 @@ export function useFilters() {
     if (params.has('style')) filters.value.mainStyle = params.get('style');
     if (params.has('subStyle')) filters.value.subStyle = params.get('subStyle');
     if (params.has('q')) filters.value.search = params.get('q');
+    if (params.has('searchType')) filters.value.searchType = params.get('searchType');
     if (params.has('source')) filters.value.source = params.get('source');
     if (params.has('vocals')) filters.value.vocals = params.get('vocals');
     if (params.has('confirmed')) filters.value.styleConfirmed = params.get('confirmed') === '1';

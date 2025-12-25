@@ -4,7 +4,8 @@ from app.core.database import get_db, SessionLocal
 from app.api.public.schemas import (
     TrackOut, LinkSubmission, FeedbackIn, StructureIn,
     StructureVersionOut, VoteIn, MovementVoteIn,
-    PlaybackTrackingIn, InteractionTrackingIn, VisitorSessionIn
+    PlaybackTrackingIn, InteractionTrackingIn, VisitorSessionIn,
+    ArtistDetailOut, AlbumDetailOut, ArtistListItemOut, AlbumListItemOut
 )
 from app.core.models import TrackStructureVersion
 from app.api.schemas import Page
@@ -603,3 +604,150 @@ def track_session(
         is_returning=session.is_returning
     )
     return {"status": "success"}
+
+# ========== ARTIST ENDPOINTS ==========
+
+@router.get("/artists", response_model=Page[ArtistListItemOut])
+def get_artists(
+    search: str = Query(None, description="Search by artist name"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Get paginated list of artists with track counts.
+    """
+    from app.services.artists import ArtistService
+
+    service = ArtistService(db)
+    return service.get_artists_paginated(
+        search=search,
+        limit=limit,
+        offset=offset
+    )
+
+@router.get("/artists/{artist_id}", response_model=ArtistDetailOut)
+def get_artist_by_id(
+    artist_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a single artist by ID with details and albums.
+    """
+    from app.services.artists import ArtistService
+    import uuid
+
+    try:
+        artist_uuid = uuid.UUID(artist_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid artist ID format")
+
+    service = ArtistService(db)
+    try:
+        return service.get_artist_by_id(artist_uuid)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/artists/{artist_id}/tracks", response_model=Page[TrackOut])
+def get_artist_tracks(
+    artist_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all tracks by a specific artist.
+    """
+    from app.services.artists import ArtistService
+    import uuid
+
+    try:
+        artist_uuid = uuid.UUID(artist_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid artist ID format")
+
+    service = ArtistService(db)
+    return service.get_artist_tracks(
+        artist_id=artist_uuid,
+        limit=limit,
+        offset=offset
+    )
+
+# ========== ALBUM ENDPOINTS ==========
+
+@router.get("/albums", response_model=Page[AlbumListItemOut])
+def get_albums(
+    search: str = Query(None, description="Search by album title"),
+    artist_id: str = Query(None, description="Filter by artist ID"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Get paginated list of albums with track counts.
+    """
+    from app.services.albums import AlbumService
+    import uuid
+
+    service = AlbumService(db)
+
+    artist_uuid = None
+    if artist_id:
+        try:
+            artist_uuid = uuid.UUID(artist_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid artist ID format")
+
+    return service.get_albums_paginated(
+        search=search,
+        artist_id=artist_uuid,
+        limit=limit,
+        offset=offset
+    )
+
+@router.get("/albums/{album_id}", response_model=AlbumDetailOut)
+def get_album_by_id(
+    album_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a single album by ID with details and track list.
+    """
+    from app.services.albums import AlbumService
+    import uuid
+
+    try:
+        album_uuid = uuid.UUID(album_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid album ID format")
+
+    service = AlbumService(db)
+    try:
+        return service.get_album_by_id(album_uuid)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/albums/{album_id}/tracks", response_model=Page[TrackOut])
+def get_album_tracks(
+    album_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all tracks from a specific album.
+    """
+    from app.services.albums import AlbumService
+    import uuid
+
+    try:
+        album_uuid = uuid.UUID(album_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid album ID format")
+
+    service = AlbumService(db)
+    return service.get_album_tracks(
+        album_id=album_uuid,
+        limit=limit,
+        offset=offset
+    )

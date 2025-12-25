@@ -2,12 +2,16 @@ import { createApp, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'; /
 import { useTracks } from './hooks/tracks.js';
 import { useFilters } from './hooks/filter.js';
 import { usePlayer } from './hooks/player.js';
+import { useArtistsList } from './hooks/artistsList.js';
+import { useAlbumsList } from './hooks/albumsList.js';
 import { trackSession } from './analytics.js';
 import { showError, showToast } from './hooks/useToast.js';
 
 import './main.css';
 
 import TrackCard from './components/TrackCard.js';
+import ArtistCard from './components/ArtistCard.js';
+import AlbumCard from './components/AlbumCard.js';
 import FilterBar from './components/FilterBar.js';
 import GlobalPlayer from './components/player/GlobalPlayer.js';
 import StatsDashboard from './components/StatsDashboard.js';
@@ -17,10 +21,14 @@ import Toast from './components/toasts/Toast.js';
 import SimilarTracksModal from './components/SimilarTracksModal.js';
 import DiscoveryPage from './components/DiscoveryPage.js';
 import ClassifyPage from './components/ClassifyPage.js';
+import ArtistPage from './components/ArtistPage.js';
+import AlbumPage from './components/AlbumPage.js';
 
 const app = createApp({
   components: {
     'track-card': TrackCard,
+    'artist-card': ArtistCard,
+    'album-card': AlbumCard,
     'filter-bar': FilterBar,
     'global-player': GlobalPlayer,
     'stats-dashboard': StatsDashboard,
@@ -30,15 +38,21 @@ const app = createApp({
     'similar-tracks-modal': SimilarTracksModal,
     'discovery-page': DiscoveryPage,
     'classify-page': ClassifyPage,
+    'artist-page': ArtistPage,
+    'album-page': AlbumPage,
   },
   setup() {
     const filterLogic = useFilters();
     const trackLogic = useTracks();
+    const artistsLogic = useArtistsList();
+    const albumsLogic = useAlbumsList();
     const playerLogic = usePlayer();
     const { togglePlay } = playerLogic;
 
     // Page routing state
     const currentPage = ref('discovery');
+    const currentArtistId = ref(null);
+    const currentAlbumId = ref(null);
 
     const scrollTrigger = ref(null);
     let observer = null;
@@ -194,6 +208,30 @@ const app = createApp({
       trackLogic.fetchTracks();
     };
 
+    const navigateToArtist = (artistId) => {
+      currentPage.value = 'artist';
+      currentArtistId.value = artistId;
+
+      // Create clean URL with only page and id parameters
+      const url = new URL(window.location.origin);
+      url.searchParams.set('page', 'artist');
+      url.searchParams.set('id', artistId);
+
+      window.history.pushState({}, '', url);
+    };
+
+    const navigateToAlbum = (albumId) => {
+      currentPage.value = 'album';
+      currentAlbumId.value = albumId;
+
+      // Create clean URL with only page and id parameters
+      const url = new URL(window.location.origin);
+      url.searchParams.set('page', 'album');
+      url.searchParams.set('id', albumId);
+
+      window.history.pushState({}, '', url);
+    };
+
     onMounted(async () => {
       // Load saved queue from localStorage
       await playerLogic.loadQueueFromStorage();
@@ -214,6 +252,22 @@ const app = createApp({
         trackLogic.fetchTracks();
       } else if (page === 'classify') {
         currentPage.value = 'classify';
+      } else if (page === 'artist') {
+        const artistId = urlParams.get('id');
+        if (artistId) {
+          currentPage.value = 'artist';
+          currentArtistId.value = artistId;
+        } else {
+          currentPage.value = 'discovery';
+        }
+      } else if (page === 'album') {
+        const albumId = urlParams.get('id');
+        if (albumId) {
+          currentPage.value = 'album';
+          currentAlbumId.value = albumId;
+        } else {
+          currentPage.value = 'discovery';
+        }
       } else {
         // Default to discovery page
         currentPage.value = 'discovery';
@@ -224,6 +278,7 @@ const app = createApp({
         const params = new URLSearchParams(window.location.search);
         const pageParam = params.get('page');
         const trackParam = params.get('track');
+        const idParam = params.get('id');
 
         // Load filters from URL on navigation
         filterLogic.loadFiltersFromQueryParams(params);
@@ -234,6 +289,14 @@ const app = createApp({
         } else if (pageParam === 'search') {
           currentPage.value = 'search';
           trackLogic.fetchTracks();
+        } else if (pageParam === 'artist' && idParam) {
+          currentPage.value = 'artist';
+          currentArtistId.value = idParam;
+        } else if (pageParam === 'album' && idParam) {
+          currentPage.value = 'album';
+          currentAlbumId.value = idParam;
+        } else if (pageParam === 'classify') {
+          currentPage.value = 'classify';
         } else {
           currentPage.value = 'discovery';
         }
@@ -282,6 +345,8 @@ const app = createApp({
 
     return {
       ...trackLogic,
+      ...artistsLogic,
+      ...albumsLogic,
       ...playerLogic,
       filters: filterLogic.filters,
       styleTree: filterLogic.styleTree,
@@ -306,8 +371,12 @@ const app = createApp({
       closeSimilarModal,
       handleSimilarPlay,
       currentPage,
+      currentArtistId,
+      currentAlbumId,
       navigateToSearch,
       navigateToPage,
+      navigateToArtist,
+      navigateToAlbum,
       addToQueue,
     };
   },

@@ -37,9 +37,37 @@
             <classify-page
                 :current-track="currentTrack"
                 :is-playing="isPlaying"
-                @play="handleDiscoveryPlay" 
+                @play="handleDiscoveryPlay"
                 @stop="togglePlay"
             ></classify-page>
+        </div>
+
+        <!-- Artist Page View -->
+        <div v-else-if="currentPage === 'artist'">
+          <artist-page
+            :artist-id="currentArtistId"
+            :current-track="currentTrack"
+            :is-playing="isPlaying"
+            :is-spotify-mode="activeSource === 'spotify'"
+            @play="handlePlay"
+            @navigate-to-album="navigateToAlbum"
+            @show-similar="showSimilarModal"
+            @add-to-queue="addToQueue"
+          ></artist-page>
+        </div>
+
+        <!-- Album Page View -->
+        <div v-else-if="currentPage === 'album'">
+          <album-page
+            :album-id="currentAlbumId"
+            :current-track="currentTrack"
+            :is-playing="isPlaying"
+            :is-spotify-mode="activeSource === 'spotify'"
+            @play="handlePlay"
+            @navigate-to-artist="navigateToArtist"
+            @show-similar="showSimilarModal"
+            @add-to-queue="addToQueue"
+          ></album-page>
         </div>
 
         <!-- Search Page View (existing) -->
@@ -52,6 +80,7 @@
             v-model:main-style="filters.mainStyle"
             v-model:sub-style="filters.subStyle"
             v-model:search="filters.search"
+            v-model:search-type="filters.searchType"
             v-model:source="filters.source"
             v-model:vocals="filters.vocals"
             v-model:style-confirmed="filters.styleConfirmed"
@@ -72,50 +101,141 @@
           ></filter-bar>
 
           <div class="max-w-4xl mx-auto">
-            <div v-if="loading" class="text-center py-12">Loading...</div>
+            <!-- Tracks View -->
+            <div v-if="filters.searchType === 'tracks'">
+              <div v-if="loading" class="text-center py-12">Loading...</div>
 
-            <div v-else class="grid gap-4">
-              <track-card
-                v-for="track in tracks"
-                :key="track.id"
-                :track="track"
-                :current-track="currentTrack"
-                :is-spotify-mode="activeSource === 'spotify'"
-                :is-playing="isPlaying"
-                @play="handlePlay"
-                @stop="togglePlay"
-                @refresh="fetchTracks"
-                @filter-style="handleFilterStyle"
-                @show-similar="showSimilarModal"
-                @add-to-queue="addToQueue"
-              ></track-card>
+              <div v-else class="grid gap-4">
+                <track-card
+                  v-for="track in tracks"
+                  :key="track.id"
+                  :track="track"
+                  :current-track="currentTrack"
+                  :is-spotify-mode="activeSource === 'spotify'"
+                  :is-playing="isPlaying"
+                  @play="handlePlay"
+                  @stop="togglePlay"
+                  @refresh="fetchTracks"
+                  @filter-style="handleFilterStyle"
+                  @show-similar="showSimilarModal"
+                  @add-to-queue="addToQueue"
+                  @navigate-to-artist="navigateToArtist"
+                  @navigate-to-album="navigateToAlbum"
+                ></track-card>
 
-              <div
-                ref="scrollTrigger"
-                class="py-8 text-center w-full"
-                style="min-height: 50px; display: block"
-              >
-                <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
-                  <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                      fill="none"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    ></path>
-                  </svg>
-                  <span>Laddar fler...</span>
+                <div
+                  ref="scrollTrigger"
+                  class="py-8 text-center w-full"
+                  style="min-height: 50px; display: block"
+                >
+                  <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
+                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                        fill="none"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    <span>Laddar fler...</span>
+                  </div>
+                  <div v-else-if="!hasMore && tracks.length > 0" class="text-gray-400 text-sm">
+                    Inga fler låtar att visa
+                  </div>
                 </div>
-                <div v-else-if="!hasMore && tracks.length > 0" class="text-gray-400 text-sm">
-                  Inga fler låtar att visa
+              </div>
+            </div>
+
+            <!-- Artists View -->
+            <div v-else-if="filters.searchType === 'artists'">
+              <div v-if="loading" class="text-center py-12">Loading...</div>
+
+              <div v-else class="grid gap-4">
+                <artist-card
+                  v-for="artist in artists"
+                  :key="artist.id"
+                  :artist="artist"
+                  @navigate-to-artist="navigateToArtist"
+                ></artist-card>
+
+                <div
+                  ref="scrollTrigger"
+                  class="py-8 text-center w-full"
+                  style="min-height: 50px; display: block"
+                >
+                  <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
+                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                        fill="none"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    <span>Laddar fler...</span>
+                  </div>
+                  <div v-else-if="!hasMore && artists.length > 0" class="text-gray-400 text-sm">
+                    Inga fler artister att visa
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Albums View -->
+            <div v-else-if="filters.searchType === 'albums'">
+              <div v-if="loading" class="text-center py-12">Loading...</div>
+
+              <div v-else class="grid gap-4">
+                <album-card
+                  v-for="album in albums"
+                  :key="album.id"
+                  :album="album"
+                  @navigate-to-album="navigateToAlbum"
+                ></album-card>
+
+                <div
+                  ref="scrollTrigger"
+                  class="py-8 text-center w-full"
+                  style="min-height: 50px; display: block"
+                >
+                  <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
+                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                        fill="none"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    <span>Laddar fler...</span>
+                  </div>
+                  <div v-else-if="!hasMore && albums.length > 0" class="text-gray-400 text-sm">
+                    Inga fler album att visa
+                  </div>
                 </div>
               </div>
             </div>
@@ -123,8 +243,10 @@
         </div>
       </div>
 
-      <global-player 
+      <global-player
         :current-page="currentPage"
+        @navigate-to-artist="navigateToArtist"
+        @navigate-to-album="navigateToAlbum"
       ></global-player>
       <cookie-consent></cookie-consent>
       <toast-container></toast-container>
