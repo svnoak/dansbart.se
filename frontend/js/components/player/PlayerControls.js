@@ -141,7 +141,7 @@ export default {
                 queueCount > 0 ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600',
                 fullMode ? 'flex' : 'hidden md:flex'
             ]"
-            :aria-label="queueCount > 0 ? 'Visa kö (' + queueCount + ' låtar)' : 'Visa kö (tom)'"
+            :aria-label="'Visa kö'"
             title="Visa kö">
 
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
@@ -152,12 +152,6 @@ export default {
                 <line x1="3" y1="12" x2="3.01" y2="12"></line>
                 <line x1="3" y1="18" x2="3.01" y2="18"></line>
             </svg>
-
-            <span v-if="queueCount > 0"
-                  class="absolute -top-1 -right-1 text-[10px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 leading-none rounded-full min-w-[18px] text-center"
-                  aria-hidden="true">
-                {{ queueCount }}
-            </span>
         </button>
 
     </div>
