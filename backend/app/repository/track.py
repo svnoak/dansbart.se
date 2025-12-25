@@ -193,7 +193,11 @@ class TrackRepository(BaseRepository[Track]):
 
         # 7. Apply Genre Filter
         if music_genre:
-            query = query.filter(Track.music_genre == music_genre)
+            # For 'traditional_folk' filter, include all folk genres except contemporary
+            if music_genre == 'traditional_folk':
+                query = query.filter(Track.music_genre.in_(['traditional_folk', 'modern_folk']))
+            else:
+                query = query.filter(Track.music_genre == music_genre)
 
         # Use full eager load to avoid N+1 queries during formatting
         query = query.options(*self.get_eager_load_full())

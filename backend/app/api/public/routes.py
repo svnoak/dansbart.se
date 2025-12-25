@@ -61,7 +61,7 @@ def get_tracks(
     max_bounciness: float = Query(None, ge=0, le=1, description="Maximum bounciness (0-1)"),
     min_articulation: float = Query(None, ge=0, le=1, description="Minimum articulation (0-1)"),
     max_articulation: float = Query(None, ge=0, le=1, description="Maximum articulation (0-1)"),
-    music_genre: str = Query(None, description="Filter by music genre: 'traditional_folk', 'modern_folk', 'folk_pop', 'contemporary'"),
+    music_genre: str = Query(None, description="Filter by music genre: 'traditional_folk' (includes all folk genres), 'modern_folk', 'folk_pop', 'contemporary'"),
     sort: str = Query("confidence", description="Field to sort by: confidence, created_at, bpm, etc."),
     order: str = Query("desc", description="Direction: asc or desc"),
     limit: int = Query(20, ge=1, le=100),
