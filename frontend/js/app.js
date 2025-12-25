@@ -232,6 +232,17 @@ const app = createApp({
       window.history.pushState({}, '', url);
     };
 
+    const navigateToClassify = () => {
+      currentPage.value = 'classify';
+
+      const url = new URL(window.location);
+      url.searchParams.set('page', 'classify');
+      url.searchParams.delete('track');
+      url.searchParams.delete('id');
+
+      window.history.pushState({}, '', url);
+    };
+
     onMounted(async () => {
       // Load saved queue from localStorage
       await playerLogic.loadQueueFromStorage();
@@ -377,6 +388,7 @@ const app = createApp({
       navigateToPage,
       navigateToArtist,
       navigateToAlbum,
+      navigateToClassify,
       addToQueue,
     };
   },

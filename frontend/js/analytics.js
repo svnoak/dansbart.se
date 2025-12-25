@@ -221,4 +221,5 @@ export const AnalyticsEvents = {
   DISCOVERY_TRACK_PLAY: 'discovery_track_play',
   DISCOVERY_STYLE_CLICK: 'discovery_style_click',
   DISCOVERY_TO_SEARCH: 'discovery_to_search',
+  DISCOVERY_TO_CLASSIFY: 'discovery_to_classify',
 };

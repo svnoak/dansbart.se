@@ -3,7 +3,6 @@ import { useDiscovery } from '../hooks/useDiscovery.js';
 import { trackInteraction, AnalyticsEvents } from '../analytics.js';
 import PopularSection from './discovery/PopularSection.js';
 import StyleExplorer from './discovery/StyleExplorer.js';
-import RecentSection from './discovery/RecentSection.js';
 import CompactTrackCard from './discovery/CompactTrackCard.js';
 import StatsDashboard from './StatsDashboard.js';
 
@@ -12,7 +11,6 @@ export default {
   components: {
     'popular-section': PopularSection,
     'style-explorer': StyleExplorer,
-    'recent-section': RecentSection,
     'compact-track-card': CompactTrackCard,
     'stats-dashboard': StatsDashboard
   },
@@ -21,13 +19,12 @@ export default {
     isPlaying: Boolean,
     isSpotifyMode: Boolean
   },
-  emits: ['play', 'stop', 'navigate-to-search', 'refresh', 'filter-style', 'show-similar', 'add-to-queue'],
+  emits: ['play', 'stop', 'navigate-to-search', 'navigate-to-classify', 'refresh', 'filter-style', 'show-similar', 'add-to-queue'],
   setup(_props, { emit }) {
     const discovery = useDiscovery();
 
     // Limit tracks to 3 for compact display
     const limitedPopularTracks = computed(() => discovery.popularTracks.value.slice(0, 3));
-    const limitedRecentTracks = computed(() => discovery.recentTracks.value.slice(0, 3));
 
     // Fetch all discovery data on mount (fetch 3 instead of 6)
     onMounted(() => {
@@ -36,7 +33,6 @@ export default {
 
       discovery.fetchPopular();
       discovery.fetchStyleOverview();
-      discovery.fetchRecent();
     });
 
     const handleStyleClick = (styleName) => {
@@ -69,12 +65,19 @@ export default {
       emit('play', track);
     };
 
+    const handleClassifyClick = () => {
+      // Track navigation to classify
+      trackInteraction(AnalyticsEvents.DISCOVERY_TO_CLASSIFY, null, { trigger: 'cta_button' });
+
+      emit('navigate-to-classify');
+    };
+
     return {
       ...discovery,
       limitedPopularTracks,
-      limitedRecentTracks,
       handleStyleClick,
       handleSearchClick,
+      handleClassifyClick,
       handlePlay
     };
   },
@@ -90,6 +93,46 @@ export default {
         </p>
         <stats-dashboard></stats-dashboard>
       </div>
+
+      <!-- Primary Call to Actions -->
+      <div class="grid md:grid-cols-2 gap-3 mb-10">
+        <button
+          @click="handleSearchClick"
+          class="group relative overflow-hidden bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl p-5 transition-all shadow-md hover:shadow-lg"
+        >
+          <div class="flex items-center gap-3">
+            <div class="flex-1 text-left">
+              <h3 class="text-base font-bold mb-0.5">Utforska alla låtar</h3>
+              <p class="text-indigo-100 text-xs">Sök och filtrera bland tusentals låtar</p>
+            </div>
+            <svg class="w-5 h-5 transform group-hover:translate-x-1 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </button>
+
+        <button
+          @click="handleClassifyClick"
+          class="group relative overflow-hidden bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-5 transition-all shadow-md hover:shadow-lg"
+        >
+          <div class="flex items-center gap-3">
+            <div class="flex-1 text-left">
+              <h3 class="text-base font-bold mb-0.5">Hjälp till kategorisera</h3>
+              <p class="text-orange-100 text-xs">Bidra med din kunskap</p>
+            </div>
+            <svg class="w-5 h-5 transform group-hover:translate-x-1 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </button>
+      </div>
+
+      <!-- Style Explorer Section -->
+      <style-explorer
+        :styles="styleOverview"
+        :loading="loading.styles"
+        @style-click="handleStyleClick"
+      ></style-explorer>
 
       <!-- Popular Tracks Section -->
       <popular-section
@@ -113,49 +156,6 @@ export default {
           ></compact-track-card>
         </template>
       </popular-section>
-
-      <!-- Style Explorer Section -->
-      <style-explorer
-        :styles="styleOverview"
-        :loading="loading.styles"
-        @style-click="handleStyleClick"
-      ></style-explorer>
-
-      <!-- Recent Tracks Section -->
-      <recent-section
-        :tracks="limitedRecentTracks"
-        :loading="loading.recent"
-        :current-track="currentTrack"
-        :is-playing="isPlaying"
-        :is-spotify-mode="isSpotifyMode"
-        @play="handlePlay"
-        @stop="$emit('stop')"
-      >
-        <template #track-card="{ track }">
-          <compact-track-card
-            :track="track"
-            :current-track="currentTrack"
-            :is-spotify-mode="isSpotifyMode"
-            :is-playing="isPlaying"
-            @play="handlePlay"
-            @stop="$emit('stop')"
-            @add-to-queue="$emit('add-to-queue', $event)"
-          ></compact-track-card>
-        </template>
-      </recent-section>
-
-      <!-- Call to Action -->
-      <div class="text-center mt-12 mb-8">
-        <button
-          @click="handleSearchClick"
-          class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-8 py-3 rounded-full transition-colors shadow-sm hover:shadow-md"
-        >
-          Utforska alla låtar
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-          </svg>
-        </button>
-      </div>
     </div>
   `
 };
