@@ -222,4 +222,6 @@ export const AnalyticsEvents = {
   DISCOVERY_STYLE_CLICK: 'discovery_style_click',
   DISCOVERY_TO_SEARCH: 'discovery_to_search',
   DISCOVERY_TO_CLASSIFY: 'discovery_to_classify',
+  DISCOVERY_PLAYLIST_PLAY: 'discovery_playlist_play',
+  DISCOVERY_PLAYLIST_VIEW_ALL: 'discovery_playlist_view_all',
 };

@@ -15,6 +15,7 @@ const filters = ref({
   source: '',
   vocals: '',
   styleConfirmed: false,
+  traditionalOnly: false,
   minDuration: null,
   maxDuration: null,
 });
@@ -107,6 +108,7 @@ export function useFilters() {
     if (filters.value.source) params.set('source', filters.value.source);
     if (filters.value.vocals) params.set('vocals', filters.value.vocals);
     if (filters.value.styleConfirmed) params.set('confirmed', '1');
+    if (filters.value.traditionalOnly) params.set('traditional', '1');
     if (filters.value.minDuration) params.set('minDur', filters.value.minDuration);
     if (filters.value.maxDuration) params.set('maxDur', filters.value.maxDuration);
 
@@ -136,6 +138,7 @@ export function useFilters() {
     if (params.has('source')) filters.value.source = params.get('source');
     if (params.has('vocals')) filters.value.vocals = params.get('vocals');
     if (params.has('confirmed')) filters.value.styleConfirmed = params.get('confirmed') === '1';
+    if (params.has('traditional')) filters.value.traditionalOnly = params.get('traditional') === '1';
     if (params.has('minDur')) filters.value.minDuration = parseInt(params.get('minDur'));
     if (params.has('maxDur')) filters.value.maxDuration = parseInt(params.get('maxDur'));
 

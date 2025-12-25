@@ -64,6 +64,7 @@ class TrackRepository(BaseRepository[Track]):
         # Meta Filters
         search: str = None,
         source: str = None,
+        music_genre: str = None, # 'traditional_folk', 'modern_folk', 'folk_pop', 'contemporary'
 
         # Sorting
         sort_by: str = "created_at",
@@ -189,6 +190,10 @@ class TrackRepository(BaseRepository[Track]):
                 PlaybackLink.platform == source,
                 PlaybackLink.is_working == True
             )
+
+        # 7. Apply Genre Filter
+        if music_genre:
+            query = query.filter(Track.music_genre == music_genre)
 
         # Use full eager load to avoid N+1 queries during formatting
         query = query.options(*self.get_eager_load_full())

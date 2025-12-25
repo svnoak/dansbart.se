@@ -3,6 +3,7 @@ import { useDiscovery } from '../hooks/useDiscovery.js';
 import { trackInteraction, AnalyticsEvents } from '../analytics.js';
 import PopularSection from './discovery/PopularSection.js';
 import StyleExplorer from './discovery/StyleExplorer.js';
+import PlaylistSection from './discovery/PlaylistSection.js';
 import CompactTrackCard from './discovery/CompactTrackCard.js';
 import StatsDashboard from './StatsDashboard.js';
 
@@ -11,6 +12,7 @@ export default {
   components: {
     'popular-section': PopularSection,
     'style-explorer': StyleExplorer,
+    'playlist-section': PlaylistSection,
     'compact-track-card': CompactTrackCard,
     'stats-dashboard': StatsDashboard
   },
@@ -33,6 +35,7 @@ export default {
 
       discovery.fetchPopular();
       discovery.fetchStyleOverview();
+      discovery.fetchPlaylists();
     });
 
     const handleStyleClick = (styleName) => {
@@ -72,13 +75,32 @@ export default {
       emit('navigate-to-classify');
     };
 
+    const handlePlaylistPlay = (track, sourcePreference) => {
+      // Track playlist track play
+      trackInteraction(AnalyticsEvents.DISCOVERY_PLAYLIST_PLAY, track.id, { source: sourcePreference });
+
+      // Emit play with source preference
+      emit('play', track, sourcePreference);
+    };
+
+    const handleViewAllPlaylist = (playlist) => {
+      // Track view all click
+      trackInteraction(AnalyticsEvents.DISCOVERY_PLAYLIST_VIEW_ALL, null, { playlist_id: playlist.id });
+
+      // Navigate to search with playlist filters
+      // For now, just navigate to search - could add specific filters later
+      emit('navigate-to-search', {});
+    };
+
     return {
       ...discovery,
       limitedPopularTracks,
       handleStyleClick,
       handleSearchClick,
       handleClassifyClick,
-      handlePlay
+      handlePlay,
+      handlePlaylistPlay,
+      handleViewAllPlaylist
     };
   },
   template: `
@@ -89,7 +111,7 @@ export default {
           Upptäck svensk folkmusik för dans
         </h1>
         <p class="text-lg text-gray-600 mb-6">
-          Hitta perfekta låtar för polska, hambo, vals och mer. Från nybörjare till instruktörer.
+          Hitta perfekta låtar för polska, schottis, vals och mer.
         </p>
         <stats-dashboard></stats-dashboard>
       </div>
@@ -126,6 +148,18 @@ export default {
           </div>
         </button>
       </div>
+
+      <!-- Playlists Section -->
+      <playlist-section
+        :playlists="playlists"
+        :loading="loading.playlists"
+        :current-track="currentTrack"
+        :is-playing="isPlaying"
+        :is-spotify-mode="isSpotifyMode"
+        @play="handlePlaylistPlay"
+        @stop="$emit('stop')"
+        @view-all="handleViewAllPlaylist"
+      ></playlist-section>
 
       <!-- Style Explorer Section -->
       <style-explorer

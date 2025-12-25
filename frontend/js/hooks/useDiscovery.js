@@ -5,12 +5,14 @@ export function useDiscovery() {
   const recentTracks = ref([]);
   const curatedTracks = ref([]);
   const styleOverview = ref([]);
+  const playlists = ref([]);
 
   const loading = reactive({
     popular: false,
     recent: false,
     curated: false,
-    styles: false
+    styles: false,
+    playlists: false
   });
 
   const error = ref(null);
@@ -72,16 +74,32 @@ export function useDiscovery() {
     }
   };
 
+  const fetchPlaylists = async () => {
+    loading.playlists = true;
+    try {
+      const res = await fetch('/api/discovery/playlists');
+      if (!res.ok) throw new Error('Failed to fetch playlists');
+      playlists.value = await res.json();
+    } catch (e) {
+      error.value = e.message;
+      playlists.value = [];
+    } finally {
+      loading.playlists = false;
+    }
+  };
+
   return {
     popularTracks,
     recentTracks,
     curatedTracks,
     styleOverview,
+    playlists,
     loading,
     error,
     fetchPopular,
     fetchRecent,
     fetchCurated,
-    fetchStyleOverview
+    fetchStyleOverview,
+    fetchPlaylists
   };
 }

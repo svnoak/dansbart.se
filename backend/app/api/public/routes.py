@@ -61,6 +61,7 @@ def get_tracks(
     max_bounciness: float = Query(None, ge=0, le=1, description="Maximum bounciness (0-1)"),
     min_articulation: float = Query(None, ge=0, le=1, description="Minimum articulation (0-1)"),
     max_articulation: float = Query(None, ge=0, le=1, description="Maximum articulation (0-1)"),
+    music_genre: str = Query(None, description="Filter by music genre: 'traditional_folk', 'modern_folk', 'folk_pop', 'contemporary'"),
     sort: str = Query("confidence", description="Field to sort by: confidence, created_at, bpm, etc."),
     order: str = Query("desc", description="Direction: asc or desc"),
     limit: int = Query(20, ge=1, le=100),
@@ -85,6 +86,7 @@ def get_tracks(
         max_bounciness=max_bounciness,
         min_articulation=min_articulation,
         max_articulation=max_articulation,
+        music_genre=music_genre,
         sort_by=sort,
         sort_order=order,
         limit=limit,
@@ -434,6 +436,17 @@ def get_style_overview(db: Session = Depends(get_db)):
 
     # Sort by track count descending
     return sorted(result, key=lambda x: x['track_count'], reverse=True)
+
+@router.get("/discovery/playlists")
+def get_curated_playlists(db: Session = Depends(get_db)):
+    """
+    Get curated playlists with tracks for discovery page.
+    Returns multiple themed playlists based on track metadata.
+    """
+    from app.services.discovery import DiscoveryService
+
+    service = DiscoveryService(db)
+    return service.get_all_playlists()
 
 # --- NEW & UPDATED STRUCTURE ROUTES ---
 @router.post("/tracks/{track_id}/structure")

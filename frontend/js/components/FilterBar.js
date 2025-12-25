@@ -122,6 +122,16 @@ export default {
               </div>
             </div>
 
+            <div>
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-medium text-gray-600">Traditionell folkmusik</label>
+                <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localTraditionalOnly = !localTraditionalOnly; $emit('update:traditionalOnly', localTraditionalOnly)" @keydown.space.prevent="localTraditionalOnly = !localTraditionalOnly; $emit('update:traditionalOnly', localTraditionalOnly)">
+                  <input type="checkbox" v-model="localTraditionalOnly" @change="$emit('update:traditionalOnly', localTraditionalOnly)" class="sr-only peer" aria-label="Visa endast traditionell folkmusik" tabindex="0">
+                  <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
             <div class="border-t border-gray-200 pt-3">
               <button
                 @click="advancedExpanded = !advancedExpanded"
@@ -252,6 +262,14 @@ export default {
                 </button>
               </div>
             </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">Traditionell folkmusik:</span>
+            <label class="relative inline-flex items-center cursor-pointer" @keydown.enter.prevent="localTraditionalOnly = !localTraditionalOnly; $emit('update:traditionalOnly', localTraditionalOnly)" @keydown.space.prevent="localTraditionalOnly = !localTraditionalOnly; $emit('update:traditionalOnly', localTraditionalOnly)">
+              <input type="checkbox" v-model="localTraditionalOnly" @change="$emit('update:traditionalOnly', localTraditionalOnly)" class="sr-only peer" aria-label="Visa endast traditionell folkmusik" tabindex="0">
+              <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
         </div>
 
         <div v-if="!localSearch && localSearchType === 'tracks'" class="flex flex-wrap gap-4 items-end">
@@ -383,7 +401,12 @@ export default {
             Bekräftad dansstil
             <button @click="clearstyleConfirmed" class="hover:text-blue-900">×</button>
           </span>
-          
+
+          <span v-if="localTraditionalOnly" class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+            Traditionell folkmusik
+            <button @click="clearTraditionalOnly" class="hover:text-blue-900">×</button>
+          </span>
+
           <span v-if="localDuration" class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
             {{ durationLabel }}
             <button @click="clearDuration" class="hover:text-blue-900">×</button>
@@ -420,6 +443,7 @@ export default {
     source: { type: String, default: '' },
     vocals: { type: String, default: '' },
     styleConfirmed: { type: Boolean, default: false },
+    traditionalOnly: { type: Boolean, default: false },
     minDuration: { type: Number, default: null },
     maxDuration: { type: Number, default: null },
     targetTempo: { type: Number, default: 130 },
@@ -442,6 +466,7 @@ export default {
     'update:source',
     'update:vocals',
     'update:styleConfirmed',
+    'update:traditionalOnly',
     'update:minDuration',
     'update:maxDuration',
     'update:targetTempo',
@@ -464,6 +489,7 @@ export default {
       localSource: this.source,
       localVocals: this.vocals,
       localStyleConfirmed: this.styleConfirmed,
+      localTraditionalOnly: this.traditionalOnly,
       localDuration: this.getDurationPreset(),
       localTargetTempo: this.targetTempo,
       localTempoEnabled: this.tempoEnabled,
@@ -492,6 +518,7 @@ export default {
       if (this.localSource) count++;
       if (this.localVocals) count++;
       if (this.localStyleConfirmed) count++;
+      if (this.localTraditionalOnly) count++;
       if (this.localMainStyle) count++; // Count main
       if (this.localSubStyle) count++; // Count sub
       if (this.localDuration) count++;
@@ -543,6 +570,9 @@ export default {
     },
     styleConfirmed(val) {
       this.localStyleConfirmed = val;
+    },
+    traditionalOnly(val) {
+      this.localTraditionalOnly = val;
     },
     targetTempo(val) {
       this.localTargetTempo = val;
@@ -645,6 +675,10 @@ export default {
       this.localStyleConfirmed = false;
       this.$emit('update:styleConfirmed', false);
     },
+    clearTraditionalOnly() {
+      this.localTraditionalOnly = false;
+      this.$emit('update:traditionalOnly', false);
+    },
     clearDuration() {
       this.localDuration = '';
       this.$emit('update:minDuration', null);
@@ -675,6 +709,7 @@ export default {
       this.clearSource();
       this.clearVocals();
       this.clearstyleConfirmed();
+      this.clearTraditionalOnly();
       this.clearMainStyle();
       this.clearSubStyle();
       this.clearDuration();

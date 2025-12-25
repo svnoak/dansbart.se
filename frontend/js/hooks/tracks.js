@@ -47,6 +47,8 @@ export function useTracks() {
       if (filters.value.vocals) params.append('vocals', filters.value.vocals);
       if (filters.value.styleConfirmed)
         params.append('style_confirmed', filters.value.styleConfirmed);
+      if (filters.value.traditionalOnly)
+        params.append('music_genre', 'modern_folk');
       if (filters.value.minDuration) params.append('min_duration', filters.value.minDuration);
       if (filters.value.maxDuration) params.append('max_duration', filters.value.maxDuration);
 
@@ -116,6 +118,7 @@ export function useTracks() {
       () => filters.value.source,
       () => filters.value.vocals,
       () => filters.value.styleConfirmed,
+      () => filters.value.traditionalOnly,
       () => filters.value.minDuration,
       () => filters.value.maxDuration,
       () => minBounciness.value,
