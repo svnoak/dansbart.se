@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session, joinedload
-from app.core.models import Track, PlaybackLink, TrackStructureVersion, TrackArtist
+from sqlalchemy.orm import Session, joinedload, selectinload
+from app.core.models import Track, PlaybackLink, TrackStructureVersion, TrackArtist, TrackAlbum
 from app.repository.analysis import AnalysisRepository
 from app.workers.audio.fetcher import AudioFetcher
 from neckenml import AudioAnalyzer
@@ -30,7 +30,7 @@ class AnalysisService:
 
         track = self.db.query(Track).options(
             joinedload(Track.playback_links),
-            joinedload(Track.album),
+            selectinload(Track.album_links).joinedload(TrackAlbum.album),
             joinedload(Track.artist_links).joinedload(TrackArtist.artist)
         ).filter(Track.id == track_id).first()
         if not track:

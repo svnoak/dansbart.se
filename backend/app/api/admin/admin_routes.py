@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func
 from app.core.database import get_db
 from app.core.config import settings
@@ -15,7 +15,7 @@ from app.services.duplicate_merger import DuplicateMergerService
 from pydantic import BaseModel
 from typing import List
 from app.core.models import (
-    Track, ArtistCrawlLog, TrackArtist, Artist
+    Track, ArtistCrawlLog, TrackArtist, Artist, TrackAlbum
 )
 from app.api.admin.admin_schemas import AlbumOutAdmin, AdminArtistListItem, AdminTrackListItem
 from app.api.schemas import Page
@@ -318,7 +318,7 @@ def trigger_reclassification(
         joinedload(Track.analysis_sources),
         joinedload(Track.dance_styles),
         joinedload(Track.artist_links).joinedload(TrackArtist.artist),
-        joinedload(Track.album)
+        selectinload(Track.album_links).joinedload(TrackAlbum.album)
     ).filter(Track.id == track_id).first()
     
     if not track:

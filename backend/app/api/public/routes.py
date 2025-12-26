@@ -289,7 +289,7 @@ def get_recent_tracks(
     Get recently added verified tracks for discovery page.
     Only returns tracks with confirmed styles and playable links.
     """
-    from app.core.models import Track, PlaybackLink, TrackDanceStyle, TrackArtist
+    from app.core.models import Track, PlaybackLink, TrackDanceStyle, TrackArtist, TrackAlbum
     from sqlalchemy.orm import selectinload, joinedload
 
     track_service = TrackService(db)
@@ -305,7 +305,7 @@ def get_recent_tracks(
     ).options(
         selectinload(Track.dance_styles),
         selectinload(Track.artist_links).joinedload(TrackArtist.artist),
-        joinedload(Track.album),
+        selectinload(Track.album_links).joinedload(TrackAlbum.album),
         selectinload(Track.playback_links)
     ).order_by(
         Track.created_at.desc()
@@ -329,7 +329,7 @@ def get_curated_tracks(
     Get high-quality curated tracks for discovery page.
     Criteria: verified style, audio analysis complete, sorted by popularity.
     """
-    from app.core.models import Track, TrackPlayback, PlaybackLink, TrackDanceStyle, TrackArtist
+    from app.core.models import Track, TrackPlayback, PlaybackLink, TrackDanceStyle, TrackArtist, TrackAlbum
     from sqlalchemy import func
     from sqlalchemy.orm import selectinload, joinedload
 
@@ -371,7 +371,7 @@ def get_curated_tracks(
     ).options(
         selectinload(Track.dance_styles),
         selectinload(Track.artist_links).joinedload(TrackArtist.artist),
-        joinedload(Track.album),
+        selectinload(Track.album_links).joinedload(TrackAlbum.album),
         selectinload(Track.playback_links)
     ).all()
 

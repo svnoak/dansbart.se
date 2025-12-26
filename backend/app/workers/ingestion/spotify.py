@@ -249,23 +249,74 @@ class SpotifyIngestor:
         if not db_track:
             print(f"✨ New Track: {title}")
             db_track = self.repo.create_track(
-                title=title, 
+                title=title,
                 isrc=isrc,
                 duration_ms=duration_ms,
                 album_data=album_data,
                 artists_data=artists_data
             )
         else:
+            # Track exists - update missing data and add new album link if needed
+            updated = False
+
+            # Update duration if missing
             if not db_track.duration_ms and duration_ms:
                 db_track.duration_ms = duration_ms
+                updated = True
+
+            # Add new album link if this track appears in a new album
+            if album_data and album_data.get('name'):
+                from app.core.models import Album, TrackAlbum
+
+                # Get or create the album
+                primary_artist_data = artists_data[0] if artists_data else None
+                if primary_artist_data:
+                    primary_artist = self.repo.get_or_create_artist(
+                        primary_artist_data['name'],
+                        primary_artist_data.get('id')
+                    )
+
+                    # Check if album exists
+                    album = self.db.query(Album).filter(
+                        Album.title == album_data['name'],
+                        Album.artist_id == primary_artist.id
+                    ).first()
+
+                    if not album:
+                        # Create new album
+                        album = Album(
+                            title=album_data['name'],
+                            artist_id=primary_artist.id,
+                            cover_image_url=album_data.get('cover'),
+                            release_date=album_data.get('date')
+                        )
+                        self.db.add(album)
+                        self.db.flush()
+
+                    # Check if track is already linked to this album
+                    existing_link = self.db.query(TrackAlbum).filter(
+                        TrackAlbum.track_id == db_track.id,
+                        TrackAlbum.album_id == album.id
+                    ).first()
+
+                    if not existing_link:
+                        # Add new album link
+                        self.db.add(TrackAlbum(
+                            track_id=db_track.id,
+                            album_id=album.id
+                        ))
+                        print(f"   📀 Added album link: '{title}' -> '{album_data['name']}'")
+                        updated = True
+
+            if updated:
                 self.db.commit()
 
         # Link Spotify ID (extract from URL or use track ID directly)
         spotify_id = sp_track.get('id')  # Spotify track ID is directly available
         if spotify_id:
             self.repo.add_playback_link(
-                track_id=db_track.id, 
-                platform="spotify", 
+                track_id=db_track.id,
+                platform="spotify",
                 url=spotify_id  # Store just the ID, not the full URL
             )
 
