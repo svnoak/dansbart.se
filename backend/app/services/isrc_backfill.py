@@ -123,31 +123,31 @@ class ISRCBackfillService:
                     if isrc:
                         old_isrc = db_track.isrc
 
-                        # Check if this ISRC already exists on a different track
+                        # Check if this ISRC already exists on a different track (for informational purposes)
                         existing_track = self.db.query(Track).filter(
                             Track.isrc == isrc,
                             Track.id != db_track.id
                         ).first()
 
-                        if existing_track:
-                            print(f"   ⚠️  Duplicate: {db_track.title} has same ISRC as existing track (skipping)")
+                        # Update the ISRC regardless of whether it's a duplicate
+                        # (duplicates are now allowed and help us identify the same song in different albums)
+                        db_track.isrc = isrc
+
+                        # Commit immediately after each track
+                        try:
+                            self.db.commit()
+                            updated_count += 1
+
+                            if existing_track:
+                                print(f"   ✅ Added duplicate ISRC: {db_track.title} -> {isrc} (same as {existing_track.title})")
+                            elif old_isrc and old_isrc.startswith('FALLBACK-'):
+                                print(f"   ✅ Updated fallback ISRC: {db_track.title} -> {isrc}")
+                            else:
+                                print(f"   ✅ Added ISRC: {db_track.title} -> {isrc}")
+                        except Exception as commit_error:
+                            self.db.rollback()
+                            print(f"   ⚠️  Failed to update {db_track.title}: {commit_error}")
                             failed_count += 1
-                        else:
-                            db_track.isrc = isrc
-
-                            # Commit immediately after each track to prevent duplicate ISRC conflicts within batch
-                            try:
-                                self.db.commit()
-                                updated_count += 1
-
-                                if old_isrc and old_isrc.startswith('FALLBACK-'):
-                                    print(f"   ✅ Updated fallback ISRC: {db_track.title} -> {isrc}")
-                                else:
-                                    print(f"   ✅ Added ISRC: {db_track.title} -> {isrc}")
-                            except Exception as commit_error:
-                                self.db.rollback()
-                                print(f"   ⚠️  Failed to update {db_track.title}: {commit_error}")
-                                failed_count += 1
                     else:
                         print(f"   ⚠️  No ISRC available for: {db_track.title}")
                         failed_count += 1
