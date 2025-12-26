@@ -3,7 +3,7 @@ from sqlalchemy import func, case
 from app.core.models import (
     Track, PlaybackLink, AnalysisSource, TrackDanceStyle,
     TrackStyleVote, TrackFeelVote, TrackStructureVersion,
-    TrackArtist, TrackPlayback, UserInteraction
+    TrackArtist, TrackAlbum, TrackPlayback, UserInteraction
 )
 from .admin_query_helpers import build_paginated_response, TRACK_EAGER_LOAD
 from .admin_rejections import AdminRejectionService
@@ -60,7 +60,7 @@ class AdminTrackService:
             query = query.filter(Track.is_flagged == flagged)
 
         if album_id:
-            query = query.filter(Track.album_id == album_id)
+            query = query.join(TrackAlbum, Track.id == TrackAlbum.track_id).filter(TrackAlbum.album_id == album_id)
 
         total = query.count()
         tracks = query.order_by(Track.created_at.desc()).offset(offset).limit(limit).all()
@@ -86,7 +86,7 @@ class AdminTrackService:
                 "title": track.title,
                 "artists": artist_names,
                 "album_title": track.album.title if track.album else None,
-                "album_id": str(track.album_id) if track.album_id else None,
+                "album_id": str(track.album.id) if track.album else None,
                 "status": track.processing_status,
                 "dance_style": primary_style.dance_style if primary_style else None,
                 "confidence": primary_style.confidence if primary_style else None,
@@ -115,6 +115,10 @@ class AdminTrackService:
         # Delete related records first (manual cascade)
         self.db.query(TrackArtist).filter(
             TrackArtist.track_id.in_(track_ids)
+        ).delete(synchronize_session=False)
+
+        self.db.query(TrackAlbum).filter(
+            TrackAlbum.track_id.in_(track_ids)
         ).delete(synchronize_session=False)
 
         self.db.query(PlaybackLink).filter(
@@ -211,13 +215,13 @@ class AdminTrackService:
         # (catches cases where Spotify has multiple track IDs for the same recording)
         # We don't check duration here because it might be missing (0) on some tracks
         duplicate_album_title_query = self.db.query(
-            Track.album_id,
+            TrackAlbum.album_id,
             Track.title,
             func.count(Track.id).label('count')
-        ).filter(
-            Track.album_id != None
+        ).join(
+            Track, TrackAlbum.track_id == Track.id
         ).group_by(
-            Track.album_id,
+            TrackAlbum.album_id,
             Track.title
         ).having(
             func.count(Track.id) > 1
@@ -266,7 +270,7 @@ class AdminTrackService:
                         "title": track.title,
                         "artists": artist_names,
                         "album_title": track.album.title if track.album else None,
-                        "album_id": str(track.album_id) if track.album_id else None,
+                        "album_id": str(track.album.id) if track.album else None,
                         "status": track.processing_status,
                         "dance_style": primary_style.dance_style if primary_style else None,
                         "confidence": primary_style.confidence if primary_style else None,
@@ -326,7 +330,7 @@ class AdminTrackService:
                         "title": track.title,
                         "artists": artist_names,
                         "album_title": track.album.title if track.album else None,
-                        "album_id": str(track.album_id) if track.album_id else None,
+                        "album_id": str(track.album.id) if track.album else None,
                         "status": track.processing_status,
                         "dance_style": primary_style.dance_style if primary_style else None,
                         "confidence": primary_style.confidence if primary_style else None,
@@ -354,8 +358,10 @@ class AdminTrackService:
 
             for album_id, title, count in duplicate_album_titles:
                 # Find all tracks with this album + title
-                tracks = self.db.query(Track).options(*TRACK_EAGER_LOAD).filter(
-                    Track.album_id == album_id,
+                tracks = self.db.query(Track).join(
+                    TrackAlbum, Track.id == TrackAlbum.track_id
+                ).options(*TRACK_EAGER_LOAD).filter(
+                    TrackAlbum.album_id == album_id,
                     Track.title == title
                 ).all()
 
@@ -396,7 +402,7 @@ class AdminTrackService:
                         "title": track.title,
                         "artists": artist_names,
                         "album_title": track.album.title if track.album else None,
-                        "album_id": str(track.album_id) if track.album_id else None,
+                        "album_id": str(track.album.id) if track.album else None,
                         "status": track.processing_status,
                         "dance_style": primary_style.dance_style if primary_style else None,
                         "confidence": primary_style.confidence if primary_style else None,
@@ -453,7 +459,7 @@ class AdminTrackService:
             ).group_by(TrackArtist.artist_id)
         else:  # album
             query = self.db.query(
-                Track.album_id.label('entity_id'),
+                TrackAlbum.album_id.label('entity_id'),
                 func.count(Track.id).label('total'),
                 func.sum(
                     case((Track.processing_status == 'DONE', 1), else_=0)
@@ -464,7 +470,9 @@ class AdminTrackService:
                 func.sum(
                     case((Track.processing_status == 'FAILED', 1), else_=0)
                 ).label('failed')
-            ).filter(Track.album_id.in_(entity_ids)).group_by(Track.album_id)
+            ).join(Track, TrackAlbum.track_id == Track.id).filter(
+                TrackAlbum.album_id.in_(entity_ids)
+            ).group_by(TrackAlbum.album_id)
 
         results = query.all()
 

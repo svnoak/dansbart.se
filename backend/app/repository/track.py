@@ -10,7 +10,7 @@ import uuid
 from typing import Optional, List, Dict, Tuple
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func, case, and_, or_
-from app.core.models import Track, PlaybackLink, TrackDanceStyle, Artist, Album, TrackArtist, AnalysisSource, TrackStyleVote, TrackFeelVote, TrackStructureVersion, TrackPlayback, UserInteraction
+from app.core.models import Track, PlaybackLink, TrackDanceStyle, Artist, Album, TrackArtist, TrackAlbum, AnalysisSource, TrackStyleVote, TrackFeelVote, TrackStructureVersion, TrackPlayback, UserInteraction
 from .base import BaseRepository
 
 class TrackRepository(BaseRepository[Track]):
@@ -27,7 +27,7 @@ class TrackRepository(BaseRepository[Track]):
         return [
             selectinload(Track.dance_styles),
             selectinload(Track.artist_links).joinedload(TrackArtist.artist),
-            joinedload(Track.album).joinedload(Album.artist),
+            selectinload(Track.album_links).joinedload(TrackAlbum.album).joinedload(Album.artist),
             selectinload(Track.playback_links),
             selectinload(Track.analysis_sources)
         ]
@@ -38,7 +38,7 @@ class TrackRepository(BaseRepository[Track]):
         return [
             selectinload(Track.dance_styles),
             selectinload(Track.artist_links).joinedload(TrackArtist.artist),
-            joinedload(Track.album)
+            selectinload(Track.album_links).joinedload(TrackAlbum.album)
         ]
 
     # ==================== PUBLIC FEED SEARCH ====================
@@ -176,7 +176,7 @@ class TrackRepository(BaseRepository[Track]):
         # 6. Apply Text/Meta Search
         if search:
             search_str = f"%{search}%"
-            query = query.outerjoin(Track.album).filter(
+            query = query.outerjoin(TrackAlbum, Track.id == TrackAlbum.track_id).outerjoin(Album, TrackAlbum.album_id == Album.id).filter(
                 or_(
                     Track.title.ilike(search_str),
                     Album.title.ilike(search_str),
@@ -265,11 +265,15 @@ class TrackRepository(BaseRepository[Track]):
                 album = existing_album
 
         # 3. Track
-        new_track = Track(title=title, isrc=isrc, duration_ms=duration_ms, album_id=album.id if album else None)
+        new_track = Track(title=title, isrc=isrc, duration_ms=duration_ms)
         self.db.add(new_track)
         self.db.flush()
 
-        # 4. Links
+        # 4. Album Link
+        if album:
+            self.db.add(TrackAlbum(track_id=new_track.id, album_id=album.id))
+
+        # 5. Artist Links
         for i, art_data in enumerate(artists_data):
             artist_obj = self.get_or_create_artist(art_data['name'], art_data.get('id'))
             role = "primary" if i == 0 else "featured"
@@ -283,6 +287,7 @@ class TrackRepository(BaseRepository[Track]):
         counts = {}
         # Delete children first
         counts['track_artists'] = self.db.query(TrackArtist).filter(TrackArtist.track_id.in_(track_ids)).delete(synchronize_session=False)
+        counts['track_albums'] = self.db.query(TrackAlbum).filter(TrackAlbum.track_id.in_(track_ids)).delete(synchronize_session=False)
         counts['playback_links'] = self.db.query(PlaybackLink).filter(PlaybackLink.track_id.in_(track_ids)).delete(synchronize_session=False)
         counts['dance_styles'] = self.db.query(TrackDanceStyle).filter(TrackDanceStyle.track_id.in_(track_ids)).delete(synchronize_session=False)
         counts['analysis_sources'] = self.db.query(AnalysisSource).filter(AnalysisSource.track_id.in_(track_ids)).delete(synchronize_session=False)
@@ -291,9 +296,12 @@ class TrackRepository(BaseRepository[Track]):
         counts['structure_versions'] = self.db.query(TrackStructureVersion).filter(TrackStructureVersion.track_id.in_(track_ids)).delete(synchronize_session=False)
         counts['playbacks'] = self.db.query(TrackPlayback).filter(TrackPlayback.track_id.in_(track_ids)).delete(synchronize_session=False)
         counts['interactions'] = self.db.query(UserInteraction).filter(UserInteraction.track_id.in_(track_ids)).delete(synchronize_session=False)
-        
+
+        # Flush child deletions before deleting parent to satisfy foreign key constraints
+        self.db.flush()
+
         # Delete Parent
         counts['tracks'] = self.db.query(Track).filter(Track.id.in_(track_ids)).delete(synchronize_session=False)
-        
+
         self.db.flush()
         return counts

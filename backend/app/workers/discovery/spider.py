@@ -283,9 +283,10 @@ class DiscoverySpider:
         album_spotify_ids = set()
 
         # Query tracks with albums
-        tracks_with_albums = self.db.query(Track).filter(
-            Track.album_id.isnot(None)
-        ).join(Album).limit(100).all()
+        from app.core.models import TrackAlbum
+        tracks_with_albums = self.db.query(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).join(Album, TrackAlbum.album_id == Album.id).limit(100).all()
 
         for track in tracks_with_albums:
             # Get Spotify link to extract album ID

@@ -13,11 +13,10 @@ class Track(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String, index=True)
-    isrc: Mapped[str | None] = mapped_column(String, unique=True, index=True)
-    album_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("albums.id"), nullable=True)
-    
+    isrc: Mapped[str | None] = mapped_column(String, index=True)  # Removed unique constraint to allow duplicates
+
     # Metadata Relationships
-    album: Mapped["Album"] = relationship("Album", back_populates="tracks")
+    album_links: Mapped[List["TrackAlbum"]] = relationship("TrackAlbum", back_populates="track", cascade="all, delete-orphan")
     artist_links: Mapped[List["TrackArtist"]] = relationship("TrackArtist", back_populates="track", cascade="all, delete-orphan")
     
     # Audio Features
@@ -72,6 +71,16 @@ class Track(Base):
                 return link.artist
         return self.artist_links[0].artist if self.artist_links else None
 
+    @property
+    def album(self) -> Optional["Album"]:
+        """Returns the first album (for backward compatibility)."""
+        return self.album_links[0].album if self.album_links else None
+
+    @property
+    def albums(self) -> List["Album"]:
+        """Returns all albums this track appears in."""
+        return [link.album for link in self.album_links]
+
 class TrackArtist(Base):
     __tablename__ = "track_artists"
     __table_args__ = (
@@ -84,6 +93,23 @@ class TrackArtist(Base):
     role: Mapped[str] = mapped_column(String, default="primary")
     track: Mapped["Track"] = relationship("Track", back_populates="artist_links")
     artist: Mapped["Artist"] = relationship("Artist", back_populates="track_links")
+
+class TrackAlbum(Base):
+    """
+    Junction table for many-to-many relationship between Track and Album.
+    Allows a single track (identified by ISRC) to appear in multiple albums.
+    """
+    __tablename__ = "track_albums"
+    __table_args__ = (
+        UniqueConstraint('track_id', 'album_id', name='unique_track_album'),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    album_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("albums.id"))
+
+    track: Mapped["Track"] = relationship("Track", back_populates="album_links")
+    album: Mapped["Album"] = relationship("Album", back_populates="track_links")
 
 class Artist(Base):
     __tablename__ = "artists"
@@ -103,9 +129,9 @@ class Album(Base):
     cover_image_url: Mapped[str | None] = mapped_column(String, nullable=True)
     release_date: Mapped[str | None] = mapped_column(String, nullable=True)
     artist_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("artists.id"), nullable=True)
-    
+
     artist: Mapped["Artist"] = relationship("Artist", back_populates="albums")
-    tracks: Mapped[List["Track"]] = relationship("Track", back_populates="album")
+    track_links: Mapped[List["TrackAlbum"]] = relationship("TrackAlbum", back_populates="album", cascade="all, delete-orphan")
 
 class AnalysisSource(Base):
     __tablename__ = "analysis_sources"

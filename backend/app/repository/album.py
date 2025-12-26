@@ -11,7 +11,7 @@ import uuid
 from typing import Optional, List, Dict, Tuple
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func, case
-from app.core.models import Album, Artist, Track, TrackArtist
+from app.core.models import Album, Artist, Track, TrackArtist, TrackAlbum
 from .base import BaseRepository
 
 
@@ -28,7 +28,7 @@ class AlbumRepository(BaseRepository[Album]):
         """Full eager loading for album with all relationships."""
         return [
             joinedload(Album.artist),
-            selectinload(Album.tracks).joinedload(Track.artist_links).joinedload(TrackArtist.artist)
+            selectinload(Album.track_links).joinedload(TrackAlbum.track).joinedload(Track.artist_links).joinedload(TrackArtist.artist)
         ]
 
     @staticmethod
@@ -107,8 +107,8 @@ class AlbumRepository(BaseRepository[Album]):
             func.sum(case((Track.processing_status == 'DONE', 1), else_=0)).label('done'),
             func.sum(case((Track.processing_status == 'PENDING', 1), else_=0)).label('pending'),
             func.sum(case((Track.processing_status == 'FAILED', 1), else_=0)).label('failed')
-        ).filter(
-            Track.album_id == album_id
+        ).join(TrackAlbum, Track.id == TrackAlbum.track_id).filter(
+            TrackAlbum.album_id == album_id
         ).first()
 
         return {
@@ -133,14 +133,14 @@ class AlbumRepository(BaseRepository[Album]):
         album_id_strs = [str(aid) for aid in album_ids]
 
         stats_query = self.db.query(
-            Track.album_id.label('album_id'),
+            TrackAlbum.album_id.label('album_id'),
             func.count(Track.id).label('total'),
             func.sum(case((Track.processing_status == 'DONE', 1), else_=0)).label('done'),
             func.sum(case((Track.processing_status == 'PENDING', 1), else_=0)).label('pending'),
             func.sum(case((Track.processing_status == 'FAILED', 1), else_=0)).label('failed')
-        ).filter(
-            Track.album_id.in_(album_ids)
-        ).group_by(Track.album_id).all()
+        ).join(Track, TrackAlbum.track_id == Track.id).filter(
+            TrackAlbum.album_id.in_(album_ids)
+        ).group_by(TrackAlbum.album_id).all()
 
         stats_map = {}
         for row in stats_query:
@@ -170,8 +170,10 @@ class AlbumRepository(BaseRepository[Album]):
         Get all unique artists who have tracks on this album.
         Includes collaborating artists, not just the album's primary artist.
         """
-        return self.db.query(Artist).join(TrackArtist).join(Track).filter(
-            Track.album_id == album_id
+        return self.db.query(Artist).join(TrackArtist).join(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).filter(
+            TrackAlbum.album_id == album_id
         ).distinct().all()
 
     def get_all_artists_on_albums_batch(
@@ -190,12 +192,14 @@ class AlbumRepository(BaseRepository[Album]):
 
         # Query all artists for all albums at once
         results = self.db.query(
-            Track.album_id,
+            TrackAlbum.album_id,
             Artist.name
-        ).join(TrackArtist, Track.id == TrackArtist.track_id).join(
+        ).join(Track, TrackAlbum.track_id == Track.id).join(
+            TrackArtist, Track.id == TrackArtist.track_id
+        ).join(
             Artist, TrackArtist.artist_id == Artist.id
         ).filter(
-            Track.album_id.in_(album_ids)
+            TrackAlbum.album_id.in_(album_ids)
         ).distinct().all()
 
         # Group by album_id
@@ -282,7 +286,9 @@ class AlbumRepository(BaseRepository[Album]):
         Returns:
             Tuple of (album_dicts, total_count)
         """
-        query = self.db.query(Album).join(Track).filter(
+        query = self.db.query(Album).join(
+            TrackAlbum, Album.id == TrackAlbum.album_id
+        ).join(Track, TrackAlbum.track_id == Track.id).filter(
             Track.processing_status == "PENDING"
         ).distinct().options(*self.get_eager_load_basic())
 
@@ -323,21 +329,27 @@ class AlbumRepository(BaseRepository[Album]):
 
     def get_pending_tracks(self, album_id: uuid.UUID) -> List[Track]:
         """Get all pending tracks for an album."""
-        return self.db.query(Track).filter(
-            Track.album_id == album_id,
+        return self.db.query(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).filter(
+            TrackAlbum.album_id == album_id,
             Track.processing_status == "PENDING"
         ).all()
 
     def get_kept_tracks(self, album_id: uuid.UUID) -> List[Track]:
         """Get all non-pending tracks for an album (analyzed or failed)."""
-        return self.db.query(Track).filter(
-            Track.album_id == album_id,
+        return self.db.query(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).filter(
+            TrackAlbum.album_id == album_id,
             Track.processing_status != "PENDING"
         ).all()
 
     def count_tracks(self, album_id: uuid.UUID) -> int:
         """Count total tracks on an album."""
-        return self.db.query(Track).filter(Track.album_id == album_id).count()
+        return self.db.query(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).filter(TrackAlbum.album_id == album_id).count()
 
     # ==================== ORPHAN DETECTION ====================
 
@@ -347,9 +359,7 @@ class AlbumRepository(BaseRepository[Album]):
         These are candidates for cleanup.
         """
         # Subquery to get album IDs that have tracks
-        albums_with_tracks = self.db.query(Track.album_id).filter(
-            Track.album_id.isnot(None)
-        ).distinct().subquery()
+        albums_with_tracks = self.db.query(TrackAlbum.album_id).distinct().subquery()
 
         # Get albums NOT in that list
         orphan_albums = self.db.query(Album).filter(

@@ -105,7 +105,7 @@ class AlbumService:
         Returns:
             Page object with tracks
         """
-        from app.core.models import Track, TrackArtist, PlaybackLink
+        from app.core.models import Track, TrackArtist, TrackAlbum, PlaybackLink
         from sqlalchemy.orm import selectinload, joinedload
         from app.services.tracks import TrackService
 
@@ -113,15 +113,17 @@ class AlbumService:
 
         # Query tracks by album with playable links
         track_query = self.db.query(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).join(
             Track.playback_links
         ).filter(
-            Track.album_id == album_id,
+            TrackAlbum.album_id == album_id,
             PlaybackLink.is_working == True,
             Track.is_flagged == False
         ).options(
             selectinload(Track.dance_styles),
             selectinload(Track.artist_links).joinedload(TrackArtist.artist),
-            joinedload(Track.album),
+            selectinload(Track.album_links).joinedload(TrackAlbum.album),
             selectinload(Track.playback_links)
         ).distinct()
 

@@ -40,9 +40,8 @@ class AdminDataCleaningService:
             Number of albums deleted
         """
         # Find all album IDs that ARE currently used by a track
-        active_album_ids = self.db.query(Track.album_id).filter(
-            Track.album_id.isnot(None)
-        ).distinct()
+        from app.core.models import TrackAlbum
+        active_album_ids = self.db.query(TrackAlbum.album_id).distinct()
 
         # Delete albums NOT in that list
         deleted = self.db.query(Album).filter(

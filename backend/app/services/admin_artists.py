@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
-from app.core.models import Artist, Track, TrackArtist, PlaybackLink, Album
+from app.core.models import Artist, Track, TrackArtist, TrackAlbum, PlaybackLink, Album
 from app.repository.artist import ArtistRepository
 from app.repository.track import TrackRepository
 from app.repository.rejection import RejectionRepository
@@ -502,8 +502,10 @@ class AdminArtistService:
                 album_key = str(track.album.id)
                 if album_key not in collab_albums:
                     # Get all artists on this album
-                    album_artists = self.db.query(Artist).join(TrackArtist).join(Track).filter(
-                        Track.album_id == track.album.id
+                    album_artists = self.db.query(Artist).join(TrackArtist).join(Track).join(
+                        TrackAlbum, Track.id == TrackAlbum.track_id
+                    ).filter(
+                        TrackAlbum.album_id == track.album.id
                     ).distinct().all()
 
                     collab_albums[album_key] = {
@@ -512,8 +514,10 @@ class AdminArtistService:
                         "cover_image_url": track.album.cover_image_url,
                         "artist_name": track.album.artist.name if track.album.artist else "Unknown",
                         "artists": [a.name for a in album_artists],
-                        "track_count": self.db.query(Track).filter(
-                            Track.album_id == track.album.id
+                        "track_count": self.db.query(Track).join(
+                            TrackAlbum, Track.id == TrackAlbum.track_id
+                        ).filter(
+                            TrackAlbum.album_id == track.album.id
                         ).count()
                     }
 
@@ -596,8 +600,10 @@ class AdminArtistService:
                     continue
 
                 # Get all tracks in this album
-                album_tracks = self.db.query(Track).filter(
-                    Track.album_id == album_uuid
+                album_tracks = self.db.query(Track).join(
+                    TrackAlbum, Track.id == TrackAlbum.track_id
+                ).filter(
+                    TrackAlbum.album_id == album_uuid
                 ).all()
 
                 # Delete all tracks in the album

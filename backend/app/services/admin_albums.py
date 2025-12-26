@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.core.models import Album, Track, TrackArtist, Artist, PlaybackLink
+from app.core.models import Album, Track, TrackArtist, TrackAlbum, Artist, PlaybackLink
 from app.repository.album import AlbumRepository
 from app.repository.track import TrackRepository
 from .admin_query_helpers import build_paginated_response, ALBUM_EAGER_LOAD
@@ -58,8 +58,10 @@ class AdminAlbumService:
             stats = stats_map.get(album_id_str, {'total': 0, 'done': 0, 'pending': 0})
 
             # Get all unique artists on this album
-            album_artists = self.db.query(Artist).join(TrackArtist).join(Track).filter(
-                Track.album_id == album.id
+            album_artists = self.db.query(Artist).join(TrackArtist).join(Track).join(
+                TrackAlbum, Track.id == TrackAlbum.track_id
+            ).filter(
+                TrackAlbum.album_id == album.id
             ).distinct().all()
             artist_names = [a.name for a in album_artists]
 
@@ -116,8 +118,10 @@ class AdminAlbumService:
             stats = stats_map.get(album_id_str, {'total': 0, 'done': 0, 'pending': 0})
 
             # Get all unique artists on this album
-            album_artists = self.db.query(Artist).join(TrackArtist).join(Track).filter(
-                Track.album_id == album.id
+            album_artists = self.db.query(Artist).join(TrackArtist).join(Track).join(
+                TrackAlbum, Track.id == TrackAlbum.track_id
+            ).filter(
+                TrackAlbum.album_id == album.id
             ).distinct().all()
             artist_names = [a.name for a in album_artists]
 
@@ -164,19 +168,25 @@ class AdminAlbumService:
         album_artist = album.artist.name if album.artist else "Unknown"
 
         # Get all unique artists on this album
-        album_artists = self.db.query(Artist).join(TrackArtist).join(Track).filter(
-            Track.album_id == album_id
+        album_artists = self.db.query(Artist).join(TrackArtist).join(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).filter(
+            TrackAlbum.album_id == album_id
         ).distinct().all()
         artist_names = [a.name for a in album_artists]
 
         # Get pending and kept tracks
-        pending_tracks = self.db.query(Track).filter(
-            Track.album_id == album_id,
+        pending_tracks = self.db.query(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).filter(
+            TrackAlbum.album_id == album_id,
             Track.processing_status == "PENDING"
         ).all()
 
-        kept_tracks = self.db.query(Track).filter(
-            Track.album_id == album_id,
+        kept_tracks = self.db.query(Track).join(
+            TrackAlbum, Track.id == TrackAlbum.track_id
+        ).filter(
+            TrackAlbum.album_id == album_id,
             Track.processing_status != "PENDING"
         ).all()
 

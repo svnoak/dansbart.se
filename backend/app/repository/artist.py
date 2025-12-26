@@ -181,7 +181,6 @@ class ArtistRepository(BaseRepository[Artist]):
         # Query to find tracks with multiple artists
         collaboration_query = self.db.query(
             Track.id.label('track_id'),
-            Track.album_id,
             func.count(TrackArtist.artist_id).label('artist_count')
         ).join(TrackArtist).filter(
             TrackArtist.track_id.in_(
@@ -189,12 +188,11 @@ class ArtistRepository(BaseRepository[Artist]):
                     TrackArtist.artist_id == artist_id
                 )
             )
-        ).group_by(Track.id, Track.album_id).subquery()
+        ).group_by(Track.id).subquery()
 
         # Get tracks where this artist collaborates (artist_count > 1)
         collab_tracks = self.db.query(
-            collaboration_query.c.track_id,
-            collaboration_query.c.album_id
+            collaboration_query.c.track_id
         ).filter(collaboration_query.c.artist_count > 1).all()
 
         # Get names of collaborating artists
@@ -202,6 +200,7 @@ class ArtistRepository(BaseRepository[Artist]):
         shared_album_ids = set()
 
         if collab_tracks:
+            from app.core.models import TrackAlbum
             track_ids = [t.track_id for t in collab_tracks]
 
             # Get other artists on these tracks
@@ -211,7 +210,12 @@ class ArtistRepository(BaseRepository[Artist]):
             ).distinct().all()
 
             shared_with = {name for (name,) in other_artists}
-            shared_album_ids = {t.album_id for t in collab_tracks if t.album_id}
+
+            # Get album IDs for these tracks
+            album_links = self.db.query(TrackAlbum.album_id).filter(
+                TrackAlbum.track_id.in_(track_ids)
+            ).distinct().all()
+            shared_album_ids = {album_id for (album_id,) in album_links}
 
         # Get total track count for this artist
         total_tracks = self.db.query(Track).join(TrackArtist).filter(
