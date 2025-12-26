@@ -1,4 +1,5 @@
-import { createApp, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'; // Added nextTick
+import { createApp, onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useTracks } from './hooks/tracks.js';
 import { useFilters } from './hooks/filter.js';
 import { usePlayer } from './hooks/player.js';
@@ -23,6 +24,7 @@ import DiscoveryPage from './components/DiscoveryPage.js';
 import ClassifyPage from './components/ClassifyPage.js';
 import ArtistPage from './components/ArtistPage.js';
 import AlbumPage from './components/AlbumPage.js';
+import router from './router.js';
 
 const app = createApp({
   components: {
@@ -42,6 +44,8 @@ const app = createApp({
     'album-page': AlbumPage,
   },
   setup() {
+    const route = useRoute();
+    const routerInstance = useRouter();
     const filterLogic = useFilters();
     const trackLogic = useTracks();
     const artistsLogic = useArtistsList();
@@ -49,46 +53,16 @@ const app = createApp({
     const playerLogic = usePlayer();
     const { togglePlay } = playerLogic;
 
-    // Initialize page state from URL to prevent flash of discovery page
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialPage = urlParams.get('page');
-    const initialId = urlParams.get('id');
-
-    let initialPageValue = 'discovery';
-    let initialArtistIdValue = null;
-    let initialAlbumIdValue = null;
-
-    if (initialPage === 'album' && initialId) {
-      initialPageValue = 'album';
-      initialAlbumIdValue = initialId;
-    } else if (initialPage === 'artist' && initialId) {
-      initialPageValue = 'artist';
-      initialArtistIdValue = initialId;
-    } else if (initialPage === 'search' || initialPage === 'classify') {
-      initialPageValue = initialPage;
-    } else if (urlParams.get('track')) {
-      initialPageValue = 'search';
-    }
-
-    // Page routing state
-    const currentPage = ref(initialPageValue);
-    const currentArtistId = ref(initialArtistIdValue);
-    const currentAlbumId = ref(initialAlbumIdValue);
+    // Derive current page and IDs from route
+    const currentPage = computed(() => route.meta.page || 'discovery');
+    const currentArtistId = computed(() => route.params.id || null);
+    const currentAlbumId = computed(() => route.params.id || null);
 
     const scrollTrigger = ref(null);
     let observer = null;
 
     const navigateToPage = (page) => {
-        currentPage.value = page;
-        
-        // Update URL
-        const url = new URL(window.location);
-        url.searchParams.set('page', page);
-        
-        // Remove track parameter if switching pages to avoid confusion
-        url.searchParams.delete('track');
-        
-        window.history.pushState({}, '', url);
+      routerInstance.push({ name: page });
     };
 
     const handlePlay = (track, sourcePreference = null) => {
@@ -188,153 +162,58 @@ const app = createApp({
       }
     };
 
-    // Sync filters to URL
+    // Sync filters to URL query params
     const syncFiltersToURL = () => {
-      const url = new URL(window.location);
       const filterParams = filterLogic.filtersToQueryParams();
-
-      // Clear existing filter params and add new ones
-      const keysToKeep = ['page', 'track'];
-      const newParams = new URLSearchParams();
-      keysToKeep.forEach(key => {
-        if (url.searchParams.has(key)) {
-          newParams.set(key, url.searchParams.get(key));
-        }
-      });
-
-      // Add filter params
+      const query = {};
       filterParams.forEach((value, key) => {
-        newParams.set(key, value);
+        query[key] = value;
       });
 
-      url.search = newParams.toString();
-      window.history.replaceState({}, '', url);
+      routerInstance.replace({ query });
     };
 
     // Navigation functions
     const navigateToSearch = (filters = {}) => {
-      currentPage.value = 'search';
       Object.assign(filterLogic.filters.value, filters);
 
-      const url = new URL(window.location);
-      url.searchParams.set('page', 'search');
-
-      // Add filter params to URL
+      // Build query params from filters
       const filterParams = filterLogic.filtersToQueryParams();
+      const query = {};
       filterParams.forEach((value, key) => {
-        url.searchParams.set(key, value);
+        query[key] = value;
       });
 
-      window.history.pushState({}, '', url);
+      routerInstance.push({ name: 'search', query });
       trackLogic.fetchTracks();
     };
 
     const navigateToArtist = (artistId) => {
-      currentPage.value = 'artist';
-      currentArtistId.value = artistId;
-
-      // Create clean URL with only page and id parameters
-      const url = new URL(window.location);
-      url.search = '';
-      url.searchParams.set('page', 'artist');
-      url.searchParams.set('id', artistId);
-
-      window.history.pushState({}, '', url);
+      routerInstance.push({ name: 'artist', params: { id: artistId } });
     };
 
     const navigateToAlbum = (albumId) => {
-      currentPage.value = 'album';
-      currentAlbumId.value = albumId;
-
-      // Create clean URL with only page and id parameters
-      const url = new URL(window.location);
-      url.search = '';
-      url.searchParams.set('page', 'album');
-      url.searchParams.set('id', albumId);
-
-      window.history.pushState({}, '', url);
+      routerInstance.push({ name: 'album', params: { id: albumId } });
     };
 
     const navigateToClassify = () => {
-      currentPage.value = 'classify';
-
-      const url = new URL(window.location);
-      url.searchParams.set('page', 'classify');
-      url.searchParams.delete('track');
-      url.searchParams.delete('id');
-
-      window.history.pushState({}, '', url);
+      routerInstance.push({ name: 'classify' });
     };
 
     onMounted(async () => {
       // Load saved queue from localStorage
       await playerLogic.loadQueueFromStorage();
 
-      // Check for track deep link or page parameter
+      // Load filters from URL query params if present
       const urlParams = new URLSearchParams(window.location.search);
-      const trackId = urlParams.get('track');
-      const page = urlParams.get('page');
-
-      // Load filters from URL if present
       filterLogic.loadFiltersFromQueryParams(urlParams);
 
-      if (trackId) {
-        currentPage.value = 'search';
-        loadAndPlayTrack(trackId);
-      } else if (page === 'search') {
-        currentPage.value = 'search';
+      // Handle track deep link (for backwards compatibility with old URLs)
+      if (route.query.track) {
+        loadAndPlayTrack(route.query.track);
+      } else if (route.name === 'search') {
         trackLogic.fetchTracks();
-      } else if (page === 'classify') {
-        currentPage.value = 'classify';
-      } else if (page === 'artist') {
-        const artistId = urlParams.get('id');
-        if (artistId) {
-          currentPage.value = 'artist';
-          currentArtistId.value = artistId;
-        } else {
-          currentPage.value = 'discovery';
-        }
-      } else if (page === 'album') {
-        const albumId = urlParams.get('id');
-        if (albumId) {
-          currentPage.value = 'album';
-          currentAlbumId.value = albumId;
-        } else {
-          currentPage.value = 'discovery';
-        }
-      } else {
-        // Default to discovery page
-        currentPage.value = 'discovery';
       }
-
-      // Handle browser back/forward
-      window.addEventListener('popstate', () => {
-        const params = new URLSearchParams(window.location.search);
-        const pageParam = params.get('page');
-        const trackParam = params.get('track');
-        const idParam = params.get('id');
-
-        // Load filters from URL on navigation
-        filterLogic.loadFiltersFromQueryParams(params);
-
-        if (trackParam) {
-          currentPage.value = 'search';
-          loadAndPlayTrack(trackParam);
-        } else if (pageParam === 'search') {
-          currentPage.value = 'search';
-          trackLogic.fetchTracks();
-        } else if (pageParam === 'artist' && idParam) {
-          currentPage.value = 'artist';
-          currentArtistId.value = idParam;
-        } else if (pageParam === 'album' && idParam) {
-          currentPage.value = 'album';
-          currentAlbumId.value = idParam;
-        } else if (pageParam === 'classify') {
-          currentPage.value = 'classify';
-        } else {
-          currentPage.value = 'discovery';
-        }
-      });
 
       trackSession();
     });
@@ -417,5 +296,6 @@ const app = createApp({
   },
 });
 
+app.use(router);
 app.config.devtools = true;
 app.mount('#app');
