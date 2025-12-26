@@ -49,10 +49,31 @@ const app = createApp({
     const playerLogic = usePlayer();
     const { togglePlay } = playerLogic;
 
+    // Initialize page state from URL to prevent flash of discovery page
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPage = urlParams.get('page');
+    const initialId = urlParams.get('id');
+
+    let initialPageValue = 'discovery';
+    let initialArtistIdValue = null;
+    let initialAlbumIdValue = null;
+
+    if (initialPage === 'album' && initialId) {
+      initialPageValue = 'album';
+      initialAlbumIdValue = initialId;
+    } else if (initialPage === 'artist' && initialId) {
+      initialPageValue = 'artist';
+      initialArtistIdValue = initialId;
+    } else if (initialPage === 'search' || initialPage === 'classify') {
+      initialPageValue = initialPage;
+    } else if (urlParams.get('track')) {
+      initialPageValue = 'search';
+    }
+
     // Page routing state
-    const currentPage = ref('discovery');
-    const currentArtistId = ref(null);
-    const currentAlbumId = ref(null);
+    const currentPage = ref(initialPageValue);
+    const currentArtistId = ref(initialArtistIdValue);
+    const currentAlbumId = ref(initialAlbumIdValue);
 
     const scrollTrigger = ref(null);
     let observer = null;
@@ -213,7 +234,8 @@ const app = createApp({
       currentArtistId.value = artistId;
 
       // Create clean URL with only page and id parameters
-      const url = new URL(window.location.origin);
+      const url = new URL(window.location);
+      url.search = '';
       url.searchParams.set('page', 'artist');
       url.searchParams.set('id', artistId);
 
@@ -225,7 +247,8 @@ const app = createApp({
       currentAlbumId.value = albumId;
 
       // Create clean URL with only page and id parameters
-      const url = new URL(window.location.origin);
+      const url = new URL(window.location);
+      url.search = '';
       url.searchParams.set('page', 'album');
       url.searchParams.set('id', albumId);
 
