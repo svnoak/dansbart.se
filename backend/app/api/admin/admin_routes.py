@@ -260,6 +260,48 @@ def trigger_orphaned_cleanup(
     }
 
 
+@router.get("/maintenance/isrc-stats")
+def get_isrc_stats(
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get statistics about ISRCs in the database.
+    Shows how many tracks have real ISRCs, fallback ISRCs, or no ISRCs.
+    """
+    from app.services.isrc_backfill import ISRCBackfillService
+
+    service = ISRCBackfillService(db)
+    return service.get_backfill_stats()
+
+
+@router.post("/maintenance/backfill-isrcs")
+def backfill_isrcs(
+    limit: int = Query(None, description="Limit number of tracks to process (None for all)"),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Backfill missing ISRCs for tracks that have Spotify links.
+
+    This fetches full track details from Spotify to get ISRCs for tracks that:
+    - Have no ISRC (NULL)
+    - Have fallback ISRCs (generated hashes)
+
+    Args:
+        limit: Maximum number of tracks to process (None for all)
+
+    Returns:
+        Statistics about the backfill operation
+    """
+    from app.services.isrc_backfill import ISRCBackfillService
+
+    service = ISRCBackfillService(db)
+    result = service.backfill_isrcs(limit=limit)
+
+    return result
+
+
 @router.post("/tracks/{track_id}/reclassify")
 def trigger_reclassification(
     track_id: str,
@@ -547,6 +589,39 @@ def get_pending_albums(
     """
     service = AdminAlbumService(db)
     return service.get_pending_albums(artist_id, limit, offset)
+
+@router.get("/tracks/duplicates")
+def get_duplicate_tracks(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get tracks that share the same ISRC (duplicates).
+    Returns groups of tracks with the same ISRC for easy duplicate management.
+    """
+    service = AdminTrackService(db)
+    return service.get_duplicate_tracks(limit, offset)
+
+@router.delete("/tracks/{track_id}")
+def delete_track(
+    track_id: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a track without adding it to the blocklist.
+    Use this for removing duplicate tracks.
+    """
+    service = AdminTrackService(db)
+    try:
+        deleted = service.delete_tracks_with_cascade([track_id])
+        db.commit()
+        return {"message": f"Track deleted successfully", "deleted": deleted}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/tracks/{track_id}/reject")
 def reject_track(

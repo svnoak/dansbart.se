@@ -43,12 +43,57 @@ class SpotifyIngestor:
         return processed_ids
 
     def ingest_tracks_from_list(self, track_items: list) -> list[str]:
-        """Returns list of track IDs that need analysis (PENDING status only)"""
+        """
+        Returns list of track IDs that need analysis (PENDING status only).
+        Fetches full track details to ensure ISRCs are available.
+        """
         pending_ids = []
         skipped_count = 0
 
+        # Extract track IDs and filter out invalid tracks
+        track_ids = []
+        track_map = {}
         for track in track_items:
-            if not track or track.get('is_local'): continue
+            if track and not track.get('is_local') and track.get('id'):
+                track_id = track['id']
+                track_ids.append(track_id)
+                track_map[track_id] = track  # Keep original track data for album info
+
+        if not track_ids:
+            return pending_ids
+
+        # Batch fetch full track details to get ISRCs (up to 50 at a time)
+        full_tracks = []
+        for i in range(0, len(track_ids), 50):
+            batch_ids = track_ids[i:i+50]
+            try:
+                batch_response = self.sp.tracks(batch_ids)
+                batch_tracks = batch_response.get('tracks', [])
+
+                # Merge full track data with original album data
+                for full_track in batch_tracks:
+                    if full_track:
+                        track_id = full_track['id']
+                        original_track = track_map.get(track_id, {})
+
+                        # If original track has album data injected, preserve it
+                        if 'album' in original_track and original_track['album']:
+                            full_track['album'] = original_track['album']
+
+                        full_tracks.append(full_track)
+
+            except Exception as e:
+                print(f"⚠️ Error fetching track details batch: {e}")
+                # Fallback to simplified tracks if batch fetch fails
+                for track_id in batch_ids:
+                    original_track = track_map.get(track_id)
+                    if original_track:
+                        full_tracks.append(original_track)
+
+        # Process all tracks
+        for track in full_tracks:
+            if not track:
+                continue
 
             try:
                 # _process_single_track now returns the DB object (or None if failed)

@@ -31,5 +31,25 @@ export function useBulkApi(token) {
     return res.json();
   };
 
-  return { reclassifyAll, bulkReanalyze };
+  // Get ISRC backfill statistics
+  const getIsrcStats = async () => {
+    const res = await fetchWithAuth('/api/admin/maintenance/isrc-stats', {
+      method: 'GET',
+    });
+    return res.json();
+  };
+
+  // Backfill ISRCs from Spotify
+  const backfillIsrcs = async (limit = null) => {
+    const url = limit
+      ? `/api/admin/maintenance/backfill-isrcs?limit=${limit}`
+      : '/api/admin/maintenance/backfill-isrcs';
+
+    const res = await fetchWithAuth(url, {
+      method: 'POST',
+    });
+    return res.json();
+  };
+
+  return { reclassifyAll, bulkReanalyze, getIsrcStats, backfillIsrcs };
 }

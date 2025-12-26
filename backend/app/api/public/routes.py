@@ -16,6 +16,7 @@ from app.services.feedback import FeedbackService
 from app.services.links import LinkService
 from app.services.stats import StatsService
 from app.services.analytics import AnalyticsService
+from app.services.data_export import DataExportService
 
 router = APIRouter()
 
@@ -764,3 +765,53 @@ def get_album_tracks(
         limit=limit,
         offset=offset
     )
+
+# ========== DATA EXPORT ENDPOINTS ==========
+
+@router.get("/export/dataset")
+def export_dataset(
+    limit: int = Query(None, description="Limit number of tracks (omit for full export)"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    db: Session = Depends(get_db)
+):
+    """
+    Export Dansbart's public dataset including:
+    - Audio analysis features from neckenml-analyzer
+    - Dance style classifications with confidence scores
+    - Human feedback and ground truth data
+    - Track structure annotations
+
+    This data is provided under CC BY 4.0 license.
+    Excludes proprietary platform data (Spotify/YouTube IDs, URLs, etc.)
+
+    Use for:
+    - Training and improving music analysis models
+    - Research on folk music characteristics
+    - Building complementary tools and services
+    """
+    service = DataExportService(db)
+    return service.export_all_tracks(limit=limit, offset=offset)
+
+@router.get("/export/feedback")
+def export_feedback(db: Session = Depends(get_db)):
+    """
+    Export aggregated human feedback and ground truth data:
+    - Style correction votes
+    - Movement feel tags
+    - Dance movement consensus data
+    - User-contributed structure annotations
+
+    This represents the collective wisdom of Dansbart users
+    and can be used to validate or improve classification models.
+    """
+    service = DataExportService(db)
+    return service.export_feedback_data()
+
+@router.get("/export/stats")
+def export_stats(db: Session = Depends(get_db)):
+    """
+    Get statistics about the available export dataset.
+    Useful for understanding dataset size before downloading.
+    """
+    service = DataExportService(db)
+    return service.get_export_stats()

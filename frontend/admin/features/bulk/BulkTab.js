@@ -16,6 +16,8 @@ export default {
     // State
     const bulkLoading = ref(false);
     const reanalyzeLoading = ref(false);
+    const isrcLoading = ref(false);
+    const isrcStats = ref(null);
     const bulkMessage = ref('');
     const bulkError = ref(false);
 
@@ -66,13 +68,54 @@ export default {
       }
     };
 
+    // 3. ISRC Backfill Logic
+    const loadIsrcStats = async () => {
+      try {
+        const data = await bulkApi.getIsrcStats();
+        isrcStats.value = data;
+      } catch (e) {
+        console.error('Failed to load ISRC stats:', e);
+      }
+    };
+
+    const backfillIsrcs = async () => {
+      if (!confirm('Backfill ISRCs from Spotify for all tracks with missing or fallback ISRCs?\n\nThis will fetch track details from Spotify API.')) {
+        return;
+      }
+
+      isrcLoading.value = true;
+      bulkMessage.value = '';
+
+      try {
+        const data = await bulkApi.backfillIsrcs();
+        showToast(data.message);
+        bulkMessage.value = `Updated ${data.isrcs_updated} ISRCs (${data.total_processed} tracks processed)`;
+        bulkError.value = false;
+
+        // Reload stats after backfill
+        await loadIsrcStats();
+      } catch (e) {
+        showToast(e.message, 'error');
+        bulkMessage.value = e.message;
+        bulkError.value = true;
+      } finally {
+        isrcLoading.value = false;
+      }
+    };
+
+    // Load ISRC stats on mount
+    loadIsrcStats();
+
     return {
       bulkLoading,
       reanalyzeLoading,
+      isrcLoading,
+      isrcStats,
       bulkMessage,
       bulkError,
       reclassifyAll,
       runBulkReanalysis,
+      backfillIsrcs,
     };
   },
   template: /*html*/ `
@@ -92,13 +135,31 @@ export default {
                     </button>
                 </div>
 
+                <div class="p-4 bg-gray-900 rounded border border-blue-900/30">
+                    <h3 class="font-medium mb-2 text-blue-400">🔖 Backfill ISRCs</h3>
+                    <p class="text-sm text-gray-400 mb-3">
+                        Fetch ISRCs from Spotify for tracks with missing or fallback ISRCs.
+                        Improves data export quality.
+                    </p>
+                    <div v-if="isrcStats" class="text-xs text-gray-500 mb-3 space-y-1">
+                        <div>📊 Real ISRCs: {{ isrcStats.tracks_with_real_isrc }}</div>
+                        <div>⚠️ Fallback ISRCs: {{ isrcStats.tracks_with_fallback_isrc }}</div>
+                        <div>❌ Missing ISRCs: {{ isrcStats.tracks_without_isrc }}</div>
+                        <div class="font-medium text-yellow-400">🔄 Need backfill: {{ isrcStats.tracks_needing_backfill }}</div>
+                    </div>
+                    <button @click="backfillIsrcs" :disabled="isrcLoading || bulkLoading || reanalyzeLoading || (isrcStats && isrcStats.tracks_needing_backfill === 0)"
+                            class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 rounded font-medium transition-colors">
+                        {{ isrcLoading ? 'Backfilling...' : 'Backfill ISRCs' }}
+                    </button>
+                </div>
+
                 <div class="p-4 bg-gray-900 rounded border border-red-900/30">
                     <h3 class="font-medium mb-2 text-red-400">⚠️ Re-analyze Audio</h3>
                     <p class="text-sm text-gray-400 mb-3">
                         Resets ALL tracks to 'PENDING' and re-downloads audio.
                         <b>Warning:</b> Very CPU & Network intensive.
                     </p>
-                    <button @click="runBulkReanalysis" :disabled="reanalyzeLoading || bulkLoading"
+                    <button @click="runBulkReanalysis" :disabled="reanalyzeLoading || bulkLoading || isrcLoading"
                             class="bg-red-900/50 hover:bg-red-800 border border-red-700/50 text-red-200 disabled:opacity-50 px-4 py-2 rounded font-medium transition-colors">
                         {{ reanalyzeLoading ? 'Queueing...' : 'Reset & Re-analyze Library' }}
                     </button>

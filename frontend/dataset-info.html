@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dansbart Dataset - Open Data för Folk Music Analysis</title>
+    <link rel="icon" href="/favicon.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50">
+    <div class="min-h-screen">
+      <!-- Header -->
+      <header class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div class="flex items-center space-x-3">
+            <a href="/" class="flex items-center space-x-2">
+              <span class="text-2xl">🎻</span>
+              <span class="text-xl font-bold text-gray-900">Dansbart.se</span>
+            </a>
+            <span class="text-gray-400">/</span>
+            <h1 class="text-xl font-bold text-gray-900">Open Dataset</h1>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Introduction -->
+        <section class="mb-12">
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">
+            Dansbart Open Dataset
+          </h2>
+          <p class="text-lg text-gray-700 mb-4">
+            Ett öppet dataset med audio-analys och klassificering av svensk folkmusik,
+            inklusive mänsklig feedback och ground truth data.
+          </p>
+          <p class="text-gray-600 mb-6">
+            Detta dataset kombinerar automatisk analys från
+            <strong>neckenml-analyzer</strong> med validering och korrigeringar
+            från Dansbart-användare. Perfekt för träning av machine learning-modeller
+            för musikanalys.
+          </p>
+
+          <!-- Download Buttons -->
+          <div class="flex flex-wrap gap-4 mb-8">
+            <a
+              href="/api/export/dataset"
+              download="dansbart-dataset.json"
+              class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              Ladda ner komplett dataset
+            </a>
+            <a
+              href="/api/export/feedback"
+              download="dansbart-feedback.json"
+              class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Ladda ner endast feedback-data
+            </a>
+            <a
+              href="/api/export/stats"
+              target="_blank"
+              class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+              Visa dataset-statistik
+            </a>
+          </div>
+        </section>
+
+        <!-- What's Included -->
+        <section class="mb-12 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-2xl font-bold text-gray-900 mb-4">Vad ingår i datasetet?</h3>
+
+          <div class="space-y-6">
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                </svg>
+                Audio-analysdata
+              </h4>
+              <ul class="list-disc list-inside text-gray-600 space-y-1 ml-7">
+                <li><code>swing_ratio</code> - Swingkänsla (0.0-1.0)</li>
+                <li><code>articulation</code> - Hur tydligt noterna är separerade</li>
+                <li><code>bounciness</code> - Studskänsla och energi</li>
+                <li><code>loudness</code> - EBU R128 Loudness (LUFS)</li>
+                <li><code>punchiness</code> - Transient score för energiska anslag</li>
+                <li><code>voice_probability</code> - Sannolikhet för sång</li>
+                <li><code>polska_score</code> - Asymmetrisk rytm-score för polska</li>
+                <li><code>hambo_score</code> - Asymmetrisk rytm-score för hambo</li>
+                <li><code>bpm_stability</code> - 1.0 = metronomisk, 0.0 = rubato</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+                Klassificeringar
+              </h4>
+              <ul class="list-disc list-inside text-gray-600 space-y-1 ml-7">
+                <li>Dansstil (t.ex. "Polska", "Vals", "Schottis") med konfidenspoäng</li>
+                <li>Understil (t.ex. "Slängpolska", "Bingsjöpolska")</li>
+                <li>Musikgenre (traditional_folk, modern_folk, folk_pop, contemporary)</li>
+                <li>Tempo-kategorier och effektiv BPM</li>
+                <li>Antal användarbekräftelser per klassificering</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                Mänsklig feedback (Ground Truth)
+              </h4>
+              <ul class="list-disc list-inside text-gray-600 space-y-1 ml-7">
+                <li>Stilkorrigeringar från användare</li>
+                <li>Rörelsetaggar (t.ex. "Sviktande", "Tungt")</li>
+                <li>Konsensusdata om dansstilar</li>
+                <li>Användarvaliderade strukturannoteringar</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+                </svg>
+                Låtstruktur
+              </h4>
+              <ul class="list-disc list-inside text-gray-600 space-y-1 ml-7">
+                <li>Taktpositioner (bars)</li>
+                <li>Sektioner (sections)</li>
+                <li>Sektionsetiketter (A, B, C, etc.)</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- What's NOT Included -->
+        <section class="mb-12 bg-amber-50 rounded-lg border border-amber-200 p-6">
+          <h3 class="text-2xl font-bold text-gray-900 mb-4">Fokus på analysdata</h3>
+          <p class="text-gray-700 mb-4">
+            Detta dataset innehåller Dansbarts egna analyser och metadata:
+          </p>
+          <ul class="list-disc list-inside text-gray-700 space-y-2 ml-4">
+            <li>Audio-analys från neckenml-analyzer</li>
+            <li>Dansstilklassificeringar med konfidenspoäng</li>
+            <li>Mänsklig feedback och ground truth-data</li>
+            <li>Låtstruktur-annoteringar</li>
+            <li>Musikgenre-klassificeringar</li>
+            <li>Allmänt tillgänglig metadata (ISRC, artistnamn, låttitlar)</li>
+          </ul>
+          <p class="text-gray-600 mt-4 text-sm">
+            Vi inkluderar endast data som vi själva har genererat eller som är
+            allmänt tillgänglig. Plattformsspecifika identifierare och länkar
+            ingår inte för att respektera tredjepartsleverantörers användarvillkor.
+          </p>
+        </section>
+
+        <!-- License -->
+        <section class="mb-12 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 class="text-2xl font-bold text-gray-900 mb-4">Licens & Attribution</h3>
+
+          <div class="bg-indigo-50 border-l-4 border-indigo-600 p-4 mb-6">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h4 class="text-lg font-semibold text-indigo-900">
+                  Creative Commons Attribution 4.0 (CC BY 4.0)
+                </h4>
+                <p class="text-indigo-800 mt-2">
+                  Detta dataset är fritt att använda, dela och modifiera för alla ändamål,
+                  även kommersiellt, så länge du ger korrekt attribution.
+                </p>
+                <a
+                  href="https://creativecommons.org/licenses/by/4.0/"
+                  target="_blank"
+                  class="text-indigo-600 hover:text-indigo-800 font-medium mt-2 inline-block"
+                >
+                  Läs hela licensvillkoren →
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-2">Attribution</h4>
+              <p class="text-gray-700 mb-2">
+                Om du använder detta dataset, vänligen citera det på följande sätt:
+              </p>
+              <div class="bg-gray-100 rounded p-4 font-mono text-sm text-gray-800">
+                Dansbart.se - Swedish Folk Dance Music Analysis Dataset<br />
+                Generated using neckenml-analyzer<br />
+                Available at: https://dansbart.se
+              </div>
+            </div>
+
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-2">Uppmuntran</h4>
+              <p class="text-gray-700">
+                Om du använder detta dataset för att förbättra neckenml-analyzer
+                eller utvecklar egna modeller, uppmuntrar vi dig att:
+              </p>
+              <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4 mt-2">
+                <li>Dela dina förbättringar tillbaka till communityn</li>
+                <li>Rapportera buggar eller felaktigheter du hittar</li>
+                <li>Bidra med feedback till Dansbart.se</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Use Cases -->
+        <section class="mb-12">
+          <h3 class="text-2xl font-bold text-gray-900 mb-4">Användningsområden</h3>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <h4 class="font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+                ML-modellträning
+              </h4>
+              <p class="text-gray-600 text-sm">
+                Träna och validera modeller för musikklassificering, särskilt för
+                folkmusik och svenska danstyper.
+              </p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <h4 class="font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                </svg>
+                Forskning
+              </h4>
+              <p class="text-gray-600 text-sm">
+                Analysera egenskaper hos svensk folkmusik, rytmiska mönster,
+                eller muzikinstrumentanalys.
+              </p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <h4 class="font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                </svg>
+                Verktygs­utveckling
+              </h4>
+              <p class="text-gray-600 text-sm">
+                Bygg kompletterande verktyg, appar eller tjänster för folkmusik-
+                communityn baserat på ground truth-data.
+              </p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <h4 class="font-semibold text-gray-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+                Benchmark
+              </h4>
+              <p class="text-gray-600 text-sm">
+                Använd som benchmark-dataset för att utvärdera och jämföra
+                olika musikanalys-algoritmer.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Contact -->
+        <section class="mb-12 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200 p-6">
+          <h3 class="text-2xl font-bold text-gray-900 mb-4">Kontakt & Bidrag</h3>
+          <p class="text-gray-700 mb-4">
+            Har du frågor om datasetet eller vill bidra med förbättringar?
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <a
+              href="/"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              Besök Dansbart.se
+            </a>
+            <a
+              href="https://github.com/yourusername/neckenml-analyzer"
+              class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path>
+              </svg>
+              neckenml-analyzer på GitHub
+            </a>
+          </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-gray-500 text-sm py-6 border-t border-gray-200">
+          <p>
+            &copy; 2024 Dansbart.se | Dataset licensierat under
+            <a
+              href="https://creativecommons.org/licenses/by/4.0/"
+              class="text-indigo-600 hover:text-indigo-800"
+              target="_blank"
+            >
+              CC BY 4.0
+            </a>
+          </p>
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>

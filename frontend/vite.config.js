@@ -14,6 +14,7 @@ export default defineConfig({
         privacy: resolve(__dirname, 'privacy.html'),
         terms: resolve(__dirname, 'terms.html'),
         help: resolve(__dirname, 'help.html'),
+        data: resolve(__dirname, 'dataset-info.html')
       },
     },
     minify: 'esbuild',

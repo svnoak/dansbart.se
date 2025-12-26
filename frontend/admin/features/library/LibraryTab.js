@@ -21,11 +21,12 @@ export default {
     const api = useLibraryApi(adminToken);
 
     // State
-    const view = ref('artists'); // tracks, albums, artists, blocklist
+    const view = ref('artists'); // tracks, albums, artists, blocklist, duplicates
     const tracks = ref([]);
     const albums = ref([]);
     const artists = ref([]);
     const blocklist = ref([]);
+    const duplicates = ref([]);
     const totalItems = ref(0);
     const searchQuery = ref('');
     const statusFilter = ref('all'); // all, pending, analyzed
@@ -105,6 +106,9 @@ export default {
         } else if (view.value === 'blocklist') {
           data = await api.loadBlocklist('', limit.value, offset.value);
           blocklist.value = data.items;
+        } else if (view.value === 'duplicates') {
+          data = await api.loadDuplicateTracks(limit.value, offset.value);
+          duplicates.value = data.items;
         }
 
         totalItems.value = data.total;
@@ -279,6 +283,24 @@ export default {
         loadData();
       } catch (e) {
         showError(e.message || 'Failed to reject track');
+      }
+    };
+
+    const deleteTrack = async track => {
+      if (
+        !confirm(
+          `Delete track "${track.title}"?\n\nThis will permanently remove it from the database (but NOT add it to the blocklist).`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        const data = await api.deleteTrack(track.id);
+        showToast(data.message);
+        loadData();
+      } catch (e) {
+        showError(e.message || 'Failed to delete track');
       }
     };
 
@@ -506,6 +528,7 @@ export default {
       albums,
       artists,
       blocklist,
+      duplicates,
       totalItems,
       searchQuery,
       statusFilter,
@@ -538,6 +561,7 @@ export default {
       reclassify,
       unflagTrack,
       rejectTrack,
+      deleteTrack,
       toggleArtistDetails,
       approveArtist,
       rejectArtist,
@@ -599,6 +623,10 @@ export default {
                 <button @click="view = 'tracks'" :class="view === 'tracks' ? 'bg-indigo-600' : 'bg-gray-700'"
                         class="px-3 py-1 rounded text-sm font-medium transition-colors">
                     🎵 Tracks
+                </button>
+                <button @click="view = 'duplicates'" :class="view === 'duplicates' ? 'bg-yellow-600' : 'bg-gray-700'"
+                        class="px-3 py-1 rounded text-sm font-medium transition-colors">
+                    🔀 Duplicates
                 </button>
                 <button @click="view = 'blocklist'" :class="view === 'blocklist' ? 'bg-indigo-600' : 'bg-gray-700'"
                         class="px-3 py-1 rounded text-sm font-medium transition-colors">
@@ -901,9 +929,14 @@ export default {
                                             title="Remove flag">
                                         {{ track.loading ? '...' : '✓' }}
                                     </button>
+                                    <button @click="deleteTrack(track)"
+                                            class="bg-orange-600 hover:bg-orange-500 px-2 py-1 rounded text-xs"
+                                            title="Delete track (no blocklist)">
+                                        ✕
+                                    </button>
                                     <button @click="rejectTrack(track)"
                                             class="bg-red-600 hover:bg-red-500 px-2 py-1 rounded text-xs"
-                                            title="Reject track">
+                                            title="Reject track & blocklist">
                                         🗑️
                                     </button>
                                 </div>
@@ -911,6 +944,61 @@ export default {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- DUPLICATES VIEW -->
+            <div v-else-if="view === 'duplicates'">
+                <div v-if="duplicates.length === 0" class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">✨</div>
+                    <p>No duplicate tracks found!</p>
+                </div>
+
+                <div v-else class="space-y-4">
+                    <div v-for="group in duplicates" :key="group.identifier"
+                         class="bg-gray-900 rounded border border-yellow-700/50 overflow-hidden">
+                        <div class="p-3 bg-yellow-900/20 border-b border-yellow-700/30">
+                            <div class="font-bold text-sm text-yellow-400">
+                                <span v-if="group.type === 'isrc'">
+                                    🔀 ISRC: {{ group.identifier }} ({{ group.count }} tracks)
+                                </span>
+                                <span v-else-if="group.type === 'spotify_link'">
+                                    🔀 Spotify Link: {{ group.identifier.substring(0, 20) }}... ({{ group.count }} tracks)
+                                </span>
+                                <span v-else>
+                                    🔀 Album/Title: {{ group.identifier }} ({{ group.count }} tracks)
+                                </span>
+                            </div>
+                        </div>
+                        <div class="divide-y divide-gray-700">
+                            <div v-for="track in group.tracks" :key="track.id"
+                                 class="p-3 hover:bg-gray-800/50 flex items-center gap-3">
+                                <InlinePlayer
+                                    :playback-links="track.playback_links || []"
+                                    :track-title="track.title"
+                                />
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-medium text-sm truncate">{{ track.title }}</div>
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        {{ track.artists?.join(', ') || '-' }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        Album: {{ track.album_title || 'N/A' }} •
+                                        ISRC: {{ track.isrc || 'N/A' }} •
+                                        {{ track.duration_ms ? Math.floor(track.duration_ms / 1000) + 's' : 'N/A' }} •
+                                        <span :class="statusClass(track.status)" class="px-1 py-0.5 rounded">
+                                            {{ track.status }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button @click="deleteTrack(track)"
+                                        class="bg-orange-600 hover:bg-orange-500 px-3 py-2 rounded text-sm"
+                                        title="Delete this duplicate">
+                                    ✕ Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- BLOCKLIST VIEW -->

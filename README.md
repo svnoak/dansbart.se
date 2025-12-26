@@ -13,6 +13,7 @@ Dansbart.se helps dancers and folk music enthusiasts discover traditional Swedis
 - 📊 **Audio Analysis** - Detailed rhythm, meter, and tempo analysis
 - 🎯 **Curated Playlists** - Dance-ready collections for practicing and events
 - 🎨 **User Feedback** - Community-driven improvement of classifications
+- 📂 **Open Dataset** - Public access to analysis data and human feedback under CC BY 4.0
 
 ## Architecture
 
@@ -70,6 +71,23 @@ NeckenML Analyzer is an MIT-licensed Python package that provides:
 - **Credibility**: Verifiable, non-black-box AI
 
 Dansbart.se uses NeckenML Analyzer (installed via PyPI) as its analysis engine while keeping audio acquisition and user-facing features proprietary.
+
+## Open Dataset
+
+Dansbart provides public access to its analysis data and human feedback through an open dataset. This includes:
+
+- Audio analysis features from neckenml-analyzer
+- Dance style classifications with confidence scores
+- Human feedback and ground truth data
+- Track structure annotations
+
+**Access the dataset:**
+- 📖 Documentation: https://dansbart.se/dataset-info.html
+- 🔗 API: `/api/export/dataset`
+- 📝 License: CC BY 4.0
+- 📂 Example scripts: See [examples/](examples/) directory
+
+For detailed information, see [DATASET_EXPORT.md](DATASET_EXPORT.md).
 
 ## Getting Started
 

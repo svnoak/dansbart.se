@@ -54,6 +54,11 @@ export default {
                         FAQ
                     </a>
 
+                    <a href="/dataset-info.html"
+                       class="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
+                        Open Data
+                    </a>
+
                     <div class="relative desktop-menu-container" @keydown="handleMenuKeydown">
                         <button
                             @click="toggleDesktopMenu"
@@ -124,6 +129,11 @@ export default {
 
                         <a href="/help.html" class="text-gray-700 hover:text-indigo-600 font-medium py-2">
                             Hjälp
+                        </a>
+
+                        <a href="/dataset-info.html"
+                           class="text-gray-700 hover:text-indigo-600 font-medium py-2">
+                            Open Data
                         </a>
 
                         <div class="border-t border-gray-200 pt-3 mt-3">

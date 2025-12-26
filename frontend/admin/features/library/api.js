@@ -45,6 +45,22 @@ export function useLibraryApi(token) {
     return res.json();
   };
 
+  const deleteTrack = async trackId => {
+    const res = await fetchWithAuth(`/api/admin/tracks/${trackId}`, {
+      method: 'DELETE',
+    });
+    return res.json();
+  };
+
+  const loadDuplicateTracks = async (limit = 50, offset = 0) => {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const res = await fetchWithAuth(`/api/admin/tracks/duplicates?${params.toString()}`);
+    return res.json();
+  };
+
   // ===== ARTISTS =====
   const loadArtists = async params => {
     const queryString = new URLSearchParams(params).toString();
@@ -173,10 +189,12 @@ export function useLibraryApi(token) {
   return {
     // Tracks
     loadTracks,
+    loadDuplicateTracks,
     reanalyzeTrack,
     reclassifyTrack,
     unflagTrack,
     rejectTrack,
+    deleteTrack,
     // Artists
     loadArtists,
     loadPendingArtists,
