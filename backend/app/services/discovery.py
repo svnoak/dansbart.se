@@ -3,7 +3,7 @@ Discovery service for curated playlists and recommendations.
 """
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
-from app.core.models import Track, PlaybackLink, TrackDanceStyle, TrackArtist
+from app.core.models import Track, PlaybackLink, TrackDanceStyle, TrackArtist, TrackAlbum
 from app.services.tracks import TrackService
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import selectinload, joinedload
@@ -38,7 +38,7 @@ class DiscoveryService:
         ).options(
             selectinload(Track.dance_styles),
             selectinload(Track.artist_links).joinedload(TrackArtist.artist),
-            joinedload(Track.album),
+            selectinload(Track.album_links).joinedload(TrackAlbum.album),
             selectinload(Track.playback_links)
         ).distinct().limit(limit)
 
