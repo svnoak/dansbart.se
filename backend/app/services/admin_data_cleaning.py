@@ -54,17 +54,23 @@ class AdminDataCleaningService:
 
     def delete_orphan_artists(self) -> int:
         """
-        Delete artists that have no associated tracks.
+        Delete artists that have no associated tracks or albums.
 
         Returns:
             Number of artists deleted
         """
         # Find all artist IDs that ARE currently linked to a track
-        active_artist_ids = self.db.query(TrackArtist.artist_id).distinct()
+        active_artist_ids_from_tracks = self.db.query(TrackArtist.artist_id).distinct()
 
-        # Delete artists NOT in that list
+        # Find all artist IDs that ARE currently linked to an album
+        active_artist_ids_from_albums = self.db.query(Album.artist_id).filter(
+            Album.artist_id.isnot(None)
+        ).distinct()
+
+        # Delete artists NOT in either list
         deleted = self.db.query(Artist).filter(
-            Artist.id.notin_(active_artist_ids)
+            Artist.id.notin_(active_artist_ids_from_tracks),
+            Artist.id.notin_(active_artist_ids_from_albums)
         ).delete(synchronize_session=False)
 
         self.db.flush()
