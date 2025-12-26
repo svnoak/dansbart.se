@@ -36,12 +36,21 @@ class PlaybackLinkOut(BaseModel):
     class Config:
         from_attributes = True
 
+class AdminAlbumLinkOut(BaseModel):
+    """Simple album reference for admin track list"""
+    id: UUID
+    title: str
+
+    class Config:
+        from_attributes = True
+
 class AdminTrackListItem(BaseModel):
     id: UUID
     title: str
     artists: List[str]
-    album_title: Optional[str] = None
-    album_id: Optional[UUID] = None
+    album_title: Optional[str] = None  # Backward compatibility - first album title
+    album_id: Optional[UUID] = None  # Backward compatibility - first album ID
+    albums: List[AdminAlbumLinkOut] = []  # All albums this track appears in
 
     status: str
     dance_style: Optional[str] = None

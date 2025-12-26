@@ -61,6 +61,21 @@ export function useLibraryApi(token) {
     return res.json();
   };
 
+  const mergeDuplicatesByIsrc = async (isrc, dryRun = false) => {
+    const params = new URLSearchParams({
+      dry_run: String(dryRun),
+    });
+    const res = await fetchWithAuth(`/api/admin/tracks/duplicates/merge/${isrc}?${params.toString()}`, {
+      method: 'POST',
+    });
+    return res.json();
+  };
+
+  const analyzeDuplicateIsrc = async isrc => {
+    const res = await fetchWithAuth(`/api/admin/tracks/duplicates/analyze/${isrc}`);
+    return res.json();
+  };
+
   // ===== ARTISTS =====
   const loadArtists = async params => {
     const queryString = new URLSearchParams(params).toString();
@@ -195,6 +210,8 @@ export function useLibraryApi(token) {
     unflagTrack,
     rejectTrack,
     deleteTrack,
+    mergeDuplicatesByIsrc,
+    analyzeDuplicateIsrc,
     // Artists
     loadArtists,
     loadPendingArtists,

@@ -39,7 +39,8 @@ class TrackOut(BaseModel):
     id: UUID
     title: str
     artists: List[ArtistOut]
-    album: Optional[AlbumOut] = None
+    album: Optional[AlbumOut] = None  # Backward compatibility - first album
+    albums: List[AlbumOut] = []  # All albums this track appears in
     dance_style: str
     sub_style: str | None = None
     has_vocals: bool | None = False

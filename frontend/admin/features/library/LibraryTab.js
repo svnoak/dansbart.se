@@ -304,6 +304,53 @@ export default {
       }
     };
 
+    const mergeDuplicates = async (group) => {
+      if (group.type !== 'isrc') {
+        showError('Only ISRC-based duplicates can be merged automatically');
+        return;
+      }
+
+      const isrc = group.identifier;
+
+      try {
+        // First, analyze what would be merged (dry run)
+        const analysis = await api.analyzeDuplicateIsrc(isrc);
+
+        if (!analysis.mergeable) {
+          showError(analysis.reason || 'These tracks cannot be merged');
+          return;
+        }
+
+        // Show preview and confirmation
+        const confirmMessage = `🔀 Merge ${analysis.track_count} duplicate tracks?\n\n` +
+          `Canonical track: "${analysis.canonical_track_title}"\n` +
+          `Total unique albums: ${analysis.unique_albums}\n\n` +
+          `This will:\n` +
+          `• Keep the canonical track (${analysis.canonical_track_id.substring(0, 8)}...)\n` +
+          `• Migrate all album links and playback links\n` +
+          `• Migrate user votes and interactions\n` +
+          `• Delete ${analysis.track_count - 1} duplicate track(s)\n\n` +
+          `This cannot be undone. Continue?`;
+
+        if (!confirm(confirmMessage)) {
+          return;
+        }
+
+        // Perform the merge
+        showToast('Merging duplicates...');
+        const result = await api.mergeDuplicatesByIsrc(isrc, false);
+
+        if (result.status === 'success') {
+          showToast(`✅ ${result.message}\n• Merged ${result.deleted_tracks} tracks\n• Migrated ${result.migrated_albums} album links`);
+          loadData(); // Reload to refresh the list
+        } else {
+          showError(result.message || 'Failed to merge duplicates');
+        }
+      } catch (e) {
+        showError(e.message || 'Failed to merge duplicates');
+      }
+    };
+
     // Artist actions
     const toggleArtistDetails = artist => {
       if (expandedArtist.value === artist.id) {
@@ -562,6 +609,7 @@ export default {
       unflagTrack,
       rejectTrack,
       deleteTrack,
+      mergeDuplicates,
       toggleArtistDetails,
       approveArtist,
       rejectArtist,
@@ -884,12 +932,30 @@ export default {
                                 {{ track.artists?.join(', ') || '-' }}
                             </td>
                             <td class="py-2 px-2 text-sm">
-                                <button v-if="track.album_id"
-                                        @click="filterByAlbum(track.album_id, track.album_title)"
-                                        class="text-indigo-400 hover:text-indigo-300 underline truncate max-w-xs block text-left"
-                                        :title="'View all tracks from: ' + track.album_title">
-                                    {{ track.album_title }}
-                                </button>
+                                <template v-if="track.albums && track.albums.length > 0">
+                                    <template v-if="track.albums.length === 1">
+                                        <button @click="filterByAlbum(track.albums[0].id, track.albums[0].title)"
+                                                class="text-indigo-400 hover:text-indigo-300 underline truncate max-w-xs block text-left"
+                                                :title="'View all tracks from: ' + track.albums[0].title">
+                                            {{ track.albums[0].title }}
+                                        </button>
+                                    </template>
+                                    <div v-else class="flex flex-wrap gap-1">
+                                        <button v-for="album in track.albums" :key="album.id"
+                                                @click="filterByAlbum(album.id, album.title)"
+                                                class="text-xs text-indigo-400 hover:text-indigo-300 underline bg-indigo-900/20 px-2 py-0.5 rounded"
+                                                :title="'View all tracks from: ' + album.title">
+                                            {{ album.title }}
+                                        </button>
+                                    </div>
+                                </template>
+                                <template v-else-if="track.album_id">
+                                    <button @click="filterByAlbum(track.album_id, track.album_title)"
+                                            class="text-indigo-400 hover:text-indigo-300 underline truncate max-w-xs block text-left"
+                                            :title="'View all tracks from: ' + track.album_title">
+                                        {{ track.album_title }}
+                                    </button>
+                                </template>
                                 <span v-else class="text-gray-500">-</span>
                             </td>
                             <td class="py-2 px-2">
@@ -956,7 +1022,7 @@ export default {
                 <div v-else class="space-y-4">
                     <div v-for="group in duplicates" :key="group.identifier"
                          class="bg-gray-900 rounded border border-yellow-700/50 overflow-hidden">
-                        <div class="p-3 bg-yellow-900/20 border-b border-yellow-700/30">
+                        <div class="p-3 bg-yellow-900/20 border-b border-yellow-700/30 flex items-center justify-between">
                             <div class="font-bold text-sm text-yellow-400">
                                 <span v-if="group.type === 'isrc'">
                                     🔀 ISRC: {{ group.identifier }} ({{ group.count }} tracks)
@@ -968,6 +1034,12 @@ export default {
                                     🔀 Album/Title: {{ group.identifier }} ({{ group.count }} tracks)
                                 </span>
                             </div>
+                            <button v-if="group.type === 'isrc' && group.count > 1"
+                                    @click="mergeDuplicates(group)"
+                                    class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-medium transition-colors"
+                                    title="Merge all duplicates into a single canonical track">
+                                🔀 Merge Duplicates
+                            </button>
                         </div>
                         <div class="divide-y divide-gray-700">
                             <div v-for="track in group.tracks" :key="track.id"
@@ -982,7 +1054,15 @@ export default {
                                         {{ track.artists?.join(', ') || '-' }}
                                     </div>
                                     <div class="text-xs text-gray-500 mt-1">
-                                        Album: {{ track.album_title || 'N/A' }} •
+                                        <template v-if="track.albums && track.albums.length > 0">
+                                            Album<span v-if="track.albums.length > 1">s</span>:
+                                            <template v-for="(album, i) in track.albums" :key="album.id">
+                                                {{ album.title }}<span v-if="i < track.albums.length - 1">, </span>
+                                            </template> •
+                                        </template>
+                                        <template v-else>
+                                            Album: {{ track.album_title || 'N/A' }} •
+                                        </template>
                                         ISRC: {{ track.isrc || 'N/A' }} •
                                         {{ track.duration_ms ? Math.floor(track.duration_ms / 1000) + 's' : 'N/A' }} •
                                         <span :class="statusClass(track.status)" class="px-1 py-0.5 rounded">

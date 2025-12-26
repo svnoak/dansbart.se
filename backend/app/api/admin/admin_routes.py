@@ -11,6 +11,7 @@ from app.services.admin_albums import AdminAlbumService
 from app.services.admin_rejections import AdminRejectionService
 from app.services.admin_data_cleaning import AdminDataCleaningService
 from app.services.admin_pending_approvals import AdminPendingApprovalService
+from app.services.duplicate_merger import DuplicateMergerService
 from pydantic import BaseModel
 from typing import List
 from app.core.models import (
@@ -603,6 +604,65 @@ def get_duplicate_tracks(
     """
     service = AdminTrackService(db)
     return service.get_duplicate_tracks(limit, offset)
+
+@router.get("/tracks/duplicates/mergeable")
+def get_mergeable_duplicates(
+    limit: int = Query(100, ge=1, le=500),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get list of ISRCs with duplicate tracks that can be merged.
+    """
+    service = DuplicateMergerService(db)
+    return service.find_mergeable_duplicates(limit=limit)
+
+@router.get("/tracks/duplicates/analyze/{isrc}")
+def analyze_duplicate_isrc(
+    isrc: str,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Analyze duplicates for a specific ISRC.
+    Shows what would be merged and which track would be canonical.
+    """
+    service = DuplicateMergerService(db)
+    return service.get_duplicate_analysis(isrc)
+
+@router.post("/tracks/duplicates/merge/{isrc}")
+def merge_duplicate_isrc(
+    isrc: str,
+    dry_run: bool = Query(False, description="Preview merge without executing"),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Merge all duplicate tracks with the given ISRC into a single canonical track.
+
+    The canonical track is selected as:
+    1. Prefer analyzed tracks (DONE status) over unanalyzed
+    2. Prefer oldest track
+
+    All album links, playback links, and user data are migrated to the canonical track.
+    """
+    service = DuplicateMergerService(db)
+    return service.merge_duplicates_by_isrc(isrc, dry_run=dry_run)
+
+@router.post("/tracks/duplicates/merge-all")
+def merge_all_duplicates(
+    dry_run: bool = Query(False, description="Preview merge without executing"),
+    limit: int = Query(None, ge=1, le=1000, description="Max ISRC groups to process"),
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Merge ALL duplicate tracks in the database.
+
+    WARNING: This is a bulk operation. Use dry_run=true first to preview.
+    """
+    service = DuplicateMergerService(db)
+    return service.merge_all_duplicates(dry_run=dry_run, limit=limit)
 
 @router.delete("/tracks/{track_id}")
 def delete_track(

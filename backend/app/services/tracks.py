@@ -48,13 +48,22 @@ class TrackService:
         sorted_artists = sorted(track.artist_links, key=lambda x: 0 if x.role == 'primary' else 1)
         artist_list = [{"id": l.artist.id, "name": l.artist.name, "role": l.role} for l in sorted_artists]
 
-        # Format album
+        # Format album (backward compatibility - first album)
         album_data = None
         if track.album:
             album_data = {
                 "id": track.album.id,
                 "title": track.album.title
             }
+
+        # Format albums (all albums this track appears in)
+        albums_data = [
+            {
+                "id": album.id,
+                "title": album.title
+            }
+            for album in track.albums
+        ]
 
         # Get feel tags
         style_feel_map = self._get_global_feels([final_style])
@@ -80,6 +89,7 @@ class TrackService:
             "title": track.title,
             "artists": artist_list,
             "album": album_data,
+            "albums": albums_data,
             "dance_style": final_style,
             "sub_style": final_sub_style,
             "feel_tags": tags,
@@ -255,13 +265,23 @@ class TrackService:
             sorted_artists = sorted(track.artist_links, key=lambda x: 0 if x.role == 'primary' else 1)
             artist_list = [{"id": l.artist.id, "name": l.artist.name, "role": l.role} for l in sorted_artists]
 
+            # Format album (backward compatibility - first album)
             album_data = None
             if track.album:
                 album_data = {
                     "id": track.album.id,
                     "title": track.album.title
                 }
-            
+
+            # Format albums (all albums this track appears in)
+            albums_data = [
+                {
+                    "id": album.id,
+                    "title": album.title
+                }
+                for album in track.albums
+            ]
+
             # Tags & Physics
             tags = self._refine_tags_with_physics(style_feel_map.get(final_style, []), track.bounciness)
             
@@ -292,6 +312,7 @@ class TrackService:
                 "title": track.title,
                 "artists": artist_list,
                 "album": album_data,
+                "albums": albums_data,
                 "dance_style": final_style,
                 "sub_style": final_sub_style,
                 "feel_tags": tags,
@@ -368,7 +389,7 @@ class TrackService:
         sorted_artists = sorted(track.artist_links, key=lambda x: 0 if x.role == 'primary' else 1)
         artist_list = [{"id": l.artist.id, "name": l.artist.name, "role": l.role} for l in sorted_artists]
 
-        # Format album
+        # Format album (backward compatibility - first album)
         album_data = None
         if track.album:
             album_data = {
@@ -376,6 +397,15 @@ class TrackService:
                 "title": track.album.title,
                 "cover_image_url": track.album.cover_image_url
             }
+
+        # Format albums (all albums this track appears in)
+        albums_data = [
+            {
+                "id": album.id,
+                "title": album.title
+            }
+            for album in track.albums
+        ]
 
         # Get feel tags
         style_feel_map = self._get_global_feels([final_style])
@@ -401,6 +431,7 @@ class TrackService:
             "title": track.title,
             "artists": artist_list,
             "album": album_data,
+            "albums": albums_data,
             "dance_style": final_style,
             "sub_style": final_sub_style,
             "feel_tags": tags,

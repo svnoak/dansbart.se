@@ -123,7 +123,32 @@ export default {
                 </template>
                 <span v-else class="font-medium text-gray-700">{{ artistDisplayString }}</span>
             </p>
-            <p v-if="track.album" class="text-gray-600 text-sm mb-3 truncate">
+            <p v-if="track.albums && track.albums.length > 0" class="text-gray-600 text-sm mb-3">
+                <template v-if="track.albums.length === 1">
+                    <a
+                        v-if="track.albums[0].id"
+                        @click.stop.prevent="$emit('navigate-to-album', track.albums[0].id)"
+                        href="#"
+                        class="italic text-gray-500 hover:text-primary-600 hover:underline cursor-pointer truncate inline-block max-w-full"
+                    >{{ track.albums[0].title }}</a>
+                    <span v-else class="italic text-gray-500 truncate">{{ track.albums[0].title }}</span>
+                </template>
+                <template v-else>
+                    <span class="italic text-gray-500 truncate">
+                        <template v-for="(album, index) in track.albums" :key="album.id || index">
+                            <a
+                                v-if="album.id"
+                                @click.stop.prevent="$emit('navigate-to-album', album.id)"
+                                href="#"
+                                class="hover:text-primary-600 hover:underline cursor-pointer"
+                            >{{ album.title }}</a>
+                            <span v-else>{{ album.title }}</span>
+                            <span v-if="index < track.albums.length - 1"> • </span>
+                        </template>
+                    </span>
+                </template>
+            </p>
+            <p v-else-if="track.album" class="text-gray-600 text-sm mb-3 truncate">
                 <a
                     v-if="track.album.id"
                     @click.stop.prevent="$emit('navigate-to-album', track.album.id)"

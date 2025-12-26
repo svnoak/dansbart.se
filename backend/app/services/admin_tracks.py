@@ -81,12 +81,19 @@ class AdminTrackService:
                 for link in track.playback_links if link.is_working
             ]
 
+            # Get all albums for this track
+            albums_list = [
+                {"id": str(album.id), "title": album.title}
+                for album in track.albums
+            ]
+
             items.append({
                 "id": str(track.id),
                 "title": track.title,
                 "artists": artist_names,
-                "album_title": track.album.title if track.album else None,
-                "album_id": str(track.album.id) if track.album else None,
+                "album_title": track.album.title if track.album else None,  # Backward compatibility
+                "album_id": str(track.album.id) if track.album else None,  # Backward compatibility
+                "albums": albums_list,  # All albums
                 "status": track.processing_status,
                 "dance_style": primary_style.dance_style if primary_style else None,
                 "confidence": primary_style.confidence if primary_style else None,
