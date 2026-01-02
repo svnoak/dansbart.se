@@ -1,0 +1,119 @@
+"""
+Authentication dependencies for FastAPI.
+
+Provides dependency injection for authenticating users via Authentik OIDC tokens.
+"""
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from datetime import datetime
+from app.core.database import get_db
+from app.core.oidc import validate_token
+from app.core.user_models import User
+
+security = HTTPBearer()
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    Dependency to get currently authenticated user from OIDC token.
+
+    Flow:
+    1. Extract Bearer token from Authorization header
+    2. Validate token with Authentik (JWKS)
+    3. Get/create user in local database
+    4. Update cached user info if changed
+    5. Return User object
+
+    Args:
+        credentials: HTTP Bearer credentials (Authorization: Bearer <token>)
+        db: Database session
+
+    Returns:
+        User: Authenticated user object
+
+    Raises:
+        HTTPException: If token is invalid or missing required claims
+    """
+    token = credentials.credentials
+
+    # Validate with Authentik
+    payload = validate_token(token)
+
+    # Extract user info from token claims
+    user_id = payload.get("sub")  # Authentik user UUID
+    email = payload.get("email")
+    display_name = payload.get("name") or payload.get("preferred_username")
+    avatar_url = payload.get("picture")
+
+    if not user_id or not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing required claims (sub or email)"
+        )
+
+    # Get or create user in local database
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        # First login - create user record
+        user = User(
+            id=user_id,
+            email=email,
+            display_name=display_name,
+            avatar_url=avatar_url
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        # Update cached user info if changed
+        updated = False
+        if user.email != email:
+            user.email = email
+            updated = True
+        if user.display_name != display_name:
+            user.display_name = display_name
+            updated = True
+        if user.avatar_url != avatar_url:
+            user.avatar_url = avatar_url
+            updated = True
+
+        # Always update last login
+        user.last_login_at = datetime.utcnow()
+        updated = True
+
+        if updated:
+            db.commit()
+            db.refresh(user)
+
+    return user
+
+
+async def get_optional_user(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+    db: Session = Depends(get_db)
+) -> User | None:
+    """
+    Optional authentication dependency - returns None if not authenticated.
+
+    Useful for endpoints that work for both authenticated and anonymous users
+    (e.g., public playlist view).
+
+    Args:
+        credentials: HTTP Bearer credentials (may be None)
+        db: Database session
+
+    Returns:
+        User | None: Authenticated user or None if not authenticated
+    """
+    if credentials is None:
+        return None
+
+    try:
+        return await get_current_user(credentials, db)
+    except HTTPException:
+        return None

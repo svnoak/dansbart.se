@@ -8,6 +8,9 @@ from sqlalchemy.sql import func
 from app.core.database import Base
 from pgvector.sqlalchemy import Vector
 
+# Import user models (User, Playlist, PlaylistTrack)
+from app.core.user_models import User, Playlist, PlaylistTrack
+
 class Track(Base):
     __tablename__ = "tracks"
 
@@ -46,6 +49,9 @@ class Track(Base):
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false', index=True)
     flagged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     flag_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # User Upload (Phase 2 - nullable for existing tracks)
+    uploader_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
 
     # Logic Relationships
     analysis_sources = relationship("AnalysisSource", back_populates="track")

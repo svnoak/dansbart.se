@@ -12,6 +12,10 @@ python-dotenv             # .env file loading
 alembic                   # Database migrations
 pgvector
 
+# Authentication (Authentik OIDC)
+python-jose[cryptography]>=3.3.0  # JWT token validation
+httpx>=0.27.0             # Async HTTP client for JWKS fetching
+
 # Task Queue
 celery                    # Distributed task queue
 redis                     # Message broker & result backend
