@@ -5,7 +5,7 @@ Exports Dansbart's proprietary analysis data and human feedback for public use.
 This includes neckenml-analyzer outputs and user-contributed ground truth data.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 from app.core.models import (
     Track, TrackDanceStyle, TrackStyleVote, TrackFeelVote,
@@ -50,7 +50,12 @@ class DataExportService:
         """
         # Export all tracks that have at least basic metadata
         # Don't filter by processing_status to include partially analyzed tracks
-        query = self.db.query(Track)
+        # Use eager loading to prevent N+1 queries
+        query = self.db.query(Track).options(
+            selectinload(Track.artist_links).joinedload(TrackArtist.artist),
+            selectinload(Track.dance_styles),
+            selectinload(Track.analysis_sources)
+        )
 
         total_count = query.count()
 
@@ -171,7 +176,9 @@ class DataExportService:
 
     def _export_style_votes(self) -> List[Dict[str, Any]]:
         """Export aggregated style correction votes."""
-        votes = self.db.query(TrackStyleVote).all()
+        votes = self.db.query(TrackStyleVote).options(
+            joinedload(TrackStyleVote.track)
+        ).all()
 
         return [{
             "track_isrc": vote.track.isrc if vote.track else None,
@@ -183,7 +190,9 @@ class DataExportService:
 
     def _export_feel_votes(self) -> List[Dict[str, Any]]:
         """Export movement feel tags."""
-        votes = self.db.query(TrackFeelVote).all()
+        votes = self.db.query(TrackFeelVote).options(
+            joinedload(TrackFeelVote.track)
+        ).all()
 
         return [{
             "track_isrc": vote.track.isrc if vote.track else None,
@@ -204,7 +213,9 @@ class DataExportService:
 
     def _export_structure_versions(self) -> List[Dict[str, Any]]:
         """Export user-contributed structure annotations."""
-        versions = self.db.query(TrackStructureVersion).filter(
+        versions = self.db.query(TrackStructureVersion).options(
+            joinedload(TrackStructureVersion.track)
+        ).filter(
             TrackStructureVersion.is_hidden == False
         ).all()
 
