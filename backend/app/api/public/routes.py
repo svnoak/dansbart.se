@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException, Header
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db, SessionLocal
 from app.api.public.schemas import (
@@ -790,7 +791,11 @@ def export_dataset(
     - Building complementary tools and services
     """
     service = DataExportService(db)
-    return service.export_all_tracks(limit=limit, offset=offset)
+    return StreamingResponse(
+        service.export_all_tracks(limit=limit, offset=offset),
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="dansbart_export.json"'}
+    )
 
 @router.get("/export/feedback")
 def export_feedback(db: Session = Depends(get_db)):

@@ -12,7 +12,7 @@ from app.core.models import (
     TrackStructureVersion, DanceMovementFeedback, AnalysisSource,
     Artist, TrackArtist
 )
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Generator
 from datetime import datetime
 import json
 
@@ -37,41 +37,62 @@ class DataExportService:
     def __init__(self, db: Session):
         self.db = db
 
-    def export_all_tracks(self, limit: int = None, offset: int = 0) -> Dict[str, Any]:
+    def export_all_tracks(self, limit: int = None, offset: int = 0) -> Generator[str, None, None]:
         """
-        Export all track analysis data in JSON format.
-
-        Args:
-            limit: Maximum number of tracks to export (None for all)
-            offset: Number of tracks to skip
-
-        Returns:
-            Dictionary with metadata and track data
+        Streams track data as a JSON string, chunk by chunk.
+        Uses manual batching (pagination) to prevent OOM and avoid yield_per conflicts.
         """
-        # Export all tracks that have at least basic metadata
-        # Don't filter by processing_status to include partially analyzed tracks
-        # Use eager loading to prevent N+1 queries
-        query = self.db.query(Track).options(
+        total_count = self.db.query(Track).count()
+
+        header = {
+            "metadata": self._get_export_metadata(total_count, limit, offset),
+            "license": self._get_license_info(),
+            "schema_version": "1.0.0",
+            "tracks": [] 
+        }
+        json_header = json.dumps(header)
+        yield json_header[:-2]  # Remove the closing "]}"
+
+        base_query = self.db.query(Track).order_by(Track.id).options(
             selectinload(Track.artist_links).joinedload(TrackArtist.artist),
             selectinload(Track.dance_styles),
             selectinload(Track.analysis_sources)
         )
 
-        total_count = query.count()
+        batch_size = 1000
+        current_offset = offset
+        tracks_yielded = 0
+        first_track = True
 
-        if limit:
-            query = query.limit(limit).offset(offset)
+        while True:
+            fetch_limit = batch_size
+            
+            if limit is not None:
+                remaining = limit - tracks_yielded
+                if remaining <= 0:
+                    break
+                fetch_limit = min(batch_size, remaining)
 
-        tracks = query.all()
+            batch = base_query.limit(fetch_limit).offset(current_offset).all()
 
-        export_data = {
-            "metadata": self._get_export_metadata(total_count, limit, offset),
-            "license": self._get_license_info(),
-            "schema_version": "1.0.0",
-            "tracks": [self._format_track_export(track) for track in tracks]
-        }
+            if not batch:
+                break
 
-        return export_data
+            for track in batch:
+                if not first_track:
+                    yield ","
+                else:
+                    first_track = False
+                
+                track_data = self._format_track_export(track)
+                yield json.dumps(track_data)
+
+            tracks_yielded += len(batch)
+            current_offset += len(batch)
+            
+            self.db.expire_all() 
+
+        yield "]}"
 
     def export_feedback_data(self) -> Dict[str, Any]:
         """
