@@ -39,8 +39,9 @@ class DataExportService:
 
     def export_all_tracks(self, limit: int = None, offset: int = 0) -> Generator[str, None, None]:
         """
-        Streams track data as a JSON string, chunk by chunk.
-        Uses manual batching (pagination) to prevent OOM and avoid yield_per conflicts.
+        Streams track data using robust Manual Batching.
+        - Compatible with UUIDs (unlike Keyset pagination).
+        - Prevents OOM by clearing session memory (expunge_all) after every batch.
         """
         total_count = self.db.query(Track).count()
 
@@ -50,8 +51,7 @@ class DataExportService:
             "schema_version": "1.0.0",
             "tracks": [] 
         }
-        json_header = json.dumps(header)
-        yield json_header[:-2]  # Remove the closing "]}"
+        yield json.dumps(header)[:-2]
 
         base_query = self.db.query(Track).order_by(Track.id).options(
             selectinload(Track.artist_links).joinedload(TrackArtist.artist),
@@ -66,7 +66,6 @@ class DataExportService:
 
         while True:
             fetch_limit = batch_size
-            
             if limit is not None:
                 remaining = limit - tracks_yielded
                 if remaining <= 0:
@@ -84,13 +83,13 @@ class DataExportService:
                 else:
                     first_track = False
                 
-                track_data = self._format_track_export(track)
-                yield json.dumps(track_data)
+                yield json.dumps(self._format_track_export(track))
 
-            tracks_yielded += len(batch)
-            current_offset += len(batch)
+            count = len(batch)
+            tracks_yielded += count
+            current_offset += count
             
-            self.db.expire_all() 
+            self.db.expunge_all() 
 
         yield "]}"
 
