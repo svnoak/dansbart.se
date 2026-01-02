@@ -59,7 +59,7 @@ class DataExportService:
             selectinload(Track.analysis_sources)
         )
 
-        batch_size = 1000
+        batch_size = 50
         current_offset = offset
         tracks_yielded = 0
         first_track = True
