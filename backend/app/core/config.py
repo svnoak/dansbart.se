@@ -8,13 +8,23 @@ class Settings(BaseSettings):
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "dansbart"
-    
+
     # Spotify
     SPOTIPY_CLIENT_ID: str
     SPOTIPY_CLIENT_SECRET: str
 
     # Admin
     ADMIN_PASSWORD: str
+
+    # Authentik OIDC Configuration
+    AUTHENTIK_ISSUER: str
+    AUTHENTIK_JWKS_URI: str
+    AUTHENTIK_CLIENT_ID: str
+    AUTHENTIK_CLIENT_SECRET: str
+    AUTHENTIK_REDIRECT_URI: str
+
+    # Frontend URL
+    FRONTEND_URL: str = "http://localhost:8080"
 
     @computed_field
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:

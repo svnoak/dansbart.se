@@ -1,4 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { useAuth } from './hooks/useAuth.js';
+import AuthCallbackPage from './components/AuthCallbackPage.js';
+import PlaylistsPage from './components/PlaylistsPage.js';
+import PlaylistDetailPage from './components/PlaylistDetailPage.js';
 
 const routes = [
   {
@@ -30,6 +34,24 @@ const routes = [
     path: '/track/:id',
     name: 'track',
     meta: { page: 'search' }
+  },
+  {
+    path: '/auth/callback',
+    name: 'authCallback',
+    component: AuthCallbackPage,
+    meta: { page: 'authCallback' }
+  },
+  {
+    path: '/playlists',
+    name: 'playlists',
+    component: PlaylistsPage,
+    meta: { page: 'playlists', requiresAuth: true }
+  },
+  {
+    path: '/playlist/:id',
+    name: 'playlist',
+    component: PlaylistDetailPage,
+    meta: { page: 'playlist', requiresAuth: true }
   }
 ];
 
@@ -39,7 +61,7 @@ const router = createRouter({
 });
 
 // Handle old query-parameter based URLs for backwards compatibility
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   // Check if we're on the root path with old-style query parameters
   if (to.path === '/' && to.query.page) {
     const page = to.query.page;
@@ -64,6 +86,29 @@ router.beforeEach((to, _from, next) => {
     const trackId = to.query.track;
     const { track: _, ...otherParams } = to.query;
     return next({ name: 'track', params: { id: trackId }, query: otherParams });
+  }
+
+  // Auth guard
+  const { isAuthenticated, waitForAuth, login } = useAuth();
+
+  // Wait for auth initialization before checking authentication
+  if (to.meta.requiresAuth) {
+    // Skip auth check if coming from callback page (we just authenticated)
+    if (_from.name === 'authCallback') {
+      console.log('[Router] Coming from callback, skipping auth check');
+      next();
+      return;
+    }
+
+    // Wait for auth to initialize
+    await waitForAuth();
+
+    // Auth is initialized, check if user is authenticated
+    if (!isAuthenticated.value) {
+      sessionStorage.setItem('returnUrl', to.fullPath);
+      login();
+      return;
+    }
   }
 
   next();

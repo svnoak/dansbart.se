@@ -1,4 +1,7 @@
+import { ref } from 'vue';
 import { useConsent } from '../consent.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { FEATURES } from '../config/features.js';
 
 export default {
   props: {
@@ -7,12 +10,13 @@ export default {
       default: 'discovery'
     }
   },
-  
+
   emits: ['navigate'],
 
-  // FIX: Remove arguments entirely since they aren't used in the JS logic
   setup() {
     const { consentStatus, revokeConsent } = useConsent();
+    const { user, isAuthenticated, login, logout } = useAuth();
+    const showAccountMenu = ref(false);
 
     const openCookieSettings = () => {
       revokeConsent();
@@ -21,6 +25,12 @@ export default {
     return {
       consentStatus,
       openCookieSettings,
+      user,
+      isAuthenticated,
+      login,
+      logout,
+      showAccountMenu,
+      authFeaturesEnabled: FEATURES.ENABLE_AUTH_FEATURES,
     };
   },
 
@@ -96,6 +106,51 @@ export default {
                             </button>
                         </div>
                     </div>
+
+                    <!-- Auth UI (Desktop) -->
+                    <div v-if="authFeaturesEnabled && !isAuthenticated" class="flex items-center gap-2 ml-4">
+                        <button
+                            @click="login"
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 font-medium transition"
+                        >
+                            Logga in
+                        </button>
+                    </div>
+
+                    <div v-else-if="authFeaturesEnabled && isAuthenticated" class="relative ml-4">
+                        <button
+                            @click="showAccountMenu = !showAccountMenu"
+                            class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+                        >
+                            <div v-if="user.picture" class="w-8 h-8 rounded-full overflow-hidden">
+                                <img :src="user.picture" :alt="user.name" class="w-full h-full object-cover">
+                            </div>
+                            <div v-else class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                                {{ (user.name || user.email)?.[0]?.toUpperCase() }}
+                            </div>
+                            <span class="font-medium text-gray-900">{{ user.name || user.email }}</span>
+                        </button>
+
+                        <!-- Account Dropdown -->
+                        <div
+                            v-if="showAccountMenu"
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200"
+                        >
+                            <router-link
+                                to="/playlists"
+                                class="block px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                @click="showAccountMenu = false"
+                            >
+                                Mina spellistor
+                            </router-link>
+                            <button
+                                @click="logout(); showAccountMenu = false"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                            >
+                                Logga ut
+                            </button>
+                        </div>
+                    </div>
                 </nav>
 
                 <button
@@ -135,6 +190,42 @@ export default {
                            class="text-gray-700 hover:text-indigo-600 font-medium py-2">
                             Open Data
                         </a>
+
+                        <!-- Auth UI (Mobile) -->
+                        <div v-if="authFeaturesEnabled" class="border-t border-gray-200 pt-3 mt-3">
+                            <div v-if="!isAuthenticated">
+                                <button
+                                    @click="login(); mobileMenuOpen = false"
+                                    class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 font-medium transition mb-3"
+                                >
+                                    Logga in
+                                </button>
+                            </div>
+                            <div v-else class="mb-3 pb-3 border-b border-gray-200">
+                                <div class="flex items-center gap-2 px-2 py-2 mb-2">
+                                    <div v-if="user.picture" class="w-8 h-8 rounded-full overflow-hidden">
+                                        <img :src="user.picture" :alt="user.name" class="w-full h-full object-cover">
+                                    </div>
+                                    <div v-else class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+                                        {{ (user.name || user.email)?.[0]?.toUpperCase() }}
+                                    </div>
+                                    <span class="font-medium text-gray-900">{{ user.name || user.email }}</span>
+                                </div>
+                                <router-link
+                                    to="/playlists"
+                                    class="block px-2 py-2 text-gray-700 hover:text-indigo-600 font-medium"
+                                    @click="mobileMenuOpen = false"
+                                >
+                                    Mina spellistor
+                                </router-link>
+                                <button
+                                    @click="logout(); mobileMenuOpen = false"
+                                    class="w-full text-left px-2 py-2 text-red-600 hover:text-red-700 font-medium"
+                                >
+                                    Logga ut
+                                </button>
+                            </div>
+                        </div>
 
                         <div class="border-t border-gray-200 pt-3 mt-3">
                             <a href="/privacy.html" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">

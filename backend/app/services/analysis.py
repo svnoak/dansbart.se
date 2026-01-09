@@ -7,6 +7,8 @@ from app.services.classification import ClassificationService
 from app.core.database import SessionLocal
 import time
 import os
+import gc
+import psutil
 
 class AnalysisService:
     def __init__(self, db: Session):
@@ -20,11 +22,21 @@ class AnalysisService:
 
         self.classifier_service = ClassificationService(db)
 
+    def _log_memory_usage(self, stage: str):
+        """Log current memory usage for debugging"""
+        process = psutil.Process()
+        mem_info = process.memory_info()
+        mem_mb = mem_info.rss / 1024 / 1024
+        print(f"   [MEMORY] {stage}: {mem_mb:.1f} MB")
+        return mem_mb
+
     def analyze_track_by_id(self, track_id: str):
         """
         Background Task Entry Point.
         Manages the lifecycle state: PENDING -> PROCESSING -> DONE / FAILED
         """
+        self._log_memory_usage("Start of task")
+
         self.repo.db = self.db
         self.classifier_service.db = self.db
 
@@ -64,16 +76,21 @@ class AnalysisService:
 
         except Exception as e:
             # Rollback if any part of the process failed (e.g., File Write, Classification Crash)
-            self.db.rollback() 
+            self.db.rollback()
             print(f"🔥 Critical Failure processing {track.title}: {e}")
             try:
                 track.processing_status = "FAILED"
                 self.db.commit()
             except: pass
-            
+
         finally:
             # Cleanup temp files regardless of outcome
             self.fetcher.cleanup(str(track.id))
+
+            # Force garbage collection to free memory
+            self._log_memory_usage("Before GC")
+            gc.collect()
+            self._log_memory_usage("After GC")
 
     def _process_single_track(self, track: Track) -> bool:
         print(f"▶️  Processing: {track.title}")
@@ -129,6 +146,7 @@ class AnalysisService:
                 self._ensure_youtube_link(track, youtube_id)
 
             print(f"   [TIME] Starting CPU-intensive analysis...")
+            self._log_memory_usage("Before analysis")
             start_time = time.time()
 
             # 2. ANALYZE (MusiCNN + Madmom) with ARTIFACT PERSISTENCE
@@ -136,6 +154,7 @@ class AnalysisService:
             result = self.analyzer.analyze_file(file_path, context, return_artifacts=True)
 
             end_time = time.time()
+            self._log_memory_usage("After analysis")
             print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.")
 
             if result:
@@ -193,9 +212,16 @@ class AnalysisService:
                 # This makes the track visible in the frontend immediately if successful
                 print(f"   🧠 Auto-classifying...")
                 self.classifier_service.classify_track_immediately(track, analysis_data=data)
-                
+
+                # Clear large objects from memory immediately after use
+                del result
+                del data
+                del artifacts
+                gc.collect()
+                self._log_memory_usage("After cleanup")
+
                 return True
-            
+
             return False
 
         finally:
