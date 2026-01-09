@@ -24,9 +24,9 @@ RUN pip install --no-cache-dir -r requirements.workers.txt
 # 4. Copy Application Code
 COPY backend/ .
 
-# 5. Copy and set up entrypoint script (for DB migrations)
-COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+# 5. Copy and set up worker entrypoint script (waits for DB, no migrations)
+COPY backend/docker-entrypoint-worker.sh /docker-entrypoint-worker.sh
+RUN chmod +x /docker-entrypoint-worker.sh
 
 # 6. Create non-root user for running Celery
 RUN useradd -m -u 1000 celeryuser && \
@@ -35,7 +35,7 @@ RUN useradd -m -u 1000 celeryuser && \
 # Switch to non-root user
 USER celeryuser
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["/docker-entrypoint-worker.sh"]
 
 # Default: Run Celery worker for light tasks (discovery, ingestion)
 # Task routing will ensure only light tasks are processed

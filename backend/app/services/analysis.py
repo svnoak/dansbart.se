@@ -16,10 +16,6 @@ class AnalysisService:
         self.repo = AnalysisRepository(db)
         self.fetcher = AudioFetcher()  # No db parameter needed
 
-        # Use neckenml-analyzer (without audio_source since we fetch manually with YouTube fetcher)
-        model_dir = os.getenv('neckenml_MODEL_DIR', '/app/app/workers/audio/models')
-        self.analyzer = AudioAnalyzer(audio_source=None, model_dir=model_dir)
-
         self.classifier_service = ClassificationService(db)
 
     def _log_memory_usage(self, stage: str):
@@ -48,8 +44,6 @@ class AnalysisService:
         if not track:
             return
 
-        db = SessionLocal()
-
         # 1. UPDATE STATE: STARTING
         print(f"🔄 Status Update: {track.title} -> PROCESSING")
         track.processing_status = "PROCESSING"
@@ -58,7 +52,6 @@ class AnalysisService:
         try:
             # 1. Start Transaction & Mark Processing
             print(f"🔄 Status Update: {track.title} -> PROCESSING")
-            track.processing_status = "PROCESSING"
 
             # 2. RUN LOGIC
             success = self._process_single_track(track)
@@ -84,10 +77,13 @@ class AnalysisService:
             except: pass
 
         finally:
-            # Cleanup temp files regardless of outcome
+            # 1. Cleanup Files
             self.fetcher.cleanup(str(track.id))
 
-            # Force garbage collection to free memory
+            # 2. Clear SQLAlchemy Identity Map
+            self.db.expire_all()
+
+            # 3. Python GC (Releases Python Wrappers)
             self._log_memory_usage("Before GC")
             gc.collect()
             self._log_memory_usage("After GC")
@@ -140,7 +136,11 @@ class AnalysisService:
         file_path = result['file_path']
         youtube_id = result.get('youtube_id')
 
-        try:
+        print(f"   [MEMORY] Initializing ML Model...")
+        # Use neckenml-analyzer (without audio_source since we fetch manually with YouTube fetcher)
+        model_dir = os.getenv('neckenml_MODEL_DIR', '/app/app/workers/audio/models')
+
+        with AudioAnalyzer(audio_source=None, model_dir=model_dir) as analyzer:
             # Save/Update the YouTube link if we found a new one
             if youtube_id:
                 self._ensure_youtube_link(track, youtube_id)
@@ -151,7 +151,8 @@ class AnalysisService:
 
             # 2. ANALYZE (MusiCNN + Madmom) with ARTIFACT PERSISTENCE
             context = f"{track.title} {artist_name} {album_name}"
-            result = self.analyzer.analyze_file(file_path, context, return_artifacts=True)
+
+            result = analyzer.analyze_file(file_path, context, return_artifacts=True)
 
             end_time = time.time()
             self._log_memory_usage("After analysis")
@@ -223,10 +224,6 @@ class AnalysisService:
                 return True
 
             return False
-
-        finally:
-            # Cleanup temp files even if analysis crashed
-            self.fetcher.cleanup(str(track.id))
 
     def _ensure_youtube_link(self, track, video_id):
         exists = self.db.query(PlaybackLink).filter_by(track_id=track.id, deep_link=video_id).first()
