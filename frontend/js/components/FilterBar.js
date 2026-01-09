@@ -122,6 +122,7 @@ export default {
               </div>
             </div>
 
+            <!--
             <div>
               <div class="flex items-center justify-between">
                 <label class="text-xs font-medium text-gray-600">Traditionell folkmusik</label>
@@ -131,6 +132,7 @@ export default {
                 </label>
               </div>
             </div>
+            -->
 
             <div class="border-t border-gray-200 pt-3">
               <button

@@ -108,10 +108,10 @@ export default {
       <!-- Hero Section -->
       <div class="text-center mb-12">
         <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-          Upptäck svensk folkmusik för dans
+          Hitta låtar att dansa folkdans till
         </h1>
         <p class="text-lg text-gray-600 mb-6">
-          Hitta perfekta låtar för polska, schottis, vals och mer.
+          Leta efter specifika dansstilar, tempo och mer!
         </p>
         <stats-dashboard></stats-dashboard>
       </div>
