@@ -38,14 +38,14 @@ export default {
   },
 
   template: /*html*/ `
-    <div class="card bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-100 flex flex-row items-center gap-3 sm:gap-4 transition-all hover:shadow-md group w-full max-w-full overflow-visible">
+    <div class="card bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 flex flex-row items-center gap-3 sm:gap-4 transition-all hover:shadow-md group w-full min-w-0">
 
         <!-- Play Button (Left) -->
         <div class="shrink-0">
             <button
                 @click.stop="playPrimary"
                 :disabled="!primarySource"
-                class="w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                class="w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100"
                 :class="[
                     !primarySource ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
                     (isCurrent && isPlaying) ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' :
@@ -54,179 +54,129 @@ export default {
                 :aria-label="!primarySource ? 'Ingen spelare tillgänglig för ' + track.title : (isCurrent && isPlaying) ? 'Pausa ' + track.title : 'Spela ' + track.title"
                 :title="playButtonTitle"
             >
-                <svg v-if="isCurrent && isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /> </svg>
-                <svg v-else class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                <svg v-if="isCurrent && isPlaying" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /> </svg>
+                <svg v-else class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
             </button>
         </div>
 
-        <div class="flex-1 min-w-0">
-            
-            <div class="flex flex-wrap items-center gap-2 mb-2">
-                
+        <div class="flex-1 min-w-0 cursor-pointer" @click="playPrimary">
+            <!-- Dance style badges (most important for dancers) -->
+            <div class="flex flex-wrap items-center gap-1.5 mb-1">
                 <template v-if="hasValidStyle">
-                    
                     <div v-if="track.style_confidence >= 1.0" class="flex items-center gap-1">
-                        <button 
+                        <button
                             @click.stop="$emit('filter-style', track.dance_style)"
-                            class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                            class="px-2 py-0.5 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
                             title="Filtrera på huvudstil"
                         >
                             {{ track.dance_style }}
                         </button>
-
                         <template v-if="hasSubStyle">
                             <span class="text-gray-300 text-[10px] font-bold">›</span>
-                            <button 
+                            <button
                                 @click.stop="$emit('filter-style', track.sub_style)"
-                                class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                                class="px-2 py-0.5 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
                                 title="Filtrera på understil"
                             >
                                 {{ track.sub_style }}
                             </button>
                         </template>
                     </div>
-
                     <div v-else-if="track.style_confidence > 0.75" class="flex items-center gap-1">
-                        <button 
+                        <button
                             @click.stop="$emit('filter-style', track.dance_style)"
-                            class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                            class="px-2 py-0.5 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
                             title="Filtrera på huvudstil (AI-gissning)"
                         >
                             {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-blue-400" />
                         </button>
-
                         <template v-if="hasSubStyle">
                             <span class="text-gray-300 text-[10px] font-bold">›</span>
-                            <button 
+                            <button
                                 @click.stop="$emit('filter-style', track.sub_style)"
-                                class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                                class="px-2 py-0.5 text-xs font-bold rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
                                 title="Filtrera på understil (AI-gissning)"
                             >
                                 {{ track.sub_style }}
                             </button>
                         </template>
                     </div>
-
                     <div v-else class="flex items-center gap-1">
-                        <button 
+                        <button
                             @click.stop="$emit('filter-style', track.dance_style)"
-                            class="px-2 py-1 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
+                            class="px-2 py-0.5 text-xs font-bold rounded-full uppercase flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
                             title="Filtrera på huvudstil (Osäker)"
                         >
                             {{ track.dance_style }} <sparkles-icon class="w-3 h-3 text-amber-400" />
                         </button>
-
                         <template v-if="hasSubStyle">
                             <span class="text-gray-300 text-[10px] font-bold">›</span>
-                            <button 
+                            <button
                                 @click.stop="$emit('filter-style', track.sub_style)"
-                                class="px-2 py-1 text-xs font-bold rounded-full uppercase bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
+                                class="px-2 py-0.5 text-xs font-bold rounded-full uppercase bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 transition-colors cursor-pointer"
                                 title="Filtrera på understil (Osäker)"
                             >
                                 {{ track.sub_style }}
                             </button>
                         </template>
                     </div>
-
                 </template>
-
                 <template v-else>
-                    <span class="px-2 py-1 bg-gray-100 text-gray-600 border border-gray-300 text-xs font-bold rounded-full flex items-center gap-1 cursor-help" title="Kunde inte avgöra stil">
+                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 border border-gray-300 text-xs font-bold rounded-full flex items-center gap-1 cursor-help" title="Kunde inte avgöra stil">
                         ❓ Okänd stil
                     </span>
                 </template>
 
-                <span class="text-gray-500 text-xs flex items-center font-medium border border-gray-100 bg-gray-50 px-2 py-1 rounded-full whitespace-nowrap">
+                <span class="text-gray-500 text-xs flex items-center font-medium border border-gray-100 bg-gray-50 px-2 py-0.5 rounded-full whitespace-nowrap">
                     {{ tempoLabel }}
                 </span>
 
-                <span v-if="track.has_vocals" class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full flex items-center gap-1">🎤 Vocals</span>
-                <span v-else class="px-2 py-1 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full flex items-center gap-1">🎻 Instr.</span>
-                
-                <span v-if="formattedDuration" class="px-2 py-1 text-gray-400 text-xs font-mono flex items-center border border-gray-100 bg-gray-50 rounded-full">{{ formattedDuration }}</span>
-            </div>
-            
-            <h3 class="font-bold text-lg text-gray-900 leading-tight mb-1 truncate">{{ track.title }}</h3>
+                <!-- Duration always visible -->
+                <span v-if="formattedDuration" class="px-2 py-0.5 text-gray-400 text-xs font-mono flex items-center border border-gray-100 bg-gray-50 rounded-full">{{ formattedDuration }}</span>
 
-            <p class="text-gray-600 text-sm mb-1 truncate">
-                <template v-if="track.artists && track.artists.length > 0">
-                    <template v-for="(artist, index) in track.artists" :key="artist.id || index">
-                        <a
-                            v-if="artist.id"
-                            @click.stop.prevent="$emit('navigate-to-artist', artist.id)"
-                            href="#"
-                            class="font-medium text-gray-700 hover:text-primary-600 hover:underline cursor-pointer"
-                        >{{ artist.name }}</a>
-                        <span v-else class="font-medium text-gray-700">{{ artist.name }}</span>
-                        <span v-if="index < track.artists.length - 1" class="text-gray-500">, </span>
-                    </template>
-                </template>
-                <span v-else class="font-medium text-gray-700">{{ artistDisplayString }}</span>
-            </p>
-            <p v-if="track.albums && track.albums.length > 0" class="text-gray-600 text-sm mb-3">
-                <template v-if="track.albums.length === 1">
-                    <a
-                        v-if="track.albums[0].id"
-                        @click.stop.prevent="$emit('navigate-to-album', track.albums[0].id)"
-                        href="#"
-                        class="italic text-gray-500 hover:text-primary-600 hover:underline cursor-pointer truncate inline-block max-w-full"
-                    >{{ track.albums[0].title }}</a>
-                    <span v-else class="italic text-gray-500 truncate">{{ track.albums[0].title }}</span>
-                </template>
-                <template v-else>
-                    <span class="italic text-gray-500 truncate">
-                        <template v-for="(album, index) in track.albums" :key="album.id || index">
+                <!-- Hidden on mobile, visible on sm+ -->
+                <span v-if="track.has_vocals" class="hidden sm:flex px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full items-center gap-1">🎤 Vocals</span>
+                <span v-else class="hidden sm:flex px-2 py-0.5 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full items-center gap-1">🎻 Instr.</span>
+            </div>
+
+            <!-- Title -->
+            <h3 class="font-semibold text-sm text-gray-900 leading-tight truncate mb-0.5">{{ track.title }}</h3>
+
+            <!-- Artist and sources on separate line -->
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+                <!-- Plain text on mobile -->
+                <span class="truncate sm:hidden">{{ artistDisplayString }}</span>
+                <!-- Clickable links on desktop -->
+                <span class="truncate hidden sm:inline">
+                    <template v-if="track.artists && track.artists.length > 0">
+                        <template v-for="(artist, index) in track.artists" :key="artist.id || index">
                             <a
-                                v-if="album.id"
-                                @click.stop.prevent="$emit('navigate-to-album', album.id)"
+                                v-if="artist.id"
+                                @click.stop.prevent="$emit('navigate-to-artist', artist.id)"
                                 href="#"
                                 class="hover:text-primary-600 hover:underline cursor-pointer"
-                            >{{ album.title }}</a>
-                            <span v-else>{{ album.title }}</span>
-                            <span v-if="index < track.albums.length - 1"> • </span>
+                            >{{ artist.name }}</a>
+                            <span v-else>{{ artist.name }}</span><span v-if="index < track.artists.length - 1">, </span>
                         </template>
-                    </span>
-                </template>
-            </p>
-            <p v-else-if="track.album" class="text-gray-600 text-sm mb-3 truncate">
-                <a
-                    v-if="track.album.id"
-                    @click.stop.prevent="$emit('navigate-to-album', track.album.id)"
-                    href="#"
-                    class="italic text-gray-500 hover:text-primary-600 hover:underline cursor-pointer"
-                >{{ track.album.title }}</a>
-                <span v-else class="italic text-gray-500">{{ track.album.title }}</span>
-            </p>
+                    </template>
+                    <span v-else>{{ artistDisplayString }}</span>
+                </span>
 
-            <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500 overflow-visible">
-                <button v-if="hasSpotify" @click="$emit('play', track, 'spotify')"
-                        class="flex items-center gap-1 hover:text-[#1DB954] transition-colors"
-                        :class="{ 'text-[#1DB954] font-bold': isCurrent && isSpotifyMode }"
-                        :aria-label="'Spela på Spotify: ' + track.title">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
-                    <span>Spotify</span>
-                </button>
-
-                <button v-if="hasYouTube" @click="$emit('play', track, 'youtube')"
-                        class="flex items-center gap-1 hover:text-red-600 transition-colors"
-                        :class="{ 'text-red-600 font-bold': isCurrent && !isSpotifyMode }"
-                        :aria-label="'Spela på YouTube: ' + track.title">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
-                    <span>YouTube</span>
-                </button>
-
-                <button v-if="!hasYouTube" @click="showLinkModal = true"
-                        class="text-xs text-gray-400 hover:text-red-500 border border-transparent hover:border-red-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
-                        :aria-label="'Lägg till YouTube-länk för ' + track.title">
-                    <span>+ Lägg till länk</span>
-                </button>
-
-                <button @click="openFlagModal"
-                        class="text-xs text-gray-400 hover:text-orange-600 border border-transparent hover:border-orange-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
-                        :aria-label="'Rapportera problem med ' + track.title">
-                    <flag-icon class="w-3 h-3" />
-                    <span>Rapportera</span>
-                </button>
+                <!-- Source buttons -->
+                <div v-if="hasSpotify || hasYouTube" class="flex items-center gap-1.5 shrink-0">
+                    <button v-if="hasSpotify" @click.stop="$emit('play', track, 'spotify')"
+                            class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-[#1DB954] transition-colors"
+                            :class="{ 'text-[#1DB954]': isCurrent && isSpotifyMode }"
+                            :aria-label="'Spela på Spotify'">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 4.32-1.32 9.779-.6 13.5 1.621.42.181.6.719.241 1.2zm.12-3.36C15.54 8.46 9.059 8.22 5.28 9.361c-.6.181-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.24z"/></svg>
+                    </button>
+                    <button v-if="hasYouTube" @click.stop="$emit('play', track, 'youtube')"
+                            class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors"
+                            :class="{ 'text-red-600': isCurrent && !isSpotifyMode }"
+                            :aria-label="'Spela på YouTube'">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -332,6 +282,35 @@ export default {
                     </svg>
                     Dela
                 </button>
+                <div class="border-t border-gray-100 my-1"></div>
+                <!-- Navigation options -->
+                <button v-if="primaryArtist" @click="goToArtist"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    Gå till artist
+                </button>
+                <button v-if="primaryAlbum" @click="goToAlbum"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                    Gå till album
+                </button>
+                <div v-if="!hasYouTube || true" class="border-t border-gray-100 my-1"></div>
+                <button v-if="!hasYouTube" @click="openAddLinkModal"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                    </svg>
+                    Lägg till YouTube-länk
+                </button>
+                <button @click="openFlagModalFromMenu"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <flag-icon class="w-4 h-4" />
+                    Rapportera problem
+                </button>
             </div>
         </div>
 
@@ -414,6 +393,19 @@ export default {
         Turbo: 'Väldigt snabbt',
       };
       return labels[this.track.tempo_category] || 'Lagom';
+    },
+    primaryArtist() {
+      if (!this.track.artists || this.track.artists.length === 0) return null;
+      return this.track.artists.find(a => a.id) || null;
+    },
+    primaryAlbum() {
+      if (this.track.albums && this.track.albums.length > 0 && this.track.albums[0].id) {
+        return this.track.albums[0];
+      }
+      if (this.track.album && this.track.album.id) {
+        return this.track.album;
+      }
+      return null;
     },
   },
   mounted() {
@@ -519,6 +511,26 @@ export default {
     },
     openFlagModal() {
       this.showFlagModal = true;
+    },
+    openFlagModalFromMenu() {
+      this.showFlagModal = true;
+      this.showMenu = false;
+    },
+    openAddLinkModal() {
+      this.showLinkModal = true;
+      this.showMenu = false;
+    },
+    goToArtist() {
+      if (this.primaryArtist) {
+        this.$emit('navigate-to-artist', this.primaryArtist.id);
+        this.showMenu = false;
+      }
+    },
+    goToAlbum() {
+      if (this.primaryAlbum) {
+        this.$emit('navigate-to-album', this.primaryAlbum.id);
+        this.showMenu = false;
+      }
     },
   },
 };
