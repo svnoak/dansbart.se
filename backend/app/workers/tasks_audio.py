@@ -8,6 +8,7 @@ from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
 from app.services.analysis import AnalysisService
 from app.core.models import Track
+import gc
 
 # GLOBAL VARIABLE (Per Worker Process)
 # This starts as None. The first task this worker runs will fill it.
@@ -21,6 +22,19 @@ def get_analysis_service():
         # This triggers the heavy load INSIDE the correct process
         _worker_analysis_service = AnalysisService(None)
     return _worker_analysis_service
+
+def cleanup_tf_resources():
+    """Clean up TensorFlow/Keras resources to free memory"""
+    try:
+        import tensorflow as tf
+        from tensorflow import keras
+        # Clear Keras session to free GPU/CPU memory
+        keras.backend.clear_session()
+        # Force TensorFlow garbage collection
+        tf.keras.backend.clear_session()
+        print("   [CLEANUP] Cleared TensorFlow/Keras session")
+    except Exception as e:
+        print(f"   [CLEANUP] Could not clear TF session: {e}")
 
 
 @celery_app.task(
@@ -60,6 +74,11 @@ def analyze_track_task(self, track_id: str):
         service.analyze_track_by_id(track_id)
 
         print(f"✅ AUDIO WORKER: Finished {track_id}")
+
+        # Clean up TensorFlow resources after successful completion
+        cleanup_tf_resources()
+        gc.collect()
+
     except MaxRetriesExceededError:
         # All retries exhausted - mark as FAILED
         print(f"💀 AUDIO WORKER: Max retries exceeded for {track_id}, marking as FAILED")
@@ -97,4 +116,7 @@ def analyze_track_task(self, track_id: str):
                 print(f"⚠️ Failed to reset status to PENDING: {status_err}")
         raise
     finally:
+        # Always cleanup resources, even on failure
+        cleanup_tf_resources()
+        gc.collect()
         db.close()

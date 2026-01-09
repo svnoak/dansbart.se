@@ -25,8 +25,8 @@ class User(Base):
     """
     __tablename__ = "users"
 
-    # Primary key matches Authentik's user ID (UUID from 'sub' claim)
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    # Primary key matches Authentik's user ID (hex string from 'sub' claim)
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
 
     # Cached user info from Authentik OIDC claims (synced on login)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
@@ -56,12 +56,11 @@ class Playlist(Base):
     __tablename__ = "playlists"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(255), ForeignKey("users.id"), nullable=False, index=True)
 
     # Metadata
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
-    cover_image_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Privacy & Sharing
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
@@ -84,6 +83,11 @@ class Playlist(Base):
         order_by="PlaylistTrack.position"
     )
 
+    @property
+    def owner(self):
+        """Alias for user relationship (for API schema compatibility)."""
+        return self.user
+
 
 class PlaylistTrack(Base):
     """Junction table for playlists and tracks with ordering"""
@@ -104,4 +108,4 @@ class PlaylistTrack(Base):
 
     # Relationships
     playlist: Mapped["Playlist"] = relationship("Playlist", back_populates="track_links")
-    track: Mapped["Track"] = relationship("Track")
+    track: Mapped["Track"] = relationship("app.core.models.Track")

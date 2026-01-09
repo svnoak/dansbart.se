@@ -3,23 +3,63 @@ import FlagTrackModal from './modals/FlagTrackModal.js';
 import SparklesIcon from '../icons/SparklesIcon.js';
 import FlagIcon from '../icons/FlagIcon.js';
 import { showToast } from '../hooks/useToast.js';
+import { usePlaylists } from '../hooks/usePlaylists.js';
+import { useAuth } from '../hooks/useAuth.js';
+import { FEATURES } from '../config/features.js';
 
 export default {
   props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
   emits: ['play', 'stop', 'refresh', 'filter-style', 'show-similar', 'add-to-queue', 'navigate-to-artist', 'navigate-to-album'],
   components: { AddLinkModal, FlagTrackModal, SparklesIcon, FlagIcon },
 
+  setup() {
+    const { isAuthenticated } = useAuth();
+    const { playlists, loading: playlistsLoading, fetchUserPlaylists, addTrackToPlaylist } = usePlaylists();
+
+    return {
+      isAuthenticated,
+      playlists,
+      playlistsLoading,
+      fetchUserPlaylists,
+      addTrackToPlaylist,
+      authFeaturesEnabled: FEATURES.ENABLE_AUTH_FEATURES,
+    };
+  },
+
   data() {
     return {
       showLinkModal: false,
       showFlagModal: false,
+      showPlaylistModal: false,
+      showMenu: false,
+      showPlaylistSubmenu: false,
+      addingToPlaylist: false,
     };
   },
 
   template: /*html*/ `
-    <div class="card bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-100 flex flex-row items-center justify-between gap-3 sm:gap-4 transition-all hover:shadow-md group w-full max-w-full overflow-hidden">
-        
-        <div class="flex-1 min-w-0 overflow-hidden">
+    <div class="card bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-100 flex flex-row items-center gap-3 sm:gap-4 transition-all hover:shadow-md group w-full max-w-full overflow-visible">
+
+        <!-- Play Button (Left) -->
+        <div class="shrink-0">
+            <button
+                @click.stop="playPrimary"
+                :disabled="!primarySource"
+                class="w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                :class="[
+                    !primarySource ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
+                    (isCurrent && isPlaying) ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' :
+                    'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 shadow-md hover:shadow-lg'
+                ]"
+                :aria-label="!primarySource ? 'Ingen spelare tillgänglig för ' + track.title : (isCurrent && isPlaying) ? 'Pausa ' + track.title : 'Spela ' + track.title"
+                :title="playButtonTitle"
+            >
+                <svg v-if="isCurrent && isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /> </svg>
+                <svg v-else class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+            </button>
+        </div>
+
+        <div class="flex-1 min-w-0">
             
             <div class="flex flex-wrap items-center gap-2 mb-2">
                 
@@ -158,7 +198,7 @@ export default {
                 <span v-else class="italic text-gray-500">{{ track.album.title }}</span>
             </p>
 
-            <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500">
+            <div class="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500 overflow-visible">
                 <button v-if="hasSpotify" @click="$emit('play', track, 'spotify')"
                         class="flex items-center gap-1 hover:text-[#1DB954] transition-colors"
                         :class="{ 'text-[#1DB954] font-bold': isCurrent && isSpotifyMode }"
@@ -181,54 +221,118 @@ export default {
                     <span>+ Lägg till länk</span>
                 </button>
 
-                <button @click="showFlagModal = true"
-                        class="text-xs text-gray-400 hover:text-amber-600 border border-transparent hover:border-amber-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+                <button @click="openFlagModal"
+                        class="text-xs text-gray-400 hover:text-orange-600 border border-transparent hover:border-orange-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
                         :aria-label="'Rapportera problem med ' + track.title">
-                    <flag-icon class="w-3 h-3" aria-hidden="true" />
+                    <flag-icon class="w-3 h-3" />
                     <span>Rapportera</span>
-                </button>
-
-                <button @click.stop="shareTrack"
-                        class="text-xs text-gray-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
-                        :aria-label="'Dela ' + track.title">
-                    <span aria-hidden="true">🔗</span>
-                    <span>Dela</span>
-                </button>
-
-                <button @click.stop="$emit('show-similar', track.id)"
-                        class="text-xs text-gray-400 hover:text-purple-600 border border-transparent hover:border-purple-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
-                        :aria-label="'Hitta liknande låtar som ' + track.title">
-                    <span aria-hidden="true">🎵</span>
-                    <span>Liknande</span>
-                </button>
-
-                <button @click.stop="$emit('add-to-queue', track)"
-                        class="text-xs text-gray-400 hover:text-green-600 border border-transparent hover:border-green-200 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
-                        :aria-label="'Lägg till ' + track.title + ' i kö'">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    <span>Kö</span>
                 </button>
             </div>
         </div>
 
-        <div class="shrink-0 pt-1">
-            <button
-                @click.stop="playPrimary"
-                :disabled="!primarySource"
-                class="w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                :class="[
-                    !primarySource ? 'bg-gray-100 text-gray-300 cursor-not-allowed' :
-                    (isCurrent && isPlaying) ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' :
-                    'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 shadow-md hover:shadow-lg'
-                ]"
-                :aria-label="!primarySource ? 'Ingen spelare tillgänglig för ' + track.title : (isCurrent && isPlaying) ? 'Pausa ' + track.title : 'Spela ' + track.title"
-                :title="playButtonTitle"
-            >
-                <svg v-if="isCurrent && isPlaying" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /> </svg>
-                <svg v-else class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+        <!-- More Menu (Right) -->
+        <div class="shrink-0 relative">
+            <button @click.stop="showMenu = !showMenu"
+                    class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                    :aria-label="'Fler alternativ för ' + track.title">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                </svg>
             </button>
+
+            <!-- Dropdown Menu -->
+            <div v-if="showMenu" @click.stop
+                 class="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <!-- Add to Playlist with Submenu -->
+                <div v-if="authFeaturesEnabled" class="relative"
+                     @mouseenter="openPlaylistSubmenu"
+                     @mouseleave="closePlaylistSubmenu">
+                    <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                            </svg>
+                            Lägg till i spellista
+                        </div>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Playlist Submenu -->
+                    <div v-if="showPlaylistSubmenu"
+                         class="absolute left-full top-0 ml-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 max-h-64 overflow-y-auto">
+
+                        <!-- Not authenticated -->
+                        <div v-if="!isAuthenticated" class="px-4 py-3 text-sm text-gray-500 text-center">
+                            <p class="mb-2">Logga in för att använda spellistor</p>
+                            <button @click="handleLogin"
+                                    class="text-indigo-600 hover:underline font-medium">
+                                Logga in
+                            </button>
+                        </div>
+
+                        <!-- Loading -->
+                        <div v-else-if="playlistsLoading" class="px-4 py-3 text-sm text-gray-500 text-center">
+                            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 mx-auto mb-1"></div>
+                            Laddar...
+                        </div>
+
+                        <!-- Playlists -->
+                        <template v-else>
+                            <!-- Create new playlist -->
+                            <button @click="openCreatePlaylistModal"
+                                    class="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium border-b border-gray-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Skapa ny spellista
+                            </button>
+
+                            <!-- Empty state -->
+                            <div v-if="playlists.length === 0" class="px-4 py-3 text-sm text-gray-500 text-center">
+                                Du har inga spellistor
+                            </div>
+
+                            <!-- Playlist items -->
+                            <button v-for="playlist in playlists"
+                                    :key="playlist.id"
+                                    @click="handleAddToPlaylist(playlist.id)"
+                                    :disabled="addingToPlaylist"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-medium truncate">{{ playlist.name }}</p>
+                                        <p class="text-xs text-gray-500">{{ playlist.track_count }} låtar</p>
+                                    </div>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <button @click="showSimilar"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                    Liknande låtar
+                </button>
+                <button @click="addToQueue"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Lägg till i kö
+                </button>
+                <button @click="handleShare"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                    </svg>
+                    Dela
+                </button>
+            </div>
         </div>
 
         <add-link-modal
@@ -244,6 +348,12 @@ export default {
             @close="showFlagModal = false"
             @refresh="$emit('refresh')"
         ></flag-track-modal>
+
+        <add-to-playlist-modal
+            :is-open="showPlaylistModal"
+            :track="track"
+            @close="showPlaylistModal = false"
+        ></add-to-playlist-modal>
     </div>
     `,
   computed: {
@@ -255,10 +365,8 @@ export default {
       );
     },
     hasSubStyle() {
-      // Checks if sub_style exists and is different from main style
       return this.track.sub_style && this.track.sub_style !== this.track.dance_style;
     },
-    // ... (Rest of computed properties: artistDisplayString, links, etc. remain the same)
     artistDisplayString() {
       if (!this.track.artists || this.track.artists.length === 0) return 'Okänd artist';
       const primary = this.track.artists.filter(a => a.role === 'primary').map(a => a.name);
@@ -308,6 +416,13 @@ export default {
       return labels[this.track.tempo_category] || 'Lagom';
     },
   },
+  mounted() {
+    // Close menu when clicking outside
+    document.addEventListener('click', this.handleClickOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside);
+  },
   methods: {
     getLink(type) {
       if (!this.track.playback_links) return null;
@@ -348,6 +463,62 @@ export default {
           showToast('Länk kopierad!', 'success');
         });
       }
+    },
+    toggleMenu() {
+      this.showMenu = !this.showMenu;
+      if (this.showMenu && this.isAuthenticated) {
+        this.fetchUserPlaylists();
+      }
+    },
+    handleClickOutside() {
+      this.showMenu = false;
+      this.showPlaylistSubmenu = false;
+    },
+    openPlaylistSubmenu() {
+      this.showPlaylistSubmenu = true;
+    },
+    closePlaylistSubmenu() {
+      this.showPlaylistSubmenu = false;
+    },
+    async handleAddToPlaylist(playlistId) {
+      if (!this.track || this.addingToPlaylist) return;
+
+      this.addingToPlaylist = true;
+      try {
+        const success = await this.addTrackToPlaylist(playlistId, this.track.id);
+        if (success) {
+          this.showMenu = false;
+          this.showPlaylistSubmenu = false;
+        }
+      } finally {
+        this.addingToPlaylist = false;
+      }
+    },
+    openCreatePlaylistModal() {
+      this.showPlaylistModal = true;
+      this.showMenu = false;
+      this.showPlaylistSubmenu = false;
+    },
+    handleLogin() {
+      this.showMenu = false;
+      this.showPlaylistSubmenu = false;
+      const { login } = useAuth();
+      login();
+    },
+    showSimilar() {
+      this.$emit('show-similar', this.track.id);
+      this.showMenu = false;
+    },
+    addToQueue() {
+      this.$emit('add-to-queue', this.track);
+      this.showMenu = false;
+    },
+    handleShare() {
+      this.shareTrack();
+      this.showMenu = false;
+    },
+    openFlagModal() {
+      this.showFlagModal = true;
     },
   },
 };

@@ -24,6 +24,7 @@ redis                     # Message broker & result backend
 typer                     # CLI builder (for manage.py)
 yt-dlp                    # YouTube URL validation (used by LinkService)
 spotipy                   # Spotify API client (for discovery/ingestion)
+psutil                    # Process and memory monitoring
 joblib
 numpy
 scikit-learn

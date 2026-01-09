@@ -32,6 +32,7 @@ def _add_computed_fields(playlist: Playlist) -> None:
     playlist.total_duration_ms = sum(
         link.track.duration_ms or 0 for link in playlist.track_links
     )
+    playlist.id = str(playlist.id)  # Convert UUID to string for schema
 
 
 @router.get("/", response_model=list[PlaylistOut])
@@ -86,9 +87,13 @@ def create_playlist(
     db.commit()
     db.refresh(playlist)
 
+    # Load user relationship
+    playlist.user = current_user
+
     # Add computed fields
     playlist.track_count = 0
     playlist.total_duration_ms = 0
+    playlist.id = str(playlist.id)  # Convert UUID to string for schema
 
     return playlist
 

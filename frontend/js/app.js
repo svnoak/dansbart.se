@@ -20,6 +20,7 @@ import Header from './components/Header.js';
 import CookieConsent from './components/CookieConsent.js';
 import Toast from './components/toasts/Toast.js';
 import SimilarTracksModal from './components/SimilarTracksModal.js';
+import PlaylistModal from './components/modals/PlaylistModal.js';
 import DiscoveryPage from './components/DiscoveryPage.js';
 import ClassifyPage from './components/ClassifyPage.js';
 import ArtistPage from './components/ArtistPage.js';
@@ -38,6 +39,7 @@ const app = createApp({
     'cookie-consent': CookieConsent,
     'toast-container': Toast,
     'similar-tracks-modal': SimilarTracksModal,
+    'playlist-modal': PlaylistModal,
     'discovery-page': DiscoveryPage,
     'classify-page': ClassifyPage,
     'artist-page': ArtistPage,

@@ -54,14 +54,14 @@ class Track(Base):
     uploader_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
 
     # Logic Relationships
-    analysis_sources = relationship("AnalysisSource", back_populates="track")
-    playback_links = relationship("PlaybackLink", back_populates="track")
-    dance_styles = relationship("TrackDanceStyle", back_populates="track")
-    
+    analysis_sources = relationship("AnalysisSource", back_populates="track", cascade="all, delete-orphan")
+    playback_links = relationship("PlaybackLink", back_populates="track", cascade="all, delete-orphan")
+    dance_styles = relationship("TrackDanceStyle", back_populates="track", cascade="all, delete-orphan")
+
     # Voting & Structure
-    style_votes = relationship("TrackStyleVote", back_populates="track")
-    feel_votes = relationship("TrackFeelVote", back_populates="track")
-    structure_versions = relationship("TrackStructureVersion", back_populates="track")
+    style_votes = relationship("TrackStyleVote", back_populates="track", cascade="all, delete-orphan")
+    feel_votes = relationship("TrackFeelVote", back_populates="track", cascade="all, delete-orphan")
+    structure_versions = relationship("TrackStructureVersion", back_populates="track", cascade="all, delete-orphan")
     
     # Analysis Data blobs
     bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
@@ -143,18 +143,18 @@ class AnalysisSource(Base):
     __tablename__ = "analysis_sources"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     source_type: Mapped[str] = mapped_column(String)
     raw_data: Mapped[dict] = mapped_column(JSONB)
     confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
     analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    
+
     track = relationship("Track", back_populates="analysis_sources")
 
 class TrackDanceStyle(Base):
     __tablename__ = "track_dance_styles"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
 
     dance_style: Mapped[str] = mapped_column(String, index=True)
     sub_style: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
@@ -171,13 +171,13 @@ class TrackDanceStyle(Base):
 
 class PlaybackLink(Base):
     __tablename__ = "playback_links"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     platform: Mapped[str] = mapped_column(String)
     deep_link: Mapped[str] = mapped_column(String)
     is_working: Mapped[bool] = mapped_column(Boolean, default=True)
-    
+
     track = relationship("Track", back_populates="playback_links")
 
 class TrackStyleVote(Base):
@@ -187,7 +187,7 @@ class TrackStyleVote(Base):
     __tablename__ = "track_style_votes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
 
     voter_id: Mapped[str] = mapped_column(String, index=True)
     
@@ -201,8 +201,8 @@ class TrackStructureVersion(Base):
     __tablename__ = "track_structure_versions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
-    
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     
@@ -257,7 +257,7 @@ class TrackFeelVote(Base):
     """
     __tablename__ = "track_feel_votes"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     feel_tag: Mapped[str] = mapped_column(String, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     track = relationship("Track", back_populates="feel_votes")
