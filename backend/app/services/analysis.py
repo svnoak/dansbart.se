@@ -302,6 +302,5 @@ class AnalysisService:
             existing.is_primary = True
             if existing.confidence < 0.5:
                 existing.confidence = 0.5
-        
-        self.db.commit()
+
         return True
