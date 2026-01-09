@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict # Added SettingsConfigDict
 from pydantic import PostgresDsn, computed_field
+from typing import Optional
 
 class Settings(BaseSettings):
     # Database
@@ -17,11 +18,11 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str
 
     # Authentik OIDC Configuration
-    AUTHENTIK_ISSUER: str
-    AUTHENTIK_JWKS_URI: str
-    AUTHENTIK_CLIENT_ID: str
-    AUTHENTIK_CLIENT_SECRET: str
-    AUTHENTIK_REDIRECT_URI: str
+    AUTHENTIK_ISSUER: Optional[str] = None
+    AUTHENTIK_JWKS_URI: Optional[str] = None
+    AUTHENTIK_CLIENT_ID: Optional[str] = None
+    AUTHENTIK_CLIENT_SECRET: Optional[str] = None
+    AUTHENTIK_REDIRECT_URI: Optional[str] = None
 
     # Frontend URL
     FRONTEND_URL: str = "http://localhost:8080"
