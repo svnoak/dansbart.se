@@ -6,7 +6,7 @@
 -r requirements.common.txt
 
 # neckenml Analyzer - Open Source Analysis & Classification Engine (core only)
-neckenml-analyzer>=0.2.2
+neckenml-analyzer>=0.2.3
 
 # Audio dependencies (installed separately due to build requirements)
 essentia-tensorflow>=2.1b6.dev0

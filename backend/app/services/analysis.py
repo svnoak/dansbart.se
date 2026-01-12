@@ -18,6 +18,16 @@ class AnalysisService:
 
         self.classifier_service = ClassificationService(db)
 
+        self._analyzer = None
+        self._model_dir = os.getenv('neckenml_MODEL_DIR', '/app/app/workers/audio/models')
+
+    def _get_analyzer(self):
+        """Get or create the cached AudioAnalyzer instance"""
+        if self._analyzer is None:
+            print("🔧 AUDIO WORKER: Loading neckenml models (one-time per worker)...")
+            self._analyzer = AudioAnalyzer(audio_source=None, model_dir=self._model_dir)
+        return self._analyzer
+
     def _log_memory_usage(self, stage: str):
         """Log current memory usage for debugging"""
         process = psutil.Process()
@@ -136,94 +146,92 @@ class AnalysisService:
         file_path = result['file_path']
         youtube_id = result.get('youtube_id')
 
-        print(f"   [MEMORY] Initializing ML Model...")
-        # Use neckenml-analyzer (without audio_source since we fetch manually with YouTube fetcher)
-        model_dir = os.getenv('neckenml_MODEL_DIR', '/app/app/workers/audio/models')
+        # Save/Update the YouTube link if we found a new one
+        if youtube_id:
+            self._ensure_youtube_link(track, youtube_id)
 
-        with AudioAnalyzer(audio_source=None, model_dir=model_dir) as analyzer:
-            # Save/Update the YouTube link if we found a new one
-            if youtube_id:
-                self._ensure_youtube_link(track, youtube_id)
+        # Get the cached analyzer instance (loads models once per worker)
+        analyzer = self._get_analyzer()
 
-            print(f"   [TIME] Starting CPU-intensive analysis...")
-            self._log_memory_usage("Before analysis")
-            start_time = time.time()
+        print(f"   [TIME] Starting CPU-intensive analysis...")
+        self._log_memory_usage("Before analysis")
+        start_time = time.time()
 
-            # 2. ANALYZE (MusiCNN + Madmom) with ARTIFACT PERSISTENCE
-            context = f"{track.title} {artist_name} {album_name}"
+        # 2. ANALYZE (MusiCNN + Madmom) with ARTIFACT PERSISTENCE
+        context = f"{track.title} {artist_name} {album_name}"
 
-            result = analyzer.analyze_file(file_path, context, return_artifacts=True)
+        result = analyzer.analyze_file(file_path, context, return_artifacts=True)
 
-            end_time = time.time()
-            self._log_memory_usage("After analysis")
-            print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.")
+        end_time = time.time()
+        self._log_memory_usage("After analysis")
+        print(f"   [TIME] Analysis finished in {end_time - start_time:.2f} seconds.")
 
-            if result:
-                # Extract features and artifacts
-                data = result["features"]           # Derived features
-                artifacts = result["raw_artifacts"]  # Raw Madmom/MusiCNN/etc outputs
+        if result:
+            # Extract features and artifacts
+            data = result["features"]           # Derived features
+            artifacts = result["raw_artifacts"]  # Raw Madmom/MusiCNN/etc outputs
 
-                # 3. SAVE RAW ARTIFACTS (enables fast re-analysis!)
-                self.repo.add_analysis(
-                    track_id=track.id,
-                    source_type="neckenml_analyzer",  # New source type
-                    raw_data=artifacts  # Store artifacts, not features!
-                )
+            # 3. SAVE RAW ARTIFACTS (enables fast re-analysis!)
+            self.repo.add_analysis(
+                track_id=track.id,
+                source_type="neckenml_analyzer",  # New source type
+                raw_data=artifacts  # Store artifacts, not features!
+            )
 
-                # --- Basic Audio Stats ---
-                track.tempo_bpm = data.get('tempo_bpm')
-                track.duration_ms = result.get('actual_duration_ms', 0)
-                track.loudness = data.get('loudness_lufs') 
-                track.is_instrumental = data.get('is_likely_instrumental', False)
+            # --- Basic Audio Stats ---
+            track.tempo_bpm = data.get('tempo_bpm')
+            track.duration_ms = result.get('actual_duration_ms', 0)
+            track.loudness = data.get('loudness_lufs')
+            track.is_instrumental = data.get('is_likely_instrumental', False)
 
-                # --- Advanced Features ---
-                track.swing_ratio = data.get('swing_ratio')
-                track.articulation = data.get('articulation')
-                track.bounciness = data.get('bounciness')
-                track.punchiness = data.get('punchiness')
-                
-                # --- Specialized Scores ---
-                track.polska_score = data.get('polska_score')
-                track.hambo_score = data.get('hambo_score')
-                track.voice_probability = data.get('voice_probability')
-                
-                # --- Structural Data ---
-                track.bars = data.get('bars')
-                track.sections = data.get('sections')
-                track.section_labels = data.get('section_labels')
-                track.embedding = data.get('embedding')
+            # --- Advanced Features ---
+            track.swing_ratio = data.get('swing_ratio')
+            track.articulation = data.get('articulation')
+            track.bounciness = data.get('bounciness')
+            track.punchiness = data.get('punchiness')
 
-                ai_version = TrackStructureVersion(
-                    track_id=track.id,
-                    description="Original AI Analysis",
-                    author_alias="AI",
-                    structure_data={
-                        "bars": data.get('bars'),
-                        "sections": data.get('sections'),
-                        "labels": data.get('section_labels')
-                    },
-                    is_active=True, 
-                    vote_count=0,
-                    is_hidden=False
-                )
-                self.db.add(ai_version)
-                self.db.add(track)
-                
-                # 4. AUTO-CLASSIFY
-                # This makes the track visible in the frontend immediately if successful
-                print(f"   🧠 Auto-classifying...")
-                self.classifier_service.classify_track_immediately(track, analysis_data=data)
+            # --- Specialized Scores ---
+            track.polska_score = data.get('polska_score')
+            track.hambo_score = data.get('hambo_score')
+            track.voice_probability = data.get('voice_probability')
 
-                # Clear large objects from memory immediately after use
-                del result
-                del data
-                del artifacts
-                gc.collect()
-                self._log_memory_usage("After cleanup")
+            # --- Structural Data ---
+            track.bars = data.get('bars')
+            track.sections = data.get('sections')
+            track.section_labels = data.get('section_labels')
+            track.embedding = data.get('embedding')
 
-                return True
+            ai_version = TrackStructureVersion(
+                track_id=track.id,
+                description="Original AI Analysis",
+                author_alias="AI",
+                structure_data={
+                    "bars": data.get('bars'),
+                    "sections": data.get('sections'),
+                    "labels": data.get('section_labels')
+                },
+                is_active=True,
+                vote_count=0,
+                is_hidden=False
+            )
+            self.db.add(ai_version)
+            self.db.add(track)
 
-            return False
+            # 4. AUTO-CLASSIFY
+            # This makes the track visible in the frontend immediately if successful
+            print(f"   🧠 Auto-classifying...")
+            self.classifier_service.classify_track_immediately(track, analysis_data=data)
+
+            # Clear large objects from memory immediately after use
+            del result
+            del data
+            del artifacts
+            gc.collect()
+            self._log_memory_usage("After cleanup")
+
+            return True
+
+        return False
 
     def _ensure_youtube_link(self, track, video_id):
         exists = self.db.query(PlaybackLink).filter_by(track_id=track.id, deep_link=video_id).first()
