@@ -228,11 +228,12 @@ class SpotifyIngestor:
         album_obj = sp_track.get('album', {})
         album_images = album_obj.get('images', [])
         cover_url = album_images[0]['url'] if album_images else None
-        
+
         album_data = {
             'name': album_obj.get('name'),
             'cover': cover_url,
-            'date': album_obj.get('release_date')
+            'date': album_obj.get('release_date'),
+            'spotify_id': album_obj.get('id')  # Spotify album ID
         }
 
         # Artists Info (List of dicts)
@@ -276,11 +277,19 @@ class SpotifyIngestor:
                         primary_artist_data.get('id')
                     )
 
-                    # Check if album exists
-                    album = self.db.query(Album).filter(
-                        Album.title == album_data['name'],
-                        Album.artist_id == primary_artist.id
-                    ).first()
+                    # Check if album exists (first try by spotify_id if available)
+                    album = None
+                    if album_data.get('spotify_id'):
+                        album = self.db.query(Album).filter(
+                            Album.spotify_id == album_data['spotify_id']
+                        ).first()
+
+                    # Fall back to title + artist if not found by spotify_id
+                    if not album:
+                        album = self.db.query(Album).filter(
+                            Album.title == album_data['name'],
+                            Album.artist_id == primary_artist.id
+                        ).first()
 
                     if not album:
                         # Create new album
@@ -288,9 +297,14 @@ class SpotifyIngestor:
                             title=album_data['name'],
                             artist_id=primary_artist.id,
                             cover_image_url=album_data.get('cover'),
-                            release_date=album_data.get('date')
+                            release_date=album_data.get('date'),
+                            spotify_id=album_data.get('spotify_id')
                         )
                         self.db.add(album)
+                        self.db.flush()
+                    elif not album.spotify_id and album_data.get('spotify_id'):
+                        # Update existing album with spotify_id if it doesn't have one
+                        album.spotify_id = album_data.get('spotify_id')
                         self.db.flush()
 
                     # Check if track is already linked to this album

@@ -36,6 +36,22 @@ class AnalysisService:
         print(f"   [MEMORY] {stage}: {mem_mb:.1f} MB")
         return mem_mb
 
+    def cleanup_analyzer_memory(self):
+        """
+        Force cleanup of analyzer's TensorFlow/Essentia resources.
+        Call this after each analysis to prevent memory leaks.
+        """
+        if self._analyzer is not None:
+            try:
+                # Close releases TensorFlow models and Essentia algorithms
+                self._analyzer.close()
+                self._analyzer = None
+                print("   [CLEANUP] Analyzer resources released")
+            except Exception as e:
+                print(f"   [CLEANUP] Warning during analyzer cleanup: {e}")
+            finally:
+                gc.collect()
+
     def analyze_track_by_id(self, track_id: str):
         """
         Background Task Entry Point.
@@ -90,10 +106,20 @@ class AnalysisService:
             # 1. Cleanup Files
             self.fetcher.cleanup(str(track.id))
 
-            # 2. Clear SQLAlchemy Identity Map
+            # 2. Cleanup analyzer TensorFlow resources
+            # This is critical - without this, TF models stay in memory
+            if self._analyzer:
+                try:
+                    self._analyzer.close()
+                    self._analyzer = None
+                    print("   [CLEANUP] Analyzer closed in finally block")
+                except Exception as e:
+                    print(f"   [CLEANUP] Error closing analyzer: {e}")
+
+            # 3. Clear SQLAlchemy Identity Map
             self.db.expire_all()
 
-            # 3. Python GC (Releases Python Wrappers)
+            # 4. Python GC (Releases Python Wrappers)
             self._log_memory_usage("Before GC")
             gc.collect()
             self._log_memory_usage("After GC")

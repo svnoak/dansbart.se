@@ -253,16 +253,36 @@ class TrackRepository(BaseRepository[Track]):
         # 2. Album
         album = None
         if album_data and album_data.get('name'):
-            existing_album = self.db.query(Album).filter(
-                Album.title == album_data['name'],
-                Album.artist_id == primary_artist.id
-            ).first()
+            # Try to find album by spotify_id first (if available)
+            existing_album = None
+            if album_data.get('spotify_id'):
+                existing_album = self.db.query(Album).filter(
+                    Album.spotify_id == album_data['spotify_id']
+                ).first()
+
+            # Fall back to title + artist lookup if not found by spotify_id
             if not existing_album:
-                album = Album(title=album_data['name'], artist_id=primary_artist.id, cover_image_url=album_data.get('cover'), release_date=album_data.get('date'))
+                existing_album = self.db.query(Album).filter(
+                    Album.title == album_data['name'],
+                    Album.artist_id == primary_artist.id
+                ).first()
+
+            if not existing_album:
+                album = Album(
+                    title=album_data['name'],
+                    artist_id=primary_artist.id,
+                    cover_image_url=album_data.get('cover'),
+                    release_date=album_data.get('date'),
+                    spotify_id=album_data.get('spotify_id')
+                )
                 self.db.add(album)
                 self.db.flush()
             else:
                 album = existing_album
+                # Update spotify_id if album exists but doesn't have one
+                if not album.spotify_id and album_data.get('spotify_id'):
+                    album.spotify_id = album_data.get('spotify_id')
+                    self.db.flush()
 
         # 3. Track
         new_track = Track(title=title, isrc=isrc, duration_ms=duration_ms)

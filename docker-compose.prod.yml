@@ -1,4 +1,3 @@
-# Production deployment using GitHub Container Registry images
 services:
   backend:
     image: ghcr.io/svnoak/dansbart-backend:production
@@ -15,7 +14,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
     environment:
@@ -40,14 +39,14 @@ services:
       - default
       - caddy_net
     labels:
-      caddy: beta.dansbart.se
+      caddy: beta.dansbart.se dansbart.se
       caddy.reverse_proxy: "{{upstreams 80}}"
     restart: unless-stopped
 
-  # Audio Worker (Heavy ML models)
   worker-audio:
     image: ghcr.io/svnoak/dansbart-audio-worker:production
     platform: linux/amd64
+    command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio
     env_file:
       - .env
     environment:
@@ -61,13 +60,18 @@ services:
     networks:
       - default
     shm_size: '2gb'
-    mem_limit: '4g'
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4500M
     restart: unless-stopped
 
-  # Light Worker (Discovery, Ingestion, No ML)
+
   worker-light:
     image: ghcr.io/svnoak/dansbart-light-worker:production
     platform: linux/amd64
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 -Q light
     env_file:
       - .env
     environment:
@@ -79,7 +83,11 @@ services:
       - redis
     networks:
       - default
-    mem_limit: '1g'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     restart: unless-stopped
 
 networks:

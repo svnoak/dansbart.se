@@ -134,6 +134,7 @@ class Album(Base):
     title: Mapped[str] = mapped_column(String, index=True)
     cover_image_url: Mapped[str | None] = mapped_column(String, nullable=True)
     release_date: Mapped[str | None] = mapped_column(String, nullable=True)
+    spotify_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True, index=True)
     artist_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("artists.id"), nullable=True)
 
     artist: Mapped["Artist"] = relationship("Artist", back_populates="albums")

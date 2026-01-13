@@ -201,6 +201,17 @@ export function useLibraryApi(token) {
     return res.json();
   };
 
+  // ===== SPOTIFY PREVIEW =====
+  const getSpotifyArtistAlbums = async spotifyId => {
+    const res = await fetchWithAuth(`/api/admin/spotify/artist/${spotifyId}/albums`);
+    return res.json();
+  };
+
+  const getSpotifyAlbumTracks = async spotifyId => {
+    const res = await fetchWithAuth(`/api/admin/spotify/album/${spotifyId}/tracks`);
+    return res.json();
+  };
+
   return {
     // Tracks
     loadTracks,
@@ -229,5 +240,8 @@ export function useLibraryApi(token) {
     loadBlocklist,
     removeFromBlocklist,
     addToBlocklist,
+    // Spotify Preview
+    getSpotifyArtistAlbums,
+    getSpotifyAlbumTracks,
   };
 }

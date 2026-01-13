@@ -49,6 +49,12 @@ export default {
 
     // Expanded artist details
     const expandedArtist = ref(null);
+    const expandedArtistAlbums = ref([]);
+    const expandedAlbum = ref(null);
+    const expandedAlbumTracks = ref([]);
+
+    // Spotify integration toggle
+    const showSpotifyContent = ref(false);
 
     // Rejection modal state
     const showRejectionModal = ref(false);
@@ -144,6 +150,7 @@ export default {
       selectedArtistName.value = artistName;
       albumFilter.value = ''; // Clear album filter
       selectedAlbumName.value = '';
+      searchQuery.value = ''; // Clear search when filtering
       offset.value = 0;
 
       // Switch to appropriate view
@@ -157,6 +164,7 @@ export default {
     const filterByAlbum = (albumId, albumName) => {
       albumFilter.value = albumId;
       selectedAlbumName.value = albumName;
+      searchQuery.value = ''; // Clear search when filtering
       offset.value = 0;
       view.value = 'tracks'; // Switch to tracks view
       loadData();
@@ -352,11 +360,149 @@ export default {
     };
 
     // Artist actions
-    const toggleArtistDetails = artist => {
+    const toggleArtistDetails = async artist => {
       if (expandedArtist.value === artist.id) {
         expandedArtist.value = null;
+        expandedArtistAlbums.value = [];
       } else {
         expandedArtist.value = artist.id;
+        // Load albums for this artist
+        try {
+          const data = await api.loadAlbums({ artist_id: artist.id, limit: 100 });
+          let albums = data.items;
+
+          // If Spotify toggle is on, merge with Spotify data
+          if (showSpotifyContent.value && artist.spotify_id) {
+            try {
+              const spotifyData = await api.getSpotifyArtistAlbums(artist.spotify_id);
+              // Create a map of library albums by spotify_id for fast lookup
+              const libraryAlbumsMap = new Map();
+              albums.forEach(album => {
+                if (album.spotify_id) {
+                  libraryAlbumsMap.set(album.spotify_id, album);
+                }
+              });
+
+              // Create merged array starting with all Spotify albums
+              const mergedAlbums = spotifyData.albums.map(spotifyAlbum => {
+                if (libraryAlbumsMap.has(spotifyAlbum.spotify_id)) {
+                  // This album exists in library - use library data and mark as in_library
+                  const libraryAlbum = libraryAlbumsMap.get(spotifyAlbum.spotify_id);
+                  return {
+                    ...libraryAlbum,
+                    in_library: true
+                  };
+                } else {
+                  // This album is not in library - use Spotify data
+                  return {
+                    ...spotifyAlbum,
+                    id: spotifyAlbum.spotify_id,
+                    in_library: false,
+                    total_tracks: spotifyAlbum.total_tracks || 0,
+                    done_tracks: 0,
+                    pending_tracks: 0,
+                  };
+                }
+              });
+
+              // Sort: library albums first, then Spotify-only albums
+              albums = mergedAlbums.sort((a, b) => {
+                if (a.in_library === b.in_library) return 0;
+                return a.in_library ? -1 : 1;
+              });
+            } catch (e) {
+              console.error('Failed to load Spotify albums:', e);
+              // Continue with just library albums
+              albums.forEach(album => { album.in_library = true; });
+            }
+          } else {
+            // Mark all as in library when not showing Spotify content
+            albums.forEach(album => { album.in_library = true; });
+          }
+
+          expandedArtistAlbums.value = albums;
+        } catch {
+          showError('Failed to load artist albums');
+          expandedArtistAlbums.value = [];
+        }
+      }
+    };
+
+    const toggleAlbumDetails = async album => {
+      if (expandedAlbum.value === album.id) {
+        expandedAlbum.value = null;
+        expandedAlbumTracks.value = [];
+      } else {
+        expandedAlbum.value = album.id;
+        // Load tracks for this album
+        try {
+          // Only load library tracks if album is in library (has database ID that's not a spotify_id)
+          let tracks = [];
+          if (album.in_library !== false) {
+            const data = await api.loadTracks({ album_id: album.id, limit: 100 });
+            tracks = data.items;
+          }
+
+          // If Spotify toggle is on and album has spotify_id, merge with Spotify data
+          if (showSpotifyContent.value && album.spotify_id) {
+            try {
+              const spotifyData = await api.getSpotifyAlbumTracks(album.spotify_id);
+              // Create a map of library tracks by spotify_id
+              const libraryTracksMap = new Map();
+              tracks.forEach(track => {
+                const spotifyId = getSpotifyTrackId(track);
+                if (spotifyId) {
+                  libraryTracksMap.set(spotifyId, track);
+                }
+              });
+
+              // Create merged array starting with all Spotify tracks
+              const mergedTracks = spotifyData.tracks.map(spotifyTrack => {
+                if (libraryTracksMap.has(spotifyTrack.spotify_id)) {
+                  // This track exists in library - use library data and mark as in_library
+                  const libraryTrack = libraryTracksMap.get(spotifyTrack.spotify_id);
+                  return {
+                    ...libraryTrack,
+                    in_library: true,
+                    track_number: spotifyTrack.track_number // Use Spotify's track number for sorting
+                  };
+                } else {
+                  // This track is not in library - use Spotify data
+                  return {
+                    ...spotifyTrack,
+                    id: spotifyTrack.spotify_id,
+                    in_library: false,
+                    status: 'NOT_IN_LIBRARY',
+                    playback_links: [{
+                      platform: 'spotify',
+                      deep_link: spotifyTrack.spotify_url,
+                      is_working: true
+                    }]
+                  };
+                }
+              });
+
+              // Sort by track number
+              tracks = mergedTracks.sort((a, b) => {
+                const aNum = a.track_number || 999;
+                const bNum = b.track_number || 999;
+                return aNum - bNum;
+              });
+            } catch (e) {
+              console.error('Failed to load Spotify tracks:', e);
+              // Continue with just library tracks
+              tracks.forEach(track => { track.in_library = true; });
+            }
+          } else {
+            // Mark all as in library when not showing Spotify content
+            tracks.forEach(track => { track.in_library = true; });
+          }
+
+          expandedAlbumTracks.value = tracks;
+        } catch {
+          showError('Failed to load album tracks');
+          expandedAlbumTracks.value = [];
+        }
       }
     };
 
@@ -491,6 +637,35 @@ export default {
     };
 
     // Helper methods
+    const getSpotifyTrackId = track => {
+      if (!track.playback_links) return null;
+      const spotifyLink = track.playback_links.find(link => link.platform === 'spotify');
+      if (!spotifyLink) return null;
+
+      // Extract ID from spotify:track:ID or https://open.spotify.com/track/ID
+      const match = spotifyLink.deep_link.match(/(?:spotify:track:|\/track\/)([a-zA-Z0-9]+)/);
+      return match ? match[1] : null;
+    };
+
+    const getSpotifyUrl = (type, id) => {
+      if (!id) return null;
+      return `https://open.spotify.com/${type}/${id}`;
+    };
+
+    const getAlbumSpotifyUrl = tracks => {
+      if (!tracks || tracks.length === 0) return null;
+      // Find first track with a Spotify link
+      for (const track of tracks) {
+        const spotifyId = getSpotifyTrackId(track);
+        if (spotifyId) {
+          // Extract album ID from Spotify track URL
+          // We'll just link to the first track for now, which will show the album
+          return `https://open.spotify.com/track/${spotifyId}`;
+        }
+      }
+      return null;
+    };
+
     const statusClass = status => {
       const classes = {
         PENDING: 'bg-yellow-600/20 text-yellow-400',
@@ -591,6 +766,10 @@ export default {
       offset,
       loading,
       expandedArtist,
+      expandedArtistAlbums,
+      expandedAlbum,
+      expandedAlbumTracks,
+      showSpotifyContent,
       selectedIds,
       loadData,
       debouncedSearch,
@@ -611,10 +790,14 @@ export default {
       deleteTrack,
       mergeDuplicates,
       toggleArtistDetails,
+      toggleAlbumDetails,
       approveArtist,
       rejectArtist,
       rejectAlbum,
       removeFromBlocklist,
+      getSpotifyTrackId,
+      getSpotifyUrl,
+      getAlbumSpotifyUrl,
       statusClass,
       statusIcon,
       confidenceClass,
@@ -642,7 +825,21 @@ export default {
             />
 
             <div class="flex justify-between items-center mb-6">
-                <h2 class="font-bold text-xl">📚 Library Manager</h2>
+                <div class="flex items-center gap-4">
+                    <h2 class="font-bold text-xl">📚 Library Manager</h2>
+
+                    <!-- Spotify Integration Toggle -->
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" v-model="showSpotifyContent"
+                               class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-green-600 focus:ring-green-500">
+                        <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
+                            <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                            </svg>
+                            Show missing from Spotify
+                        </span>
+                    </label>
+                </div>
 
                 <!-- Bulk Actions Banner -->
                 <div v-if="selectedIds.size > 0" class="flex items-center gap-4 bg-indigo-900/30 border border-indigo-500/30 px-4 py-2 rounded animate-fade-in">
@@ -730,18 +927,42 @@ export default {
                 </button>
             </div>
 
-            <!-- Active Filters -->
-            <div v-if="artistFilter || albumFilter" class="flex items-center gap-2 mb-4 p-3 bg-indigo-900/20 border border-indigo-700/30 rounded">
-                <span class="text-sm text-gray-400">Active Filters:</span>
-                <span v-if="selectedArtistName" class="text-sm bg-indigo-600 text-white px-2 py-1 rounded">
-                    👤 {{ selectedArtistName }}
-                </span>
-                <span v-if="selectedAlbumName" class="text-sm bg-indigo-600 text-white px-2 py-1 rounded">
-                    💿 {{ selectedAlbumName }}
-                </span>
-                <button @click="clearFilters" class="text-sm bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded ml-auto">
-                    ✕ Clear Filters
-                </button>
+            <!-- Breadcrumb Navigation / Active Filters -->
+            <div v-if="artistFilter || albumFilter" class="mb-4 p-3 bg-indigo-900/20 border border-indigo-700/30 rounded">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm text-gray-400 font-bold">📍 Navigation:</span>
+
+                    <!-- Artist breadcrumb -->
+                    <div v-if="selectedArtistName" class="flex items-center gap-2">
+                        <button @click="artistFilter = ''; selectedArtistName = ''; view = 'artists'; loadData()"
+                                class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors"
+                                title="Back to all artists">
+                            👤 {{ selectedArtistName }}
+                        </button>
+                        <span v-if="view === 'albums' || albumFilter" class="text-gray-500">→</span>
+                    </div>
+
+                    <!-- Album breadcrumb -->
+                    <div v-if="selectedAlbumName && view === 'tracks'" class="flex items-center gap-2">
+                        <button @click="albumFilter = ''; selectedAlbumName = ''; view = 'albums'; loadData()"
+                                class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition-colors"
+                                title="Back to albums">
+                            💿 {{ selectedAlbumName }}
+                        </button>
+                        <span class="text-gray-500">→</span>
+                        <span class="text-sm text-gray-300">Tracks</span>
+                    </div>
+
+                    <!-- View indicator when only artist filter -->
+                    <span v-else-if="selectedArtistName && view === 'albums'" class="text-sm text-gray-300">
+                        Albums
+                    </span>
+
+                    <button @click="clearFilters" class="text-sm bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded ml-auto transition-colors"
+                            title="Clear all filters and return to main view">
+                        ✕ Clear All
+                    </button>
+                </div>
             </div>
 
             <!-- Stats -->
@@ -802,6 +1023,16 @@ export default {
                             </div>
 
                             <div class="flex gap-2">
+                                <a v-if="artist.spotify_id" :href="getSpotifyUrl('artist', artist.spotify_id)"
+                                   target="_blank" rel="noopener noreferrer"
+                                   class="bg-green-700 hover:bg-green-600 px-3 py-2 rounded text-sm flex items-center gap-1"
+                                   title="Open in Spotify"
+                                   @click.stop>
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                                    </svg>
+                                    Spotify
+                                </a>
                                 <button @click.stop="filterByArtist(artist.id, artist.name)"
                                         class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded text-sm"
                                         title="View albums by this artist">
@@ -824,21 +1055,69 @@ export default {
                         </div>
 
                         <!-- Expanded Details -->
-                        <div v-if="expandedArtist === artist.id" class="p-3 bg-gray-950 border-t border-gray-700">
-                            <div v-if="artist.is_isolated" class="text-sm text-gray-400">
-                                ℹ️ This artist has no collaborations with other artists in your database.
-                            </div>
-                            <div v-else>
-                                <div class="text-xs uppercase text-gray-500 mb-2">Collaborates With:</div>
+                        <div v-if="expandedArtist === artist.id" class="p-4 bg-gray-950 border-t border-gray-700 space-y-4">
+                            <!-- Collaborations Section -->
+                            <div v-if="!artist.is_isolated" class="border-b border-gray-800 pb-3">
+                                <div class="text-xs uppercase text-gray-500 font-bold mb-2">🤝 Collaborates With:</div>
                                 <div class="flex flex-wrap gap-2">
-                                    <span v-for="collab in artist.shared_with_artists" :key="collab"
-                                          class="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded border border-blue-600/30">
+                                    <button v-for="collab in artist.shared_with_artists" :key="collab"
+                                          @click.stop="searchQuery = collab; view = 'artists'; loadData()"
+                                          class="text-xs bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-2 py-1 rounded border border-blue-600/30 transition-colors cursor-pointer"
+                                          :title="'Search for ' + collab">
                                         👥 {{ collab }}
-                                    </span>
+                                    </button>
                                 </div>
                                 <div class="text-xs text-gray-500 mt-2">
                                     {{ artist.shared_tracks }} collaborative tracks across {{ artist.shared_albums }} albums
                                 </div>
+                            </div>
+
+                            <!-- Albums Section -->
+                            <div>
+                                <div class="text-xs uppercase text-gray-500 font-bold mb-2">
+                                    💿 Albums ({{ expandedArtistAlbums.length }})
+                                </div>
+                                <div v-if="expandedArtistAlbums.length === 0" class="text-sm text-gray-500 italic">
+                                    Loading albums...
+                                </div>
+                                <div v-else class="space-y-2 max-h-64 overflow-y-auto">
+                                    <div v-for="album in expandedArtistAlbums" :key="album.id"
+                                         class="flex items-center gap-2 p-2 rounded border transition-colors"
+                                         :class="album.in_library === false ? 'bg-gray-900/50 border-orange-700/50' : 'bg-gray-900 hover:bg-gray-800 border-gray-800'">
+                                        <img v-if="album.cover_image_url" :src="album.cover_image_url" class="w-8 h-8 rounded object-cover">
+                                        <div v-else class="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-xs">💿</div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2">
+                                                <div class="text-xs font-medium truncate">{{ album.title }}</div>
+                                                <span v-if="album.in_library === false" class="text-xs bg-orange-600/20 text-orange-400 px-2 py-0.5 rounded border border-orange-600/30 shrink-0">
+                                                    Not in library
+                                                </span>
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ album.total_tracks }} tracks
+                                                <span v-if="album.done_tracks > 0" class="text-green-400">({{ album.done_tracks }} analyzed)</span>
+                                            </div>
+                                        </div>
+                                        <button v-if="album.in_library !== false" @click.stop="filterByAlbum(album.id, album.title)"
+                                                class="bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded text-xs shrink-0"
+                                                title="View tracks in this album">
+                                            🎵 Tracks
+                                        </button>
+                                        <a v-else :href="album.spotify_url || getSpotifyUrl('album', album.spotify_id)"
+                                           target="_blank" rel="noopener noreferrer"
+                                           class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-xs shrink-0 flex items-center gap-1"
+                                           title="Open in Spotify">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                                            </svg>
+                                            Spotify
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="artist.is_isolated" class="text-sm text-gray-400 italic">
+                                ℹ️ This artist has no collaborations with other artists in your database.
                             </div>
                         </div>
                     </div>
@@ -861,40 +1140,98 @@ export default {
 
                 <div v-else class="space-y-2">
                     <div v-for="album in albums" :key="album.id"
-                         class="p-3 bg-gray-900 rounded border border-gray-700 flex items-center gap-3">
+                         class="bg-gray-900 rounded border border-gray-700 overflow-hidden">
 
-                        <input type="checkbox"
-                               :checked="selectedIds.has(album.id)"
-                               @change="toggleSelection(album.id)"
-                               class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-indigo-500">
+                        <div class="p-3 flex items-center gap-3">
+                            <input type="checkbox"
+                                   :checked="selectedIds.has(album.id)"
+                                   @change="toggleSelection(album.id)"
+                                   class="w-5 h-5 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-indigo-500">
 
-                        <img v-if="album.cover_image_url" :src="album.cover_image_url" class="w-12 h-12 rounded object-cover">
-                        <div v-else class="w-12 h-12 bg-gray-800 rounded flex items-center justify-center text-lg">💿</div>
+                            <img v-if="album.cover_image_url" :src="album.cover_image_url" class="w-12 h-12 rounded object-cover">
+                            <div v-else class="w-12 h-12 bg-gray-800 rounded flex items-center justify-center text-lg">💿</div>
 
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm truncate">{{ album.title }}</div>
-                            <div class="text-xs text-gray-400">{{ album.artist_name }}</div>
-                            <div class="text-xs text-gray-500 mt-1">
-                                {{ album.total_tracks }} tracks
-                                <span v-if="album.done_tracks > 0" class="text-green-400">({{ album.done_tracks }} analyzed)</span>
-                                <span v-if="album.pending_tracks > 0" class="text-yellow-400">({{ album.pending_tracks }} pending)</span>
+                            <div @click="toggleAlbumDetails(album)" class="flex-1 min-w-0 cursor-pointer hover:bg-gray-800/50 -m-3 p-3 rounded">
+                                <div class="font-bold text-sm truncate">{{ album.title }}</div>
+                                <div class="text-xs text-gray-400">{{ album.artist_name }}</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    {{ album.total_tracks }} tracks
+                                    <span v-if="album.done_tracks > 0" class="text-green-400">({{ album.done_tracks }} analyzed)</span>
+                                    <span v-if="album.pending_tracks > 0" class="text-yellow-400">({{ album.pending_tracks }} pending)</span>
+                                </div>
+                                <!-- Show all artists as clickable badges -->
+                                <div v-if="album.all_artists && album.all_artists.length > 0" class="flex flex-wrap gap-1 mt-2">
+                                    <button v-for="artistName in album.all_artists" :key="artistName"
+                                            @click.stop="searchQuery = artistName; view = 'artists'; loadData()"
+                                            class="text-xs bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-2 py-0.5 rounded border border-blue-600/30 transition-colors"
+                                            :title="'Search for ' + artistName">
+                                        👤 {{ artistName }}
+                                    </button>
+                                    <span v-if="album.all_artists.length > 1" class="text-xs text-blue-500">
+                                        (🤝 Collaboration)
+                                    </span>
+                                </div>
                             </div>
-                            <div v-if="album.all_artists && album.all_artists.length > 1" class="text-xs text-blue-400 mt-1">
-                                🤝 Collaboration: {{ album.all_artists.join(', ') }}
+
+                            <div class="flex gap-2">
+                                <button @click="filterByAlbum(album.id, album.title)"
+                                        class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded text-sm"
+                                        title="View tracks in this album">
+                                    🎵 Tracks
+                                </button>
+                                <button @click="rejectAlbum(album)"
+                                        class="bg-red-600 hover:bg-red-500 px-3 py-2 rounded text-sm"
+                                        title="Reject album">
+                                    🗑️
+                                </button>
+                                <button @click="toggleAlbumDetails(album)" class="text-gray-400 px-2">
+                                    {{ expandedAlbum === album.id ? '▲' : '▼' }}
+                                </button>
                             </div>
                         </div>
 
-                        <div class="flex gap-2">
-                            <button @click="filterByAlbum(album.id, album.title)"
-                                    class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded text-sm"
-                                    title="View tracks in this album">
-                                🎵 Tracks
-                            </button>
-                            <button @click="rejectAlbum(album)"
-                                    class="bg-red-600 hover:bg-red-500 px-3 py-2 rounded text-sm"
-                                    title="Reject album">
-                                🗑️
-                            </button>
+                        <!-- Expanded Album Tracks Preview -->
+                        <div v-if="expandedAlbum === album.id" class="p-4 bg-gray-950 border-t border-gray-700">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-xs uppercase text-gray-500 font-bold">
+                                    🎵 Tracks ({{ expandedAlbumTracks.length }})
+                                </div>
+                                <a v-if="getAlbumSpotifyUrl(expandedAlbumTracks)"
+                                   :href="getAlbumSpotifyUrl(expandedAlbumTracks)"
+                                   target="_blank" rel="noopener noreferrer"
+                                   class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-xs flex items-center gap-1"
+                                   title="Open in Spotify">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                                    </svg>
+                                    Spotify
+                                </a>
+                            </div>
+                            <div v-if="expandedAlbumTracks.length === 0" class="text-sm text-gray-500 italic">
+                                Loading tracks...
+                            </div>
+                            <div v-else class="space-y-1 max-h-64 overflow-y-auto">
+                                <div v-for="track in expandedAlbumTracks" :key="track.id"
+                                     class="flex items-center gap-2 p-2 rounded text-xs transition-colors"
+                                     :class="track.in_library === false ? 'bg-gray-900/50 border border-orange-700/50' : 'bg-gray-900 hover:bg-gray-800'">
+                                    <InlinePlayer
+                                        :playback-links="track.playback_links || []"
+                                        :track-title="track.title"
+                                    />
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <div class="font-medium truncate">{{ track.title }}</div>
+                                            <span v-if="track.in_library === false" class="text-xs bg-orange-600/20 text-orange-400 px-1.5 py-0.5 rounded border border-orange-600/30 shrink-0">
+                                                Not in library
+                                            </span>
+                                        </div>
+                                        <div class="text-gray-500">{{ track.artists?.join(', ') || '-' }}</div>
+                                    </div>
+                                    <span v-if="track.status && track.status !== 'NOT_IN_LIBRARY'" :class="statusClass(track.status)" class="px-2 py-0.5 rounded text-xs shrink-0">
+                                        {{ statusIcon(track.status) }} {{ track.status }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -928,8 +1265,16 @@ export default {
                             <td class="py-2 px-2 max-w-xs truncate" :title="track.title">
                                 {{ track.title }}
                             </td>
-                            <td class="py-2 px-2 text-gray-400 text-sm max-w-xs truncate">
-                                {{ track.artists?.join(', ') || '-' }}
+                            <td class="py-2 px-2 text-sm max-w-xs">
+                                <div v-if="track.artists && track.artists.length > 0" class="flex flex-wrap gap-1">
+                                    <button v-for="(artistName, idx) in track.artists" :key="idx"
+                                            @click="searchQuery = artistName; view = 'artists'; loadData()"
+                                            class="text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+                                            :title="'Search for ' + artistName">
+                                        {{ artistName }}{{ idx < track.artists.length - 1 ? ',' : '' }}
+                                    </button>
+                                </div>
+                                <span v-else class="text-gray-500">-</span>
                             </td>
                             <td class="py-2 px-2 text-sm">
                                 <template v-if="track.albums && track.albums.length > 0">
@@ -980,6 +1325,15 @@ export default {
                             </td>
                             <td class="py-2 px-2">
                                 <div class="flex gap-1">
+                                    <a v-if="getSpotifyTrackId(track)"
+                                       :href="getSpotifyUrl('track', getSpotifyTrackId(track))"
+                                       target="_blank" rel="noopener noreferrer"
+                                       class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-xs flex items-center"
+                                       title="Open in Spotify">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                                        </svg>
+                                    </a>
                                     <button @click="reanalyze(track)" :disabled="track.loading"
                                             class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-2 py-1 rounded text-xs"
                                             title="Full re-analysis">

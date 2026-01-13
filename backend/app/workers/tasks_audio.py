@@ -81,7 +81,11 @@ def analyze_track_task(self, track_id: str):
 
         print(f"✅ AUDIO WORKER: Finished {track_id}")
 
-        # Clean up TensorFlow resources after successful completion
+        # CRITICAL: Clean up analyzer memory to prevent leaks
+        # This releases TensorFlow models and Essentia resources
+        service.cleanup_analyzer_memory()
+
+        # Clean up remaining Python objects
         cleanup_resources()
         gc.collect()
 
@@ -123,6 +127,12 @@ def analyze_track_task(self, track_id: str):
         raise
     finally:
         # Always cleanup resources, even on failure
+        # This ensures memory is freed even if the task crashes
+        try:
+            service.cleanup_analyzer_memory()
+        except Exception as e:
+            print(f"⚠️ Error during finally cleanup: {e}")
+
         cleanup_resources()
         gc.collect()
         db.close()

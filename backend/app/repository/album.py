@@ -265,6 +265,7 @@ class AlbumRepository(BaseRepository[Album]):
                 "all_artists": all_artists,
                 "cover_image_url": album.cover_image_url,
                 "release_date": album.release_date,
+                "spotify_id": album.spotify_id,
                 "total_tracks": stats['total'],
                 "done_tracks": stats['done'],
                 "pending_tracks": stats['pending'],
@@ -318,6 +319,7 @@ class AlbumRepository(BaseRepository[Album]):
                 "all_artists": all_artists,
                 "cover_image_url": album.cover_image_url,
                 "release_date": album.release_date,
+                "spotify_id": album.spotify_id,
                 "pending_tracks": stats['pending'],
                 "done_tracks": stats['done'],
                 "total_tracks": stats['total']

@@ -73,6 +73,7 @@ class AdminAlbumService:
                 "all_artists": artist_names,
                 "cover_image_url": album.cover_image_url,
                 "release_date": album.release_date,
+                "spotify_id": album.spotify_id,
                 "total_tracks": stats['total'],
                 "done_tracks": stats['done'],
                 "pending_tracks": stats['pending']
@@ -133,6 +134,7 @@ class AdminAlbumService:
                 "all_artists": artist_names,
                 "cover_image_url": album.cover_image_url,
                 "release_date": album.release_date,
+                "spotify_id": album.spotify_id,
                 "pending_tracks": stats['pending'],
                 "done_tracks": stats['done'],
                 "total_tracks": stats['total']

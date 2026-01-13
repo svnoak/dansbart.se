@@ -6,6 +6,7 @@ from app.api.public.schemas import AlbumOut
 
 class AlbumOutAdmin(AlbumOut):
     cover_image_url: Optional[str] = None
+    spotify_id: Optional[str] = None
 
 class AdminArtistListItem(BaseModel):
     id: UUID
