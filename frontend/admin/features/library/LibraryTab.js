@@ -8,12 +8,14 @@ import { useAdminAuth } from '../../shared/composables/useAdminAuth.js';
 import { useLibraryApi } from './api.js';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import RejectionModal from './RejectionModal.js';
+import ConfirmationModal from './ConfirmationModal.js';
 import InlinePlayer from '../../shared/components/InlinePlayer.js';
 import { showError, showToast } from '../../../js/hooks/useToast.js';
 
 export default {
   components: {
     RejectionModal,
+    ConfirmationModal,
     InlinePlayer,
   },
   setup() {
@@ -61,6 +63,17 @@ export default {
     const rejectionEntity = ref(null);
     const rejectionEntityType = ref('artist');
     const collaborationData = ref(null);
+
+    // Confirmation modal state
+    const showConfirmationModal = ref(false);
+    const confirmationData = ref({
+      title: '',
+      message: '',
+      confirmText: 'Confirm',
+      cancelText: 'Cancel',
+      confirmClass: 'bg-blue-600 hover:bg-blue-500',
+      onConfirm: null,
+    });
 
     // Computed
     const pageNumber = computed(() => Math.floor(offset.value / limit.value) + 1);
@@ -506,6 +519,60 @@ export default {
       }
     };
 
+    // Spotify ingestion actions
+    const ingestAlbum = async (spotifyAlbumId, albumTitle) => {
+      // Show confirmation modal
+      confirmationData.value = {
+        title: 'Ingest Album',
+        message: `Ingest album "${albumTitle}" from Spotify?\n\nThis will add all tracks to your library and queue them for analysis.`,
+        confirmText: 'Ingest',
+        cancelText: 'Cancel',
+        confirmClass: 'bg-blue-600 hover:bg-blue-500',
+        onConfirm: async () => {
+          showConfirmationModal.value = false;
+
+          try {
+            const data = await api.ingestSpotifyAlbum(spotifyAlbumId);
+            showToast(`${data.message} - ${data.tracks_ingested} tracks ingested`);
+            // Reload to show new tracks
+            loadData();
+            // Refresh expanded album if it's open
+            if (expandedAlbum.value) {
+              const currentAlbum = { id: expandedAlbum.value, spotify_id: spotifyAlbumId };
+              expandedAlbum.value = null;
+              await toggleAlbumDetails(currentAlbum);
+            }
+          } catch (e) {
+            showError(e.message || 'Failed to ingest album');
+          }
+        },
+      };
+      showConfirmationModal.value = true;
+    };
+
+    const ingestTrack = async (spotifyTrackId) => {
+      try {
+        const data = await api.ingestSpotifyTrack(spotifyTrackId);
+        showToast(`${data.message}`);
+        // Reload to show new track
+        loadData();
+        // Refresh expanded album if it's open
+        if (expandedAlbum.value) {
+          const currentAlbumId = expandedAlbum.value;
+          expandedAlbum.value = null;
+          // Re-open the album to refresh the track list
+          setTimeout(() => {
+            const albumElement = document.querySelector(`[data-album-id="${currentAlbumId}"]`);
+            if (albumElement) {
+              albumElement.click();
+            }
+          }, 500);
+        }
+      } catch (e) {
+        showError(e.message || 'Failed to ingest track');
+      }
+    };
+
     const approveArtist = async artist => {
       const confirmMsg = `Approve artist "${artist.name}"?\n\n• ${artist.pending_tracks} pending tracks will be queued for analysis`;
       if (!confirm(confirmMsg)) return;
@@ -676,16 +743,6 @@ export default {
       return classes[status] || 'bg-gray-600/20 text-gray-400';
     };
 
-    const statusIcon = status => {
-      const icons = {
-        PENDING: '⏳',
-        PROCESSING: '🔄',
-        DONE: '✅',
-        FAILED: '❌',
-      };
-      return icons[status] || '❓';
-    };
-
     const confidenceClass = confidence => {
       if (confidence >= 0.9) return 'text-green-400';
       if (confidence >= 0.75) return 'text-blue-400';
@@ -795,11 +852,12 @@ export default {
       rejectArtist,
       rejectAlbum,
       removeFromBlocklist,
+      ingestAlbum,
+      ingestTrack,
       getSpotifyTrackId,
       getSpotifyUrl,
       getAlbumSpotifyUrl,
       statusClass,
-      statusIcon,
       confidenceClass,
       pageNumber,
       totalPages,
@@ -810,6 +868,9 @@ export default {
       collaborationData,
       closeRejectionModal,
       confirmRejection,
+      // Confirmation modal
+      showConfirmationModal,
+      confirmationData,
     };
   },
   template: /*html*/ `
@@ -822,6 +883,18 @@ export default {
                 :collaboration-data="collaborationData"
                 @close="closeRejectionModal"
                 @confirm="confirmRejection"
+            />
+
+            <!-- Confirmation Modal -->
+            <ConfirmationModal
+                :show="showConfirmationModal"
+                :title="confirmationData.title"
+                :message="confirmationData.message"
+                :confirm-text="confirmationData.confirmText"
+                :cancel-text="confirmationData.cancelText"
+                :confirm-class="confirmationData.confirmClass"
+                @confirm="confirmationData.onConfirm"
+                @cancel="showConfirmationModal = false"
             />
 
             <div class="flex justify-between items-center mb-6">
@@ -1103,15 +1176,22 @@ export default {
                                                 title="View tracks in this album">
                                             🎵 Tracks
                                         </button>
-                                        <a v-else :href="album.spotify_url || getSpotifyUrl('album', album.spotify_id)"
-                                           target="_blank" rel="noopener noreferrer"
-                                           class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-xs shrink-0 flex items-center gap-1"
-                                           title="Open in Spotify">
-                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                                            </svg>
-                                            Spotify
-                                        </a>
+                                        <template v-else>
+                                            <button @click.stop="ingestAlbum(album.spotify_id, album.title)"
+                                                    class="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded text-xs shrink-0"
+                                                    title="Ingest this album into library">
+                                                Ingest
+                                            </button>
+                                            <a :href="album.spotify_url || getSpotifyUrl('album', album.spotify_id)"
+                                               target="_blank" rel="noopener noreferrer"
+                                               class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-xs shrink-0 flex items-center gap-1"
+                                               title="Open in Spotify">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                                                </svg>
+                                                Spotify
+                                            </a>
+                                        </template>
                                     </div>
                                 </div>
                             </div>
@@ -1227,8 +1307,13 @@ export default {
                                         </div>
                                         <div class="text-gray-500">{{ track.artists?.join(', ') || '-' }}</div>
                                     </div>
+                                    <button v-if="track.in_library === false" @click.stop="ingestTrack(track.spotify_id)"
+                                            class="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded text-xs shrink-0"
+                                            title="Ingest this track into library">
+                                        Ingest
+                                    </button>
                                     <span v-if="track.status && track.status !== 'NOT_IN_LIBRARY'" :class="statusClass(track.status)" class="px-2 py-0.5 rounded text-xs shrink-0">
-                                        {{ statusIcon(track.status) }} {{ track.status }}
+                                        {{ track.status }}
                                     </span>
                                 </div>
                             </div>
@@ -1305,7 +1390,7 @@ export default {
                             </td>
                             <td class="py-2 px-2">
                                 <span :class="statusClass(track.status)" class="px-2 py-1 rounded text-xs font-medium">
-                                    {{ statusIcon(track.status) }} {{ track.status }}
+                                    {{ track.status }}
                                 </span>
                             </td>
                             <td class="py-2 px-2">{{ track.dance_style || '-' }}</td>

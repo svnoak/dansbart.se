@@ -236,6 +236,13 @@ class SpotifyIngestor:
             'spotify_id': album_obj.get('id')  # Spotify album ID
         }
 
+        # Debug logging for spotify_id extraction
+        if album_data.get('spotify_id'):
+            print(f"   🔍 Album spotify_id extracted: {album_data['spotify_id']} for '{album_data['name']}'")
+        else:
+            print(f"   ⚠️  WARNING: No spotify_id found for album '{album_data['name']}'")
+            print(f"   Album object keys: {list(album_obj.keys())}")
+
         # Artists Info (List of dicts)
         artists_data = []
         for artist in sp_track.get('artists', []):
@@ -302,10 +309,12 @@ class SpotifyIngestor:
                         )
                         self.db.add(album)
                         self.db.flush()
+                        print(f"   ✅ Created album: '{album_data['name']}' with spotify_id: {album_data.get('spotify_id')}")
                     elif not album.spotify_id and album_data.get('spotify_id'):
                         # Update existing album with spotify_id if it doesn't have one
                         album.spotify_id = album_data.get('spotify_id')
                         self.db.flush()
+                        print(f"   🔄 Updated album '{album.title}' with spotify_id: {album_data.get('spotify_id')}")
 
                     # Check if track is already linked to this album
                     existing_link = self.db.query(TrackAlbum).filter(

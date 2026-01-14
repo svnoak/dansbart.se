@@ -2,9 +2,13 @@
 Spotify Preview API
 Fetch data directly from Spotify for preview/comparison purposes
 without ingesting into the database.
+Also provides endpoints for manual ingestion of Spotify content.
 """
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.core.config import settings
+from app.core.database import get_db
 
 router = APIRouter()
 
@@ -146,4 +150,126 @@ def get_album_tracks(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch tracks from Spotify: {str(e)}"
+        )
+
+
+# ===== INGESTION ENDPOINTS =====
+
+class IngestAlbumRequest(BaseModel):
+    spotify_album_id: str
+
+
+class IngestTrackRequest(BaseModel):
+    spotify_track_id: str
+
+
+@router.post("/ingest/album")
+def ingest_album(
+    request: IngestAlbumRequest,
+    background_tasks: BackgroundTasks,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Ingest a single album from Spotify by its ID.
+    Fetches all tracks and queues them for analysis.
+    """
+    try:
+        from app.workers.ingestion.spotify import SpotifyIngestor
+
+        # Create ingestor and ingest album
+        ingestor = SpotifyIngestor(db)
+
+        # Fetch album from Spotify
+        sp = get_spotify_client()
+        album_data = sp.album(request.spotify_album_id)
+
+        if not album_data:
+            raise HTTPException(status_code=404, detail="Album not found on Spotify")
+
+        # Process all tracks in the album
+        tracks_ingested = 0
+        tracks_skipped = 0
+
+        for track_item in album_data['tracks']['items']:
+            track_id = track_item['id']
+
+            # Fetch full track details
+            track_data = sp.track(track_id)
+
+            # Use existing ingestion logic
+            # Note: SpotifyIngestor doesn't have ingest_single_track, we'll use _process_single_track
+            db_track = ingestor._process_single_track(track_data)
+
+            if db_track:
+                tracks_ingested += 1
+            else:
+                tracks_skipped += 1
+
+        db.commit()
+
+        return {
+            "status": "success",
+            "message": f"Ingested album '{album_data['name']}'",
+            "album_title": album_data['name'],
+            "tracks_ingested": tracks_ingested,
+            "tracks_skipped": tracks_skipped,
+            "total_tracks": len(album_data['tracks']['items'])
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to ingest album: {str(e)}"
+        )
+
+
+@router.post("/ingest/track")
+def ingest_track(
+    request: IngestTrackRequest,
+    _: bool = Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Ingest a single track from Spotify by its ID.
+    Queues the track for analysis.
+    """
+    try:
+        from app.workers.ingestion.spotify import SpotifyIngestor
+
+        # Create ingestor
+        ingestor = SpotifyIngestor(db)
+
+        # Fetch track from Spotify
+        sp = get_spotify_client()
+        track_data = sp.track(request.spotify_track_id)
+
+        if not track_data:
+            raise HTTPException(status_code=404, detail="Track not found on Spotify")
+
+        # Ingest track
+        db_track = ingestor._process_single_track(track_data)
+
+        db.commit()
+
+        if db_track:
+            return {
+                "status": "success",
+                "message": f"Ingested track '{track_data['name']}'",
+                "track_title": track_data['name'],
+                "track_id": str(db_track.id)
+            }
+        else:
+            return {
+                "status": "skipped",
+                "message": "Track was skipped (already exists or failed)",
+                "track_title": track_data['name']
+            }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to ingest track: {str(e)}"
         )

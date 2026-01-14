@@ -277,12 +277,14 @@ class TrackRepository(BaseRepository[Track]):
                 )
                 self.db.add(album)
                 self.db.flush()
+                print(f"   ✅ [TrackRepo] Created album: '{album_data['name']}' with spotify_id: {album_data.get('spotify_id')}")
             else:
                 album = existing_album
                 # Update spotify_id if album exists but doesn't have one
                 if not album.spotify_id and album_data.get('spotify_id'):
                     album.spotify_id = album_data.get('spotify_id')
                     self.db.flush()
+                    print(f"   🔄 [TrackRepo] Updated album '{album.title}' with spotify_id: {album_data.get('spotify_id')}")
 
         # 3. Track
         new_track = Track(title=title, isrc=isrc, duration_ms=duration_ms)

@@ -212,6 +212,25 @@ export function useLibraryApi(token) {
     return res.json();
   };
 
+  // ===== SPOTIFY INGESTION =====
+  const ingestSpotifyAlbum = async spotifyAlbumId => {
+    const res = await fetchWithAuth('/api/admin/spotify/ingest/album', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ spotify_album_id: spotifyAlbumId }),
+    });
+    return res.json();
+  };
+
+  const ingestSpotifyTrack = async spotifyTrackId => {
+    const res = await fetchWithAuth('/api/admin/spotify/ingest/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ spotify_track_id: spotifyTrackId }),
+    });
+    return res.json();
+  };
+
   return {
     // Tracks
     loadTracks,
@@ -243,5 +262,8 @@ export function useLibraryApi(token) {
     // Spotify Preview
     getSpotifyArtistAlbums,
     getSpotifyAlbumTracks,
+    // Spotify Ingestion
+    ingestSpotifyAlbum,
+    ingestSpotifyTrack,
   };
 }
