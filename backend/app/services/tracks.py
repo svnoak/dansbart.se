@@ -394,8 +394,7 @@ class TrackService:
         if track.album:
             album_data = {
                 "id": track.album.id,
-                "title": track.album.title,
-                "cover_image_url": track.album.cover_image_url
+                "title": track.album.title
             }
 
         # Format albums (all albums this track appears in)

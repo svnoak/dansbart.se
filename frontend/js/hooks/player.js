@@ -42,7 +42,6 @@ const saveQueueToStorage = () => {
 const loadQueueFromStorage = async () => {
   try {
     const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-    const storedIndex = localStorage.getItem(QUEUE_INDEX_KEY);
 
     if (!stored) return;
 
@@ -67,12 +66,8 @@ const loadQueueFromStorage = async () => {
 
     if (validTracks.length > 0) {
       queue.value = validTracks;
-      currentIndex.value = storedIndex ? parseInt(storedIndex) : -1;
-
-      // Ensure index is within bounds
-      if (currentIndex.value >= validTracks.length) {
-        currentIndex.value = validTracks.length - 1;
-      }
+      // Don't restore the current index - keep player hidden until user plays something
+      currentIndex.value = -1;
     }
   } catch {
     showError();

@@ -87,9 +87,31 @@ export default {
       // Track view all click
       trackInteraction(AnalyticsEvents.DISCOVERY_PLAYLIST_VIEW_ALL, null, { playlist_id: playlist.id });
 
-      // Navigate to search with playlist filters
-      // For now, just navigate to search - could add specific filters later
-      emit('navigate-to-search', {});
+      // Navigate to search with playlist-specific filters
+      const searchFilters = {};
+
+      // Build filters based on playlist type
+      switch (playlist.id) {
+        case 'party':
+          // No specific filter - party mix has variety
+          break;
+        case 'beginner-friendly':
+          // No vocals, instrumental tracks for learning
+          searchFilters.vocals = 'instrumental';
+          searchFilters.tempo = '130';
+          break;
+        case 'slow':
+          searchFilters.tempo = '70';
+          break;
+        case 'fast':
+          searchFilters.tempo = '180';
+          break;
+        case 'instrumental':
+          searchFilters.vocals = 'instrumental';
+          break;
+      }
+
+      emit('navigate-to-search', searchFilters);
     };
 
     return {

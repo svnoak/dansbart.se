@@ -256,7 +256,11 @@ def get_popular_tracks(
     """
     Get most played tracks with good completion rates for discovery page.
     Uses playback analytics to surface engaging tracks.
+    Falls back to recent high-confidence tracks if no analytics data.
     """
+    from app.core.models import Track, PlaybackLink, TrackDanceStyle, TrackArtist, TrackAlbum
+    from sqlalchemy.orm import selectinload, joinedload
+
     analytics_service = AnalyticsService
     track_service = TrackService(db)
 
@@ -278,6 +282,34 @@ def get_popular_tracks(
         track = track_service.get_track_by_id(track_id)
         if track:
             tracks.append(track)
+
+    # Fallback: if we don't have enough tracks, get recent high-confidence tracks
+    if len(tracks) < limit:
+        fallback_query = db.query(Track).join(
+            Track.playback_links
+        ).join(
+            Track.dance_styles
+        ).filter(
+            PlaybackLink.is_working == True,
+            Track.is_flagged == False,
+            TrackDanceStyle.is_primary == True,
+            TrackDanceStyle.confidence >= 0.8
+        ).options(
+            selectinload(Track.dance_styles),
+            selectinload(Track.artist_links).joinedload(TrackArtist.artist),
+            selectinload(Track.album_links).joinedload(TrackAlbum.album),
+            selectinload(Track.playback_links)
+        ).order_by(Track.created_at.desc()).limit(limit).distinct()
+
+        for track_model in fallback_query.all():
+            if len(tracks) >= limit:
+                break
+            # Skip if already in list
+            if any(t['id'] == str(track_model.id) for t in tracks):
+                continue
+            formatted = track_service.format_track(track_model)
+            if formatted:
+                tracks.append(formatted)
 
     return tracks
 
