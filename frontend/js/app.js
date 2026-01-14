@@ -22,6 +22,7 @@ import Toast from './components/toasts/Toast.js';
 import SimilarTracksModal from './components/SimilarTracksModal.js';
 import PlaylistModal from './components/modals/PlaylistModal.js';
 import DiscoveryPage from './components/DiscoveryPage.js';
+import SearchPage from './components/SearchPage.js';
 import ClassifyPage from './components/ClassifyPage.js';
 import ArtistPage from './components/ArtistPage.js';
 import AlbumPage from './components/AlbumPage.js';
@@ -41,6 +42,7 @@ const app = createApp({
     'similar-tracks-modal': SimilarTracksModal,
     'playlist-modal': PlaylistModal,
     'discovery-page': DiscoveryPage,
+    'search-page': SearchPage,
     'classify-page': ClassifyPage,
     'artist-page': ArtistPage,
     'album-page': AlbumPage,
@@ -224,8 +226,48 @@ const app = createApp({
       if (observer) observer.disconnect();
     });
 
+    // Compute loading states based on active search type
+    const loading = computed(() => {
+      const searchType = filterLogic.filters.value.searchType;
+      if (searchType === 'tracks') return trackLogic.loading.value;
+      if (searchType === 'artists') return artistsLogic.loading.value;
+      if (searchType === 'albums') return albumsLogic.loading.value;
+      return false;
+    });
+
+    const loadingMore = computed(() => {
+      const searchType = filterLogic.filters.value.searchType;
+      if (searchType === 'tracks') return trackLogic.loadingMore.value;
+      if (searchType === 'artists') return artistsLogic.loadingMore.value;
+      if (searchType === 'albums') return albumsLogic.loadingMore.value;
+      return false;
+    });
+
+    const hasMore = computed(() => {
+      const searchType = filterLogic.filters.value.searchType;
+      if (searchType === 'tracks') return trackLogic.hasMore.value;
+      if (searchType === 'artists') return artistsLogic.hasMore.value;
+      if (searchType === 'albums') return albumsLogic.hasMore.value;
+      return false;
+    });
+
+    // Watch for page navigation to trigger initial data fetch
     watch(
-      () => trackLogic.loading.value,
+      () => currentPage.value,
+      (newPage) => {
+        if (newPage === 'search' && filterLogic.filters.value.searchType === 'tracks') {
+          trackLogic.fetchTracks();
+        } else if (newPage === 'search' && filterLogic.filters.value.searchType === 'artists') {
+          artistsLogic.fetchArtists();
+        } else if (newPage === 'search' && filterLogic.filters.value.searchType === 'albums') {
+          albumsLogic.fetchAlbums();
+        }
+      },
+      { immediate: true }
+    );
+
+    watch(
+      () => loading.value,
       async isLoading => {
         if (!isLoading) {
           await nextTick(); // Wait for v-else to render the div
@@ -259,9 +301,20 @@ const app = createApp({
     );
 
     return {
-      ...trackLogic,
-      ...artistsLogic,
-      ...albumsLogic,
+      // Data
+      tracks: trackLogic.tracks,
+      artists: artistsLogic.artists,
+      albums: albumsLogic.albums,
+      // Computed loading states based on searchType
+      loading,
+      loadingMore,
+      hasMore,
+      // Fetch functions
+      fetchTracks: trackLogic.fetchTracks,
+      loadMore: trackLogic.loadMore,
+      fetchArtists: artistsLogic.fetchArtists,
+      fetchAlbums: albumsLogic.fetchAlbums,
+      // Player logic
       ...playerLogic,
       filters: filterLogic.filters,
       styleTree: filterLogic.styleTree,
