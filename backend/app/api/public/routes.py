@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException, Header
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from app.core.database import get_db, SessionLocal
 from app.api.public.schemas import (
     TrackOut, LinkSubmission, FeedbackIn, StructureIn,
@@ -20,6 +22,14 @@ from app.services.analytics import AnalyticsService
 from app.services.data_export import DataExportService
 
 router = APIRouter()
+
+@router.get("/health")
+def health(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "healthy", "db": "connected"}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=503, detail=f"Database unreachable")
 
 @router.get("/styles/tree")
 def get_style_tree(db: Session = Depends(get_db)):
