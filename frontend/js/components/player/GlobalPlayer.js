@@ -585,7 +585,7 @@ export default {
   },
 
   template: /*html*/ `
-    <div v-if="currentTrack">
+    <div v-if="currentTrack && currentIndex >= 0">
     
         <player-mobile-view
             :current-page="currentPage"
