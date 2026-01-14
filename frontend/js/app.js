@@ -22,6 +22,7 @@ import Toast from './components/toasts/Toast.js';
 import SimilarTracksModal from './components/SimilarTracksModal.js';
 import PlaylistModal from './components/modals/PlaylistModal.js';
 import DiscoveryPage from './components/DiscoveryPage.js';
+import SearchPage from './components/SearchPage.js';
 import ClassifyPage from './components/ClassifyPage.js';
 import ArtistPage from './components/ArtistPage.js';
 import AlbumPage from './components/AlbumPage.js';
@@ -41,6 +42,7 @@ const app = createApp({
     'similar-tracks-modal': SimilarTracksModal,
     'playlist-modal': PlaylistModal,
     'discovery-page': DiscoveryPage,
+    'search-page': SearchPage,
     'classify-page': ClassifyPage,
     'artist-page': ArtistPage,
     'album-page': AlbumPage,
@@ -224,6 +226,21 @@ const app = createApp({
       if (observer) observer.disconnect();
     });
 
+    // Watch for page navigation to trigger initial data fetch
+    watch(
+      () => currentPage.value,
+      (newPage) => {
+        if (newPage === 'search' && filterLogic.filters.value.searchType === 'tracks') {
+          trackLogic.fetchTracks();
+        } else if (newPage === 'search' && filterLogic.filters.value.searchType === 'artists') {
+          artistsLogic.fetchArtists();
+        } else if (newPage === 'search' && filterLogic.filters.value.searchType === 'albums') {
+          albumsLogic.fetchAlbums();
+        }
+      },
+      { immediate: true }
+    );
+
     watch(
       () => trackLogic.loading.value,
       async isLoading => {
@@ -259,9 +276,20 @@ const app = createApp({
     );
 
     return {
-      ...trackLogic,
-      ...artistsLogic,
-      ...albumsLogic,
+      // Track logic (use loading from tracks since it's checked in SearchPage)
+      tracks: trackLogic.tracks,
+      loading: trackLogic.loading,
+      loadingMore: trackLogic.loadingMore,
+      hasMore: trackLogic.hasMore,
+      fetchTracks: trackLogic.fetchTracks,
+      loadMore: trackLogic.loadMore,
+      // Artists logic
+      artists: artistsLogic.artists,
+      fetchArtists: artistsLogic.fetchArtists,
+      // Albums logic
+      albums: albumsLogic.albums,
+      fetchAlbums: albumsLogic.fetchAlbums,
+      // Player logic
       ...playerLogic,
       filters: filterLogic.filters,
       styleTree: filterLogic.styleTree,

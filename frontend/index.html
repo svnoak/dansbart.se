@@ -74,178 +74,57 @@
           ></album-page>
         </div>
 
-        <!-- Search Page View (existing) -->
-        <div v-else>
-          <div class="max-w-4xl mx-auto mb-8 text-center">
-            <stats-dashboard></stats-dashboard>
-          </div>
-
-          <filter-bar
-            v-model:main-style="filters.mainStyle"
-            v-model:sub-style="filters.subStyle"
-            v-model:search="filters.search"
-            v-model:search-type="filters.searchType"
-            v-model:source="filters.source"
-            v-model:vocals="filters.vocals"
-            v-model:style-confirmed="filters.styleConfirmed"
-            v-model:traditional-only="filters.traditionalOnly"
-            v-model:min-duration="filters.minDuration"
-            v-model:max-duration="filters.maxDuration"
-            v-model:target-tempo="targetTempo"
-            v-model:tempo-enabled="tempoEnabled"
-            v-model:min-bounciness="minBounciness"
-            v-model:max-bounciness="maxBounciness"
-            v-model:bounciness-enabled="bouncinessEnabled"
-            v-model:min-articulation="minArticulation"
-            v-model:max-articulation="maxArticulation"
-            v-model:articulation-enabled="articulationEnabled"
-            :computed-min="computedMin"
-            :computed-max="computedMax"
-            :style-tree="styleTree"
-            @filter-style="handleFilterStyle"
-          ></filter-bar>
-
-          <div class="max-w-4xl mx-auto">
-            <!-- Tracks View -->
-            <div v-if="filters.searchType === 'tracks'">
-              <div v-if="loading" class="text-center py-12">Loading...</div>
-
-              <div v-else class="grid gap-4">
-                <track-card
-                  v-for="track in tracks"
-                  :key="track.id"
-                  :track="track"
-                  :current-track="currentTrack"
-                  :is-spotify-mode="activeSource === 'spotify'"
-                  :is-playing="isPlaying"
-                  @play="handlePlay"
-                  @stop="togglePlay"
-                  @refresh="fetchTracks"
-                  @filter-style="handleFilterStyle"
-                  @show-similar="showSimilarModal"
-                  @add-to-queue="addToQueue"
-                  @navigate-to-artist="navigateToArtist"
-                  @navigate-to-album="navigateToAlbum"
-                ></track-card>
-
-                <div
-                  ref="scrollTrigger"
-                  class="py-8 text-center w-full"
-                  style="min-height: 50px; display: block"
-                >
-                  <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
-                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                        fill="none"
-                      ></circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      ></path>
-                    </svg>
-                    <span>Laddar fler...</span>
-                  </div>
-                  <div v-else-if="!hasMore && tracks.length > 0" class="text-gray-400 text-sm">
-                    Inga fler låtar att visa
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Artists View -->
-            <div v-else-if="filters.searchType === 'artists'">
-              <div v-if="loading" class="text-center py-12">Loading...</div>
-
-              <div v-else class="grid gap-4">
-                <artist-card
-                  v-for="artist in artists"
-                  :key="artist.id"
-                  :artist="artist"
-                  @navigate-to-artist="navigateToArtist"
-                ></artist-card>
-
-                <div
-                  ref="scrollTrigger"
-                  class="py-8 text-center w-full"
-                  style="min-height: 50px; display: block"
-                >
-                  <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
-                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                        fill="none"
-                      ></circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      ></path>
-                    </svg>
-                    <span>Laddar fler...</span>
-                  </div>
-                  <div v-else-if="!hasMore && artists.length > 0" class="text-gray-400 text-sm">
-                    Inga fler artister att visa
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Albums View -->
-            <div v-else-if="filters.searchType === 'albums'">
-              <div v-if="loading" class="text-center py-12">Loading...</div>
-
-              <div v-else class="grid gap-4">
-                <album-card
-                  v-for="album in albums"
-                  :key="album.id"
-                  :album="album"
-                  @navigate-to-album="navigateToAlbum"
-                ></album-card>
-
-                <div
-                  ref="scrollTrigger"
-                  class="py-8 text-center w-full"
-                  style="min-height: 50px; display: block"
-                >
-                  <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
-                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                        fill="none"
-                      ></circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      ></path>
-                    </svg>
-                    <span>Laddar fler...</span>
-                  </div>
-                  <div v-else-if="!hasMore && albums.length > 0" class="text-gray-400 text-sm">
-                    Inga fler album att visa
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Search Page View -->
+        <search-page
+          v-else
+          :filters="filters"
+          :style-tree="styleTree"
+          :target-tempo="targetTempo"
+          :tempo-enabled="tempoEnabled"
+          :computed-min="computedMin"
+          :computed-max="computedMax"
+          :min-bounciness="minBounciness"
+          :max-bounciness="maxBounciness"
+          :bounciness-enabled="bouncinessEnabled"
+          :min-articulation="minArticulation"
+          :max-articulation="maxArticulation"
+          :articulation-enabled="articulationEnabled"
+          :tracks="tracks"
+          :loading="loading"
+          :loading-more="loadingMore"
+          :has-more="hasMore"
+          :artists="artists"
+          :albums="albums"
+          :current-track="currentTrack"
+          :is-playing="isPlaying"
+          :active-source="activeSource"
+          @update:main-style="filters.mainStyle = $event"
+          @update:sub-style="filters.subStyle = $event"
+          @update:search="filters.search = $event"
+          @update:search-type="filters.searchType = $event"
+          @update:source="filters.source = $event"
+          @update:vocals="filters.vocals = $event"
+          @update:style-confirmed="filters.styleConfirmed = $event"
+          @update:traditional-only="filters.traditionalOnly = $event"
+          @update:min-duration="filters.minDuration = $event"
+          @update:max-duration="filters.maxDuration = $event"
+          @update:target-tempo="targetTempo = $event"
+          @update:tempo-enabled="tempoEnabled = $event"
+          @update:min-bounciness="minBounciness = $event"
+          @update:max-bounciness="maxBounciness = $event"
+          @update:bounciness-enabled="bouncinessEnabled = $event"
+          @update:min-articulation="minArticulation = $event"
+          @update:max-articulation="maxArticulation = $event"
+          @update:articulation-enabled="articulationEnabled = $event"
+          @filter-style="handleFilterStyle"
+          @play="handlePlay"
+          @stop="togglePlay"
+          @refresh="fetchTracks"
+          @show-similar="showSimilarModal"
+          @add-to-queue="addToQueue"
+          @navigate-to-artist="navigateToArtist"
+          @navigate-to-album="navigateToAlbum"
+        ></search-page>
       </div>
 
       <global-player
