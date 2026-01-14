@@ -164,7 +164,7 @@ export default {
               class="py-8 text-center w-full"
               style="min-height: 50px; display: block"
             >
-              <div v-if="tracksLoadingMore" class="flex items-center justify-center gap-2 text-gray-500">
+              <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
                 <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
                   <circle
                     class="opacity-25"
@@ -183,7 +183,7 @@ export default {
                 </svg>
                 <span>Laddar fler...</span>
               </div>
-              <div v-else-if="!tracksHasMore && tracks.length > 0" class="text-gray-400 text-sm">
+              <div v-else-if="!hasMore && tracks.length > 0" class="text-gray-400 text-sm">
                 Inga fler låtar att visa
               </div>
             </div>
@@ -192,7 +192,7 @@ export default {
 
         <!-- Artists View -->
         <div v-else-if="filters.searchType === 'artists'">
-          <div v-if="artistsLoading" class="grid gap-4">
+          <div v-if="loading" class="grid gap-4">
             <div v-for="i in 5" :key="i" class="bg-white rounded-xl shadow-sm p-6 animate-pulse">
               <div class="flex gap-4">
                 <div class="w-16 h-16 bg-gray-200 rounded-full flex-shrink-0"></div>
@@ -217,7 +217,7 @@ export default {
               class="py-8 text-center w-full"
               style="min-height: 50px; display: block"
             >
-              <div v-if="artistsLoadingMore" class="flex items-center justify-center gap-2 text-gray-500">
+              <div v-if="loadingMore" class="flex items-center justify-center gap-2 text-gray-500">
                 <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
                   <circle
                     class="opacity-25"
@@ -236,7 +236,7 @@ export default {
                 </svg>
                 <span>Laddar fler...</span>
               </div>
-              <div v-else-if="!artistsHasMore && artists.length > 0" class="text-gray-400 text-sm">
+              <div v-else-if="!hasMore && artists.length > 0" class="text-gray-400 text-sm">
                 Inga fler artister att visa
               </div>
             </div>
@@ -245,7 +245,7 @@ export default {
 
         <!-- Albums View -->
         <div v-else-if="filters.searchType === 'albums'">
-          <div v-if="albumsLoading" class="grid gap-4">
+          <div v-if="loading" class="grid gap-4">
             <div v-for="i in 5" :key="i" class="bg-white rounded-xl shadow-sm p-6 animate-pulse">
               <div class="flex gap-4">
                 <div class="w-16 h-16 bg-gray-200 rounded flex-shrink-0"></div>

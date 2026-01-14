@@ -226,6 +226,31 @@ const app = createApp({
       if (observer) observer.disconnect();
     });
 
+    // Compute loading states based on active search type
+    const loading = computed(() => {
+      const searchType = filterLogic.filters.value.searchType;
+      if (searchType === 'tracks') return trackLogic.loading.value;
+      if (searchType === 'artists') return artistsLogic.loading.value;
+      if (searchType === 'albums') return albumsLogic.loading.value;
+      return false;
+    });
+
+    const loadingMore = computed(() => {
+      const searchType = filterLogic.filters.value.searchType;
+      if (searchType === 'tracks') return trackLogic.loadingMore.value;
+      if (searchType === 'artists') return artistsLogic.loadingMore.value;
+      if (searchType === 'albums') return albumsLogic.loadingMore.value;
+      return false;
+    });
+
+    const hasMore = computed(() => {
+      const searchType = filterLogic.filters.value.searchType;
+      if (searchType === 'tracks') return trackLogic.hasMore.value;
+      if (searchType === 'artists') return artistsLogic.hasMore.value;
+      if (searchType === 'albums') return albumsLogic.hasMore.value;
+      return false;
+    });
+
     // Watch for page navigation to trigger initial data fetch
     watch(
       () => currentPage.value,
@@ -242,7 +267,7 @@ const app = createApp({
     );
 
     watch(
-      () => trackLogic.loading.value,
+      () => loading.value,
       async isLoading => {
         if (!isLoading) {
           await nextTick(); // Wait for v-else to render the div
@@ -276,18 +301,18 @@ const app = createApp({
     );
 
     return {
-      // Track logic (use loading from tracks since it's checked in SearchPage)
+      // Data
       tracks: trackLogic.tracks,
-      loading: trackLogic.loading,
-      loadingMore: trackLogic.loadingMore,
-      hasMore: trackLogic.hasMore,
+      artists: artistsLogic.artists,
+      albums: albumsLogic.albums,
+      // Computed loading states based on searchType
+      loading,
+      loadingMore,
+      hasMore,
+      // Fetch functions
       fetchTracks: trackLogic.fetchTracks,
       loadMore: trackLogic.loadMore,
-      // Artists logic
-      artists: artistsLogic.artists,
       fetchArtists: artistsLogic.fetchArtists,
-      // Albums logic
-      albums: albumsLogic.albums,
       fetchAlbums: albumsLogic.fetchAlbums,
       // Player logic
       ...playerLogic,
