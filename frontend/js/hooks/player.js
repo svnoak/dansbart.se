@@ -276,6 +276,7 @@ export function usePlayer() {
   const cycleRepeatMode = () => {
     if (repeatMode.value === 'none') repeatMode.value = 'all';
     else if (repeatMode.value === 'all') repeatMode.value = 'one';
+    else if (repeatMode.value === 'one') repeatMode.value = 'stop';
     else repeatMode.value = 'none';
   };
 

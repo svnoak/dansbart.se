@@ -116,7 +116,7 @@ export default {
                 repeatMode !== 'none' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600',
                 fullMode ? 'flex' : 'hidden md:flex'
             ]"
-            :aria-label="repeatMode === 'one' ? 'Repetera en låt, klicka för att stänga av' : repeatMode === 'all' ? 'Repetera alla, klicka för att repetera en' : 'Repetera av, klicka för att repetera alla'"
+            :aria-label="repeatMode === 'one' ? 'Repetera en låt, klicka för att stoppa efter spår' : repeatMode === 'all' ? 'Repetera alla, klicka för att repetera en' : repeatMode === 'stop' ? 'Stoppa efter spår, klicka för att stänga av' : 'Repetera av, klicka för att repetera alla'"
             :aria-pressed="repeatMode !== 'none'"
             title="Repeat">
 
@@ -132,6 +132,18 @@ export default {
                   aria-hidden="true">
                 1
             </span>
+
+            <svg v-if="repeatMode === 'stop'"
+                 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="#dc2626"
+                 stroke-width="3"
+                 stroke-linecap="round"
+                 aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
         </button>
 
         <!-- Queue -->

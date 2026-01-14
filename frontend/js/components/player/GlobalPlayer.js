@@ -335,6 +335,8 @@ export default {
       if (this.repeatMode === 'one') {
         this.handleSeek(0);
         if (this.$refs.ytEngine) this.$refs.ytEngine.play();
+      } else if (this.repeatMode === 'stop') {
+        this.isPlaying = false;
       } else {
         this.nextTrack();
       }
