@@ -4,6 +4,7 @@ from app.api.public.routes import router
 from app.api.admin import router as admin_router
 from app.api.admin.analytics_admin import router as analytics_admin_router
 from app.api.auth import routes as auth_routes
+from app.api.users import routes as user_routes
 from app.api.playlists import routes as playlist_routes
 import os
 
@@ -29,6 +30,7 @@ app.include_router(analytics_admin_router, prefix="/api/admin/analytics", tags=[
 
 # Authentication & User routes
 app.include_router(auth_routes.router, prefix="/api")
+app.include_router(user_routes.router, prefix="/api")
 app.include_router(playlist_routes.router, prefix="/api")
 
 @app.get("/")

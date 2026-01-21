@@ -3,7 +3,8 @@ Pydantic schemas for playlist API.
 """
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import List
+from typing import List, Literal
+from enum import Enum
 
 
 class PlaylistCreate(BaseModel):
@@ -73,3 +74,64 @@ class PlaylistTrackOut(BaseModel):
 class PlaylistDetailOut(PlaylistOut):
     """Playlist response with full track list."""
     tracks: List[PlaylistTrackOut]
+
+
+# Collaboration Schemas
+
+class PermissionLevel(str, Enum):
+    """Permission levels for playlist collaboration."""
+    VIEW = 'view'
+    EDIT = 'edit'
+
+
+class InvitationStatus(str, Enum):
+    """Status of a collaboration invitation."""
+    PENDING = 'pending'
+    ACCEPTED = 'accepted'
+    REJECTED = 'rejected'
+
+
+class PlaylistInviteCreate(BaseModel):
+    """Schema for inviting a user to collaborate on a playlist."""
+    username: str = Field(..., min_length=3, max_length=50)
+    permission: PermissionLevel
+
+
+class PlaylistInviteUpdate(BaseModel):
+    """Schema for accepting/rejecting an invitation."""
+    status: Literal['accepted', 'rejected']
+
+
+class CollaboratorUserOut(BaseModel):
+    """User info for collaborator display."""
+    id: str
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+
+    class Config:
+        from_attributes = True
+
+
+class PlaylistCollaboratorOut(BaseModel):
+    """Full collaborator information."""
+    id: str
+    user: CollaboratorUserOut
+    permission: str
+    status: str
+    invited_at: datetime
+    accepted_at: datetime | None
+    invited_by_username: str | None
+
+    class Config:
+        from_attributes = True
+
+
+class PlaylistWithPermissionsOut(PlaylistOut):
+    """Playlist response with user's permission level."""
+    user_permission: str | None  # 'owner', 'edit', 'view', or None
+
+
+class PlaylistDetailWithPermissionsOut(PlaylistDetailOut):
+    """Playlist detail response with user's permission level."""
+    user_permission: str | None  # 'owner', 'edit', 'view', or None

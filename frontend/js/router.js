@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuth } from './hooks/useAuth.js';
 import AuthCallbackPage from './components/AuthCallbackPage.js';
+import ProfilePage from './components/ProfilePage.js';
 import PlaylistsPage from './components/PlaylistsPage.js';
 import PlaylistDetailPage from './components/PlaylistDetailPage.js';
 
@@ -40,6 +41,12 @@ const routes = [
     name: 'authCallback',
     component: AuthCallbackPage,
     meta: { page: 'authCallback' }
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: ProfilePage,
+    meta: { page: 'profile', requiresAuth: true }
   },
   {
     path: '/playlists',
@@ -89,7 +96,7 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   // Auth guard
-  const { isAuthenticated, waitForAuth, login } = useAuth();
+  const { user, isAuthenticated, waitForAuth, login } = useAuth();
 
   // Wait for auth initialization before checking authentication
   if (to.meta.requiresAuth) {
@@ -108,6 +115,15 @@ router.beforeEach(async (to, _from, next) => {
       sessionStorage.setItem('returnUrl', to.fullPath);
       login();
       return;
+    }
+
+    // Check if user needs to set a username (has auto-generated username)
+    // Skip this check if already going to profile page
+    if (to.name !== 'profile' && user.value?.username?.startsWith('user_')) {
+      console.log('[Router] User has auto-generated username, redirecting to profile');
+      // Store intended destination so we can redirect after username is set
+      sessionStorage.setItem('returnUrl', to.fullPath);
+      return next({ name: 'profile' });
     }
   }
 

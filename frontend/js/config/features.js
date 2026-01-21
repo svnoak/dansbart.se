@@ -7,7 +7,7 @@
 export const FEATURES = {
   // Authentication and user features
   // Set to false to hide login button and all auth-dependent features
-  ENABLE_AUTH_FEATURES: false,
+  ENABLE_AUTH_FEATURES: true,
 
   // Individual feature toggles (only apply if ENABLE_AUTH_FEATURES is true)
   ENABLE_PLAYLISTS: true,

@@ -1,0 +1,398 @@
+/*
+ * Dansbart.se - Custom Authentik Theme (2025.12+)
+ * SCOPED TO LOGIN/FLOW PAGES ONLY
+ *
+ * To use: Admin Interface → System → Brands → Custom CSS
+ * After saving, hard-refresh the page (Ctrl+Shift+R)
+ */
+
+/* ============================================
+   ROOT VARIABLES (only for accent color)
+   ============================================ */
+:root {
+  --db-accent: #4f46e5;
+  --db-accent-hover: #6366f1;
+  --db-text-primary: #111827;
+  --db-text-secondary: #464b54;
+  --db-border: #e5e7eb;
+  --db-card-bg: #ffffff;
+}
+
+/* ============================================
+   SCOPED STYLES - Only apply to login pages
+   All styles below are scoped to .pf-c-login
+   ============================================ */
+
+/* Background - only on login pages */
+.pf-c-login .pf-c-background-image {
+  background: linear-gradient(135deg, #f0f0f5 0%, #e8e8f0 100%) !important;
+  background-image: none !important;
+}
+
+.pf-c-login .pf-c-background-image::before,
+.pf-c-login .pf-c-background-image::after {
+  display: none !important;
+}
+
+/* Hide logo only on login pages */
+.pf-c-login .pf-c-login__header,
+.pf-c-login .pf-c-brand {
+  display: none !important;
+}
+
+/* Hide "powered by" footer */
+.pf-c-login .pf-c-login__footer {
+  display: none !important;
+}
+
+/* ============================================
+   LOGIN/REGISTRATION CARD
+   ============================================ */
+
+.pf-c-login {
+  min-height: 100vh !important;
+  width: 100% !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  background: linear-gradient(135deg, #f0f0f5 0%, #e8e8f0 100%) !important;
+}
+
+.pf-c-login .pf-c-login__container {
+  display: block !important;
+  width: auto !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.pf-c-login .pf-c-login__main {
+  margin: 0 auto !important;
+  background: var(--db-card-bg) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--db-border) !important;
+  max-width: 400px !important;
+  width: 100% !important;
+  max-height: calc(100vh - 40px) !important;
+  overflow-y: auto !important;
+}
+
+.pf-c-login .pf-c-login__main-header {
+  background: var(--db-card-bg) !important;
+  padding: 24px 24px 16px !important;
+  text-align: center !important;
+}
+
+.pf-c-login .pf-c-login__main-header-desc,
+.pf-c-login .pf-c-title {
+  color: var(--db-text-primary) !important;
+  font-weight: 600 !important;
+  font-size: 1.25rem !important;
+  margin: 0 !important;
+}
+
+.pf-c-login .pf-c-login__main-body {
+  padding: 16px 24px 24px !important;
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-primary) !important;
+}
+
+/* ============================================
+   TEXT COLORS (scoped to login)
+   ============================================ */
+
+.pf-c-login .pf-c-login__main,
+.pf-c-login .pf-c-login__main p,
+.pf-c-login .pf-c-login__main span,
+.pf-c-login .pf-c-login__main div,
+.pf-c-login .pf-c-login__main label {
+  color: var(--db-text-primary) !important;
+}
+
+.pf-c-login .pf-c-content,
+.pf-c-login .pf-c-content p,
+.pf-c-login .pf-c-content span,
+.pf-c-login .pf-c-content li {
+  color: var(--db-text-primary) !important;
+}
+
+.pf-c-login .pf-c-form__helper-text,
+.pf-c-login .pf-c-helper-text,
+.pf-c-login .pf-c-helper-text__item-text {
+  color: var(--db-text-secondary) !important;
+}
+
+/* ============================================
+   FORM ELEMENTS (scoped to login)
+   ============================================ */
+
+.pf-c-login .pf-c-form__group {
+  margin-bottom: 14px !important;
+}
+
+.pf-c-login .pf-c-form__label-text {
+  color: var(--db-text-primary) !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+}
+
+.pf-c-login .pf-c-form-control {
+  background: var(--db-card-bg) !important;
+  border: 1px solid var(--db-border) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 0.925rem !important;
+  color: var(--db-text-primary) !important;
+}
+
+.pf-c-login .pf-c-form-control:focus {
+  border-color: var(--db-accent) !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15) !important;
+  outline: none !important;
+}
+
+.pf-c-login .pf-c-button.pf-m-control {
+  background: transparent !important;
+  border: none !important;
+  color: var(--db-text-secondary) !important;
+}
+
+/* ============================================
+   BUTTONS (scoped to login)
+   ============================================ */
+
+.pf-c-login .pf-c-button.pf-m-primary {
+  background: var(--db-accent) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  font-size: 0.925rem !important;
+  color: #ffffff !important;
+}
+
+.pf-c-login .pf-c-button.pf-m-primary:hover {
+  background: var(--db-accent-hover) !important;
+}
+
+.pf-c-login .pf-c-button.pf-m-link {
+  color: var(--db-accent) !important;
+  font-weight: 500 !important;
+  padding: 6px 0 !important;
+}
+
+.pf-c-login .pf-c-button.pf-m-link:hover {
+  color: var(--db-accent-hover) !important;
+}
+
+/* ============================================
+   FOOTER & ENROLLMENT LINK (scoped to login)
+   ============================================ */
+
+.pf-c-login .pf-c-login__main-footer {
+  background: var(--db-card-bg) !important;
+  padding: 12px 24px 20px !important;
+  text-align: center !important;
+  border-top: 1px solid var(--db-border) !important;
+  color: var(--db-text-secondary) !important;
+  font-size: 0.875rem !important;
+}
+
+.pf-c-login .pf-c-login__main-footer span,
+.pf-c-login .pf-c-login__main-footer p {
+  color: var(--db-text-secondary) !important;
+}
+
+.pf-c-login .pf-c-login__main-footer a {
+  color: var(--db-accent) !important;
+  font-size: 0.875rem !important;
+}
+
+/* ============================================
+   ALERTS (scoped to login)
+   ============================================ */
+
+.pf-c-login .pf-c-alert {
+  border-radius: 6px !important;
+  margin-bottom: 12px !important;
+}
+
+/* ============================================
+   CONSENT STAGE STYLING
+   ============================================ */
+
+/* Target the flow executor which wraps all stages */
+ak-flow-executor {
+  background: linear-gradient(135deg, #f0f0f5 0%, #e8e8f0 100%) !important;
+  min-height: 100vh !important;
+  display: block !important;
+}
+
+/* Consent stage specific */
+ak-stage-consent {
+  color: var(--db-text-primary) !important;
+}
+
+ak-stage-consent .pf-c-login__main,
+ak-stage-consent .pf-c-card {
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-primary) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--db-border) !important;
+}
+
+ak-stage-consent p,
+ak-stage-consent span,
+ak-stage-consent div,
+ak-stage-consent label,
+ak-stage-consent li {
+  color: var(--db-text-primary) !important;
+}
+
+ak-stage-consent .pf-c-button.pf-m-primary {
+  background: var(--db-accent) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #ffffff !important;
+}
+
+ak-stage-consent .pf-c-button.pf-m-primary:hover {
+  background: var(--db-accent-hover) !important;
+}
+
+/* ============================================
+   ALL FLOW STAGES - GENERAL STYLING
+   ============================================ */
+
+/* Target all ak-stage-* components */
+ak-stage-identification,
+ak-stage-password,
+ak-stage-prompt,
+ak-stage-consent,
+ak-stage-autosubmit,
+ak-stage-authenticator-validate {
+  color: var(--db-text-primary) !important;
+}
+
+/* Prompt stage (enrollment) specific */
+ak-stage-prompt {
+  display: block !important;
+  background: transparent !important;
+}
+
+ak-stage-prompt .pf-c-login,
+ak-stage-prompt .pf-c-login__main,
+ak-stage-prompt .pf-c-card {
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-primary) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--db-border) !important;
+}
+
+ak-stage-prompt .pf-c-login__main-header,
+ak-stage-prompt .pf-c-login__main-body,
+ak-stage-prompt .pf-c-login__main-footer {
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-primary) !important;
+}
+
+ak-stage-prompt p,
+ak-stage-prompt span,
+ak-stage-prompt div,
+ak-stage-prompt label,
+ak-stage-prompt li,
+ak-stage-prompt h1,
+ak-stage-prompt h2,
+ak-stage-prompt h3 {
+  color: var(--db-text-primary) !important;
+}
+
+ak-stage-prompt .pf-c-form-control,
+ak-stage-prompt input,
+ak-stage-prompt textarea {
+  background: var(--db-card-bg) !important;
+  border: 1px solid var(--db-border) !important;
+  color: var(--db-text-primary) !important;
+}
+
+ak-stage-prompt .pf-c-button.pf-m-primary {
+  background: var(--db-accent) !important;
+  color: #ffffff !important;
+}
+
+ak-stage-prompt .pf-c-button.pf-m-primary:hover {
+  background: var(--db-accent-hover) !important;
+}
+
+/* Ensure background image is hidden across all stages */
+ak-flow-executor .pf-c-background-image {
+  background: linear-gradient(135deg, #f0f0f5 0%, #e8e8f0 100%) !important;
+  background-image: none !important;
+}
+
+ak-flow-executor .pf-c-background-image::before,
+ak-flow-executor .pf-c-background-image::after {
+  display: none !important;
+}
+
+/* Hide header/logo in flow executor */
+ak-flow-executor .pf-c-login__header,
+ak-flow-executor .pf-c-brand {
+  display: none !important;
+}
+
+/* Hide powered by footer in flow executor */
+ak-flow-executor .pf-c-login__footer {
+  display: none !important;
+}
+
+/* ============================================
+   GLOBAL FLOW CARD STYLING
+   ============================================ */
+
+/* Apply to ALL .pf-c-login__main regardless of parent */
+.pf-c-login__main {
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-primary) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--db-border) !important;
+}
+
+.pf-c-login__main-header {
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-primary) !important;
+}
+
+.pf-c-login__main-body {
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-primary) !important;
+}
+
+.pf-c-login__main-footer {
+  background: var(--db-card-bg) !important;
+  color: var(--db-text-secondary) !important;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 480px) {
+  .pf-c-login .pf-c-login__main {
+    margin: 12px !important;
+    max-height: calc(100vh - 24px) !important;
+  }
+
+  .pf-c-login .pf-c-login__main-header,
+  .pf-c-login .pf-c-login__main-body,
+  .pf-c-login .pf-c-login__main-footer {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}

@@ -21,7 +21,19 @@ from app.api.playlists.schemas import (
     PlaylistTrackReorder,
     PlaylistOwnerOut,
     PlaylistTrackOut,
+    PlaylistInviteCreate,
+    PlaylistInviteUpdate,
+    PlaylistCollaboratorOut,
+    CollaboratorUserOut,
 )
+from app.api.playlists.permissions import (
+    get_user_permission,
+    can_edit_playlist,
+    require_permission,
+    is_owner,
+)
+from app.core.user_models import PlaylistCollaborator
+from sqlalchemy import func, or_
 
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
@@ -134,12 +146,12 @@ def get_playlist(
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
 
-    # Check permissions
-    if not playlist.is_public:
-        if not current_user or playlist.user_id != current_user.id:
-            raise HTTPException(
-                status_code=403, detail="This playlist is private"
-            )
+    # Check permissions (public OR user has access)
+    from app.api.playlists.permissions import can_view_playlist
+    if not can_view_playlist(playlist, current_user, db):
+        raise HTTPException(
+            status_code=403, detail="You do not have access to this playlist"
+        )
 
     # Add computed fields
     _add_computed_fields(playlist)
@@ -279,6 +291,8 @@ def add_track_to_playlist(
     """
     Add a track to a playlist.
 
+    Requires edit permission (owner or collaborator with edit access).
+
     Args:
         playlist_id: Playlist UUID
         track_data: Track ID and optional position
@@ -288,17 +302,17 @@ def add_track_to_playlist(
 
     Raises:
         404: Playlist or track not found
+        403: Insufficient permissions
         400: Track already in playlist
     """
-    # Verify ownership
-    playlist = (
-        db.query(Playlist)
-        .filter(Playlist.id == playlist_id, Playlist.user_id == current_user.id)
-        .first()
-    )
+    # Verify access and edit permission
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
 
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
+
+    # Require edit permission (owner or collaborator with edit permission)
+    require_permission(playlist, current_user, 'edit', db)
 
     # Verify track exists
     track = db.query(Track).filter(Track.id == track_data.track_id).first()
@@ -359,22 +373,24 @@ def remove_track_from_playlist(
     """
     Remove a track from a playlist.
 
+    Requires edit permission (owner or collaborator with edit access).
+
     Args:
         playlist_id: Playlist UUID
         track_id: Track UUID
 
     Raises:
         404: Playlist or track not found
+        403: Insufficient permissions
     """
-    # Verify ownership
-    playlist = (
-        db.query(Playlist)
-        .filter(Playlist.id == playlist_id, Playlist.user_id == current_user.id)
-        .first()
-    )
+    # Verify access and edit permission
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
 
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
+
+    # Require edit permission
+    require_permission(playlist, current_user, 'edit', db)
 
     # Find and delete
     playlist_track = (
@@ -415,6 +431,8 @@ def reorder_playlist_tracks(
     """
     Reorder a track in a playlist (for drag-and-drop).
 
+    Requires edit permission (owner or collaborator with edit access).
+
     Args:
         playlist_id: Playlist UUID
         reorder: Track ID and new position
@@ -424,16 +442,16 @@ def reorder_playlist_tracks(
 
     Raises:
         404: Playlist or track not found
+        403: Insufficient permissions
     """
-    # Verify ownership
-    playlist = (
-        db.query(Playlist)
-        .filter(Playlist.id == playlist_id, Playlist.user_id == current_user.id)
-        .first()
-    )
+    # Verify access and edit permission
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
 
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
+
+    # Require edit permission
+    require_permission(playlist, current_user, 'edit', db)
 
     # Find track
     playlist_track = (
@@ -475,3 +493,404 @@ def reorder_playlist_tracks(
 
     db.commit()
     return {"message": "Track reordered", "new_position": new_position}
+
+
+# ========================================
+# Playlist Collaboration Endpoints
+# ========================================
+
+
+@router.post("/{playlist_id}/collaborators", response_model=PlaylistCollaboratorOut, status_code=status.HTTP_201_CREATED)
+def invite_collaborator(
+    playlist_id: str,
+    invite_data: PlaylistInviteCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Invite a user to collaborate on a playlist (owner only).
+
+    Args:
+        playlist_id: Playlist UUID
+        invite_data: Username and permission level
+
+    Returns:
+        Created collaboration invitation
+
+    Raises:
+        404: Playlist not found or user not found
+        403: Not playlist owner
+        400: Cannot invite self or duplicate invitation
+    """
+    # Verify ownership
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+
+    if not is_owner(playlist, current_user):
+        raise HTTPException(status_code=403, detail="Only playlist owner can invite collaborators")
+
+    # Find invited user by username
+    invited_user = db.query(User).filter(func.lower(User.username) == invite_data.username.lower()).first()
+    if not invited_user:
+        raise HTTPException(status_code=404, detail=f"User '@{invite_data.username}' not found")
+
+    # Cannot invite self
+    if invited_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot invite yourself")
+
+    # Check for existing collaboration
+    existing = db.query(PlaylistCollaborator).filter(
+        PlaylistCollaborator.playlist_id == playlist_id,
+        PlaylistCollaborator.user_id == invited_user.id
+    ).first()
+
+    if existing:
+        if existing.status == 'rejected':
+            # Resend invitation
+            existing.status = 'pending'
+            existing.invited_at = datetime.utcnow()
+            existing.accepted_at = None
+            existing.permission = invite_data.permission.value
+            db.commit()
+            db.refresh(existing)
+            collaboration = existing
+        else:
+            raise HTTPException(status_code=400, detail="User already invited or is a collaborator")
+    else:
+        # Create new invitation
+        collaboration = PlaylistCollaborator(
+            playlist_id=playlist_id,
+            user_id=invited_user.id,
+            permission=invite_data.permission.value,
+            invited_by=current_user.id,
+            status='pending'
+        )
+        db.add(collaboration)
+        db.commit()
+        db.refresh(collaboration)
+
+    # Load relationships for response
+    collaboration.user = invited_user
+    collaboration.invited_by_username = current_user.username
+
+    return PlaylistCollaboratorOut(
+        id=str(collaboration.id),
+        user=CollaboratorUserOut.from_orm(invited_user),
+        permission=collaboration.permission,
+        status=collaboration.status,
+        invited_at=collaboration.invited_at,
+        accepted_at=collaboration.accepted_at,
+        invited_by_username=current_user.username
+    )
+
+
+@router.get("/{playlist_id}/collaborators", response_model=list[PlaylistCollaboratorOut])
+def list_collaborators(
+    playlist_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    List all collaborators for a playlist (owner only).
+
+    Args:
+        playlist_id: Playlist UUID
+
+    Returns:
+        List of collaborators with status and permissions
+
+    Raises:
+        404: Playlist not found
+        403: Not playlist owner
+    """
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+
+    if not is_owner(playlist, current_user):
+        raise HTTPException(status_code=403, detail="Only playlist owner can view collaborators")
+
+    collaborations = (
+        db.query(PlaylistCollaborator)
+        .options(
+            joinedload(PlaylistCollaborator.user),
+            joinedload(PlaylistCollaborator.inviter)
+        )
+        .filter(PlaylistCollaborator.playlist_id == playlist_id)
+        .order_by(PlaylistCollaborator.invited_at.desc())
+        .all()
+    )
+
+    result = []
+    for collab in collaborations:
+        result.append(PlaylistCollaboratorOut(
+            id=str(collab.id),
+            user=CollaboratorUserOut.from_orm(collab.user),
+            permission=collab.permission,
+            status=collab.status,
+            invited_at=collab.invited_at,
+            accepted_at=collab.accepted_at,
+            invited_by_username=collab.inviter.username if collab.inviter else None
+        ))
+
+    return result
+
+
+@router.put("/{playlist_id}/collaborators/{collaborator_id}", response_model=PlaylistCollaboratorOut)
+def update_collaborator_permission(
+    playlist_id: str,
+    collaborator_id: str,
+    permission: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Update a collaborator's permission level (owner only).
+
+    Args:
+        playlist_id: Playlist UUID
+        collaborator_id: Collaboration UUID
+        permission: New permission level ('view' or 'edit')
+
+    Returns:
+        Updated collaboration
+
+    Raises:
+        404: Playlist or collaboration not found
+        403: Not playlist owner
+        400: Invalid permission level
+    """
+    if permission not in ('view', 'edit'):
+        raise HTTPException(status_code=400, detail="Permission must be 'view' or 'edit'")
+
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+
+    if not is_owner(playlist, current_user):
+        raise HTTPException(status_code=403, detail="Only playlist owner can update permissions")
+
+    collaboration = (
+        db.query(PlaylistCollaborator)
+        .options(
+            joinedload(PlaylistCollaborator.user),
+            joinedload(PlaylistCollaborator.inviter)
+        )
+        .filter(
+            PlaylistCollaborator.id == collaborator_id,
+            PlaylistCollaborator.playlist_id == playlist_id
+        )
+        .first()
+    )
+
+    if not collaboration:
+        raise HTTPException(status_code=404, detail="Collaborator not found")
+
+    collaboration.permission = permission
+    db.commit()
+    db.refresh(collaboration)
+
+    return PlaylistCollaboratorOut(
+        id=str(collaboration.id),
+        user=CollaboratorUserOut.from_orm(collaboration.user),
+        permission=collaboration.permission,
+        status=collaboration.status,
+        invited_at=collaboration.invited_at,
+        accepted_at=collaboration.accepted_at,
+        invited_by_username=collaboration.inviter.username if collaboration.inviter else None
+    )
+
+
+@router.delete("/{playlist_id}/collaborators/{collaborator_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_collaborator(
+    playlist_id: str,
+    collaborator_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove a collaborator from a playlist (owner or self).
+
+    Args:
+        playlist_id: Playlist UUID
+        collaborator_id: Collaboration UUID
+
+    Raises:
+        404: Playlist or collaboration not found
+        403: Not authorized (must be owner or the collaborator themselves)
+    """
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+
+    collaboration = db.query(PlaylistCollaborator).filter(
+        PlaylistCollaborator.id == collaborator_id,
+        PlaylistCollaborator.playlist_id == playlist_id
+    ).first()
+
+    if not collaboration:
+        raise HTTPException(status_code=404, detail="Collaborator not found")
+
+    # Allow owner or the collaborator themselves to remove
+    if not (is_owner(playlist, current_user) or collaboration.user_id == current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to remove this collaborator")
+
+    db.delete(collaboration)
+    db.commit()
+    return None
+
+
+@router.get("/invitations", response_model=list[dict])
+def list_my_invitations(
+    status_filter: str | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    List invitations for the current user.
+
+    Args:
+        status_filter: Optional filter ('pending', 'accepted', 'rejected')
+
+    Returns:
+        List of invitations with playlist info
+    """
+    query = (
+        db.query(PlaylistCollaborator)
+        .options(
+            joinedload(PlaylistCollaborator.playlist).joinedload(Playlist.user),
+            joinedload(PlaylistCollaborator.inviter)
+        )
+        .filter(PlaylistCollaborator.user_id == current_user.id)
+    )
+
+    if status_filter:
+        if status_filter not in ('pending', 'accepted', 'rejected'):
+            raise HTTPException(status_code=400, detail="Invalid status filter")
+        query = query.filter(PlaylistCollaborator.status == status_filter)
+
+    invitations = query.order_by(PlaylistCollaborator.invited_at.desc()).all()
+
+    result = []
+    for inv in invitations:
+        result.append({
+            "id": str(inv.id),
+            "playlist": {
+                "id": str(inv.playlist.id),
+                "name": inv.playlist.name,
+                "description": inv.playlist.description,
+                "owner": {
+                    "id": inv.playlist.user.id,
+                    "username": inv.playlist.user.username,
+                    "display_name": inv.playlist.user.display_name,
+                    "avatar_url": inv.playlist.user.avatar_url,
+                }
+            },
+            "permission": inv.permission,
+            "status": inv.status,
+            "invited_at": inv.invited_at,
+            "accepted_at": inv.accepted_at,
+            "invited_by": {
+                "username": inv.inviter.username,
+                "display_name": inv.inviter.display_name,
+            } if inv.inviter else None
+        })
+
+    return result
+
+
+@router.put("/invitations/{invitation_id}", response_model=dict)
+def respond_to_invitation(
+    invitation_id: str,
+    response: PlaylistInviteUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Accept or reject a playlist invitation.
+
+    Args:
+        invitation_id: Invitation UUID
+        response: Status ('accepted' or 'rejected')
+
+    Returns:
+        Updated invitation
+
+    Raises:
+        404: Invitation not found
+        400: Invalid status or invitation already processed
+    """
+    invitation = (
+        db.query(PlaylistCollaborator)
+        .options(
+            joinedload(PlaylistCollaborator.playlist).joinedload(Playlist.user),
+            joinedload(PlaylistCollaborator.inviter)
+        )
+        .filter(
+            PlaylistCollaborator.id == invitation_id,
+            PlaylistCollaborator.user_id == current_user.id
+        )
+        .first()
+    )
+
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+
+    if invitation.status != 'pending':
+        raise HTTPException(status_code=400, detail="Invitation already processed")
+
+    invitation.status = response.status
+    if response.status == 'accepted':
+        invitation.accepted_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(invitation)
+
+    return {
+        "id": str(invitation.id),
+        "status": invitation.status,
+        "accepted_at": invitation.accepted_at,
+        "message": f"Invitation {response.status}"
+    }
+
+
+@router.get("/shared", response_model=list[PlaylistOut])
+def list_shared_playlists(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    List playlists shared with the current user (accepted collaborations only).
+
+    Returns:
+        List of playlists where user is a collaborator
+    """
+    # Get accepted collaborations
+    collaborations = (
+        db.query(PlaylistCollaborator)
+        .filter(
+            PlaylistCollaborator.user_id == current_user.id,
+            PlaylistCollaborator.status == 'accepted'
+        )
+        .all()
+    )
+
+    playlist_ids = [collab.playlist_id for collab in collaborations]
+
+    if not playlist_ids:
+        return []
+
+    playlists = (
+        db.query(Playlist)
+        .options(joinedload(Playlist.user))
+        .filter(Playlist.id.in_(playlist_ids))
+        .order_by(Playlist.updated_at.desc())
+        .all()
+    )
+
+    # Add computed fields
+    for playlist in playlists:
+        _add_computed_fields(playlist)
+
+    return playlists
