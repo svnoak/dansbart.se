@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuth } from './hooks/useAuth.js';
 import AuthCallbackPage from './components/AuthCallbackPage.js';
+import ProfilePage from './components/ProfilePage.js';
 import PlaylistsPage from './components/PlaylistsPage.js';
 import PlaylistDetailPage from './components/PlaylistDetailPage.js';
 
@@ -42,6 +43,12 @@ const routes = [
     meta: { page: 'authCallback' }
   },
   {
+    path: '/profile',
+    name: 'profile',
+    component: ProfilePage,
+    meta: { page: 'profile', requiresAuth: true }
+  },
+  {
     path: '/playlists',
     name: 'playlists',
     component: PlaylistsPage,
@@ -51,7 +58,49 @@ const routes = [
     path: '/playlist/:id',
     name: 'playlist',
     component: PlaylistDetailPage,
-    meta: { page: 'playlist', requiresAuth: true }
+    meta: { page: 'playlist' }  // No requiresAuth - handles both authenticated and public access
+  },
+  {
+    path: '/shared/:token',
+    name: 'sharedPlaylist',
+    // Redirect route - resolves share token to playlist ID
+    redirect: to => {
+      // Store the token for the redirect handler to resolve
+      sessionStorage.setItem('pendingShareToken', to.params.token);
+      return { name: 'resolveShare' };
+    }
+  },
+  {
+    path: '/resolve-share',
+    name: 'resolveShare',
+    // This route handles the async token resolution
+    component: {
+      template: '<div class="flex items-center justify-center min-h-screen"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>',
+      async mounted() {
+        const token = sessionStorage.getItem('pendingShareToken');
+        sessionStorage.removeItem('pendingShareToken');
+
+        if (!token) {
+          this.$router.push({ name: 'playlists' });
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/playlists/share/${token}`);
+          if (response.ok) {
+            const playlist = await response.json();
+            this.$router.replace({ name: 'playlist', params: { id: playlist.id } });
+          } else {
+            // Playlist not found or not public
+            this.$router.push({ name: 'playlists' });
+          }
+        } catch (error) {
+          console.error('Failed to resolve share token:', error);
+          this.$router.push({ name: 'playlists' });
+        }
+      }
+    },
+    meta: { page: 'resolveShare' }
   }
 ];
 
@@ -89,7 +138,7 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   // Auth guard
-  const { isAuthenticated, waitForAuth, login } = useAuth();
+  const { user, isAuthenticated, waitForAuth, login } = useAuth();
 
   // Wait for auth initialization before checking authentication
   if (to.meta.requiresAuth) {
@@ -108,6 +157,15 @@ router.beforeEach(async (to, _from, next) => {
       sessionStorage.setItem('returnUrl', to.fullPath);
       login();
       return;
+    }
+
+    // Check if user needs to set a username (has auto-generated username)
+    // Skip this check if already going to profile page
+    if (to.name !== 'profile' && user.value?.username?.startsWith('user_')) {
+      console.log('[Router] User has auto-generated username, redirecting to profile');
+      // Store intended destination so we can redirect after username is set
+      sessionStorage.setItem('returnUrl', to.fullPath);
+      return next({ name: 'profile' });
     }
   }
 

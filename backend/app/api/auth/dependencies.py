@@ -44,27 +44,32 @@ async def get_current_user(
     payload = validate_token(token)
 
     # Extract user info from token claims
+    # Note: We intentionally do NOT store email to minimize PII/GDPR exposure
     user_id = payload.get("sub")  # Authentik user UUID
-    email = payload.get("email")
-    display_name = payload.get("name") or payload.get("preferred_username")
+    # preferred_username is the Authentik username set during registration
+    authentik_username = payload.get("preferred_username")
+    display_name = payload.get("name") or authentik_username
     avatar_url = payload.get("picture")
 
-    if not user_id or not email:
+    if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token missing required claims (sub or email)"
+            detail="Token missing required claim (sub)"
         )
 
     # Get or create user in local database
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
-        # First login - create user record
+        # Use Authentik username if available, otherwise generate one
+        username = authentik_username if authentik_username else f"user_{user_id[:8]}"
+
+        # First login - create user record (no email stored)
         user = User(
             id=user_id,
-            email=email,
             display_name=display_name,
-            avatar_url=avatar_url
+            avatar_url=avatar_url,
+            username=username
         )
         db.add(user)
         db.commit()
@@ -72,9 +77,6 @@ async def get_current_user(
     else:
         # Update cached user info if changed
         updated = False
-        if user.email != email:
-            user.email = email
-            updated = True
         if user.display_name != display_name:
             user.display_name = display_name
             updated = True

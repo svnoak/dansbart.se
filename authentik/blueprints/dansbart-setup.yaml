@@ -1,0 +1,420 @@
+# Dansbart.se Authentik Blueprint
+# Fully self-contained - no dependencies on default flows
+#
+# To apply: Mount to /blueprints/custom/ inside Authentik container
+# Blueprints are auto-discovered and applied on startup
+#
+version: 1
+metadata:
+  name: Dansbart Authentication Setup
+  labels:
+    blueprints.goauthentik.io/description: "Complete auth setup for Dansbart.se"
+
+entries:
+  # ============================================
+  # PROMPT FIELDS
+  # ============================================
+
+  # Username field
+  - model: authentik_stages_prompt.prompt
+    id: dansbart-field-username
+    identifiers:
+      name: dansbart-field-username
+    attrs:
+      field_key: username
+      label: Användarnamn
+      type: text
+      required: true
+      placeholder: mitt_anvandarnamn
+      order: 100
+      sub_text: "3-50 tecken. Endast bokstäver, siffror och _"
+
+  # Email field
+  - model: authentik_stages_prompt.prompt
+    id: dansbart-field-email
+    identifiers:
+      name: dansbart-field-email
+    attrs:
+      field_key: email
+      label: E-postadress
+      type: email
+      required: true
+      placeholder: din@email.se
+      order: 200
+
+  # Name field (display name)
+  - model: authentik_stages_prompt.prompt
+    id: dansbart-field-name
+    identifiers:
+      name: dansbart-field-name
+    attrs:
+      field_key: name
+      label: Namn
+      type: text
+      required: false
+      placeholder: Ditt namn
+      order: 150
+      sub_text: "Visas för andra användare (valfritt)"
+
+  # Password field
+  - model: authentik_stages_prompt.prompt
+    id: dansbart-field-password
+    identifiers:
+      name: dansbart-field-password
+    attrs:
+      field_key: password
+      label: Lösenord
+      type: password
+      required: true
+      placeholder: ""
+      order: 300
+
+  # Password repeat field
+  - model: authentik_stages_prompt.prompt
+    id: dansbart-field-password-repeat
+    identifiers:
+      name: dansbart-field-password-repeat
+    attrs:
+      field_key: password_repeat
+      label: Bekräfta lösenord
+      type: password
+      required: true
+      placeholder: ""
+      order: 400
+
+  # ============================================
+  # ENROLLMENT STAGES
+  # ============================================
+
+  # Enrollment prompt stage
+  - model: authentik_stages_prompt.promptstage
+    id: dansbart-enrollment-prompt
+    identifiers:
+      name: dansbart-enrollment-prompt
+    attrs:
+      fields:
+        - !Find [authentik_stages_prompt.prompt, [name, dansbart-field-username]]
+        - !Find [authentik_stages_prompt.prompt, [name, dansbart-field-email]]
+        - !Find [authentik_stages_prompt.prompt, [name, dansbart-field-name]]
+        - !Find [authentik_stages_prompt.prompt, [name, dansbart-field-password]]
+        - !Find [authentik_stages_prompt.prompt, [name, dansbart-field-password-repeat]]
+      validation_policies: []
+
+  # User write stage
+  - model: authentik_stages_user_write.userwritestage
+    id: dansbart-enrollment-user-write
+    identifiers:
+      name: dansbart-enrollment-user-write
+    attrs:
+      create_users_as_inactive: false
+      user_creation_mode: always_create
+
+  # User login stage (for enrollment)
+  - model: authentik_stages_user_login.userloginstage
+    id: dansbart-enrollment-user-login
+    identifiers:
+      name: dansbart-enrollment-user-login
+    attrs:
+      session_duration: seconds=0
+      remember_me_offset: seconds=2592000
+
+  # ============================================
+  # ENROLLMENT FLOW
+  # ============================================
+
+  - model: authentik_flows.flow
+    id: dansbart-enrollment-flow
+    identifiers:
+      slug: registrering
+    attrs:
+      name: Dansbart Registrering
+      title: Skapa konto
+      designation: enrollment
+      authentication: none
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-enrollment-binding-1
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, registrering]]
+      stage: !Find [authentik_stages_prompt.promptstage, [name, dansbart-enrollment-prompt]]
+    attrs:
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-enrollment-binding-2
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, registrering]]
+      stage: !Find [authentik_stages_user_write.userwritestage, [name, dansbart-enrollment-user-write]]
+    attrs:
+      order: 20
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-enrollment-binding-3
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, registrering]]
+      stage: !Find [authentik_stages_user_login.userloginstage, [name, dansbart-enrollment-user-login]]
+    attrs:
+      order: 30
+
+  # ============================================
+  # LOGIN STAGES
+  # ============================================
+
+  # Password stage (must be created before identification stage references it)
+  - model: authentik_stages_password.passwordstage
+    id: dansbart-login-password
+    identifiers:
+      name: dansbart-login-password
+    attrs:
+      backends:
+        - authentik.core.auth.InbuiltBackend
+
+  # Identification stage
+  - model: authentik_stages_identification.identificationstage
+    id: dansbart-login-identification
+    identifiers:
+      name: dansbart-login-identification
+    attrs:
+      user_fields:
+        - username
+        - email
+      password_stage: !Find [authentik_stages_password.passwordstage, [name, dansbart-login-password]]
+      enrollment_flow: !Find [authentik_flows.flow, [slug, registrering]]
+      pretend_user_exists: true
+      show_matched_user: true
+      show_source_labels: false
+
+  # User login stage (for login)
+  - model: authentik_stages_user_login.userloginstage
+    id: dansbart-login-user-login
+    identifiers:
+      name: dansbart-login-user-login
+    attrs:
+      session_duration: seconds=0
+      remember_me_offset: seconds=2592000
+
+  # ============================================
+  # LOGIN FLOW
+  # ============================================
+
+  - model: authentik_flows.flow
+    id: dansbart-login-flow
+    identifiers:
+      slug: dansbart-login
+    attrs:
+      name: Dansbart Inloggning
+      title: Logga in
+      designation: authentication
+      authentication: none
+      compatibility_mode: true
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-login-binding-1
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, dansbart-login]]
+      stage: !Find [authentik_stages_identification.identificationstage, [name, dansbart-login-identification]]
+    attrs:
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-login-binding-2
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, dansbart-login]]
+      stage: !Find [authentik_stages_user_login.userloginstage, [name, dansbart-login-user-login]]
+    attrs:
+      order: 20
+
+  # ============================================
+  # AUTHORIZATION FLOW (for OAuth consent)
+  # ============================================
+
+  # Consent stage
+  - model: authentik_stages_consent.consentstage
+    id: dansbart-authorization-consent
+    identifiers:
+      name: dansbart-authorization-consent
+    attrs:
+      mode: always_require
+      consent_expire_in: seconds=2592000
+
+  # Authorization flow
+  - model: authentik_flows.flow
+    id: dansbart-authorization-flow
+    identifiers:
+      slug: dansbart-authorization
+    attrs:
+      name: Dansbart Authorization
+      title: Godkänn åtkomst
+      designation: authorization
+      authentication: none
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-authorization-binding-1
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, dansbart-authorization]]
+      stage: !Find [authentik_stages_consent.consentstage, [name, dansbart-authorization-consent]]
+    attrs:
+      order: 10
+
+  # ============================================
+  # INVALIDATION FLOW (for logout)
+  # ============================================
+
+  - model: authentik_stages_user_logout.userlogoutstage
+    id: dansbart-logout-stage
+    identifiers:
+      name: dansbart-logout-stage
+    attrs: {}
+
+  - model: authentik_flows.flow
+    id: dansbart-invalidation-flow
+    identifiers:
+      slug: dansbart-invalidation
+    attrs:
+      name: Dansbart Logout
+      title: Logga ut
+      designation: invalidation
+      authentication: none
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-invalidation-binding-1
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, dansbart-invalidation]]
+      stage: !Find [authentik_stages_user_logout.userlogoutstage, [name, dansbart-logout-stage]]
+    attrs:
+      order: 10
+
+  # ============================================
+  # OAUTH2 SCOPE MAPPINGS
+  # ============================================
+
+  - model: authentik_providers_oauth2.scopemapping
+    id: dansbart-scope-openid
+    identifiers:
+      managed: goauthentik.io/providers/oauth2/scope-openid
+    attrs:
+      name: "OpenID Connect scope (openid)"
+      scope_name: openid
+      expression: |
+        return {}
+
+  - model: authentik_providers_oauth2.scopemapping
+    id: dansbart-scope-email
+    identifiers:
+      managed: goauthentik.io/providers/oauth2/scope-email
+    attrs:
+      name: "Email scope"
+      scope_name: email
+      expression: |
+        return {
+            "email": request.user.email,
+            "email_verified": True,
+        }
+
+  - model: authentik_providers_oauth2.scopemapping
+    id: dansbart-scope-profile
+    identifiers:
+      managed: goauthentik.io/providers/oauth2/scope-profile
+    attrs:
+      name: "Profile scope"
+      scope_name: profile
+      expression: |
+        return {
+            "name": request.user.name,
+            "given_name": request.user.name,
+            "preferred_username": request.user.username,
+            "nickname": request.user.username,
+        }
+
+  # Offline access scope (for refresh tokens)
+  - model: authentik_providers_oauth2.scopemapping
+    id: dansbart-scope-offline-access
+    identifiers:
+      managed: goauthentik.io/providers/oauth2/scope-offline-access
+    attrs:
+      name: "Offline Access scope"
+      scope_name: offline_access
+      description: "Allows the application to refresh tokens without user interaction"
+      expression: |
+        return {}
+
+  # ============================================
+  # SIGNING KEY (for RS256 JWT tokens)
+  # ============================================
+
+  # Use Authentik's self-signed certificate for JWT signing
+  # This enables RS256 which publishes keys via JWKS endpoint
+
+  # ============================================
+  # OAUTH2 PROVIDER
+  # ============================================
+
+  - model: authentik_providers_oauth2.oauth2provider
+    id: dansbart-oauth2-provider
+    identifiers:
+      name: Dansbart OAuth2 Provider
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, dansbart-authorization]]
+      authentication_flow: !Find [authentik_flows.flow, [slug, dansbart-login]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, dansbart-invalidation]]
+      client_type: public
+      client_id: dansbart-client
+      redirect_uris:
+        - matching_mode: strict
+          url: http://localhost:8080/auth/callback
+        - matching_mode: strict
+          url: http://localhost:8080/
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+      include_claims_in_id_token: true
+      sub_mode: hashed_user_id
+      issuer_mode: per_provider
+      # Use default self-signed cert for RS256 JWT signing
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, "authentik Self-signed Certificate"]]
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-offline-access]]
+
+  # ============================================
+  # APPLICATION
+  # ============================================
+
+  - model: authentik_core.application
+    id: dansbart-application
+    identifiers:
+      slug: dansbart
+    attrs:
+      name: Dansbart
+      provider: !Find [authentik_providers_oauth2.oauth2provider, [name, Dansbart OAuth2 Provider]]
+      meta_launch_url: http://localhost:8080/
+      meta_description: "Dansbart.se - Hitta rätt låt"
+      policy_engine_mode: any
+
+  # ============================================
+  # BRAND CONFIGURATION (Custom CSS)
+  # ============================================
+
+  - model: authentik_brands.brand
+    id: dansbart-brand
+    identifiers:
+      domain: localhost:9000
+    attrs:
+      branding_title: Dansbart
+      branding_logo: /static/dist/assets/icons/icon_left_brand.svg
+      branding_favicon: /static/dist/assets/icons/icon.png
+      default_application: !Find [authentik_core.application, [slug, dansbart]]
+      flow_authentication: !Find [authentik_flows.flow, [slug, dansbart-login]]
+      flow_invalidation: !Find [authentik_flows.flow, [slug, dansbart-invalidation]]
+      flow_user_settings: null
+      flow_device_code: null
+      flow_recovery: null
+      flow_unenrollment: null
+      web_certificate: null
+      attributes:
+        settings:
+          theme:
+            base: light
+          locale: sv
+      branding_css: ":root { --ak-accent: #4f46e5; --ak-accent-hover: #6366f1; } .pf-c-button.pf-m-primary { background: var(--ak-accent) !important; border-radius: 8px !important; } .pf-c-button.pf-m-primary:hover { background: var(--ak-accent-hover) !important; } .pf-c-login__main { border-radius: 16px !important; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important; } .pf-c-form-control { border-radius: 8px !important; }"

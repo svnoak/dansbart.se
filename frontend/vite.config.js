@@ -20,6 +20,10 @@ export default defineConfig({
     minify: 'esbuild',
     sourcemap: false,
   },
+  esbuild: {
+    // Remove console.log and debugger statements in production
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'js'),
