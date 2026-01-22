@@ -36,6 +36,7 @@ class PlaylistTrackReorder(BaseModel):
 class PlaylistOwnerOut(BaseModel):
     """Playlist owner info."""
     id: str
+    username: str
     display_name: str | None
     avatar_url: str | None
 
@@ -55,6 +56,7 @@ class PlaylistOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     owner: PlaylistOwnerOut
+    permission: str | None = None  # For shared playlists: 'view' or 'edit'
 
     class Config:
         from_attributes = True

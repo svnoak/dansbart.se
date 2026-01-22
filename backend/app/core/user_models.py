@@ -15,7 +15,6 @@ from app.core.database import Base
 if TYPE_CHECKING:
     from app.core.models import Track
 
-
 class User(Base):
     """
     User account linked to Authentik.
@@ -29,8 +28,6 @@ class User(Base):
     # Primary key matches Authentik's user ID (hex string from 'sub' claim)
     id: Mapped[str] = mapped_column(String(255), primary_key=True)
 
-    # Cached display info from Authentik OIDC claims (synced on login)
-    # Note: Email is NOT stored - it stays in Authentik only
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
@@ -112,6 +109,11 @@ class Playlist(Base):
     def owner(self):
         """Alias for user relationship (for API schema compatibility)."""
         return self.user
+
+    @property
+    def tracks(self):
+        """Alias for track_links (for API schema compatibility)."""
+        return self.track_links
 
 
 class PlaylistTrack(Base):

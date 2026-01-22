@@ -58,7 +58,49 @@ const routes = [
     path: '/playlist/:id',
     name: 'playlist',
     component: PlaylistDetailPage,
-    meta: { page: 'playlist', requiresAuth: true }
+    meta: { page: 'playlist' }  // No requiresAuth - handles both authenticated and public access
+  },
+  {
+    path: '/shared/:token',
+    name: 'sharedPlaylist',
+    // Redirect route - resolves share token to playlist ID
+    redirect: to => {
+      // Store the token for the redirect handler to resolve
+      sessionStorage.setItem('pendingShareToken', to.params.token);
+      return { name: 'resolveShare' };
+    }
+  },
+  {
+    path: '/resolve-share',
+    name: 'resolveShare',
+    // This route handles the async token resolution
+    component: {
+      template: '<div class="flex items-center justify-center min-h-screen"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>',
+      async mounted() {
+        const token = sessionStorage.getItem('pendingShareToken');
+        sessionStorage.removeItem('pendingShareToken');
+
+        if (!token) {
+          this.$router.push({ name: 'playlists' });
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/playlists/share/${token}`);
+          if (response.ok) {
+            const playlist = await response.json();
+            this.$router.replace({ name: 'playlist', params: { id: playlist.id } });
+          } else {
+            // Playlist not found or not public
+            this.$router.push({ name: 'playlists' });
+          }
+        } catch (error) {
+          console.error('Failed to resolve share token:', error);
+          this.$router.push({ name: 'playlists' });
+        }
+      }
+    },
+    meta: { page: 'resolveShare' }
   }
 ];
 

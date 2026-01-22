@@ -40,14 +40,25 @@ async function fetchUserPlaylists() {
 
 /**
  * Fetch a single playlist by ID.
+ * Works for both authenticated users (own/shared playlists) and unauthenticated (public playlists).
  */
 async function fetchPlaylist(playlistId) {
   loading.value = true;
   try {
-    const response = await fetchWithAuth(`/api/playlists/${playlistId}`);
+    // Try with auth first if authenticated, otherwise fetch without auth
+    let response;
+    if (isAuthenticated.value) {
+      response = await fetchWithAuth(`/api/playlists/${playlistId}`);
+    } else {
+      response = await fetch(`/api/playlists/${playlistId}`);
+    }
+
     if (!response.ok) {
       if (response.status === 403) {
         showError('Du har inte åtkomst till denna spellista');
+      } else if (response.status === 404) {
+        // Playlist not found or not public
+        return null;
       } else {
         throw new Error('Playlist not found');
       }
@@ -404,14 +415,16 @@ async function respondToInvitation(invitationId, status) {
 
 /**
  * Copy share link to clipboard.
+ * Uses the direct playlist URL (works for public playlists).
  */
 async function copyShareLink(playlist) {
-  if (!playlist.share_token) {
+  if (!playlist.is_public) {
     showError('Denna spellista är inte offentlig');
     return false;
   }
 
-  const shareUrl = `${window.location.origin}/shared/${playlist.share_token}`;
+  // Use direct playlist URL - works for public playlists without authentication
+  const shareUrl = `${window.location.origin}/playlist/${playlist.id}`;
 
   try {
     await navigator.clipboard.writeText(shareUrl);
