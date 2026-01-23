@@ -34,6 +34,7 @@ export default {
       showMenu: false,
       showPlaylistSubmenu: false,
       addingToPlaylist: false,
+      menuOpenUpward: false,
     };
   },
 
@@ -162,8 +163,8 @@ export default {
                     <span v-else>{{ artistDisplayString }}</span>
                 </span>
 
-                <!-- Source buttons -->
-                <div v-if="hasSpotify || hasYouTube" class="flex items-center gap-1.5 shrink-0">
+                <!-- Source buttons and report -->
+                <div class="flex items-center gap-1.5 shrink-0">
                     <button v-if="hasSpotify" @click.stop="$emit('play', track, 'spotify')"
                             class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-[#1DB954] transition-colors"
                             :class="{ 'text-[#1DB954]': isCurrent && isSpotifyMode }"
@@ -176,13 +177,19 @@ export default {
                             :aria-label="'Spela på YouTube'">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
                     </button>
+                    <button @click.stop="openFlagModal"
+                            class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-amber-600 transition-colors"
+                            :aria-label="'Rapportera problem med ' + track.title"
+                            title="Rapportera problem">
+                        <flag-icon class="w-4 h-4" />
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- More Menu (Right) -->
         <div class="shrink-0 relative">
-            <button @click.stop="showMenu = !showMenu"
+            <button ref="menuButton" @click.stop="toggleMenu"
                     class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
                     :aria-label="'Fler alternativ för ' + track.title">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -192,7 +199,8 @@ export default {
 
             <!-- Dropdown Menu -->
             <div v-if="showMenu" @click.stop
-                 class="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                 class="absolute right-0 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                 :class="menuOpenUpward ? 'bottom-full mb-1' : 'top-full mt-1'">
                 <!-- Add to Playlist with Submenu -->
                 <div v-if="authFeaturesEnabled" class="relative"
                      @mouseenter="openPlaylistSubmenu"
@@ -457,10 +465,20 @@ export default {
       }
     },
     toggleMenu() {
-      this.showMenu = !this.showMenu;
-      if (this.showMenu && this.isAuthenticated) {
-        this.fetchUserPlaylists();
+      if (!this.showMenu) {
+        // Calculate if menu should open upward
+        const button = this.$refs.menuButton;
+        if (button) {
+          const rect = button.getBoundingClientRect();
+          const menuHeight = 350; // Approximate menu height
+          const spaceBelow = window.innerHeight - rect.bottom;
+          this.menuOpenUpward = spaceBelow < menuHeight;
+        }
+        if (this.isAuthenticated) {
+          this.fetchUserPlaylists();
+        }
       }
+      this.showMenu = !this.showMenu;
     },
     handleClickOutside() {
       this.showMenu = false;
