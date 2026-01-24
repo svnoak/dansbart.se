@@ -15,7 +15,7 @@ const oidcConfig = {
   redirect_uri: 'http://localhost:8080/auth/callback',
   post_logout_redirect_uri: 'http://localhost:8080/',
   response_type: 'code',
-  scope: 'openid email profile offline_access',  // Added offline_access for refresh tokens
+  scope: 'openid email profile offline_access groups',  // groups scope for admin access
   userStore: new WebStorageStateStore({ store: window.localStorage }),
   automaticSilentRenew: false,  // Disabled - Authentik blocks iframe with X-Frame-Options
 

@@ -24,17 +24,18 @@ export default {
   },
   emits: ['logout'],
   setup(props, { emit }) {
-    const { clearToken } = useAdminAuth();
+    const { logout: authLogout, user } = useAdminAuth();
     const activeTab = ref('library');
 
     const logout = () => {
-      clearToken();
-      emit('logout'); // Switches component back to LoginView
+      authLogout();
+      emit('logout');
     };
 
     return {
       activeTab,
       logout,
+      user,
     };
   },
   template: `

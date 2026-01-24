@@ -62,7 +62,7 @@ def _serialize_track(track: Track) -> dict:
         } if track.primary_artist else None,
         "album": {
             "id": str(track.album.id) if track.album else None,
-            "name": track.album.name if track.album else None,
+            "name": track.album.title if track.album else None,
         } if track.album else None,
         "dance_style": dance_style,
         "sub_style": sub_style,
@@ -100,7 +100,7 @@ def _serialize_playlist_detail(playlist: Playlist) -> dict:
         "created_at": playlist.created_at,
         "updated_at": playlist.updated_at,
         "owner": {
-            "id": playlist.user.id,
+            "id": str(playlist.user.id),
             "username": playlist.user.username,
             "display_name": playlist.user.display_name,
             "avatar_url": playlist.user.avatar_url,

@@ -35,6 +35,7 @@ export default {
       showPlaylistSubmenu: false,
       addingToPlaylist: false,
       menuOpenUpward: false,
+      submenuCloseTimer: null,
     };
   },
 
@@ -204,8 +205,9 @@ export default {
                 <!-- Add to Playlist with Submenu -->
                 <div v-if="authFeaturesEnabled" class="relative"
                      @mouseenter="openPlaylistSubmenu"
-                     @mouseleave="closePlaylistSubmenu">
-                    <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between gap-2">
+                     @mouseleave="scheduleClosePlaylistSubmenu">
+                    <button @click="togglePlaylistSubmenu"
+                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
@@ -219,7 +221,10 @@ export default {
 
                     <!-- Playlist Submenu -->
                     <div v-if="showPlaylistSubmenu"
-                         class="absolute left-full top-0 ml-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 max-h-64 overflow-y-auto">
+                         @mouseenter="cancelClosePlaylistSubmenu"
+                         @mouseleave="scheduleClosePlaylistSubmenu"
+                         class="absolute left-full top-0 -ml-2 pl-3 w-59 bg-transparent">
+                      <div class="w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 max-h-64 overflow-y-auto">
 
                         <!-- Not authenticated -->
                         <div v-if="!isAuthenticated" class="px-4 py-3 text-sm text-gray-500 text-center">
@@ -266,6 +271,7 @@ export default {
                                 </div>
                             </button>
                         </template>
+                      </div>
                     </div>
                 </div>
 
@@ -422,6 +428,9 @@ export default {
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside);
+    if (this.submenuCloseTimer) {
+      clearTimeout(this.submenuCloseTimer);
+    }
   },
   methods: {
     getLink(type) {
@@ -485,10 +494,23 @@ export default {
       this.showPlaylistSubmenu = false;
     },
     openPlaylistSubmenu() {
+      this.cancelClosePlaylistSubmenu();
       this.showPlaylistSubmenu = true;
     },
-    closePlaylistSubmenu() {
-      this.showPlaylistSubmenu = false;
+    togglePlaylistSubmenu() {
+      this.cancelClosePlaylistSubmenu();
+      this.showPlaylistSubmenu = !this.showPlaylistSubmenu;
+    },
+    scheduleClosePlaylistSubmenu() {
+      this.submenuCloseTimer = setTimeout(() => {
+        this.showPlaylistSubmenu = false;
+      }, 150);
+    },
+    cancelClosePlaylistSubmenu() {
+      if (this.submenuCloseTimer) {
+        clearTimeout(this.submenuCloseTimer);
+        this.submenuCloseTimer = null;
+      }
     },
     async handleAddToPlaylist(playlistId) {
       if (!this.track || this.addingToPlaylist) return;

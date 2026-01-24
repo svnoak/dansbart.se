@@ -9,12 +9,14 @@ import { useRoute, useRouter } from 'vue-router';
 import { usePlaylists } from '../hooks/usePlaylists.js';
 import { useAuth } from '../hooks/useAuth.js';
 import SharePlaylistModal from './modals/SharePlaylistModal.js';
+import TrackCard from './TrackCard.js';
 
 export default {
   name: 'PlaylistDetailPage',
 
   components: {
     SharePlaylistModal,
+    TrackCard
   },
 
   setup() {
@@ -153,7 +155,7 @@ export default {
     };
   },
 
-  template: `
+  template: /*html*/`
     <div class="max-w-4xl mx-auto px-4 py-8">
       <!-- Loading State -->
       <div v-if="loading" class="text-center py-12">
@@ -295,15 +297,13 @@ export default {
 
         <!-- Tracks List -->
         <div v-if="playlist.tracks && playlist.tracks.length > 0" class="space-y-1">
-          <div
+          <!--- <div
             v-for="(item, index) in playlist.tracks"
             :key="item.track?.id || index"
             class="flex items-center gap-4 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition group"
           >
-            <!-- Track number -->
             <span class="text-gray-400 w-6 text-right text-sm">{{ index + 1 }}</span>
 
-            <!-- Track info -->
             <div class="flex-1 min-w-0">
               <p class="font-medium text-gray-900 truncate">{{ item.track?.title || 'Okänd låt' }}</p>
               <p class="text-sm text-gray-500 truncate">
@@ -311,13 +311,9 @@ export default {
                 <span v-if="item.track?.album?.name"> &bull; {{ item.track.album.name }}</span>
               </p>
             </div>
-
-            <!-- Duration -->
             <span class="text-sm text-gray-400">
               {{ item.track?.duration_ms ? formatDuration(item.track.duration_ms) : '--:--' }}
             </span>
-
-            <!-- Remove button (if can edit) -->
             <button
               v-if="canEdit"
               @click="handleRemoveTrack(item.track?.id)"
@@ -329,6 +325,24 @@ export default {
               </svg>
             </button>
           </div>
+          -->
+
+          <track-card
+            v-for="track in playlist.tracks"
+            :key="track.id"
+            :track="track"
+            :current-track="currentTrack"
+            :is-spotify-mode="activeSource === 'youtube'"
+            :is-playing="isPlaying"
+            @play="$emit('play', $event)"
+            @stop="$emit('stop')"
+            @refresh="$emit('refresh')"
+            @filter-style="$emit('filter-style', $event)"
+            @show-similar="$emit('show-similar', $event)"
+            @add-to-queue="$emit('add-to-queue', $event)"
+            @navigate-to-artist="$emit('navigate-to-artist', $event)"
+            @navigate-to-album="$emit('navigate-to-album', $event)"
+          ></track-card>
         </div>
 
         <!-- Empty playlist -->

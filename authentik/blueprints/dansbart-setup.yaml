@@ -106,8 +106,20 @@ entries:
     identifiers:
       name: dansbart-enrollment-user-write
     attrs:
-      create_users_as_inactive: false
+      create_users_as_inactive: true
       user_creation_mode: always_create
+
+  # Email verification stage
+  - model: authentik_stages_email.emailstage
+    id: dansbart-enrollment-email-verification
+    identifiers:
+      name: dansbart-enrollment-email-verification
+    attrs:
+      use_global_settings: true
+      activate_user_on_success: true
+      subject: Bekräfta din e-postadress för Dansbart
+      template: email/account_confirmation.html
+      token_expiry: minutes=30
 
   # User login stage (for enrollment)
   - model: authentik_stages_user_login.userloginstage
@@ -150,6 +162,14 @@ entries:
 
   - model: authentik_flows.flowstagebinding
     id: dansbart-enrollment-binding-3
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, registrering]]
+      stage: !Find [authentik_stages_email.emailstage, [name, dansbart-enrollment-email-verification]]
+    attrs:
+      order: 25
+
+  - model: authentik_flows.flowstagebinding
+    id: dansbart-enrollment-binding-4
     identifiers:
       target: !Find [authentik_flows.flow, [slug, registrering]]
       stage: !Find [authentik_stages_user_login.userloginstage, [name, dansbart-enrollment-user-login]]
@@ -338,6 +358,31 @@ entries:
       expression: |
         return {}
 
+  # Groups scope (for admin access control)
+  - model: authentik_providers_oauth2.scopemapping
+    id: dansbart-scope-groups
+    identifiers:
+      name: dansbart-scope-groups
+    attrs:
+      name: "Groups scope"
+      scope_name: groups
+      description: "Returns user group memberships for access control"
+      expression: |
+        return {
+            "groups": [group.name for group in request.user.ak_groups.all()],
+        }
+
+  # ============================================
+  # ADMIN GROUP
+  # ============================================
+
+  - model: authentik_core.group
+    id: dansbart-admin-group
+    identifiers:
+      name: dansbart-admins
+    attrs:
+      is_superuser: false
+
   # ============================================
   # SIGNING KEY (for RS256 JWT tokens)
   # ============================================
@@ -364,6 +409,8 @@ entries:
           url: http://localhost:8080/auth/callback
         - matching_mode: strict
           url: http://localhost:8080/
+        - matching_mode: strict
+          url: http://localhost:8080/admin/index.html
       access_token_validity: hours=1
       refresh_token_validity: days=30
       include_claims_in_id_token: true
@@ -376,6 +423,7 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-offline-access]]
+        - !Find [authentik_providers_oauth2.scopemapping, [name, dansbart-scope-groups]]
 
   # ============================================
   # APPLICATION

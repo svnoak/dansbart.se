@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func
 from app.core.database import get_db
-from app.core.config import settings
+from app.core.user_models import User
+from app.api.auth.dependencies import get_admin_user
 from app.services.pipeline import PipelineService
 from app.services.feedback import FeedbackService
 from app.services.admin_tracks import AdminTrackService
@@ -22,23 +23,13 @@ from app.api.schemas import Page
 
 router = APIRouter()
 
-def verify_admin(x_admin_token: str = Header(None)):
-    """Verify admin token from request header against configured password."""
-    if not settings.ADMIN_PASSWORD:
-        # This logs an error on the server side so you know config is missing
-        print("CRITICAL ERROR: ADMIN_PASSWORD is not set in environment!")
-        raise HTTPException(status_code=500, detail="Server misconfiguration")
-    if x_admin_token != settings.ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    return True
-
 class IngestRequest(BaseModel):
     resource_id: str
     resource_type: str = "playlist"  # playlist, album, or artist
 
 @router.post("/danger/reset-crawl-data")
 def reset_crawl_data(
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -61,7 +52,7 @@ def reset_crawl_data(
 @router.post("/ingest")
 def trigger_ingest(
     req: IngestRequest,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     # Validate resource_type
@@ -81,7 +72,7 @@ def get_all_tracks_admin(
     album_id: str = Query(None, description="Filter by album ID"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -97,7 +88,7 @@ def get_all_artists_admin(
     isolated: str = Query(None, description="Filter by isolation status: 'true' or 'false'"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     service = AdminArtistService(db)
@@ -110,7 +101,7 @@ def get_all_albums_admin(
     artist_id: str = Query(None, description="Filter by artist_id"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -123,7 +114,7 @@ def get_all_albums_admin(
 @router.post("/tracks/{track_id}/reanalyze")
 def trigger_reanalysis(
     track_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -157,7 +148,7 @@ class BulkReanalyzeRequest(BaseModel):
 @router.post("/tracks/bulk-reanalyze")
 def trigger_bulk_reanalysis(
     req: BulkReanalyzeRequest = BulkReanalyzeRequest(),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -233,7 +224,7 @@ def trigger_bulk_reanalysis(
 @router.post("/maintenance/cleanup-orphaned")
 def trigger_orphaned_cleanup(
     stuck_threshold_minutes: int = Query(30, ge=5, le=1440),
-    _: bool = Depends(verify_admin)
+    _: User = Depends(get_admin_user)
 ):
     """
     Manually trigger cleanup of orphaned tracks.
@@ -263,7 +254,7 @@ def trigger_orphaned_cleanup(
 
 @router.get("/maintenance/isrc-stats")
 def get_isrc_stats(
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -279,7 +270,7 @@ def get_isrc_stats(
 @router.post("/maintenance/backfill-isrcs")
 def backfill_isrcs(
     limit: int = Query(None, description="Limit number of tracks to process (None for all)"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -306,7 +297,7 @@ def backfill_isrcs(
 @router.post("/tracks/{track_id}/reclassify")
 def trigger_reclassification(
     track_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -348,7 +339,7 @@ def trigger_reclassification(
 
 @router.post("/reclassify-all")
 def trigger_reclassify_all(
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -370,7 +361,7 @@ def trigger_reclassify_all(
 @router.post("/tracks/{track_id}/structure/reset")
 def reset_track_structure_endpoint(
     track_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     service = FeedbackService(db)
@@ -396,7 +387,7 @@ class SpiderRequest(BaseModel):
 @router.post("/spider/crawl")
 def trigger_spider_crawl(
     req: SpiderRequest = SpiderRequest(),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -452,7 +443,7 @@ def trigger_spider_crawl(
 @router.get("/spider/task/{task_id}")
 def get_spider_task_status(
     task_id: str,
-    _: bool = Depends(verify_admin)
+    _: User = Depends(get_admin_user)
 ):
     """
     Check the status of a spider crawl task.
@@ -489,7 +480,7 @@ def get_spider_task_status(
 def get_crawl_history(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -524,7 +515,7 @@ def get_crawl_history(
 
 @router.get("/spider/stats")
 def get_spider_stats(
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -566,7 +557,7 @@ def get_pending_artists(
     search: str = Query(None, description="Search artists by name"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -581,7 +572,7 @@ def get_pending_albums(
     artist_id: str = Query(None, description="Filter by artist_id"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -595,7 +586,7 @@ def get_pending_albums(
 def get_duplicate_tracks(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -608,7 +599,7 @@ def get_duplicate_tracks(
 @router.get("/tracks/duplicates/mergeable")
 def get_mergeable_duplicates(
     limit: int = Query(100, ge=1, le=500),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -620,7 +611,7 @@ def get_mergeable_duplicates(
 @router.get("/tracks/duplicates/analyze/{isrc}")
 def analyze_duplicate_isrc(
     isrc: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -634,7 +625,7 @@ def analyze_duplicate_isrc(
 def merge_duplicate_isrc(
     isrc: str,
     dry_run: bool = Query(False, description="Preview merge without executing"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -653,7 +644,7 @@ def merge_duplicate_isrc(
 def merge_all_duplicates(
     dry_run: bool = Query(False, description="Preview merge without executing"),
     limit: int = Query(None, ge=1, le=1000, description="Max ISRC groups to process"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -667,7 +658,7 @@ def merge_all_duplicates(
 @router.delete("/tracks/{track_id}")
 def delete_track(
     track_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -687,7 +678,7 @@ def delete_track(
 def reject_track(
     track_id: str,
     req: RejectRequest = RejectRequest(),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -712,7 +703,7 @@ def reject_track(
 def reject_artist(
     artist_id: str,
     req: RejectRequest = RejectRequest(),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -738,7 +729,7 @@ def reject_artist(
 def reject_album(
     album_id: str,
     req: RejectRequest = RejectRequest(),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -764,7 +755,7 @@ def get_rejection_list(
     entity_type: str = Query(None, description="Filter by entity_type: track, artist, album"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -776,7 +767,7 @@ def get_rejection_list(
 @router.delete("/rejections/{rejection_id}")
 def remove_from_blocklist(
     rejection_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -804,7 +795,7 @@ def remove_from_blocklist(
 def get_pending_artists_for_approval(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -817,7 +808,7 @@ def get_pending_artists_for_approval(
 @router.post("/pending-artists/{artist_id}/approve")
 def approve_pending_artist(
     artist_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -838,7 +829,7 @@ def approve_pending_artist(
 def reject_pending_artist(
     artist_id: str,
     req: RejectRequest = RejectRequest(),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -861,7 +852,7 @@ def reject_pending_artist(
 @router.get("/artists/{artist_id}/isolation-check")
 def get_artist_isolation_status(
     artist_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -890,7 +881,7 @@ class BulkRejectRequest(BaseModel):
 @router.post("/artists/bulk-reject")
 def bulk_reject_artists(
     req: BulkRejectRequest,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -908,7 +899,7 @@ def bulk_reject_artists(
 @router.post("/artists/{artist_id}/approve")
 def approve_artist(
     artist_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -932,7 +923,7 @@ class BulkApproveRequest(BaseModel):
 @router.post("/artists/bulk-approve")
 def bulk_approve_artists(
     req: BulkApproveRequest,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -953,7 +944,7 @@ def bulk_approve_artists(
 @router.get("/artists/{artist_id}/collaboration-network")
 def get_collaboration_network(
     artist_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -978,7 +969,7 @@ class RejectNetworkRequest(BaseModel):
 @router.post("/reject-network")
 def reject_network(
     req: RejectNetworkRequest,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -1003,7 +994,7 @@ class BlockSpotifyRequest(BaseModel):
 @router.post("/blocklist/add")
 def add_to_blocklist(
     req: BlockSpotifyRequest,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     service = AdminRejectionService(db)
@@ -1042,7 +1033,7 @@ def get_style_keywords(
     is_active: bool = Query(None, description="Filter by active status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -1056,7 +1047,7 @@ def get_style_keywords(
 
 @router.get("/style-keywords/stats")
 def get_style_keyword_stats(
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -1070,7 +1061,7 @@ def get_style_keyword_stats(
 @router.get("/style-keywords/{keyword_id}")
 def get_style_keyword(
     keyword_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -1087,7 +1078,7 @@ def get_style_keyword(
 @router.post("/style-keywords")
 def create_style_keyword(
     req: StyleKeywordRequest,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -1107,7 +1098,7 @@ def create_style_keyword(
 def update_style_keyword(
     keyword_id: str,
     req: StyleKeywordUpdateRequest,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -1133,7 +1124,7 @@ def update_style_keyword(
 @router.delete("/style-keywords/{keyword_id}")
 def delete_style_keyword(
     keyword_id: str,
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -1149,7 +1140,7 @@ def delete_style_keyword(
 
 @router.post("/style-keywords/invalidate-cache")
 def invalidate_keyword_cache(
-    _: bool = Depends(verify_admin)
+    _: User = Depends(get_admin_user)
 ):
     """
     Manually invalidate the style keywords cache.

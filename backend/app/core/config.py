@@ -14,15 +14,13 @@ class Settings(BaseSettings):
     SPOTIPY_CLIENT_ID: str
     SPOTIPY_CLIENT_SECRET: str
 
-    # Admin
-    ADMIN_PASSWORD: str
-
     # Authentik OIDC Configuration
     AUTHENTIK_ISSUER: Optional[str] = None
     AUTHENTIK_JWKS_URI: Optional[str] = None
     AUTHENTIK_CLIENT_ID: Optional[str] = None
     AUTHENTIK_CLIENT_SECRET: Optional[str] = None
     AUTHENTIK_REDIRECT_URI: Optional[str] = None
+    AUTHENTIK_ADMIN_GROUP: str = "dansbart-admins"
 
     # Frontend URL
     FRONTEND_URL: str = "http://localhost:8080"

@@ -1,30 +1,22 @@
 """
 Admin-only analytics endpoints.
-Require X-Admin-Token header for authentication.
+Requires Authentik authentication with admin group membership.
 """
-from fastapi import APIRouter, Depends, Query, Header, HTTPException
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.config import settings
+from app.core.user_models import User
+from app.api.auth.dependencies import get_admin_user
 from app.services.analytics import AnalyticsService
 
 router = APIRouter()
-
-def verify_admin(x_admin_token: str = Header(None)):
-    """Verify admin token from request header against configured password."""
-    if not settings.ADMIN_PASSWORD:
-        print("CRITICAL ERROR: ADMIN_PASSWORD is not set in environment!")
-        raise HTTPException(status_code=500, detail="Server misconfiguration")
-    if x_admin_token != settings.ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    return True
 
 # ========== ANALYTICS ENDPOINTS (ADMIN-ONLY) ==========
 
 @router.get("/dashboard")
 def get_analytics_dashboard(
     days: int = Query(30, description="Number of days to analyze"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -44,7 +36,7 @@ def get_analytics_dashboard(
 @router.get("/visitors")
 def get_visitor_analytics(
     days: int = Query(30, description="Number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -55,7 +47,7 @@ def get_visitor_analytics(
 @router.get("/visits/hourly")
 def get_hourly_visits(
     days: int = Query(30, description="Number of days to analyze"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -66,7 +58,7 @@ def get_hourly_visits(
 @router.get("/visits/daily")
 def get_daily_visits(
     days: int = Query(30, description="Number of days to analyze"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -78,7 +70,7 @@ def get_daily_visits(
 def get_most_played_tracks(
     limit: int = Query(10, description="Number of tracks to return"),
     days: int = Query(None, description="Optional number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -89,7 +81,7 @@ def get_most_played_tracks(
 @router.get("/listen-time")
 def get_total_listen_time(
     days: int = Query(None, description="Optional number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -100,7 +92,7 @@ def get_total_listen_time(
 @router.get("/platform-stats")
 def get_platform_stats(
     days: int = Query(None, description="Optional number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -111,7 +103,7 @@ def get_platform_stats(
 @router.get("/abandonment/nudges")
 def get_nudge_abandonment(
     days: int = Query(None, description="Optional number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -122,7 +114,7 @@ def get_nudge_abandonment(
 @router.get("/abandonment/modals")
 def get_modal_abandonment(
     days: int = Query(None, description="Optional number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -133,7 +125,7 @@ def get_modal_abandonment(
 @router.get("/reports")
 def get_report_analytics(
     days: int = Query(None, description="Optional number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -144,7 +136,7 @@ def get_report_analytics(
 @router.get("/discovery")
 def get_discovery_analytics(
     days: int = Query(30, description="Number of days to look back"),
-    _: bool = Depends(verify_admin),
+    _: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
