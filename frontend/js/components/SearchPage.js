@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import TrackCard from './TrackCard.js';
 import ArtistCard from './ArtistCard.js';
 import AlbumCard from './AlbumCard.js';
@@ -68,9 +68,47 @@ export default {
     'add-to-queue',
     'navigate-to-artist',
     'navigate-to-album',
+    'load-more',
   ],
-  setup() {
+  setup(props, { emit }) {
     const scrollTrigger = ref(null);
+    let observer = null;
+
+    const createObserver = () => {
+      if (observer) observer.disconnect();
+
+      observer = new IntersectionObserver(
+        entries => {
+          const entry = entries[0];
+          if (entry.isIntersecting && !props.loading && !props.loadingMore && props.hasMore) {
+            emit('load-more');
+          }
+        },
+        {
+          root: null,
+          rootMargin: '200px',
+          threshold: 0,
+        }
+      );
+
+      if (scrollTrigger.value) {
+        observer.observe(scrollTrigger.value);
+      }
+    };
+
+    watch(scrollTrigger, (el) => {
+      if (el) createObserver();
+    });
+
+    watch(() => props.loading, (isLoading) => {
+      if (!isLoading && scrollTrigger.value) {
+        createObserver();
+      }
+    });
+
+    onUnmounted(() => {
+      if (observer) observer.disconnect();
+    });
 
     return {
       scrollTrigger

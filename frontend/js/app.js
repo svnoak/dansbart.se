@@ -1,4 +1,4 @@
-import { createApp, onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue';
+import { createApp, onMounted, ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useTracks } from './hooks/tracks.js';
 import { useFilters } from './hooks/filter.js';
@@ -62,9 +62,6 @@ const app = createApp({
     const currentArtistId = computed(() => route.params.id || null);
     const currentAlbumId = computed(() => route.params.id || null);
 
-    const scrollTrigger = ref(null);
-    let observer = null;
-
     const navigateToPage = (page) => {
       routerInstance.push({ name: page });
     };
@@ -120,31 +117,6 @@ const app = createApp({
 
       // Fallback: play just this track
       playerLogic.playContext([track], 0, sourcePreference);
-    };
-
-    const createObserver = () => {
-      if (observer) observer.disconnect();
-
-      observer = new IntersectionObserver(
-        entries => {
-          const entry = entries[0];
-
-          if (entry.isIntersecting) {
-            if (!trackLogic.loading.value && !trackLogic.loadingMore.value) {
-              trackLogic.loadMore();
-            }
-          }
-        },
-        {
-          root: null, // viewport
-          rootMargin: '200px',
-          threshold: 0,
-        }
-      );
-
-      if (scrollTrigger.value) {
-        observer.observe(scrollTrigger.value);
-      }
     };
 
     const loadAndPlayTrack = async trackId => {
@@ -204,6 +176,17 @@ const app = createApp({
       routerInstance.push({ name: 'classify' });
     };
 
+    const handleLoadMore = () => {
+      const searchType = filterLogic.filters.value.searchType;
+      if (searchType === 'tracks') {
+        trackLogic.loadMore();
+      } else if (searchType === 'artists') {
+        artistsLogic.loadMore();
+      } else if (searchType === 'albums') {
+        albumsLogic.loadMore();
+      }
+    };
+
     onMounted(async () => {
       // Load saved queue from localStorage
       await playerLogic.loadQueueFromStorage();
@@ -222,9 +205,6 @@ const app = createApp({
       trackSession();
     });
 
-    onUnmounted(() => {
-      if (observer) observer.disconnect();
-    });
 
     // Compute loading states based on active search type
     const loading = computed(() => {
@@ -265,19 +245,6 @@ const app = createApp({
       },
       { immediate: true }
     );
-
-    watch(
-      () => loading.value,
-      async isLoading => {
-        if (!isLoading) {
-          await nextTick(); // Wait for v-else to render the div
-          createObserver();
-        }
-      }
-    );
-    watch(scrollTrigger, el => {
-      if (el) createObserver();
-    });
 
     // Watch filters and sync to URL (only on search page)
     watch(
@@ -332,7 +299,6 @@ const app = createApp({
       handlePlay,
       handleDiscoveryPlay,
       togglePlay,
-      scrollTrigger,
       similarModalTrackId,
       similarTracks,
       showSimilarModal,
@@ -347,6 +313,7 @@ const app = createApp({
       navigateToAlbum,
       navigateToClassify,
       addToQueue,
+      handleLoadMore,
     };
   },
 });
