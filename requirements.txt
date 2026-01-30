@@ -1,0 +1,36 @@
+# ====================================================
+# DANSBART AUDIO WORKER DEPENDENCIES
+# AGPL-3.0 Licensed - Heavy ML models for audio analysis
+# ====================================================
+
+# Core Framework & Database
+sqlalchemy>=2.0.0
+psycopg2-binary
+pydantic-settings
+python-dotenv
+pgvector
+
+# Task Queue
+celery
+redis
+
+# neckenml Analyzer - AGPL-3.0 Analysis & Classification Engine
+# (also installs neckenml-core as a dependency)
+neckenml-analyzer>=0.3.0
+
+# Audio dependencies (Essentia uses AGPL-3.0)
+essentia-tensorflow>=2.1b6.dev0
+librosa>=0.9.0
+git+https://github.com/CPJKU/madmom.git
+soundfile>=0.10.0
+
+# Audio File Handling
+yt-dlp
+mutagen
+
+# Music Theory (used by StyleClassifier)
+music21
+
+# Utilities
+psutil
+numpy
