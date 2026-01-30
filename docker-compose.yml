@@ -41,23 +41,24 @@ services:
     depends_on:
       - backend
 
-  # Audio Worker (Heavy ML models)
+  # Audio Worker (AGPL-3.0) - From git submodule: ./audio-worker
+  # To add submodule: git submodule add https://github.com/svnoak/dansbart-audio-worker.git audio-worker
   worker-audio:
     build:
-      context: .
-      dockerfile: backend/Dockerfile.audio
+      context: ./audio-worker
+      dockerfile: Dockerfile
     platform: linux/amd64
     command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio
     volumes:
-      - ./backend:/app
-    env_file:
-      - ./backend/.env
+      - ./audio-worker/app:/app/app:ro  # Mount for development hot-reload
+      - audio_models:/app/models  # Persistent volume for ML models
     environment:
-      - WORKER_TYPE=audio
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_SERVER=db
+      - POSTGRES_DB=dansbart
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - CUDA_VISIBLE_DEVICES=-1
-      - TF_CPP_MIN_LOG_LEVEL=3
+      - NECKENML_MODEL_DIR=/app/models
     depends_on:
       - db
       - redis
@@ -86,3 +87,4 @@ services:
 
 volumes:
   postgres_data:
+  audio_models:  # Persistent storage for ML models (survives container updates)

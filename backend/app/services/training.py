@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.core.models import Track, TrackDanceStyle, AnalysisSource
-from neckenml.training import TrainingService as neckenmlTrainer
+from neckenml.core import TrainingService as neckenmlTrainer
 import numpy as np
 
 

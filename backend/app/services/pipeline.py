@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.services.analysis import AnalysisService
+
 
 class PipelineService:
     def __init__(self, db: Session):
@@ -9,7 +9,7 @@ class PipelineService:
         """
         Generic ingestion method supporting playlist, album, or artist.
         1. Ingest (Blocking, creates DB rows).
-        2. Schedule Analysis for every track found.
+        2. Schedule Analysis for every track found (handled by external audio worker).
         """
         # Lazy imports to avoid loading worker dependencies in API
         from app.workers.ingestion.spotify import SpotifyIngestor
@@ -30,11 +30,12 @@ class PipelineService:
         if not track_ids:
             return {"status": "error", "message": "No tracks found or Spotify error."}
 
-        # 2. SCHEDULE ANALYSIS (Asynchronous)
-        print(f"⚙️ Scheduling analysis for {len(track_ids)} tracks...")
+        # 2. SCHEDULE ANALYSIS (Asynchronous - handled by external dansbart-audio-worker)
+        print(f"Scheduling analysis for {len(track_ids)} tracks...")
 
         for tid in track_ids:
-            analyze_track_task.delay(tid)
+            # This sends the task to the external audio worker via Celery
+            analyze_track_task(tid)
 
         return {
             "status": "success",
@@ -46,12 +47,3 @@ class PipelineService:
         Legacy method for playlist ingestion (backwards compatibility).
         """
         return self.ingest_and_process(playlist_id, "playlist")
-
-    def _analyze_job(self, track_id: str):
-        """
-        Wrapper to run analysis in background.
-        Note: AnalysisService automatically triggers ClassificationService.
-        """
-        # Re-instantiate service to be safe with DB sessions in threads
-        analyzer = AnalysisService(self.db)
-        analyzer.analyze_track_by_id(track_id)
