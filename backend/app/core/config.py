@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     SPOTIPY_CLIENT_ID: str
     SPOTIPY_CLIENT_SECRET: str
 
+    # Feature flags
+    ENABLE_AUTH_FEATURES: bool = False  # Set to False to disable Authentik and use password auth
+
+    # Admin password (used when ENABLE_AUTH_FEATURES is False, or for spotify_preview endpoints)
+    ADMIN_PASSWORD: Optional[str] = None
+
     # Authentik OIDC Configuration
     AUTHENTIK_ISSUER: Optional[str] = None
     AUTHENTIK_JWKS_URI: Optional[str] = None

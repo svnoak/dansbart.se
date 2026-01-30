@@ -4,10 +4,16 @@
  *
  * Shares the same session as the main app - if user is logged into the main app,
  * the admin will use that token and just verify admin group membership.
+ *
+ * When ENABLE_AUTH_FEATURES is false, uses password-based authentication instead.
  */
 
 import { ref, computed } from 'vue';
 import { UserManager, WebStorageStateStore, User } from 'oidc-client-ts';
+import { FEATURES } from '../../../js/config/features.js';
+
+// Check if auth features are enabled
+const authFeaturesEnabled = FEATURES.ENABLE_AUTH_FEATURES;
 
 // Main app OIDC config - used to check existing session
 const mainAppOidcConfig = {
@@ -36,12 +42,9 @@ const adminOidcConfig = {
   post_logout_redirect_uri: 'http://localhost:8080/admin/index.html',
 };
 
-// Use main app's user manager to check existing session
-const mainAppUserManager = new UserManager(mainAppOidcConfig);
-// Use admin-specific config for login redirects from admin page
-const adminUserManager = new UserManager(adminOidcConfig);
-
-// Alias for backward compatibility - use main app manager for most operations
+// Only create user managers if auth features are enabled
+const mainAppUserManager = authFeaturesEnabled ? new UserManager(mainAppOidcConfig) : null;
+const adminUserManager = authFeaturesEnabled ? new UserManager(adminOidcConfig) : null;
 const userManager = mainAppUserManager;
 
 // Shared state
@@ -50,8 +53,16 @@ const accessToken = ref(null);
 const isAdmin = ref(false);
 const authError = ref('');
 const isLoading = ref(true);
+// For password auth mode
+const usePasswordAuth = ref(!authFeaturesEnabled);
+const adminPassword = ref(localStorage.getItem('admin_password') || '');
 
-const isAuthenticated = computed(() => !!user.value && !!accessToken.value && isAdmin.value);
+const isAuthenticated = computed(() => {
+  if (usePasswordAuth.value) {
+    return !!adminPassword.value && isAdmin.value;
+  }
+  return !!user.value && !!accessToken.value && isAdmin.value;
+});
 
 // Admin group name (must match backend config)
 const ADMIN_GROUP = 'dansbart-admins';
@@ -85,6 +96,19 @@ function checkAdminGroup(token) {
 async function initAuth() {
   isLoading.value = true;
   authError.value = '';
+
+  // If using password auth mode
+  if (usePasswordAuth.value) {
+    console.log('[useAdminAuth] Using password auth mode');
+    const storedPassword = localStorage.getItem('admin_password');
+    if (storedPassword) {
+      adminPassword.value = storedPassword;
+      // Verify the password with the backend
+      await verifyPasswordAuth(storedPassword);
+    }
+    isLoading.value = false;
+    return;
+  }
 
   try {
     // Check if this is a callback from Authentik
@@ -133,6 +157,48 @@ async function initAuth() {
   } finally {
     isLoading.value = false;
   }
+}
+
+// Verify password with backend
+async function verifyPasswordAuth(password) {
+  try {
+    const response = await fetch('/api/admin/spider/stats', {
+      headers: {
+        'X-Admin-Token': password,
+      },
+    });
+    if (response.ok) {
+      isAdmin.value = true;
+      authError.value = '';
+      console.log('[useAdminAuth] Password verified');
+      return true;
+    } else {
+      isAdmin.value = false;
+      adminPassword.value = '';
+      localStorage.removeItem('admin_password');
+      authError.value = 'Invalid admin password';
+      return false;
+    }
+  } catch (error) {
+    console.error('[useAdminAuth] Password verify error:', error);
+    authError.value = 'Could not verify password';
+    return false;
+  }
+}
+
+// Login with password
+async function loginWithPassword(password) {
+  isLoading.value = true;
+  authError.value = '';
+
+  const verified = await verifyPasswordAuth(password);
+  if (verified) {
+    adminPassword.value = password;
+    localStorage.setItem('admin_password', password);
+  }
+
+  isLoading.value = false;
+  return verified;
 }
 
 async function handleCallback() {
@@ -253,5 +319,9 @@ export function useAdminAuth() {
     logout,
     refreshToken,
     waitForAuth: () => authInitPromise,
+    // Password auth mode
+    usePasswordAuth,
+    adminPassword,
+    loginWithPassword,
   };
 }

@@ -1,29 +1,39 @@
 /**
  * Admin API Composable
- * Provides authenticated fetch wrapper for admin API calls using Bearer token
+ * Provides authenticated fetch wrapper for admin API calls
+ *
+ * When using Authentik (ENABLE_AUTH_FEATURES=true): Uses Authorization: Bearer token
+ * When using password auth (ENABLE_AUTH_FEATURES=false): Uses X-Admin-Token header
  */
 
 import { unref } from 'vue';
 import { useAdminAuth } from './useAdminAuth.js';
 
 export function useAdminApi(token) {
-  const { logout, refreshToken } = useAdminAuth();
+  const { logout, refreshToken, usePasswordAuth, adminPassword } = useAdminAuth();
 
   const fetchWithAuth = async (url, options = {}) => {
-    const rawToken = unref(token);
-    const tokenValue =
-      rawToken && typeof rawToken === 'object' && 'value' in rawToken ? rawToken.value : rawToken;
-
-    const headers = {
+    let headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${tokenValue}`,
       ...options.headers,
     };
 
+    // Use different auth headers based on auth mode
+    if (usePasswordAuth.value) {
+      // Password auth mode - use X-Admin-Token header
+      headers['X-Admin-Token'] = adminPassword.value;
+    } else {
+      // Authentik mode - use Bearer token
+      const rawToken = unref(token);
+      const tokenValue =
+        rawToken && typeof rawToken === 'object' && 'value' in rawToken ? rawToken.value : rawToken;
+      headers['Authorization'] = `Bearer ${tokenValue}`;
+    }
+
     let response = await fetch(url, { ...options, headers });
 
-    // Handle 401 - try to refresh token
-    if (response.status === 401) {
+    // Handle 401 - try to refresh token (only in Authentik mode)
+    if (response.status === 401 && !usePasswordAuth.value) {
       console.log('[useAdminApi] Got 401, attempting token refresh');
       const refreshed = await refreshToken();
       if (refreshed) {
@@ -36,6 +46,11 @@ export function useAdminApi(token) {
         logout();
         throw new Error('Session expired');
       }
+    }
+
+    if (response.status === 401 && usePasswordAuth.value) {
+      // Invalid password in password auth mode
+      throw new Error('Invalid admin password');
     }
 
     if (response.status === 403) {

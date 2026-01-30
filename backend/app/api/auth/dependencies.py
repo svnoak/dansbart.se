@@ -2,17 +2,19 @@
 Authentication dependencies for FastAPI.
 
 Provides dependency injection for authenticating users via Authentik OIDC tokens.
+When ENABLE_AUTH_FEATURES is False, admin endpoints fall back to password auth.
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime
+from typing import Optional
 from app.core.database import get_db
 from app.core.oidc import validate_token
 from app.core.user_models import User
 from app.core.config import settings
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=settings.ENABLE_AUTH_FEATURES)
 
 
 async def get_current_user(
@@ -124,25 +126,47 @@ async def get_optional_user(
 
 async def get_admin_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    x_admin_token: Optional[str] = Header(None),
     db: Session = Depends(get_db)
-) -> User:
+) -> User | None:
     """
     Dependency to require authenticated user with admin group membership.
 
-    Validates that the user:
-    1. Has a valid Authentik token
-    2. Is a member of the configured admin group (AUTHENTIK_ADMIN_GROUP)
+    When ENABLE_AUTH_FEATURES is True:
+    - Validates that the user has a valid Authentik token
+    - Validates that the user is a member of the configured admin group
+
+    When ENABLE_AUTH_FEATURES is False:
+    - Falls back to password-based auth using X-Admin-Token header
+    - Returns None instead of a User object (no user context available)
 
     Args:
         credentials: HTTP Bearer credentials (Authorization: Bearer <token>)
+        x_admin_token: Admin password header (used when auth features disabled)
         db: Database session
 
     Returns:
-        User: Authenticated admin user object
+        User | None: Authenticated admin user object, or None if using password auth
 
     Raises:
         HTTPException: 401 if token invalid, 403 if not in admin group
     """
+    # If auth features are disabled, fall back to password auth
+    if not settings.ENABLE_AUTH_FEATURES:
+        if not settings.ADMIN_PASSWORD:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Server misconfiguration: ADMIN_PASSWORD not set"
+            )
+        if x_admin_token != settings.ADMIN_PASSWORD:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid admin token"
+            )
+        # Return None - no user context available in password auth mode
+        return None
+
+    # Auth features enabled - use Authentik
     # First validate the user is authenticated
     user = await get_current_user(credentials, db)
 

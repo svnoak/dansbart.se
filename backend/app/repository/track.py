@@ -94,6 +94,35 @@ class TrackRepository(BaseRepository[Track]):
             )
         
         # 3. Sorting Logic
+
+        # Priority sorting: confirmed tracks with YouTube links first
+        # Uses a subquery to check for YouTube links without filtering
+        has_youtube_subquery = (
+            self.db.query(PlaybackLink.track_id)
+            .filter(
+                PlaybackLink.platform == 'youtube',
+                PlaybackLink.is_working == True
+            )
+            .correlate(Track)
+            .exists()
+            .where(PlaybackLink.track_id == Track.id)
+        )
+
+        # Priority order:
+        # 1 = confirmed (confidence >= 0.98) + has YouTube
+        # 2 = confirmed + no YouTube
+        # 3 = unconfirmed + has YouTube
+        # 4 = unconfirmed + no YouTube
+        priority_order = case(
+            (and_(TrackDanceStyle.confidence >= 0.98, has_youtube_subquery), 1),
+            (TrackDanceStyle.confidence >= 0.98, 2),
+            (has_youtube_subquery, 3),
+            else_=4
+        )
+
+        # Always apply priority sorting first
+        query = query.order_by(priority_order.asc())
+
         sort_columns = {
             "created_at": Track.created_at,
             "title": Track.title,
