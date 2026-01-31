@@ -133,16 +133,16 @@ export default {
                     {{ tempoLabel }}
                 </span>
 
-                <!-- Duration always visible -->
-                <span v-if="formattedDuration" class="px-2 py-0.5 text-gray-400 text-xs font-mono flex items-center border border-gray-100 bg-gray-50 rounded-full">{{ formattedDuration }}</span>
-
                 <!-- Hidden on mobile, visible on sm+ -->
                 <span v-if="track.has_vocals" class="hidden sm:flex px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-bold rounded-full items-center gap-1">🎤 Vocals</span>
                 <span v-else class="hidden sm:flex px-2 py-0.5 bg-green-50 text-green-700 border border-green-100 text-xs font-bold rounded-full items-center gap-1">🎻 Instr.</span>
             </div>
 
-            <!-- Title -->
-            <h3 class="font-semibold text-sm text-gray-900 leading-tight truncate mb-0.5">{{ track.title }}</h3>
+            <!-- Title + Duration -->
+            <div class="flex items-center justify-between gap-2 mb-0.5 w-full overflow-hidden">
+                <h3 class="font-semibold text-sm text-gray-900 leading-tight truncate">{{ track.title }}</h3>
+                <span v-if="formattedDuration" class="text-xs text-gray-400 font-mono whitespace-nowrap">{{ formattedDuration }}</span>
+            </div>
 
             <!-- Artist and sources on separate line -->
             <div class="flex items-center gap-2 text-xs text-gray-500">

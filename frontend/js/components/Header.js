@@ -93,9 +93,14 @@ export default {
                             </a>
                             <a href="/terms.html"
                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                               :class="{ 'rounded-b-lg': !consentStatus }"
                                role="menuitem">
                                 Användarvillkor
+                            </a>
+                            <a href="mailto:info@dansbart.se"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                               :class="{ 'rounded-b-lg': !consentStatus }"
+                               role="menuitem">
+                                Kontakt
                             </a>
                             <button
                                 v-if="consentStatus"
@@ -233,6 +238,9 @@ export default {
                             </a>
                             <a href="/terms.html" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">
                                 Användarvillkor
+                            </a>
+                            <a href="mailto:info@dansbart.se" class="block text-sm text-gray-600 hover:text-indigo-600 py-2">
+                                Kontakt
                             </a>
                             <button v-if="consentStatus" @click="openCookieSettings" class="w-full text-left block text-sm text-gray-600 hover:text-indigo-600 py-2">
                                 Cookie-inställningar
