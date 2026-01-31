@@ -96,27 +96,29 @@ class TrackRepository(BaseRepository[Track]):
         # 3. Sorting Logic
 
         # Priority sorting: confirmed tracks with YouTube links first
-        # Uses a subquery to check for YouTube links without filtering
-        has_youtube_subquery = (
+        # Uses a LEFT JOIN with subquery (evaluated once) instead of correlated EXISTS (per-row)
+        youtube_tracks_sq = (
             self.db.query(PlaybackLink.track_id)
             .filter(
                 PlaybackLink.platform == 'youtube',
                 PlaybackLink.is_working == True
             )
-            .correlate(Track)
-            .exists()
-            .where(PlaybackLink.track_id == Track.id)
+            .distinct()
+            .subquery()
         )
 
-        # Priority order:
+        # LEFT JOIN to check YouTube availability efficiently
+        query = query.outerjoin(youtube_tracks_sq, Track.id == youtube_tracks_sq.c.track_id)
+
+        # Priority order (NULL in subquery column means no YouTube link):
         # 1 = confirmed (confidence >= 0.98) + has YouTube
         # 2 = confirmed + no YouTube
         # 3 = unconfirmed + has YouTube
         # 4 = unconfirmed + no YouTube
         priority_order = case(
-            (and_(TrackDanceStyle.confidence >= 0.98, has_youtube_subquery), 1),
+            (and_(TrackDanceStyle.confidence >= 0.98, youtube_tracks_sq.c.track_id.isnot(None)), 1),
             (TrackDanceStyle.confidence >= 0.98, 2),
-            (has_youtube_subquery, 3),
+            (youtube_tracks_sq.c.track_id.isnot(None), 3),
             else_=4
         )
 
@@ -203,14 +205,21 @@ class TrackRepository(BaseRepository[Track]):
             query = query.filter(Track.articulation <= max_articulation)
 
         # 6. Apply Text/Meta Search
+        # Uses explicit JOINs instead of .any()/.has() subqueries for better performance.
+        # The trigram GIN indexes (pg_trgm) on title/name columns accelerate ILIKE queries.
         if search:
             search_str = f"%{search}%"
-            query = query.outerjoin(TrackAlbum, Track.id == TrackAlbum.track_id).outerjoin(Album, TrackAlbum.album_id == Album.id).filter(
-                or_(
-                    Track.title.ilike(search_str),
-                    Album.title.ilike(search_str),
-                    Track.artist_links.any(
-                        TrackArtist.artist.has(Artist.name.ilike(search_str))
+            query = (
+                query
+                .outerjoin(TrackAlbum, Track.id == TrackAlbum.track_id)
+                .outerjoin(Album, TrackAlbum.album_id == Album.id)
+                .outerjoin(TrackArtist, Track.id == TrackArtist.track_id)
+                .outerjoin(Artist, TrackArtist.artist_id == Artist.id)
+                .filter(
+                    or_(
+                        Track.title.ilike(search_str),
+                        Album.title.ilike(search_str),
+                        Artist.name.ilike(search_str)
                     )
                 )
             )
@@ -228,13 +237,34 @@ class TrackRepository(BaseRepository[Track]):
             else:
                 query = query.filter(Track.music_genre == music_genre)
 
-        # Use full eager load to avoid N+1 queries during formatting
-        query = query.options(*self.get_eager_load_full())
+        # Ensure distinct results when searching (JOINs can create duplicates)
+        if search:
+            query = query.distinct(Track.id)
 
-        total = query.count()
+        import time
+        t0 = time.perf_counter()
 
+        # Get count from a lightweight subquery (without eager loading or ordering)
+        # order_by(None) strips inherited ORDER BY which would cause GROUP BY errors
+        count_query = query.order_by(None).with_entities(func.count(func.distinct(Track.id)))
+        total = count_query.scalar() or 0
+
+        t1 = time.perf_counter()
+        print(f"[PERF] count query: {t1-t0:.3f}s")
+
+        # Apply eager loading only to the paginated result set
+        # Use joinedload for single-query fetch (faster for small result sets)
+        query = query.options(
+            joinedload(Track.dance_styles),
+            joinedload(Track.artist_links).joinedload(TrackArtist.artist),
+            joinedload(Track.album_links).joinedload(TrackAlbum.album),
+            joinedload(Track.playback_links)
+        )
         items = query.offset(offset).limit(limit).all()
-        
+
+        t2 = time.perf_counter()
+        print(f"[PERF] main query with eager load: {t2-t1:.3f}s")
+
         return items, total
 
     # ==================== CRUD & HELPERS ====================

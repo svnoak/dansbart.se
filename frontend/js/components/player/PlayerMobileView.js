@@ -53,6 +53,17 @@ export default {
   ],
   components: { SmartNudge, SectionVoting, BrokenLinkToast, PlayerControls, ProgressBar },
 
+  methods: {
+    handleNavigateToArtist(artistId) {
+      this.$emit('close');
+      this.$emit('navigate-to-artist', artistId);
+    },
+    handleNavigateToAlbum(albumId) {
+      this.$emit('close');
+      this.$emit('navigate-to-album', albumId);
+    },
+  },
+
   computed: {
     structureButtonLabel() {
       if (this.structureMode === 'bars') return 'Visa repriser';
@@ -98,7 +109,7 @@ export default {
                         <template v-for="(artist, index) in currentTrack.artists" :key="artist.id || index">
                             <a
                                 v-if="artist.id"
-                                @click.stop.prevent="$emit('close'); $emit('navigate-to-artist', artist.id)"
+                                @click.stop.prevent="handleNavigateToArtist(artist.id)"
                                 href="#"
                                 class="hover:underline cursor-pointer"
                             >{{ artist.name }}</a>
@@ -111,7 +122,7 @@ export default {
                 <p v-if="trackAlbum" class="text-sm text-gray-500 font-medium truncate mb-2">
                     <a
                         v-if="currentTrack.album && currentTrack.album.id"
-                        @click.stop.prevent="$emit('close'); $emit('navigate-to-album', currentTrack.album.id)"
+                        @click.stop.prevent="handleNavigateToAlbum(currentTrack.album.id)"
                         href="#"
                         class="hover:underline cursor-pointer"
                     >{{ trackAlbum }}</a>

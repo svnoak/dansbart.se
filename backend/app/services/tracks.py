@@ -193,6 +193,9 @@ class TrackService:
             exact_main_style = main_style
 
         # 2. CALL REPO
+        import time
+        t0 = time.perf_counter()
+
         tracks, base_total = self.repo.search_playable_tracks(
             exact_style=exact_style,
             exact_main_style=exact_main_style,
@@ -215,15 +218,21 @@ class TrackService:
             offset=offset
         )
 
+        t1 = time.perf_counter()
+        print(f"[PERF] repo.search_playable_tracks: {t1-t0:.3f}s ({len(tracks)} tracks, {base_total} total)")
+
         # 3. POST-PROCESSING (Tags, Formatting, Tempo Logic)
-        
+
         # Gather styles for Tag Lookup
         visible_styles = set()
         for t in tracks:
             primary = next((s for s in t.dance_styles if s.is_primary), None)
             if primary: visible_styles.add(primary.dance_style)
-        
+
         style_feel_map = self._get_global_feels(list(visible_styles))
+
+        t2 = time.perf_counter()
+        print(f"[PERF] _get_global_feels: {t2-t1:.3f}s")
         
         results = []
         filtered_count = 0
