@@ -314,8 +314,8 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
     /**
      * Find tracks stuck in a processing status since before a given time.
      */
-    @Query("SELECT t FROM Track t WHERE t.processingStatus = :status AND t.updatedAt < :threshold")
-    List<Track> findByProcessingStatusAndUpdatedAtBefore(
+    @Query("SELECT t FROM Track t WHERE t.processingStatus = :status AND t.createdAt < :threshold")
+    List<Track> findByProcessingStatusAndCreatedAtBefore(
         @Param("status") String status,
         @Param("threshold") java.time.OffsetDateTime threshold
     );

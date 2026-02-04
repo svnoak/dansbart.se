@@ -74,7 +74,7 @@ public class MaintenanceService {
         OffsetDateTime threshold = OffsetDateTime.now().minusMinutes(stuckThresholdMinutes);
 
         // Find tracks stuck in PROCESSING for too long
-        List<Track> stuckTracks = trackRepository.findByProcessingStatusAndUpdatedAtBefore("PROCESSING", threshold);
+        List<Track> stuckTracks = trackRepository.findByProcessingStatusAndCreatedAtBefore("PROCESSING", threshold);
 
         int resetCount = 0;
         List<Map<String, Object>> resetTracks = new ArrayList<>();
