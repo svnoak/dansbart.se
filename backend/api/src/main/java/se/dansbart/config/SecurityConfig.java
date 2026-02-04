@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 // Health check
                 .requestMatchers("/actuator/health").permitAll()
+                // Public playlist share endpoint (before authenticated playlists)
+                .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
                 // User endpoints require authentication
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()

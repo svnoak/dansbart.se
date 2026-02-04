@@ -59,14 +59,14 @@
         const sessionId = getSessionId();
 
         try {
-          await fetch(`${API_BASE}/analytics/track/interaction`, {
+          await fetch(`${API_BASE}/analytics/interaction`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              event_type: eventType,
-              track_id: null,
-              event_data: eventData,
-              session_id: sessionId,
+              eventType: eventType,
+              trackId: null,
+              eventData: eventData,
+              sessionId: sessionId,
             }),
           });
         } catch (error) {

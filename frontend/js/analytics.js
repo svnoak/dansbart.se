@@ -57,9 +57,8 @@ export async function trackSession() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        session_id: sessionId,
-        user_agent: navigator.userAgent,
-        is_returning: isReturning,
+        sessionId: sessionId,
+        userAgent: navigator.userAgent,
       }),
     });
 
@@ -83,15 +82,15 @@ export async function trackPlayback(trackId, platform, durationSeconds, complete
   const sessionId = getSessionId();
 
   try {
-    await fetch(`${API_BASE}/analytics/track/playback/${trackId}`, {
+    await fetch(`${API_BASE}/analytics/playback/${trackId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         platform,
-        session_id: sessionId,
-        duration_seconds: Math.floor(durationSeconds),
+        sessionId: sessionId,
+        durationSeconds: Math.floor(durationSeconds),
         completed,
       }),
     });
@@ -110,16 +109,16 @@ export async function trackInteraction(eventType, trackId = null, eventData = nu
   const sessionId = getSessionId();
 
   try {
-    await fetch(`${API_BASE}/analytics/track/interaction`, {
+    await fetch(`${API_BASE}/analytics/interaction`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        event_type: eventType,
-        track_id: trackId,
-        event_data: eventData,
-        session_id: sessionId,
+        eventType: eventType,
+        trackId: trackId,
+        eventData: eventData,
+        sessionId: sessionId,
       }),
     });
   } catch {
