@@ -1,0 +1,51 @@
+package se.dansbart.worker;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Admin endpoints for triggering background tasks.
+ */
+@RestController
+@RequestMapping("/api/admin")
+@RequiredArgsConstructor
+@Tag(name = "Admin", description = "Administrative task management")
+public class AdminTaskController {
+
+    private final TaskDispatcher taskDispatcher;
+
+    @PostMapping("/trigger/reclassify")
+    @Operation(summary = "Trigger library reclassification")
+    public ResponseEntity<Map<String, String>> triggerReclassify() {
+        taskDispatcher.dispatchReclassifyLibrary();
+        return ResponseEntity.ok(Map.of("status", "dispatched", "task", "reclassify_library"));
+    }
+
+    @PostMapping("/trigger/spider")
+    @Operation(summary = "Trigger spider crawl")
+    public ResponseEntity<Map<String, String>> triggerSpider(
+            @RequestParam(required = false) String seedArtistId) {
+        taskDispatcher.dispatchSpiderCrawl(seedArtistId);
+        return ResponseEntity.ok(Map.of("status", "dispatched", "task", "spider_crawl"));
+    }
+
+    @PostMapping("/trigger/analyze/{trackId}")
+    @Operation(summary = "Trigger audio analysis for a track")
+    public ResponseEntity<Map<String, String>> triggerAnalysis(@PathVariable UUID trackId) {
+        taskDispatcher.dispatchAudioAnalysis(trackId);
+        return ResponseEntity.ok(Map.of("status", "dispatched", "task", "analyze_track", "trackId", trackId.toString()));
+    }
+
+    @PostMapping("/trigger/backfill/{artistId}")
+    @Operation(summary = "Trigger backfill for an artist")
+    public ResponseEntity<Map<String, String>> triggerBackfill(@PathVariable UUID artistId) {
+        taskDispatcher.dispatchBackfillArtist(artistId);
+        return ResponseEntity.ok(Map.of("status", "dispatched", "task", "backfill_artist", "artistId", artistId.toString()));
+    }
+}

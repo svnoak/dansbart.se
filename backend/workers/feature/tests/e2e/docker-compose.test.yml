@@ -1,0 +1,124 @@
+version: '3.8'
+
+# Docker Compose configuration for E2E testing
+# This sets up an isolated test environment with PostgreSQL and Redis
+
+services:
+  # PostgreSQL test database
+  test-db:
+    image: pgvector/pgvector:pg16
+    container_name: dansbart-test-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dansbart_test
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts with dev DB
+    volumes:
+      - test-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Redis for Celery broker
+  test-redis:
+    image: redis:7-alpine
+    container_name: dansbart-test-redis
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Feature worker (classification)
+  test-feature-worker:
+    build:
+      context: ../../../..
+      dockerfile: workers/feature/Dockerfile
+    container_name: dansbart-test-feature-worker
+    environment:
+      DATABASE_URL: postgresql://postgres:password@test-db:5432/dansbart_test
+      CELERY_BROKER_URL: redis://test-redis:6379/0
+      CELERY_RESULT_BACKEND: redis://test-redis:6379/0
+      SPOTIPY_CLIENT_ID: ${SPOTIPY_CLIENT_ID:-test_client_id}
+      SPOTIPY_CLIENT_SECRET: ${SPOTIPY_CLIENT_SECRET:-test_client_secret}
+      NECKENML_MODEL_DIR: /app/models
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    volumes:
+      - ./models:/app/models:ro
+    networks:
+      - test-network
+    profiles:
+      - workers
+
+  # Test runner
+  test-runner:
+    build:
+      context: ../../../..
+      dockerfile: workers/feature/Dockerfile
+    container_name: dansbart-test-runner
+    environment:
+      TEST_DATABASE_URL: postgresql://postgres:password@test-db:5432/dansbart_test
+      CELERY_BROKER_URL: redis://test-redis:6379/0
+      CELERY_RESULT_BACKEND: redis://test-redis:6379/0
+      SPOTIPY_CLIENT_ID: ${SPOTIPY_CLIENT_ID:-test_client_id}
+      SPOTIPY_CLIENT_SECRET: ${SPOTIPY_CLIENT_SECRET:-test_client_secret}
+      NECKENML_MODEL_DIR: /app/models
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app/tests/e2e:ro
+      - ./models:/app/models:ro
+    working_dir: /app
+    command: ["pytest", "tests/e2e/", "-v", "-m", "e2e", "--tb=short"]
+    networks:
+      - test-network
+    profiles:
+      - test
+
+volumes:
+  test-db-data:
+
+networks:
+  test-network:
+    driver: bridge
+
+# Usage:
+#
+# Start test infrastructure:
+#   docker-compose -f tests/e2e/docker-compose.test.yml up -d test-db test-redis
+#
+# Run all E2E tests:
+#   docker-compose -f tests/e2e/docker-compose.test.yml --profile test up test-runner
+#
+# Run tests locally (requires test-db and test-redis running):
+#   TEST_DATABASE_URL=postgresql://postgres:password@localhost:5433/dansbart_test \
+#   pytest tests/e2e/ -v -m e2e
+#
+# Run specific test file:
+#   docker-compose -f tests/e2e/docker-compose.test.yml run test-runner \
+#     pytest tests/e2e/test_spotify_ingestion.py -v
+#
+# Run with real Spotify credentials:
+#   SPOTIPY_CLIENT_ID=xxx SPOTIPY_CLIENT_SECRET=xxx \
+#   docker-compose -f tests/e2e/docker-compose.test.yml --profile test up test-runner
+#
+# Cleanup:
+#   docker-compose -f tests/e2e/docker-compose.test.yml down -v

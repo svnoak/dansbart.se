@@ -1,0 +1,74 @@
+spring:
+  application:
+    name: dansbart-api
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    baseline-description: "Existing schema from Alembic migrations"
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_SERVER:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:dansbart}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:https://auth.dansbart.se/application/o/dansbart/}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:https://auth.dansbart.se/application/o/dansbart/jwks/}
+
+server:
+  port: 8000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+logging:
+  level:
+    se.dansbart: DEBUG
+    org.springframework.security: INFO
+
+# Custom application properties
+dansbart:
+  celery:
+    broker-url: redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}/0
+    queues:
+      audio: audio
+      feature: feature
+      light: light
+  auth:
+    # Set to false to use ADMIN_PASSWORD instead of Authentik OIDC
+    enabled: ${ENABLE_AUTH_FEATURES:false}
+    # Password for admin access when auth.enabled=false
+    admin-password: ${ADMIN_PASSWORD:}

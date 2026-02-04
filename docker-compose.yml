@@ -6,6 +6,7 @@ services:
     platform: linux/amd64
     volumes:
       - ./backend:/app
+      - ../neckenml-analyzer:/neckenml  # Mount neckenml for local development (rw for pip install -e)
     env_file:
       - ./backend/.env
     depends_on:
@@ -13,7 +14,9 @@ services:
       - redis
     ports:
       - "8000:8000"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      sh -c "pip install -e /neckenml/packages/neckenml-core --quiet &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -48,10 +51,13 @@ services:
       context: ./audio-worker
       dockerfile: Dockerfile
     platform: linux/amd64
-    command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio
+    command: >
+      sh -c "pip install -e /neckenml/packages/neckenml-core -e /neckenml/packages/neckenml-analyzer --quiet &&
+             celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio"
     volumes:
       - ./audio-worker/app:/app/app:ro  # Mount for development hot-reload
       - audio_models:/app/models  # Persistent volume for ML models
+      - ../neckenml-analyzer:/neckenml  # Mount neckenml for local development (rw for pip install -e)
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
@@ -71,9 +77,12 @@ services:
       context: .
       dockerfile: backend/Dockerfile.workers
     platform: linux/amd64
-    command: celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q light
+    command: >
+      sh -c "pip install -e /neckenml/packages/neckenml-core --quiet &&
+             celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q light"
     volumes:
       - ./backend:/app
+      - ../neckenml-analyzer:/neckenml  # Mount neckenml for local development (rw for pip install -e)
     env_file:
       - ./backend/.env
     environment:
