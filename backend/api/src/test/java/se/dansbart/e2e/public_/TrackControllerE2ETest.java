@@ -41,10 +41,12 @@ class TrackControllerE2ETest extends AbstractE2ETest {
                     .param("size", "10")
                     .param("page", "0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content", hasSize(3)))
-                .andExpect(jsonPath("$.totalElements").value(3))
-                .andExpect(jsonPath("$.pageable").exists());
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items", hasSize(3)))
+                .andExpect(jsonPath("$.total").value(3))
+                .andExpect(jsonPath("$.page").exists())
+                .andExpect(jsonPath("$.size").exists())
+                .andExpect(jsonPath("$.hasMore").exists());
         }
 
         @Test
@@ -54,10 +56,10 @@ class TrackControllerE2ETest extends AbstractE2ETest {
             testData.track().withTitle("Hambo").withArtist(artist).withDanceStyle("Hambo").complete().build();
 
             mockMvc.perform(get("/api/tracks")
-                    .param("style", "Polska"))
+                    .param("main_style", "Polska"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(1)))
-                .andExpect(jsonPath("$.content[0].title").value("Polska"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].title").value("Polska"));
         }
 
         @Test
@@ -68,8 +70,8 @@ class TrackControllerE2ETest extends AbstractE2ETest {
 
             mockMvc.perform(get("/api/tracks"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(1)))
-                .andExpect(jsonPath("$.content[0].title").value("Complete Track"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].title").value("Complete Track"));
         }
 
         @Test
@@ -79,10 +81,10 @@ class TrackControllerE2ETest extends AbstractE2ETest {
             testData.track().withTitle("With Vocals").withArtist(artist).withDanceStyle("Polska").withHasVocals(true).complete().build();
 
             mockMvc.perform(get("/api/tracks")
-                    .param("hasVocals", "false"))
+                    .param("vocals", "instrumental"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(1)))
-                .andExpect(jsonPath("$.content[0].title").value("Instrumental"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].title").value("Instrumental"));
         }
     }
 
@@ -128,8 +130,8 @@ class TrackControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/tracks/search")
                     .param("q", "Polska"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(2)))
-                .andExpect(jsonPath("$.content[*].title", everyItem(containsString("Polska"))));
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[*].title", everyItem(containsString("Polska"))));
         }
 
         @Test
@@ -140,7 +142,7 @@ class TrackControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/tracks/search")
                     .param("q", "nonexistent"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
     }
 
