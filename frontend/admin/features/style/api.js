@@ -1,62 +1,58 @@
 /**
  * Style Keywords API
  * API methods for managing genre classification keywords
+ * Uses generated API client from OpenAPI spec
  */
 
-import { useAdminApi } from '../../shared/composables/useAdminApi.js';
+import {
+  getKeywords1,
+  getStats1,
+  createKeyword as createKeywordGenerated,
+  updateKeyword as updateKeywordGenerated,
+  deleteKeyword as deleteKeywordGenerated,
+  invalidateCache as invalidateCacheGenerated,
+} from '../../api/generated/admin-style-keywords/admin-style-keywords.js';
 
-export function useStyleKeywordsApi(token) {
-  const { fetchWithAuth } = useAdminApi(token);
-
+export function useStyleKeywordsApi() {
   const getKeywords = async params => {
-    // Convert null/undefined to empty strings or filter out
-    const query = new URLSearchParams();
-    if (params.search) query.append('search', params.search);
-    if (params.main_style) query.append('main_style', params.main_style);
-    if (params.is_active !== null && params.is_active !== '')
-      query.append('is_active', params.is_active);
-    query.append('limit', params.limit || 50);
-    query.append('offset', params.offset || 0);
+    // Map snake_case params to camelCase for generated API
+    const apiParams = {
+      limit: params.limit || 50,
+      offset: params.offset || 0,
+    };
+    if (params.search) apiParams.search = params.search;
+    if (params.main_style) apiParams.mainStyle = params.main_style;
+    if (params.is_active !== null && params.is_active !== '') {
+      apiParams.isActive = params.is_active === 'true' || params.is_active === true;
+    }
 
-    const res = await fetchWithAuth(`/api/admin/style-keywords?${query.toString()}`);
-    return res.json();
+    const response = await getKeywords1(apiParams);
+    return response.data;
   };
 
   const getStats = async () => {
-    const res = await fetchWithAuth('/api/admin/style-keywords/stats');
-    return res.json();
+    const response = await getStats1();
+    return response.data;
   };
 
   const createKeyword = async data => {
-    const res = await fetchWithAuth('/api/admin/style-keywords', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
+    const response = await createKeywordGenerated(data);
+    return response.data;
   };
 
   const updateKeyword = async (id, data) => {
-    const res = await fetchWithAuth(`/api/admin/style-keywords/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
+    const response = await updateKeywordGenerated(id, data);
+    return response.data;
   };
 
   const deleteKeyword = async id => {
-    const res = await fetchWithAuth(`/api/admin/style-keywords/${id}`, {
-      method: 'DELETE',
-    });
-    return res.json();
+    const response = await deleteKeywordGenerated(id);
+    return response.data;
   };
 
   const invalidateCache = async () => {
-    const res = await fetchWithAuth('/api/admin/style-keywords/invalidate-cache', {
-      method: 'POST',
-    });
-    return res.json();
+    const response = await invalidateCacheGenerated();
+    return response.data;
   };
 
   return {

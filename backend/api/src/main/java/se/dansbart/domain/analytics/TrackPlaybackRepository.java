@@ -17,15 +17,15 @@ public interface TrackPlaybackRepository extends JpaRepository<TrackPlayback, UU
      * Returns [trackId, playCount, completionRate].
      */
     @Query(value = """
-        SELECT tp.track_id,
-               COUNT(tp.id) as play_count,
-               (SUM(CASE WHEN tp.completed = true THEN 1 ELSE 0 END)::float / COUNT(tp.id) * 100) as completion_rate
-        FROM track_playbacks tp
-        WHERE (:since IS NULL OR tp.played_at >= :since)
-        GROUP BY tp.track_id
-        ORDER BY play_count DESC
-        LIMIT :limit
-        """, nativeQuery = true)
+    SELECT tp.track_id,
+           COUNT(tp.id) as play_count,
+           (SUM(CASE WHEN tp.completed = true THEN 1 ELSE 0 END) * 100.0 / COUNT(tp.id)) as completion_rate
+    FROM track_playbacks tp
+    WHERE (CAST(:since AS TIMESTAMP) IS NULL OR tp.played_at >= :since)
+    GROUP BY tp.track_id
+    ORDER BY play_count DESC
+    LIMIT :limit
+    """, nativeQuery = true)
     List<Object[]> findMostPlayedTracks(
         @Param("since") OffsetDateTime since,
         @Param("limit") int limit

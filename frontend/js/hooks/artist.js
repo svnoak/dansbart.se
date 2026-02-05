@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { getArtist, getArtistTracks } from '../api/generated/artists/artists';
 
 export function useArtist() {
   const artist = ref(null);
@@ -6,18 +7,15 @@ export function useArtist() {
   const loading = ref(false);
   const loadingTracks = ref(false);
   const error = ref(null);
-  const hasMore = ref(true);
+  const hasMore = ref(false);
 
   const fetchArtist = async artistId => {
     loading.value = true;
     error.value = null;
 
     try {
-      const response = await fetch(`/api/artists/${artistId}`);
-      if (!response.ok) {
-        throw new Error('Artist not found');
-      }
-      artist.value = await response.json();
+      const response = await getArtist(artistId);
+      artist.value = response.data;
     } catch (err) {
       error.value = err.message;
       artist.value = null;
@@ -26,29 +24,14 @@ export function useArtist() {
     }
   };
 
-  const fetchArtistTracks = async (artistId, offset = 0) => {
-    if (offset === 0) {
-      loadingTracks.value = true;
-      tracks.value = [];
-    }
+  const fetchArtistTracks = async artistId => {
+    loadingTracks.value = true;
+    tracks.value = [];
 
     try {
-      const response = await fetch(
-        `/api/artists/${artistId}/tracks?limit=20&offset=${offset}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to load tracks');
-      }
-
-      const data = await response.json();
-
-      if (offset === 0) {
-        tracks.value = data.items;
-      } else {
-        tracks.value = [...tracks.value, ...data.items];
-      }
-
-      hasMore.value = tracks.value.length < data.total;
+      const response = await getArtistTracks(artistId);
+      tracks.value = response.data;
+      hasMore.value = false; // API returns all tracks at once
     } catch (err) {
       error.value = err.message;
     } finally {
@@ -57,8 +40,7 @@ export function useArtist() {
   };
 
   const loadMore = () => {
-    if (!hasMore.value || loadingTracks.value || !artist.value) return;
-    fetchArtistTracks(artist.value.id, tracks.value.length);
+    // No-op: API returns all tracks at once
   };
 
   return {

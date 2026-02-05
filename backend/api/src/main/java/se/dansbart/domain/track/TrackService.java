@@ -2,6 +2,8 @@ package se.dansbart.domain.track;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,12 +25,54 @@ public class TrackService {
     }
 
     public Page<Track> findPlayableTracks(
-            String style,
+            String mainStyle,
+            String subStyle,
+            String search,
+            String source,
+            String vocals,
+            Boolean styleConfirmed,
+            String musicGenre,
             Integer minBpm,
             Integer maxBpm,
-            Boolean hasVocals,
-            Pageable pageable) {
-        return trackRepository.findPlayableTracks(style, minBpm, maxBpm, hasVocals, pageable);
+            Integer minDuration,
+            Integer maxDuration,
+            Float minBounciness,
+            Float maxBounciness,
+            Float minArticulation,
+            Float maxArticulation,
+            Integer limit,
+            Integer offset) {
+
+        // Convert vocals string to Boolean hasVocals
+        Boolean hasVocals = null;
+        if ("instrumental".equals(vocals)) {
+            hasVocals = false;
+        } else if ("vocals".equals(vocals)) {
+            hasVocals = true;
+        }
+
+        // Convert duration from seconds to milliseconds
+        Integer minDurationMs = minDuration != null ? minDuration * 1000 : null;
+        Integer maxDurationMs = maxDuration != null ? maxDuration * 1000 : null;
+
+        // For style_confirmed, confidence >= 1.0 means user-confirmed
+        Float minConfidence = styleConfirmed != null && styleConfirmed ? 1.0f : null;
+
+        List<Track> tracks = trackRepository.findPlayableTracksWithFilters(
+            mainStyle, subStyle, search, source, hasVocals, minConfidence, musicGenre,
+            minBpm, maxBpm, minDurationMs, maxDurationMs,
+            minBounciness, maxBounciness, minArticulation, maxArticulation,
+            limit, offset
+        );
+
+        long total = trackRepository.countPlayableTracksWithFilters(
+            mainStyle, subStyle, search, source, hasVocals, minConfidence, musicGenre,
+            minBpm, maxBpm, minDurationMs, maxDurationMs,
+            minBounciness, maxBounciness, minArticulation, maxArticulation
+        );
+
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return new PageImpl<>(tracks, pageable, total);
     }
 
     public List<Track> findSimilarTracks(UUID trackId, int limit) {

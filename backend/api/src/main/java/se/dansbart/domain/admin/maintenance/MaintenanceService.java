@@ -143,4 +143,38 @@ public class MaintenanceService {
         result.put("message", "Ingestion task queued");
         return result;
     }
+
+    /**
+     * Trigger heuristic reclassification for all tracks.
+     * This runs the classification pipeline without re-downloading audio.
+     */
+    public Map<String, Object> reclassifyAll() {
+        String taskId = UUID.randomUUID().toString();
+
+        // Dispatch the reclassify library task
+        taskDispatcher.dispatchReclassifyLibrary();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "queued");
+        result.put("task_id", taskId);
+        result.put("message", "Library reclassification task queued");
+        return result;
+    }
+
+    /**
+     * Backfill ISRCs from Spotify for tracks missing them.
+     */
+    public Map<String, Object> backfillIsrcs(int limit) {
+        String taskId = UUID.randomUUID().toString();
+
+        // Dispatch the backfill ISRC task to the light worker
+        taskDispatcher.dispatchBackfillIsrcs(limit);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "queued");
+        result.put("task_id", taskId);
+        result.put("limit", limit);
+        result.put("message", "ISRC backfill task queued for up to " + limit + " tracks");
+        return result;
+    }
 }

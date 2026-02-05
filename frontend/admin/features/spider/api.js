@@ -1,37 +1,41 @@
 /**
  * Spider API
  * API methods for spider crawling operations
+ * Uses generated API client from OpenAPI spec
  */
 
-import { useAdminApi } from '../../shared/composables/useAdminApi.js';
+import {
+  triggerCrawl,
+  getSpiderStats,
+  getCrawlHistory,
+  getTaskStatus as getTaskStatusGenerated,
+} from '../../api/generated/admin-spider/admin-spider.js';
 
-export function useSpiderApi(token) {
-  const { fetchWithAuth } = useAdminApi(token);
-
+export function useSpiderApi() {
   const crawl = async settings => {
-    const res = await fetchWithAuth('/api/admin/spider/crawl', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(settings),
-    });
-    return res.json();
+    // Map settings object to query params expected by generated API
+    const params = {};
+    if (settings.mode) params.mode = settings.mode;
+    if (settings.maxDiscoveries !== undefined) params.maxDiscoveries = settings.maxDiscoveries;
+    if (settings.discoverFromAlbums !== undefined) params.discoverFromAlbums = settings.discoverFromAlbums;
+
+    const response = await triggerCrawl(params);
+    return response.data;
   };
 
   const getTaskStatus = async taskId => {
-    const res = await fetchWithAuth(`/api/admin/spider/task/${taskId}`);
-    return res.json();
+    const response = await getTaskStatusGenerated(taskId);
+    return response.data;
   };
 
   const getStats = async () => {
-    const res = await fetchWithAuth('/api/admin/spider/stats');
-    return res.json();
+    const response = await getSpiderStats();
+    return response.data;
   };
 
   const getHistory = async (limit = 50) => {
-    const res = await fetchWithAuth(`/api/admin/spider/history?limit=${limit}`);
-    return res.json();
+    const response = await getCrawlHistory({ limit });
+    return response.data;
   };
 
   return { crawl, getTaskStatus, getStats, getHistory };

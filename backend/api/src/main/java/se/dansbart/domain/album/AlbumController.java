@@ -4,11 +4,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackService;
+import se.dansbart.dto.PageResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -24,8 +26,15 @@ public class AlbumController {
 
     @GetMapping
     @Operation(summary = "Get all albums with pagination")
-    public ResponseEntity<Page<Album>> getAlbums(Pageable pageable) {
-        return ResponseEntity.ok(albumService.findAll(pageable));
+    public ResponseEntity<PageResponse<Album>> getAlbums(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "0") Integer offset) {
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        Page<Album> page = search != null && !search.isBlank()
+            ? albumService.searchByTitle(search, pageable)
+            : albumService.findAll(pageable);
+        return ResponseEntity.ok(PageResponse.from(page));
     }
 
     @GetMapping("/{id}")
@@ -44,9 +53,11 @@ public class AlbumController {
 
     @GetMapping("/search")
     @Operation(summary = "Search albums by title")
-    public ResponseEntity<Page<Album>> searchAlbums(
+    public ResponseEntity<PageResponse<Album>> searchAlbums(
             @RequestParam String q,
-            Pageable pageable) {
-        return ResponseEntity.ok(albumService.searchByTitle(q, pageable));
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "0") Integer offset) {
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return ResponseEntity.ok(PageResponse.from(albumService.searchByTitle(q, pageable)));
     }
 }

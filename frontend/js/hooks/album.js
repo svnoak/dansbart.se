@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { getAlbum, getAlbumTracks } from '../api/generated/albums/albums';
 
 export function useAlbum() {
   const album = ref(null);
@@ -6,18 +7,15 @@ export function useAlbum() {
   const loading = ref(false);
   const loadingTracks = ref(false);
   const error = ref(null);
-  const hasMore = ref(true);
+  const hasMore = ref(false);
 
   const fetchAlbum = async albumId => {
     loading.value = true;
     error.value = null;
 
     try {
-      const response = await fetch(`/api/albums/${albumId}`);
-      if (!response.ok) {
-        throw new Error('Album not found');
-      }
-      album.value = await response.json();
+      const response = await getAlbum(albumId);
+      album.value = response.data;
     } catch (err) {
       error.value = err.message;
       album.value = null;
@@ -26,29 +24,14 @@ export function useAlbum() {
     }
   };
 
-  const fetchAlbumTracks = async (albumId, offset = 0) => {
-    if (offset === 0) {
-      loadingTracks.value = true;
-      tracks.value = [];
-    }
+  const fetchAlbumTracks = async albumId => {
+    loadingTracks.value = true;
+    tracks.value = [];
 
     try {
-      const response = await fetch(
-        `/api/albums/${albumId}/tracks?limit=20&offset=${offset}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to load tracks');
-      }
-
-      const data = await response.json();
-
-      if (offset === 0) {
-        tracks.value = data.items;
-      } else {
-        tracks.value = [...tracks.value, ...data.items];
-      }
-
-      hasMore.value = tracks.value.length < data.total;
+      const response = await getAlbumTracks(albumId);
+      tracks.value = response.data;
+      hasMore.value = false; // API returns all tracks at once
     } catch (err) {
       error.value = err.message;
     } finally {
@@ -57,8 +40,7 @@ export function useAlbum() {
   };
 
   const loadMore = () => {
-    if (!hasMore.value || loadingTracks.value || !album.value) return;
-    fetchAlbumTracks(album.value.id, tracks.value.length);
+    // No-op: API returns all tracks at once
   };
 
   return {

@@ -38,4 +38,10 @@ public class AdminSpiderController {
     public ResponseEntity<Map<String, Object>> getSpiderStats() {
         return ResponseEntity.ok(spiderService.getSpiderStats());
     }
+
+    @GetMapping("/task/{taskId}")
+    @Operation(summary = "Get spider task status")
+    public ResponseEntity<Map<String, Object>> getTaskStatus(@PathVariable String taskId) {
+        return ResponseEntity.ok(spiderService.getTaskStatus(taskId));
+    }
 }

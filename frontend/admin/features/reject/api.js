@@ -1,103 +1,82 @@
 /**
  * Reject API
  * API methods for managing rejections, blocklist, and artist review
+ * Uses generated API client from OpenAPI spec
  */
 
-import { useAdminApi } from '../../shared/composables/useAdminApi.js';
+import {
+  getPendingArtists,
+  getPendingAlbums,
+} from '../../api/generated/admin-pending/admin-pending.js';
+import {
+  getRejections,
+  removeFromBlocklist,
+  addToBlocklist as addToBlocklistGenerated,
+} from '../../api/generated/admin-rejections/admin-rejections.js';
+import {
+  rejectArtist,
+  bulkRejectArtists as bulkRejectArtistsGenerated,
+} from '../../api/generated/admin-artists/admin-artists.js';
+import { rejectAlbum as rejectAlbumGenerated } from '../../api/generated/admin-albums/admin-albums.js';
 
-export function useRejectApi(token) {
-  const { fetchWithAuth } = useAdminApi(token);
-
+export function useRejectApi() {
   const loadPendingArtists = async (limit = 50, offset = 0, search = '') => {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-
-    if (search) {
-      params.append('search', search);
-    }
-
-    const res = await fetchWithAuth(`/api/admin/pending/artists?${params.toString()}`);
-    return res.json();
+    const params = { limit, offset };
+    if (search) params.search = search;
+    const response = await getPendingArtists(params);
+    return response.data;
   };
 
   const loadPendingAlbums = async (limit = 50, offset = 0) => {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    const res = await fetchWithAuth(`/api/admin/pending/albums?${params.toString()}`);
-    return res.json();
+    const response = await getPendingAlbums({ limit, offset });
+    return response.data;
   };
 
   const loadBlocklist = async (filter = '', limit = 50, offset = 0) => {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-
-    if (filter) {
-      params.append('entity_type', filter);
-    }
-
-    const res = await fetchWithAuth(`/api/admin/rejections?${params.toString()}`);
-    return res.json();
+    const params = { limit, offset };
+    if (filter) params.entityType = filter;
+    const response = await getRejections(params);
+    return response.data;
   };
 
   const rejectArtistPreview = async artistId => {
-    const res = await fetchWithAuth(`/api/admin/artists/${artistId}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reason: 'Not relevant',
-        dry_run: true,
-      }),
+    const response = await rejectArtist(artistId, {
+      reason: 'Not relevant',
+      dryRun: true,
     });
-    return res.json();
+    return response.data;
   };
 
   const confirmRejectArtist = async (artistId, reason, deleteContent = true) => {
-    const res = await fetchWithAuth(`/api/admin/artists/${artistId}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason, delete_content: deleteContent }),
+    const response = await rejectArtist(artistId, {
+      reason,
+      deleteContent,
     });
-    return res.json();
+    return response.data;
   };
 
   const rejectAlbum = async (albumId, reason) => {
-    const res = await fetchWithAuth(`/api/admin/albums/${albumId}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
-    });
-    return res.json();
+    const response = await rejectAlbumGenerated(albumId, { reason });
+    return response.data;
   };
 
   const unblock = async rejectionId => {
-    const res = await fetchWithAuth(`/api/admin/rejections/${rejectionId}`, {
-      method: 'DELETE',
-    });
-    return res.json();
+    const response = await removeFromBlocklist(rejectionId);
+    return response.data;
   };
 
   const addToBlocklist = async data => {
-    const res = await fetchWithAuth('/api/admin/blocklist/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
+    const response = await addToBlocklistGenerated(data);
+    return response.data;
   };
 
   const bulkRejectArtists = async (ids, reason = 'Bulk rejection', deleteContent = true) => {
-    const res = await fetchWithAuth('/api/admin/artists/bulk-reject', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids, reason, delete_content: deleteContent }),
+    const response = await bulkRejectArtistsGenerated({
+      ids,
+      reason,
+      deleteContent,
     });
-    return res.json();
+    return response.data;
   };
 
   return {

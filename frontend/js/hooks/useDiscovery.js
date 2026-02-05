@@ -1,4 +1,11 @@
 import { ref, reactive } from 'vue';
+import {
+  getPopularTracks,
+  getRecentTracks,
+  getCuratedTracks,
+  getStyleOverview,
+  getCuratedPlaylists,
+} from '../api/generated/discovery/discovery';
 
 export function useDiscovery() {
   const popularTracks = ref([]);
@@ -21,9 +28,8 @@ export function useDiscovery() {
   const fetchPopular = async () => {
     loading.popular = true;
     try {
-      const res = await fetch('/api/discovery/popular?limit=3');
-      if (!res.ok) throw new Error('Failed to fetch popular tracks');
-      popularTracks.value = await res.json();
+      const response = await getPopularTracks({ limit: 3 });
+      popularTracks.value = response.data;
     } catch (e) {
       error.value = e.message;
       popularTracks.value = [];
@@ -35,9 +41,8 @@ export function useDiscovery() {
   const fetchRecent = async () => {
     loading.recent = true;
     try {
-      const res = await fetch('/api/discovery/recent?limit=3');
-      if (!res.ok) throw new Error('Failed to fetch recent tracks');
-      recentTracks.value = await res.json();
+      const response = await getRecentTracks({ limit: 3 });
+      recentTracks.value = response.data;
     } catch (e) {
       error.value = e.message;
       recentTracks.value = [];
@@ -49,9 +54,8 @@ export function useDiscovery() {
   const fetchCurated = async () => {
     loading.curated = true;
     try {
-      const res = await fetch('/api/discovery/curated?limit=3');
-      if (!res.ok) throw new Error('Failed to fetch curated tracks');
-      curatedTracks.value = await res.json();
+      const response = await getCuratedTracks({ limit: 3 });
+      curatedTracks.value = response.data;
     } catch (e) {
       error.value = e.message;
       curatedTracks.value = [];
@@ -63,9 +67,8 @@ export function useDiscovery() {
   const fetchStyleOverview = async () => {
     loading.styles = true;
     try {
-      const res = await fetch('/api/discovery/by-style');
-      if (!res.ok) throw new Error('Failed to fetch style overview');
-      styleOverview.value = await res.json();
+      const response = await getStyleOverview();
+      styleOverview.value = response.data;
     } catch (e) {
       error.value = e.message;
       styleOverview.value = [];
@@ -77,9 +80,8 @@ export function useDiscovery() {
   const fetchPlaylists = async () => {
     loading.playlists = true;
     try {
-      const res = await fetch('/api/discovery/playlists');
-      if (!res.ok) throw new Error('Failed to fetch playlists');
-      playlists.value = await res.json();
+      const response = await getCuratedPlaylists();
+      playlists.value = response.data;
     } catch (e) {
       error.value = e.message;
       playlists.value = [];

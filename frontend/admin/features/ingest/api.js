@@ -1,25 +1,18 @@
 /**
  * Ingest API
  * API methods for ingesting content from Spotify
+ * Uses generated API client from OpenAPI spec
  */
 
-import { useAdminApi } from '../../shared/composables/useAdminApi.js';
+import { ingest as ingestGenerated } from '../../api/generated/admin-maintenance/admin-maintenance.js';
 
-export function useIngestApi(token) {
-  const { fetchWithAuth } = useAdminApi(token);
-
+export function useIngestApi() {
   const ingest = async (resourceType, resourceId) => {
-    const res = await fetchWithAuth('/api/admin/ingest', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        resource_id: resourceId,
-        resource_type: resourceType,
-      }),
+    const response = await ingestGenerated({
+      resourceId,
+      resourceType,
     });
-    return res.json();
+    return response.data;
   };
 
   return { ingest };

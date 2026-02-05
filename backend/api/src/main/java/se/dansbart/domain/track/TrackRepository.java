@@ -53,6 +53,101 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
     );
 
     /**
+     * Find playable tracks with comprehensive filters matching frontend requirements.
+     */
+    @Query(value = """
+        SELECT t.* FROM tracks t
+        WHERE t.id IN (
+            SELECT DISTINCT t2.id FROM tracks t2
+            JOIN track_dance_styles tds ON t2.id = tds.track_id
+            JOIN playback_links pl ON t2.id = pl.track_id
+            WHERE pl.is_working = true
+            AND t2.processing_status = 'DONE'
+            AND t2.is_flagged = false
+            AND (:mainStyle IS NULL OR tds.dance_style = :mainStyle)
+            AND (:subStyle IS NULL OR tds.sub_style = :subStyle)
+            AND (:search IS NULL OR LOWER(t2.title) LIKE LOWER(CONCAT('%', :search, '%')))
+            AND (:source IS NULL OR pl.platform = :source)
+            AND (:hasVocals IS NULL OR t2.has_vocals = :hasVocals)
+            AND (:minConfidence IS NULL OR tds.confidence >= :minConfidence)
+            AND (:musicGenre IS NULL OR t2.music_genre = :musicGenre)
+            AND (:minBpm IS NULL OR tds.effective_bpm >= :minBpm)
+            AND (:maxBpm IS NULL OR tds.effective_bpm <= :maxBpm)
+            AND (:minDurationMs IS NULL OR t2.duration_ms >= :minDurationMs)
+            AND (:maxDurationMs IS NULL OR t2.duration_ms <= :maxDurationMs)
+            AND (:minBounciness IS NULL OR t2.bounciness >= :minBounciness)
+            AND (:maxBounciness IS NULL OR t2.bounciness <= :maxBounciness)
+            AND (:minArticulation IS NULL OR t2.articulation >= :minArticulation)
+            AND (:maxArticulation IS NULL OR t2.articulation <= :maxArticulation)
+        )
+        ORDER BY t.created_at DESC
+        LIMIT :limit OFFSET :offset
+        """, nativeQuery = true)
+    List<Track> findPlayableTracksWithFilters(
+        @Param("mainStyle") String mainStyle,
+        @Param("subStyle") String subStyle,
+        @Param("search") String search,
+        @Param("source") String source,
+        @Param("hasVocals") Boolean hasVocals,
+        @Param("minConfidence") Float minConfidence,
+        @Param("musicGenre") String musicGenre,
+        @Param("minBpm") Integer minBpm,
+        @Param("maxBpm") Integer maxBpm,
+        @Param("minDurationMs") Integer minDurationMs,
+        @Param("maxDurationMs") Integer maxDurationMs,
+        @Param("minBounciness") Float minBounciness,
+        @Param("maxBounciness") Float maxBounciness,
+        @Param("minArticulation") Float minArticulation,
+        @Param("maxArticulation") Float maxArticulation,
+        @Param("limit") Integer limit,
+        @Param("offset") Integer offset
+    );
+
+    /**
+     * Count playable tracks with comprehensive filters.
+     */
+    @Query(value = """
+        SELECT COUNT(DISTINCT t.id) FROM tracks t
+        JOIN track_dance_styles tds ON t.id = tds.track_id
+        JOIN playback_links pl ON t.id = pl.track_id
+        WHERE pl.is_working = true
+        AND t.processing_status = 'DONE'
+        AND t.is_flagged = false
+        AND (:mainStyle IS NULL OR tds.dance_style = :mainStyle)
+        AND (:subStyle IS NULL OR tds.sub_style = :subStyle)
+        AND (:search IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%')))
+        AND (:source IS NULL OR pl.platform = :source)
+        AND (:hasVocals IS NULL OR t.has_vocals = :hasVocals)
+        AND (:minConfidence IS NULL OR tds.confidence >= :minConfidence)
+        AND (:musicGenre IS NULL OR t.music_genre = :musicGenre)
+        AND (:minBpm IS NULL OR tds.effective_bpm >= :minBpm)
+        AND (:maxBpm IS NULL OR tds.effective_bpm <= :maxBpm)
+        AND (:minDurationMs IS NULL OR t.duration_ms >= :minDurationMs)
+        AND (:maxDurationMs IS NULL OR t.duration_ms <= :maxDurationMs)
+        AND (:minBounciness IS NULL OR t.bounciness >= :minBounciness)
+        AND (:maxBounciness IS NULL OR t.bounciness <= :maxBounciness)
+        AND (:minArticulation IS NULL OR t.articulation >= :minArticulation)
+        AND (:maxArticulation IS NULL OR t.articulation <= :maxArticulation)
+        """, nativeQuery = true)
+    long countPlayableTracksWithFilters(
+        @Param("mainStyle") String mainStyle,
+        @Param("subStyle") String subStyle,
+        @Param("search") String search,
+        @Param("source") String source,
+        @Param("hasVocals") Boolean hasVocals,
+        @Param("minConfidence") Float minConfidence,
+        @Param("musicGenre") String musicGenre,
+        @Param("minBpm") Integer minBpm,
+        @Param("maxBpm") Integer maxBpm,
+        @Param("minDurationMs") Integer minDurationMs,
+        @Param("maxDurationMs") Integer maxDurationMs,
+        @Param("minBounciness") Float minBounciness,
+        @Param("maxBounciness") Float maxBounciness,
+        @Param("minArticulation") Float minArticulation,
+        @Param("maxArticulation") Float maxArticulation
+    );
+
+    /**
      * Find similar tracks using pgvector similarity.
      */
     @Query(value = """

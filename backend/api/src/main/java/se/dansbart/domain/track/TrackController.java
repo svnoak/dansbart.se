@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import se.dansbart.dto.PageResponse;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,15 +27,31 @@ public class TrackController {
 
     @GetMapping
     @Operation(summary = "Get playable tracks with optional filters")
-    public ResponseEntity<Page<Track>> getTracks(
-            @RequestParam(required = false) String style,
-            @RequestParam(required = false) Integer minBpm,
-            @RequestParam(required = false) Integer maxBpm,
-            @RequestParam(required = false) Boolean hasVocals,
-            Pageable pageable) {
-        return ResponseEntity.ok(
-            trackService.findPlayableTracks(style, minBpm, maxBpm, hasVocals, pageable)
+    public ResponseEntity<PageResponse<Track>> getTracks(
+            @RequestParam(name = "main_style", required = false) String mainStyle,
+            @RequestParam(name = "sub_style", required = false) String subStyle,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String vocals,
+            @RequestParam(name = "style_confirmed", required = false) Boolean styleConfirmed,
+            @RequestParam(name = "music_genre", required = false) String musicGenre,
+            @RequestParam(name = "min_bpm", required = false) Integer minBpm,
+            @RequestParam(name = "max_bpm", required = false) Integer maxBpm,
+            @RequestParam(name = "min_duration", required = false) Integer minDuration,
+            @RequestParam(name = "max_duration", required = false) Integer maxDuration,
+            @RequestParam(name = "min_bounciness", required = false) Float minBounciness,
+            @RequestParam(name = "max_bounciness", required = false) Float maxBounciness,
+            @RequestParam(name = "min_articulation", required = false) Float minArticulation,
+            @RequestParam(name = "max_articulation", required = false) Float maxArticulation,
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "0") Integer offset) {
+        Page<Track> page = trackService.findPlayableTracks(
+            mainStyle, subStyle, search, source, vocals, styleConfirmed, musicGenre,
+            minBpm, maxBpm, minDuration, maxDuration,
+            minBounciness, maxBounciness, minArticulation, maxArticulation,
+            limit, offset
         );
+        return ResponseEntity.ok(PageResponse.from(page));
     }
 
     @GetMapping("/{id}")
@@ -55,10 +72,10 @@ public class TrackController {
 
     @GetMapping("/search")
     @Operation(summary = "Search tracks by title")
-    public ResponseEntity<Page<Track>> searchTracks(
+    public ResponseEntity<PageResponse<Track>> searchTracks(
             @RequestParam String q,
             Pageable pageable) {
-        return ResponseEntity.ok(trackService.searchByTitle(q, pageable));
+        return ResponseEntity.ok(PageResponse.from(trackService.searchByTitle(q, pageable)));
     }
 
     @PostMapping("/{id}/feedback")

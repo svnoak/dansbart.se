@@ -95,6 +95,47 @@ public class TaskDispatcher {
     }
 
     /**
+     * Dispatch ISRC backfill task to the light worker.
+     */
+    public void dispatchBackfillIsrcs(int limit) {
+        String taskMessage = buildCeleryMessage(
+            "app.workers.tasks_light.backfill_isrcs_task",
+            List.of(),
+            Map.of("limit", limit)
+        );
+        pushToQueue(LIGHT_QUEUE, taskMessage);
+        log.info("Dispatched ISRC backfill with limit {}", limit);
+    }
+
+    /**
+     * Dispatch Spotify preview task to the light worker.
+     * Used to fetch metadata from Spotify without ingesting tracks.
+     */
+    public void dispatchSpotifyPreview(String previewType, String spotifyId) {
+        String taskMessage = buildCeleryMessage(
+            "app.workers.tasks_light.spotify_preview_task",
+            List.of(previewType, spotifyId),
+            Map.of()
+        );
+        pushToQueue(LIGHT_QUEUE, taskMessage);
+        log.info("Dispatched Spotify preview {} for {}", previewType, spotifyId);
+    }
+
+    /**
+     * Dispatch Spotify ingestion task to the light worker.
+     * Used to ingest albums or tracks from Spotify.
+     */
+    public void dispatchSpotifyIngest(String resourceType, String spotifyId) {
+        String taskMessage = buildCeleryMessage(
+            "app.workers.tasks_light.spotify_ingest_task",
+            List.of(resourceType, spotifyId),
+            Map.of()
+        );
+        pushToQueue(LIGHT_QUEUE, taskMessage);
+        log.info("Dispatched Spotify ingest {} for {}", resourceType, spotifyId);
+    }
+
+    /**
      * Build a Celery-compatible task message.
      *
      * Celery message format:

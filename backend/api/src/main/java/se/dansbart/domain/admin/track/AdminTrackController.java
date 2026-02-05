@@ -94,6 +94,18 @@ public class AdminTrackController {
         }
     }
 
+    @DeleteMapping("/{trackId}/flag")
+    @Operation(summary = "Remove flag from a track (admin override)")
+    public ResponseEntity<Map<String, Object>> unflagTrack(@PathVariable UUID trackId) {
+        return adminTrackService.unflagTrack(trackId)
+            .map(result -> {
+                result.put("status", "success");
+                result.put("message", "Track unflagged successfully");
+                return ResponseEntity.ok(result);
+            })
+            .orElse(ResponseEntity.notFound().build());
+    }
+
     public record BulkReanalyzeRequest(String statusFilter, Integer limit) {}
     public record RejectRequest(String reason, Boolean dryRun, Boolean deleteContent) {}
 }

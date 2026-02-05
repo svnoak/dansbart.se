@@ -171,4 +171,12 @@ public class AdminTrackService {
         return feedbackService.resetTrackStructure(trackId)
             .orElseThrow(() -> new IllegalArgumentException("Track not found"));
     }
+
+    /**
+     * Remove flag from a track (admin override).
+     */
+    @Transactional
+    public Optional<Map<String, Object>> unflagTrack(UUID trackId) {
+        return feedbackService.unflagTrack(trackId);
+    }
 }

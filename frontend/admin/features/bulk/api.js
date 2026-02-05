@@ -1,54 +1,43 @@
 /**
  * Bulk Operations API
  * API methods for bulk operations on tracks
+ * Uses generated API client from OpenAPI spec
  */
 
-import { useAdminApi } from '../../shared/composables/useAdminApi.js';
+import { bulkReanalyze as bulkReanalyzeGenerated } from '../../api/generated/admin-tracks/admin-tracks.js';
+import {
+  getIsrcStats as getIsrcStatsGenerated,
+  reclassifyAll as reclassifyAllGenerated,
+  backfillIsrcs as backfillIsrcsGenerated,
+} from '../../api/generated/admin-maintenance/admin-maintenance.js';
 
-export function useBulkApi(token) {
-  const { fetchWithAuth } = useAdminApi(token);
-
+export function useBulkApi() {
   // Heuristic Classification (Fast)
   const reclassifyAll = async () => {
-    const res = await fetchWithAuth('/api/admin/reclassify-all', {
-      method: 'POST',
-    });
-    return res.json();
+    const response = await reclassifyAllGenerated();
+    return response.data;
   };
 
   // Full Audio Re-analysis (Slow/Heavy)
   const bulkReanalyze = async (statusFilter = 'everything', limit = 5000) => {
-    const res = await fetchWithAuth('/api/admin/tracks/bulk-reanalyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        status_filter: statusFilter,
-        limit: limit,
-      }),
+    const response = await bulkReanalyzeGenerated({
+      statusFilter,
+      limit,
     });
-    return res.json();
+    return response.data;
   };
 
   // Get ISRC backfill statistics
   const getIsrcStats = async () => {
-    const res = await fetchWithAuth('/api/admin/maintenance/isrc-stats', {
-      method: 'GET',
-    });
-    return res.json();
+    const response = await getIsrcStatsGenerated();
+    return response.data;
   };
 
   // Backfill ISRCs from Spotify
   const backfillIsrcs = async (limit = null) => {
-    const url = limit
-      ? `/api/admin/maintenance/backfill-isrcs?limit=${limit}`
-      : '/api/admin/maintenance/backfill-isrcs';
-
-    const res = await fetchWithAuth(url, {
-      method: 'POST',
-    });
-    return res.json();
+    const params = limit ? { limit } : undefined;
+    const response = await backfillIsrcsGenerated(params);
+    return response.data;
   };
 
   return { reclassifyAll, bulkReanalyze, getIsrcStats, backfillIsrcs };

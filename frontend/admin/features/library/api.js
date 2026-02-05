@@ -1,234 +1,206 @@
 /**
  * Library API
  * Unified API for managing tracks, albums, artists, and blocklist
+ * Uses generated API client from OpenAPI spec
  */
 
-import { useAdminApi } from '../../shared/composables/useAdminApi.js';
+import {
+  getTracks1,
+  reanalyzeTrack as reanalyzeTrackGenerated,
+  reclassifyTrack as reclassifyTrackGenerated,
+  rejectTrack as rejectTrackGenerated,
+  deleteTrack as deleteTrackGenerated,
+  unflagTrack1 as unflagTrackGenerated,
+} from '../../api/generated/admin-tracks/admin-tracks.js';
+import {
+  getDuplicates,
+  mergeDuplicates,
+  analyzeDuplicates,
+} from '../../api/generated/admin-duplicates/admin-duplicates.js';
+import {
+  getArtists1,
+  rejectArtist as rejectArtistGenerated,
+  bulkRejectArtists as bulkRejectArtistsGenerated,
+  approveArtist as approveArtistGenerated,
+  bulkApproveArtists as bulkApproveArtistsGenerated,
+  getCollaborationNetwork as getCollaborationNetworkGenerated,
+} from '../../api/generated/admin-artists/admin-artists.js';
+import {
+  getPendingArtists,
+  getPendingAlbums,
+} from '../../api/generated/admin-pending/admin-pending.js';
+import {
+  getAlbums1,
+  rejectAlbum as rejectAlbumGenerated,
+} from '../../api/generated/admin-albums/admin-albums.js';
+import {
+  getRejections,
+  removeFromBlocklist as removeFromBlocklistGenerated,
+  addToBlocklist as addToBlocklistGenerated,
+  rejectNetwork as rejectNetworkGenerated,
+} from '../../api/generated/admin-rejections/admin-rejections.js';
+import {
+  getArtistAlbums as getArtistAlbumsGenerated,
+  getAlbumTracks1 as getAlbumTracksGenerated,
+  ingestAlbum as ingestAlbumGenerated,
+  ingestTrack as ingestTrackGenerated,
+} from '../../api/generated/admin-spotify/admin-spotify.js';
 
-export function useLibraryApi(token) {
-  const { fetchWithAuth } = useAdminApi(token);
-
+export function useLibraryApi() {
   // ===== TRACKS =====
   const loadTracks = async params => {
-    const queryString = new URLSearchParams(params).toString();
-    const res = await fetchWithAuth(`/api/admin/tracks?${queryString}`);
-    return res.json();
+    const response = await getTracks1(params);
+    return response.data;
   };
 
   const reanalyzeTrack = async trackId => {
-    const res = await fetchWithAuth(`/api/admin/tracks/${trackId}/reanalyze`, {
-      method: 'POST',
-    });
-    return res.json();
+    const response = await reanalyzeTrackGenerated(trackId);
+    return response.data;
   };
 
   const reclassifyTrack = async trackId => {
-    const res = await fetchWithAuth(`/api/admin/tracks/${trackId}/reclassify`, {
-      method: 'POST',
-    });
-    return res.json();
+    const response = await reclassifyTrackGenerated(trackId);
+    return response.data;
   };
 
   const unflagTrack = async trackId => {
-    const res = await fetchWithAuth(`/api/tracks/${trackId}/flag`, {
-      method: 'DELETE',
-    });
-    return res.json();
+    const response = await unflagTrackGenerated(trackId);
+    return response.data;
   };
 
   const rejectTrack = async (trackId, reason) => {
-    const res = await fetchWithAuth(`/api/admin/tracks/${trackId}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
-    });
-    return res.json();
+    const response = await rejectTrackGenerated(trackId, { reason });
+    return response.data;
   };
 
   const deleteTrack = async trackId => {
-    const res = await fetchWithAuth(`/api/admin/tracks/${trackId}`, {
-      method: 'DELETE',
-    });
-    return res.json();
+    const response = await deleteTrackGenerated(trackId);
+    return response.data;
   };
 
   const loadDuplicateTracks = async (limit = 50, offset = 0) => {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    const res = await fetchWithAuth(`/api/admin/tracks/duplicates?${params.toString()}`);
-    return res.json();
+    const response = await getDuplicates({ limit, offset });
+    return response.data;
   };
 
   const mergeDuplicatesByIsrc = async (isrc, dryRun = false) => {
-    const params = new URLSearchParams({
-      dry_run: String(dryRun),
-    });
-    const res = await fetchWithAuth(`/api/admin/tracks/duplicates/merge/${isrc}?${params.toString()}`, {
-      method: 'POST',
-    });
-    return res.json();
+    const response = await mergeDuplicates(isrc, { dryRun });
+    return response.data;
   };
 
   const analyzeDuplicateIsrc = async isrc => {
-    const res = await fetchWithAuth(`/api/admin/tracks/duplicates/analyze/${isrc}`);
-    return res.json();
+    const response = await analyzeDuplicates(isrc);
+    return response.data;
   };
 
   // ===== ARTISTS =====
   const loadArtists = async params => {
-    const queryString = new URLSearchParams(params).toString();
-    const res = await fetchWithAuth(`/api/admin/artists?${queryString}`);
-    return res.json();
+    const response = await getArtists1(params);
+    return response.data;
   };
 
   const loadPendingArtists = async (limit = 50, offset = 0, search = '') => {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-
-    if (search) {
-      params.append('search', search);
-    }
-
-    const res = await fetchWithAuth(`/api/admin/pending/artists?${params.toString()}`);
-    return res.json();
+    const params = { limit, offset };
+    if (search) params.search = search;
+    const response = await getPendingArtists(params);
+    return response.data;
   };
 
   const rejectArtist = async (artistId, reason, deleteContent = true) => {
-    const res = await fetchWithAuth(`/api/admin/artists/${artistId}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason, delete_content: deleteContent }),
+    const response = await rejectArtistGenerated(artistId, {
+      reason,
+      deleteContent,
     });
-    return res.json();
+    return response.data;
   };
 
   const bulkRejectArtists = async (ids, reason = 'Bulk rejection', deleteContent = true) => {
-    const res = await fetchWithAuth('/api/admin/artists/bulk-reject', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids, reason, delete_content: deleteContent }),
+    const response = await bulkRejectArtistsGenerated({
+      ids,
+      reason,
+      deleteContent,
     });
-    return res.json();
+    return response.data;
   };
 
   const approveArtist = async artistId => {
-    const res = await fetchWithAuth(`/api/admin/artists/${artistId}/approve`, {
-      method: 'POST',
-    });
-    return res.json();
+    const response = await approveArtistGenerated(artistId);
+    return response.data;
   };
 
   const bulkApproveArtists = async ids => {
-    const res = await fetchWithAuth('/api/admin/artists/bulk-approve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    });
-    return res.json();
+    const response = await bulkApproveArtistsGenerated({ ids });
+    return response.data;
   };
 
   const getCollaborationNetwork = async artistId => {
-    const res = await fetchWithAuth(`/api/admin/artists/${artistId}/collaboration-network`);
-    return res.json();
+    const response = await getCollaborationNetworkGenerated(artistId);
+    return response.data;
   };
 
   const rejectNetwork = async (artistIds, albumIds, reason) => {
-    const res = await fetchWithAuth('/api/admin/reject-network', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ artist_ids: artistIds, album_ids: albumIds, reason }),
+    const response = await rejectNetworkGenerated({
+      artistIds,
+      albumIds,
+      reason,
     });
-    return res.json();
+    return response.data;
   };
 
   // ===== ALBUMS =====
   const loadAlbums = async params => {
-    const queryString = new URLSearchParams(params).toString();
-    const res = await fetchWithAuth(`/api/admin/albums?${queryString}`);
-    return res.json();
+    const response = await getAlbums1(params);
+    return response.data;
   };
 
   const loadPendingAlbums = async (limit = 50, offset = 0) => {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-    const res = await fetchWithAuth(`/api/admin/pending/albums?${params.toString()}`);
-    return res.json();
+    const response = await getPendingAlbums({ limit, offset });
+    return response.data;
   };
 
   const rejectAlbum = async (albumId, reason) => {
-    const res = await fetchWithAuth(`/api/admin/albums/${albumId}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
-    });
-    return res.json();
+    const response = await rejectAlbumGenerated(albumId, { reason });
+    return response.data;
   };
 
   // ===== BLOCKLIST =====
   const loadBlocklist = async (filter = '', limit = 50, offset = 0) => {
-    const params = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-    });
-
-    if (filter) {
-      params.append('entity_type', filter);
-    }
-
-    const res = await fetchWithAuth(`/api/admin/rejections?${params.toString()}`);
-    return res.json();
+    const params = { limit, offset };
+    if (filter) params.entityType = filter;
+    const response = await getRejections(params);
+    return response.data;
   };
 
   const removeFromBlocklist = async rejectionId => {
-    const res = await fetchWithAuth(`/api/admin/rejections/${rejectionId}`, {
-      method: 'DELETE',
-    });
-    return res.json();
+    const response = await removeFromBlocklistGenerated(rejectionId);
+    return response.data;
   };
 
   const addToBlocklist = async data => {
-    const res = await fetchWithAuth('/api/admin/blocklist/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
+    const response = await addToBlocklistGenerated(data);
+    return response.data;
   };
 
   // ===== SPOTIFY PREVIEW =====
   const getSpotifyArtistAlbums = async spotifyId => {
-    const res = await fetchWithAuth(`/api/admin/spotify/artist/${spotifyId}/albums`);
-    return res.json();
+    const response = await getArtistAlbumsGenerated(spotifyId);
+    return response.data;
   };
 
   const getSpotifyAlbumTracks = async spotifyId => {
-    const res = await fetchWithAuth(`/api/admin/spotify/album/${spotifyId}/tracks`);
-    return res.json();
+    const response = await getAlbumTracksGenerated(spotifyId);
+    return response.data;
   };
 
   // ===== SPOTIFY INGESTION =====
   const ingestSpotifyAlbum = async spotifyAlbumId => {
-    const res = await fetchWithAuth('/api/admin/spotify/ingest/album', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spotify_album_id: spotifyAlbumId }),
-    });
-    return res.json();
+    const response = await ingestAlbumGenerated({ spotify_album_id: spotifyAlbumId });
+    return response.data;
   };
 
   const ingestSpotifyTrack = async spotifyTrackId => {
-    const res = await fetchWithAuth('/api/admin/spotify/ingest/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spotify_track_id: spotifyTrackId }),
-    });
-    return res.json();
+    const response = await ingestTrackGenerated({ spotify_track_id: spotifyTrackId });
+    return response.data;
   };
 
   return {

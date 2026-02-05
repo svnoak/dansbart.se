@@ -45,6 +45,19 @@ public class MaintenanceController {
         return ResponseEntity.ok(maintenanceService.getIsrcStats());
     }
 
+    @PostMapping("/reclassify-all")
+    @Operation(summary = "Trigger heuristic reclassification for all tracks")
+    public ResponseEntity<Map<String, Object>> reclassifyAll() {
+        return ResponseEntity.ok(maintenanceService.reclassifyAll());
+    }
+
+    @PostMapping("/maintenance/backfill-isrcs")
+    @Operation(summary = "Backfill ISRCs from Spotify")
+    public ResponseEntity<Map<String, Object>> backfillIsrcs(
+            @RequestParam(defaultValue = "100") int limit) {
+        return ResponseEntity.ok(maintenanceService.backfillIsrcs(limit));
+    }
+
     public record IngestRequest(String resourceId, String resourceType) {
         public IngestRequest {
             if (resourceType == null) resourceType = "playlist";
