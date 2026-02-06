@@ -1,5 +1,6 @@
 package se.dansbart.domain.artist;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import se.dansbart.domain.track.Track;
@@ -30,10 +31,12 @@ public class TrackArtist {
     @Builder.Default
     private String role = "primary";
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "track_id", insertable = false, updatable = false)
     private Track track;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "artist_id", insertable = false, updatable = false)
     private Artist artist;

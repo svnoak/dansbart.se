@@ -9,21 +9,29 @@ import {
   getSpiderStats,
   getCrawlHistory,
   getTaskStatus as getTaskStatusGenerated,
-} from '../../api/generated/admin-spider/admin-spider.js';
+} from '../../api/generated/admin-spider/admin-spider';
+
+type SpiderSettings = {
+  mode?: string;
+  maxDiscoveries?: number;
+  discoverFromAlbums?: boolean;
+};
 
 export function useSpiderApi() {
-  const crawl = async settings => {
+  const crawl = async (settings: SpiderSettings) => {
     // Map settings object to query params expected by generated API
-    const params = {};
+    const params: Record<string, unknown> = {};
     if (settings.mode) params.mode = settings.mode;
     if (settings.maxDiscoveries !== undefined) params.maxDiscoveries = settings.maxDiscoveries;
-    if (settings.discoverFromAlbums !== undefined) params.discoverFromAlbums = settings.discoverFromAlbums;
+    if (settings.discoverFromAlbums !== undefined) {
+      params.discoverFromAlbums = settings.discoverFromAlbums;
+    }
 
     const response = await triggerCrawl(params);
     return response.data;
   };
 
-  const getTaskStatus = async taskId => {
+  const getTaskStatus = async (taskId: string) => {
     const response = await getTaskStatusGenerated(taskId);
     return response.data;
   };
@@ -40,3 +48,4 @@ export function useSpiderApi() {
 
   return { crawl, getTaskStatus, getStats, getHistory };
 }
+

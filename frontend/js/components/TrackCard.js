@@ -5,7 +5,7 @@ import FlagIcon from '../icons/FlagIcon.js';
 import { showToast } from '../hooks/useToast.js';
 import { usePlaylists } from '../hooks/usePlaylists.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { FEATURES } from '../config/features.js';
+import { useAuthConfig } from '../hooks/useAuthConfig.js';
 
 export default {
   props: ['track', 'currentTrack', 'isSpotifyMode', 'isPlaying'],
@@ -15,6 +15,7 @@ export default {
   setup() {
     const { isAuthenticated } = useAuth();
     const { playlists, loading: playlistsLoading, fetchUserPlaylists, addTrackToPlaylist } = usePlaylists();
+    const { authEnabled } = useAuthConfig();
 
     return {
       isAuthenticated,
@@ -22,7 +23,7 @@ export default {
       playlistsLoading,
       fetchUserPlaylists,
       addTrackToPlaylist,
-      authFeaturesEnabled: FEATURES.ENABLE_AUTH_FEATURES,
+      authFeaturesEnabled: authEnabled,
     };
   },
 

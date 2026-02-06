@@ -252,7 +252,7 @@ export default {
       try {
         const data = await api.reanalyzeTrack(track.id);
         showToast(data.message);
-        track.status = 'PENDING';
+        track.processingStatus = 'PENDING';
         window.dispatchEvent(new CustomEvent('admin:track-updated', { detail: { track } }));
       } catch (e) {
         showError(e.message || 'Re-analysis failed');
@@ -1312,8 +1312,8 @@ export default {
                                             title="Ingest this track into library">
                                         Ingest
                                     </button>
-                                    <span v-if="track.status && track.status !== 'NOT_IN_LIBRARY'" :class="statusClass(track.status)" class="px-2 py-0.5 rounded text-xs shrink-0">
-                                        {{ track.status }}
+                                    <span v-if="track.processingStatus && track.processingStatus !== 'NOT_IN_LIBRARY'" :class="statusClass(track.processingStatus)" class="px-2 py-0.5 rounded text-xs shrink-0">
+                                        {{ track.processingStatus }}
                                     </span>
                                 </div>
                             </div>
@@ -1389,8 +1389,8 @@ export default {
                                 <span v-else class="text-gray-500">-</span>
                             </td>
                             <td class="py-2 px-2">
-                                <span :class="statusClass(track.status)" class="px-2 py-1 rounded text-xs font-medium">
-                                    {{ track.status }}
+                                <span :class="statusClass(track.processingStatus)" class="px-2 py-1 rounded text-xs font-medium">
+                                    {{ track.processingStatus }}
                                 </span>
                             </td>
                             <td class="py-2 px-2">{{ track.dance_style || '-' }}</td>
@@ -1424,7 +1424,7 @@ export default {
                                             title="Full re-analysis">
                                         {{ track.loading ? '...' : '🔄' }}
                                     </button>
-                                    <button @click="reclassify(track)" :disabled="track.loading || track.status !== 'DONE'"
+                                    <button @click="reclassify(track)" :disabled="track.loading || track.processingStatus !== 'DONE'"
                                             class="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-2 py-1 rounded text-xs"
                                             title="Re-classify only">
                                         🏷️
@@ -1504,8 +1504,8 @@ export default {
                                         </template>
                                         ISRC: {{ track.isrc || 'N/A' }} •
                                         {{ track.duration_ms ? Math.floor(track.duration_ms / 1000) + 's' : 'N/A' }} •
-                                        <span :class="statusClass(track.status)" class="px-1 py-0.5 rounded">
-                                            {{ track.status }}
+                                        <span :class="statusClass(track.processingStatus)" class="px-1 py-0.5 rounded">
+                                            {{ track.processingStatus }}
                                         </span>
                                     </div>
                                 </div>

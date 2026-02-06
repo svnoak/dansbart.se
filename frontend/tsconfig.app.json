@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": false
+  },
+  "exclude": [
+    "node_modules/vitest",
+    "node_modules/vitest/**"
+  ]
+}
+

@@ -1,0 +1,17 @@
+# Development image: JDK + run Spring Boot with source mounted for hot reload
+FROM eclipse-temurin:21-jdk-alpine
+
+WORKDIR /app
+
+# Install Maven wrapper and deps so we don't need to re-download on every run
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B -q
+
+# Copy entrypoint (source will be mounted at runtime)
+COPY dev-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/dev-entrypoint.sh
+
+# Default: run with mounted source; entrypoint expects /app to be the project root
+ENTRYPOINT ["/usr/local/bin/dev-entrypoint.sh"]

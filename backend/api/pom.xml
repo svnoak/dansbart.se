@@ -21,6 +21,13 @@
         <java.version>21</java.version>
         <pgvector.version>0.1.4</pgvector.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <jooq.version>3.19.8</jooq.version>
+        <!-- JDBC for jOOQ codegen (profile generate-jooq). Override with -Djooq.codegen.jdbc.url=... etc. -->
+        <jooq.codegen.jdbc.url>jdbc:postgresql://localhost:5432/dansbart</jooq.codegen.jdbc.url>
+        <jooq.codegen.jdbc.user>postgres</jooq.codegen.jdbc.user>
+        <jooq.codegen.jdbc.password>password</jooq.codegen.jdbc.password>
+        <!-- Set -DskipDbBuild=true when building the image (no PostgreSQL available); use committed jOOQ sources -->
+        <skipDbBuild>false</skipDbBuild>
     </properties>
 
     <dependencies>
@@ -89,6 +96,13 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- DevTools for hot restart in development -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- MapStruct for DTO mapping -->
         <dependency>
             <groupId>org.mapstruct</groupId>
@@ -120,6 +134,13 @@
             <groupId>io.hypersistence</groupId>
             <artifactId>hypersistence-utils-hibernate-63</artifactId>
             <version>3.7.0</version>
+        </dependency>
+
+        <!-- jOOQ for type-safe SQL (alongside JPA) -->
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq</artifactId>
+            <version>${jooq.version}</version>
         </dependency>
 
         <!-- OpenAPI / Swagger -->
@@ -159,6 +180,107 @@
 
     <build>
         <plugins>
+            <!-- Add jOOQ generated sources (src/main/jooq) to compile path -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>add-jooq-source</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/main/jooq</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Flyway migrate before jOOQ so schema is up to date (runs on every build; needs PostgreSQL) -->
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>10.8.1</version>
+                <executions>
+                    <execution>
+                        <id>flyway-migrate</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>migrate</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipDbBuild}</skip>
+                            <url>${jooq.codegen.jdbc.url}</url>
+                            <user>${jooq.codegen.jdbc.user}</user>
+                            <password>${jooq.codegen.jdbc.password}</password>
+                            <locations>
+                                <location>filesystem:${project.basedir}/src/main/resources/db/migration</location>
+                            </locations>
+                            <baselineOnMigrate>true</baselineOnMigrate>
+                            <baselineVersion>0</baselineVersion>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.flywaydb</groupId>
+                        <artifactId>flyway-database-postgresql</artifactId>
+                        <version>10.8.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <!-- jOOQ codegen from PostgreSQL (after Flyway); override with -Djooq.codegen.jdbc.url=... etc. -->
+            <plugin>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq-codegen-maven</artifactId>
+                <version>${jooq.version}</version>
+                <executions>
+                    <execution>
+                        <id>jooq-codegen-from-postgres</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipDbBuild}</skip>
+                            <jdbc>
+                                <driver>org.postgresql.Driver</driver>
+                                <url>${jooq.codegen.jdbc.url}</url>
+                                <user>${jooq.codegen.jdbc.user}</user>
+                                <password>${jooq.codegen.jdbc.password}</password>
+                            </jdbc>
+                            <generator>
+                                <database>
+                                    <name>org.jooq.meta.postgres.PostgresDatabase</name>
+                                    <includes>.*</includes>
+                                    <excludes>flyway_schema_history</excludes>
+                                    <inputSchema>public</inputSchema>
+                                </database>
+                                <generate>
+                                    <javaTimeTypes>true</javaTimeTypes>
+                                    <pojos>false</pojos>
+                                    <immutablePojos>false</immutablePojos>
+                                    <interfaces>false</interfaces>
+                                    <daos>false</daos>
+                                    <deprecated>false</deprecated>
+                                    <records>false</records>
+                                    <globalObjectReferences>true</globalObjectReferences>
+                                    <globalCatalogReferences>false</globalCatalogReferences>
+                                    <globalSchemaReferences>false</globalSchemaReferences>
+                                </generate>
+                                <target>
+                                    <packageName>se.dansbart.jooq</packageName>
+                                    <directory>${project.basedir}/src/main/jooq</directory>
+                                </target>
+                            </generator>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

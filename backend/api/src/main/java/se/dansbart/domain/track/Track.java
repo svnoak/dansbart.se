@@ -1,5 +1,6 @@
 package se.dansbart.domain.track;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -70,6 +71,7 @@ public class Track {
     private Float bpmStability;
 
     // Vector embedding (stored as float array, pgvector handles conversion)
+    @JsonIgnore
     @Column(name = "embedding", columnDefinition = "vector")
     private float[] embedding;
 
@@ -98,6 +100,7 @@ public class Track {
     @Column(name = "uploader_id", length = 255)
     private String uploaderId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploader_id", insertable = false, updatable = false)
     private User uploader;
@@ -121,34 +124,42 @@ public class Track {
     private List<String> sectionLabels;
 
     // Relationships
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackArtist> artistLinks = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackAlbum> albumLinks = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackDanceStyle> danceStyles = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PlaybackLink> playbackLinks = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<AnalysisSource> analysisSources = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackStyleVote> styleVotes = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackFeelVote> feelVotes = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "track", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackStructureVersion> structureVersions = new ArrayList<>();

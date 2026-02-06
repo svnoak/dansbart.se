@@ -1,5 +1,6 @@
 package se.dansbart.domain.artist;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import se.dansbart.domain.album.Album;
@@ -34,10 +35,12 @@ public class Artist {
     @Builder.Default
     private Boolean isVerified = false;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "artist", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackArtist> trackLinks = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "artist", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Album> albums = new ArrayList<>();

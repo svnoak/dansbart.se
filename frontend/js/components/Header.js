@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { useConsent } from '../consent.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { FEATURES } from '../config/features.js';
+import { useAuthConfig } from '../hooks/useAuthConfig.js';
 
 export default {
   props: {
@@ -16,6 +16,7 @@ export default {
   setup() {
     const { consentStatus, revokeConsent } = useConsent();
     const { user, isAuthenticated, login, logout } = useAuth();
+    const { authEnabled } = useAuthConfig();
     const showAccountMenu = ref(false);
 
     const openCookieSettings = () => {
@@ -30,7 +31,7 @@ export default {
       login,
       logout,
       showAccountMenu,
-      authFeaturesEnabled: FEATURES.ENABLE_AUTH_FEATURES,
+      authFeaturesEnabled: authEnabled,
     };
   },
 
@@ -107,7 +108,7 @@ export default {
                         </div>
                     </div>
 
-                    <!-- Auth UI (Desktop) -->
+                    <!-- Auth UI (Desktop): only when backend has auth enabled -->
                     <div v-if="authFeaturesEnabled && !isAuthenticated" class="flex items-center gap-2 ml-4">
                         <button
                             @click="login"
@@ -117,7 +118,7 @@ export default {
                         </button>
                     </div>
 
-                    <div v-else-if="authFeaturesEnabled && isAuthenticated" class="relative ml-4">
+                    <div v-else-if="authFeaturesEnabled && isAuthenticated" class="relative ml-4" data-testid="account-menu">
                         <button
                             @click="showAccountMenu = !showAccountMenu"
                             class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition"

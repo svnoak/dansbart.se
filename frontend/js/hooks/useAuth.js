@@ -1,12 +1,13 @@
 /**
  * Authentication composable using Authentik OIDC.
  *
- * Handles user authentication via Authentik using the oidc-client-ts library.
- * Provides login, logout, and authenticated API requests.
+ * When auth is disabled (backend authEnabled=false), no login/playlists; user stays null.
+ * When auth is enabled, handles user authentication via Authentik (oidc-client-ts).
  */
 import { ref, computed } from 'vue';
 import { UserManager, WebStorageStateStore, User } from 'oidc-client-ts';
 import { showError, showToast } from './useToast.js';
+import { useAuthConfig } from './useAuthConfig.js';
 
 // OIDC Client Configuration
 const oidcConfig = {
@@ -62,6 +63,14 @@ async function fetchUserProfile(token) {
 // --- INITIALIZATION ---
 async function initAuth() {
   try {
+    const { waitForAuthConfig, authEnabled } = useAuthConfig();
+    await waitForAuthConfig();
+    if (!authEnabled.value) {
+      user.value = null;
+      accessToken.value = null;
+      return;
+    }
+
     // Debug: Check what's in localStorage
     const storageKey = `oidc.user:${oidcConfig.authority}:${oidcConfig.client_id}`;
     const rawStored = localStorage.getItem(storageKey);

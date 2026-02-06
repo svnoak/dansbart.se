@@ -1,0 +1,14 @@
+{
+  "name": "dansbart-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests for Dansbart (frontend + API + DB + workers)",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

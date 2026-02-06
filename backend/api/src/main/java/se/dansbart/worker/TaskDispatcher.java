@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -135,46 +137,82 @@ public class TaskDispatcher {
         log.info("Dispatched Spotify ingest {} for {}", resourceType, spotifyId);
     }
 
-    /**
-     * Build a Celery-compatible task message.
-     *
-     * Celery message format:
-     * {
-     *   "id": "unique-task-id",
-     *   "task": "module.path.task_name",
-     *   "args": [...],
-     *   "kwargs": {...},
-     *   "retries": 0,
-     *   "eta": null
-     * }
-     */
     private String buildCeleryMessage(String taskName, List<Object> args, Map<String, Object> kwargs) {
-        Map<String, Object> message = Map.of(
-            "id", UUID.randomUUID().toString(),
-            "task", taskName,
-            "args", args,
-            "kwargs", kwargs,
-            "retries", 0,
-            "eta", (Object) null
-        );
+        // Celery Redis transport message format (mirrors Python producer):
+        // {
+        //   "body": base64(json.dumps([args, kwargs, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}])),
+        //   "content-encoding": "utf-8",
+        //   "content-type": "application/json",
+        //   "headers": { ... task metadata ... },
+        //   "properties": { ... broker metadata incl. delivery_tag ... }
+        // }
+
+        String taskId = UUID.randomUUID().toString();
+
+        // Build body envelope: [args, kwargs, {callbacks, errbacks, chain, chord}]
+        Map<String, Object> callbackMeta = new HashMap<>();
+        callbackMeta.put("callbacks", null);
+        callbackMeta.put("errbacks", null);
+        callbackMeta.put("chain", null);
+        callbackMeta.put("chord", null);
+
+        List<Object> bodyEnvelope = List.of(args, kwargs, callbackMeta);
+
+        String bodyBase64 = encodeBase64(bodyEnvelope);
+
+        // Headers closely match what Celery generates
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("lang", "py");
+        headers.put("task", taskName);
+        headers.put("id", taskId);
+        headers.put("shadow", null);
+        headers.put("eta", null);
+        headers.put("expires", null);
+        headers.put("group", null);
+        headers.put("group_index", null);
+        headers.put("retries", 0);
+        headers.put("timelimit", Arrays.asList(null, null));
+        headers.put("root_id", taskId);
+        headers.put("parent_id", null);
+        try {
+            headers.put("argsrepr", objectMapper.writeValueAsString(args));
+            headers.put("kwargsrepr", objectMapper.writeValueAsString(kwargs));
+        } catch (JsonProcessingException e) {
+            // Fallback to simple toString representations
+            headers.put("argsrepr", args.toString());
+            headers.put("kwargsrepr", kwargs.toString());
+        }
+        headers.put("origin", "java-api");
+        headers.put("ignore_result", false);
+        headers.put("replaced_task_nesting", 0);
+        headers.put("stamped_headers", null);
+        headers.put("stamps", new HashMap<String, Object>());
+
+        // Determine routing key / queue
+        String routingKey = taskName.contains("audio")
+            ? AUDIO_QUEUE
+            : (taskName.contains("feature") ? FEATURE_QUEUE : LIGHT_QUEUE);
+
+        // Properties including required delivery_tag
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("correlation_id", taskId);
+        properties.put("reply_to", UUID.randomUUID().toString());
+        properties.put("delivery_mode", 2);
+        Map<String, Object> deliveryInfo = new HashMap<>();
+        deliveryInfo.put("exchange", "");
+        deliveryInfo.put("routing_key", routingKey);
+        properties.put("delivery_info", deliveryInfo);
+        properties.put("priority", 0);
+        properties.put("body_encoding", "base64");
+        properties.put("delivery_tag", UUID.randomUUID().toString());
 
         // Celery expects the message body + content metadata
         Map<String, Object> celeryMessage = Map.of(
-            "body", encodeBase64(message),
+            "body", bodyBase64,
             "content-encoding", "utf-8",
             "content-type", "application/json",
-            "headers", Map.of(),
-            "properties", Map.of(
-                "correlation_id", UUID.randomUUID().toString(),
-                "delivery_mode", 2,
-                "delivery_info", Map.of(
-                    "exchange", "",
-                    "routing_key", taskName.contains("audio") ? AUDIO_QUEUE :
-                                   taskName.contains("feature") ? FEATURE_QUEUE : LIGHT_QUEUE
-                ),
-                "priority", 0,
-                "body_encoding", "base64"
-            )
+            "headers", headers,
+            "properties", properties
         );
 
         try {
@@ -184,7 +222,7 @@ public class TaskDispatcher {
         }
     }
 
-    private String encodeBase64(Map<String, Object> message) {
+    private String encodeBase64(Object message) {
         try {
             String json = objectMapper.writeValueAsString(message);
             return java.util.Base64.getEncoder().encodeToString(json.getBytes());

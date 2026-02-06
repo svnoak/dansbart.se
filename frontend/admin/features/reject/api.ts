@@ -7,21 +7,21 @@
 import {
   getPendingArtists,
   getPendingAlbums,
-} from '../../api/generated/admin-pending/admin-pending.js';
+} from '../../api/generated/admin-pending/admin-pending';
 import {
   getRejections,
   removeFromBlocklist,
   addToBlocklist as addToBlocklistGenerated,
-} from '../../api/generated/admin-rejections/admin-rejections.js';
+} from '../../api/generated/admin-rejections/admin-rejections';
 import {
   rejectArtist,
   bulkRejectArtists as bulkRejectArtistsGenerated,
-} from '../../api/generated/admin-artists/admin-artists.js';
-import { rejectAlbum as rejectAlbumGenerated } from '../../api/generated/admin-albums/admin-albums.js';
+} from '../../api/generated/admin-artists/admin-artists';
+import { rejectAlbum as rejectAlbumGenerated } from '../../api/generated/admin-albums/admin-albums';
 
 export function useRejectApi() {
   const loadPendingArtists = async (limit = 50, offset = 0, search = '') => {
-    const params = { limit, offset };
+    const params: Record<string, unknown> = { limit, offset };
     if (search) params.search = search;
     const response = await getPendingArtists(params);
     return response.data;
@@ -33,44 +33,48 @@ export function useRejectApi() {
   };
 
   const loadBlocklist = async (filter = '', limit = 50, offset = 0) => {
-    const params = { limit, offset };
+    const params: Record<string, unknown> = { limit, offset };
     if (filter) params.entityType = filter;
     const response = await getRejections(params);
     return response.data;
   };
 
-  const rejectArtistPreview = async artistId => {
+  const rejectArtistPreview = async (artistId: string) => {
     const response = await rejectArtist(artistId, {
       reason: 'Not relevant',
       dryRun: true,
-    });
+    } as any);
     return response.data;
   };
 
-  const confirmRejectArtist = async (artistId, reason, deleteContent = true) => {
+  const confirmRejectArtist = async (artistId: string, reason: string, deleteContent = true) => {
     const response = await rejectArtist(artistId, {
       reason,
       deleteContent,
-    });
+    } as any);
     return response.data;
   };
 
-  const rejectAlbum = async (albumId, reason) => {
-    const response = await rejectAlbumGenerated(albumId, { reason });
+  const rejectAlbum = async (albumId: string, reason: string) => {
+    const response = await rejectAlbumGenerated(albumId, { reason } as any);
     return response.data;
   };
 
-  const unblock = async rejectionId => {
+  const unblock = async (rejectionId: string) => {
     const response = await removeFromBlocklist(rejectionId);
     return response.data;
   };
 
-  const addToBlocklist = async data => {
-    const response = await addToBlocklistGenerated(data);
+  const addToBlocklist = async (data: unknown) => {
+    const response = await addToBlocklistGenerated(data as any);
     return response.data;
   };
 
-  const bulkRejectArtists = async (ids, reason = 'Bulk rejection', deleteContent = true) => {
+  const bulkRejectArtists = async (
+    ids: string[],
+    reason = 'Bulk rejection',
+    deleteContent = true,
+  ) => {
     const response = await bulkRejectArtistsGenerated({
       ids,
       reason,
@@ -91,3 +95,4 @@ export function useRejectApi() {
     bulkRejectArtists,
   };
 }
+

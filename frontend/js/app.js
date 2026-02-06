@@ -4,7 +4,7 @@ import { useTracks } from './hooks/tracks.js';
 import { useFilters } from './hooks/filter.js';
 import { usePlayer } from './hooks/player.js';
 import { useArtistsList } from './hooks/artistsList.js';
-import { useAlbumsList } from './hooks/albumsList.js';
+import { useAuthConfig } from './hooks/useAuthConfig.js';
 import { trackSession } from './analytics.js';
 import { showError, showToast } from './hooks/useToast.js';
 
@@ -48,6 +48,7 @@ const app = createApp({
     'album-page': AlbumPage,
   },
   setup() {
+    useAuthConfig().fetchAuthConfig();
     const route = useRoute();
     const routerInstance = useRouter();
     const filterLogic = useFilters();

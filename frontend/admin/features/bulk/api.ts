@@ -4,12 +4,12 @@
  * Uses generated API client from OpenAPI spec
  */
 
-import { bulkReanalyze as bulkReanalyzeGenerated } from '../../api/generated/admin-tracks/admin-tracks.js';
+import { bulkReanalyze as bulkReanalyzeGenerated } from '../../api/generated/admin-tracks/admin-tracks';
 import {
   getIsrcStats as getIsrcStatsGenerated,
   reclassifyAll as reclassifyAllGenerated,
   backfillIsrcs as backfillIsrcsGenerated,
-} from '../../api/generated/admin-maintenance/admin-maintenance.js';
+} from '../../api/generated/admin-maintenance/admin-maintenance';
 
 export function useBulkApi() {
   // Heuristic Classification (Fast)
@@ -34,11 +34,12 @@ export function useBulkApi() {
   };
 
   // Backfill ISRCs from Spotify
-  const backfillIsrcs = async (limit = null) => {
+  const backfillIsrcs = async (limit: number | null = null) => {
     const params = limit ? { limit } : undefined;
-    const response = await backfillIsrcsGenerated(params);
+    const response = await backfillIsrcsGenerated(params as any);
     return response.data;
   };
 
   return { reclassifyAll, bulkReanalyze, getIsrcStats, backfillIsrcs };
 }
+

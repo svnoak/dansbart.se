@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuth } from './hooks/useAuth.js';
+import { useAuthConfig } from './hooks/useAuthConfig.js';
 import AuthCallbackPage from './components/AuthCallbackPage.js';
 import ProfilePage from './components/ProfilePage.js';
 import PlaylistsPage from './components/PlaylistsPage.js';
@@ -80,8 +81,13 @@ const routes = [
         const token = sessionStorage.getItem('pendingShareToken');
         sessionStorage.removeItem('pendingShareToken');
 
+        const { useAuthConfig } = await import('./hooks/useAuthConfig.js');
+        const { waitForAuthConfig, authEnabled } = useAuthConfig();
+        await waitForAuthConfig();
+        const fallbackRoute = authEnabled.value ? { name: 'playlists' } : { name: 'discovery' };
+
         if (!token) {
-          this.$router.push({ name: 'playlists' });
+          this.$router.push(fallbackRoute);
           return;
         }
 
@@ -91,12 +97,11 @@ const routes = [
             const playlist = await response.json();
             this.$router.replace({ name: 'playlist', params: { id: playlist.id } });
           } else {
-            // Playlist not found or not public
-            this.$router.push({ name: 'playlists' });
+            this.$router.push(fallbackRoute);
           }
         } catch (error) {
           console.error('Failed to resolve share token:', error);
-          this.$router.push({ name: 'playlists' });
+          this.$router.push(fallbackRoute);
         }
       }
     },
@@ -137,10 +142,18 @@ router.beforeEach(async (to, _from, next) => {
     return next({ name: 'track', params: { id: trackId }, query: otherParams });
   }
 
-  // Auth guard
+  // Auth config: single backend flag drives login/playlists visibility
+  const { waitForAuthConfig, authEnabled } = useAuthConfig();
+  await waitForAuthConfig();
+
+  // When auth is disabled, profile and playlists are hidden; redirect to home
+  if (!authEnabled.value && (to.name === 'profile' || to.name === 'playlists')) {
+    return next({ name: 'discovery' });
+  }
+
+  // Auth guard for routes that require login (only when auth is enabled)
   const { user, isAuthenticated, waitForAuth, login } = useAuth();
 
-  // Wait for auth initialization before checking authentication
   if (to.meta.requiresAuth) {
     // Skip auth check if coming from callback page (we just authenticated)
     if (_from.name === 'authCallback') {

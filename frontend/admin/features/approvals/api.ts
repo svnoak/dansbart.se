@@ -10,15 +10,15 @@ import {
   approveArtist as approveArtistGenerated,
   bulkApproveArtists as bulkApproveArtistsGenerated,
   bulkRejectArtists as bulkRejectArtistsGenerated,
-} from '../../api/generated/admin-artists/admin-artists.js';
+} from '../../api/generated/admin-artists/admin-artists';
 import {
   removeFromBlocklist as removeFromBlocklistGenerated,
   getRejections,
-} from '../../api/generated/admin-rejections/admin-rejections.js';
+} from '../../api/generated/admin-rejections/admin-rejections';
 
 export function useApprovalsApi() {
   const loadIsolatedArtists = async (limit = 100, offset = 0, search = '') => {
-    const params = { limit, offset };
+    const params: Record<string, unknown> = { limit, offset };
     if (search) {
       params.search = search;
     }
@@ -27,27 +27,27 @@ export function useApprovalsApi() {
     return response.data;
   };
 
-  const rejectArtist = async (artistId, reason) => {
-    const response = await rejectArtistGenerated(artistId, { reason });
+  const rejectArtist = async (artistId: string, reason: string) => {
+    const response = await rejectArtistGenerated(artistId, { reason } as any);
     return response.data;
   };
 
-  const approveArtist = async artistId => {
+  const approveArtist = async (artistId: string) => {
     const response = await approveArtistGenerated(artistId);
     return response.data;
   };
 
-  const bulkApproveArtists = async ids => {
+  const bulkApproveArtists = async (ids: string[]) => {
     const response = await bulkApproveArtistsGenerated({ ids });
     return response.data;
   };
 
-  const bulkRejectArtists = async (ids, reason = 'Bulk rejection') => {
+  const bulkRejectArtists = async (ids: string[], reason = 'Bulk rejection') => {
     const response = await bulkRejectArtistsGenerated({ ids, reason });
     return response.data;
   };
 
-  const removeFromBlocklist = async rejectionId => {
+  const removeFromBlocklist = async (rejectionId: string) => {
     const response = await removeFromBlocklistGenerated(rejectionId);
     return response.data;
   };
@@ -67,3 +67,4 @@ export function useApprovalsApi() {
     loadBlocklist,
   };
 }
+

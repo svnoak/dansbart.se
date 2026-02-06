@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -41,7 +42,16 @@ public class AnalyticsService {
 
     @Transactional
     public VisitorSession createOrUpdateSession(String sessionId, String userAgent) {
-        return visitorSessionRepository.findBySessionId(sessionId)
+        // Be defensive against missing/blank session IDs coming from older clients/tests.
+        // The DB column is NOT NULL + UNIQUE, so always persist a non-empty value.
+        final String normalizedSessionId = (sessionId == null || sessionId.isBlank())
+            ? UUID.randomUUID().toString()
+            : sessionId;
+
+        // Normalize userAgent to null-safe value (so we don't accidentally propagate the literal "null").
+        final String normalizedUserAgent = Objects.equals(userAgent, "null") ? null : userAgent;
+
+        return visitorSessionRepository.findBySessionId(normalizedSessionId)
             .map(session -> {
                 session.setLastSeen(OffsetDateTime.now());
                 session.setPageViews(session.getPageViews() + 1);
@@ -50,8 +60,8 @@ public class AnalyticsService {
             })
             .orElseGet(() -> {
                 VisitorSession session = VisitorSession.builder()
-                    .sessionId(sessionId)
-                    .userAgent(userAgent)
+                    .sessionId(normalizedSessionId)
+                    .userAgent(normalizedUserAgent)
                     .lastSeen(OffsetDateTime.now())
                     .pageViews(1)
                     .isReturning(false)

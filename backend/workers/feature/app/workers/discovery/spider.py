@@ -12,6 +12,7 @@ Features:
 import time
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from app.core.celery_app import celery_app
 from app.workers.ingestion.spotify import SpotifyIngestor
 from app.repository.track import TrackRepository
 from app.core.models import (
@@ -19,6 +20,19 @@ from app.core.models import (
     ArtistCrawlLog, RejectionLog, PendingArtistApproval
 )
 from app.services.genre_classifier import GenreClassifier
+
+
+def _dispatch_audio_analysis(track_ids: list[str]) -> int:
+    """Dispatch audio analysis tasks to the audio worker queue."""
+    dispatched = 0
+    for track_id in track_ids:
+        celery_app.send_task(
+            "app.workers.tasks_audio.analyze_track_task",
+            args=[track_id],
+            queue="audio"
+        )
+        dispatched += 1
+    return dispatched
 
 
 class DiscoverySpider:
@@ -173,6 +187,11 @@ class DiscoverySpider:
 
                 # Ingest full discography
                 track_ids = self.ingestor.ingest_artist_albums(artist_id)
+
+                # Dispatch audio analysis for new tracks
+                if track_ids:
+                    dispatched = _dispatch_audio_analysis(track_ids)
+                    print(f"      Dispatched {dispatched} tracks to audio queue")
 
                 # Log the backfill
                 crawl_log = ArtistCrawlLog(
@@ -450,6 +469,11 @@ class DiscoverySpider:
 
         try:
             track_ids = self.ingestor.ingest_artist_albums(artist_id)
+
+            # Dispatch audio analysis for new tracks
+            if track_ids:
+                dispatched = _dispatch_audio_analysis(track_ids)
+                print(f"         Dispatched {dispatched} tracks to audio queue")
 
             # STEP 7: LOG THE CRAWL
             crawl_log = ArtistCrawlLog(

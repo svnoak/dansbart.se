@@ -1,15 +1,14 @@
 /**
- * Feature flags for controlling application features
+ * Feature flags for application features.
  *
- * Toggle these flags to enable/disable features during development
+ * Auth is driven by the backend: GET /api/config/auth returns authEnabled.
+ * When authEnabled is false: no login, no playlists, no profile (use useAuthConfig()).
+ * When authEnabled is true: full OIDC login, playlists, profile.
+ *
+ * Optional toggles below only apply when auth is enabled; they are not read from backend.
  */
 
 export const FEATURES = {
-  // Authentication and user features
-  // Set to false to hide login button and all auth-dependent features
-  ENABLE_AUTH_FEATURES: true,
-
-  // Individual feature toggles (only apply if ENABLE_AUTH_FEATURES is true)
   ENABLE_PLAYLISTS: true,
   ENABLE_USER_PROFILE: true,
 };

@@ -1,9 +1,11 @@
 /**
  * Analytics Tab Component
- * Displays comprehensive analytics about site usage, track plays, and user interactions
+ * Displays comprehensive analytics about site usage, track plays, and user interactions.
+ * Uses the generated admin API (customAdminFetch) so auth matches the rest of the admin app.
  */
 
 import { showError } from '../../../js/hooks/useToast';
+import { getDashboard } from '../../api/generated/admin-analytics/admin-analytics';
 
 export default {
   data() {
@@ -23,15 +25,9 @@ export default {
       this.error = null;
 
       try {
-        const token = localStorage.getItem('admin_token');
-        const response = await fetch(`/api/admin/analytics/dashboard?days=${this.days}`, {
-          headers: {
-            'X-Admin-Token': token,
-          },
-        });
-        if (!response.ok) throw new Error('Failed to fetch analytics');
-
-        this.analytics = await response.json();
+        const result = await getDashboard({ days: this.days });
+        // Backend returns the dashboard object directly (no .data wrapper)
+        this.analytics = result?.data ?? result;
       } catch (e) {
         this.error = e.message;
         showError(e.message);

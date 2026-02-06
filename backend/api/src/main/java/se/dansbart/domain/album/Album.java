@@ -1,5 +1,6 @@
 package se.dansbart.domain.album;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import se.dansbart.domain.artist.Artist;
@@ -36,10 +37,12 @@ public class Album {
     @Column(name = "artist_id")
     private UUID artistId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "artist_id", insertable = false, updatable = false)
     private Artist artist;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "album", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrackAlbum> trackLinks = new ArrayList<>();

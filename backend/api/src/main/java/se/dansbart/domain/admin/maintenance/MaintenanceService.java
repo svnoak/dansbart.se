@@ -123,17 +123,18 @@ public class MaintenanceService {
 
     @Transactional
     public Map<String, Object> ingestResource(String resourceId, String resourceType) {
+        if (resourceId == null || resourceId.isBlank()) {
+            throw new IllegalArgumentException("resource_id is required");
+        }
         // Validate resource type
         Set<String> validTypes = Set.of("playlist", "album", "artist");
         if (!validTypes.contains(resourceType)) {
             throw new IllegalArgumentException("Invalid resource_type. Must be one of: " + String.join(", ", validTypes));
         }
 
-        // Dispatch appropriate task based on type
+        // Dispatch Spotify ingestion task (playlist, album, or artist) to light worker
         String taskId = UUID.randomUUID().toString();
-
-        // Queue the ingestion task
-        taskDispatcher.dispatchSpiderCrawl(resourceId);
+        taskDispatcher.dispatchSpotifyIngest(resourceType, resourceId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");

@@ -13,8 +13,8 @@ RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 # Copy source code
 COPY src src
 
-# Build the application
-RUN ./mvnw package -DskipTests -B
+# Build the application (skip Flyway + jOOQ codegen; no DB at build time; use committed jOOQ sources)
+RUN ./mvnw package -DskipTests -B -DskipDbBuild=true
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
