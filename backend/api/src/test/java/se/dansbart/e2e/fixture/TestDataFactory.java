@@ -3,22 +3,23 @@ package se.dansbart.e2e.fixture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import se.dansbart.domain.album.Album;
-import se.dansbart.domain.album.AlbumRepository;
+import se.dansbart.domain.album.AlbumJooqRepository;
+import se.dansbart.domain.album.TrackAlbum;
 import se.dansbart.domain.artist.Artist;
-import se.dansbart.domain.artist.ArtistRepository;
+import se.dansbart.domain.artist.ArtistJooqRepository;
 import se.dansbart.domain.artist.TrackArtist;
 import se.dansbart.domain.playlist.Playlist;
-import se.dansbart.domain.playlist.PlaylistRepository;
+import se.dansbart.domain.playlist.PlaylistJooqRepository;
 import se.dansbart.domain.playlist.PlaylistTrack;
-import se.dansbart.domain.playlist.PlaylistTrackRepository;
+import se.dansbart.domain.playlist.PlaylistTrackJooqRepository;
 import se.dansbart.domain.track.PlaybackLink;
-import se.dansbart.domain.track.PlaybackLinkRepository;
+import se.dansbart.domain.track.PlaybackLinkJooqRepository;
 import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackDanceStyle;
-import se.dansbart.domain.track.TrackDanceStyleRepository;
-import se.dansbart.domain.track.TrackRepository;
+import se.dansbart.domain.track.TrackDanceStyleJooqRepository;
+import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.user.User;
-import se.dansbart.domain.user.UserRepository;
+import se.dansbart.domain.user.UserJooqRepository;
 
 import java.util.UUID;
 
@@ -35,28 +36,28 @@ import java.util.UUID;
 public class TestDataFactory {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserJooqRepository userJooqRepository;
 
     @Autowired
-    private ArtistRepository artistRepository;
+    private ArtistJooqRepository artistJooqRepository;
 
     @Autowired
-    private AlbumRepository albumRepository;
+    private AlbumJooqRepository albumJooqRepository;
 
     @Autowired
-    private TrackRepository trackRepository;
+    private TrackJooqRepository trackJooqRepository;
 
     @Autowired
-    private TrackDanceStyleRepository trackDanceStyleRepository;
+    private TrackDanceStyleJooqRepository trackDanceStyleJooqRepository;
 
     @Autowired
-    private PlaybackLinkRepository playbackLinkRepository;
+    private PlaybackLinkJooqRepository playbackLinkJooqRepository;
 
     @Autowired
-    private PlaylistRepository playlistRepository;
+    private PlaylistJooqRepository playlistJooqRepository;
 
     @Autowired
-    private PlaylistTrackRepository playlistTrackRepository;
+    private PlaylistTrackJooqRepository playlistTrackJooqRepository;
 
     // Builder factory methods
     public UserBuilder user() {
@@ -77,6 +78,14 @@ public class TestDataFactory {
 
     public PlaylistBuilder playlist() {
         return new PlaylistBuilder();
+    }
+
+    /**
+     * Link a track to an album (creates track_albums row).
+     */
+    public Album addTrackToAlbum(Album album, Track track) {
+        albumJooqRepository.insertTrackAlbum(track.getId(), album.getId());
+        return album;
     }
 
     // User Builder
@@ -113,7 +122,7 @@ public class TestDataFactory {
                 .displayName(displayName)
                 .avatarUrl(avatarUrl)
                 .build();
-            return userRepository.save(user);
+            return userJooqRepository.insert(user);
         }
     }
 
@@ -151,7 +160,7 @@ public class TestDataFactory {
                 .imageUrl(imageUrl)
                 .isVerified(isVerified)
                 .build();
-            return artistRepository.save(artist);
+            return artistJooqRepository.insert(artist);
         }
     }
 
@@ -196,7 +205,7 @@ public class TestDataFactory {
                 .releaseDate(releaseDate)
                 .artistId(artist != null ? artist.getId() : null)
                 .build();
-            return albumRepository.save(album);
+            return albumJooqRepository.insert(album);
         }
     }
 
@@ -315,17 +324,11 @@ public class TestDataFactory {
                 .embedding(embedding)
                 .build();
 
-            track = trackRepository.save(track);
+            track = trackJooqRepository.insert(track);
 
             // Link to artist if provided
             if (artist != null) {
-                TrackArtist trackArtist = TrackArtist.builder()
-                    .trackId(track.getId())
-                    .artistId(artist.getId())
-                    .role("primary")
-                    .build();
-                track.getArtistLinks().add(trackArtist);
-                track = trackRepository.save(track);
+                trackJooqRepository.insertTrackArtist(track.getId(), artist.getId(), "primary");
             }
 
             // Add dance style if provided
@@ -337,7 +340,7 @@ public class TestDataFactory {
                     .confidence(0.9f)
                     .effectiveBpm(effectiveBpm)
                     .build();
-                trackDanceStyleRepository.save(tds);
+                trackDanceStyleJooqRepository.save(tds);
             }
 
             // Add playback link if requested (required for tracks to be "playable")
@@ -348,7 +351,7 @@ public class TestDataFactory {
                     .deepLink("spotify:track:" + UUID.randomUUID())
                     .isWorking(true)
                     .build();
-                playbackLinkRepository.save(link);
+                playbackLinkJooqRepository.insert(link);
             }
 
             return track;
@@ -407,7 +410,7 @@ public class TestDataFactory {
                 .isPublic(isPublic)
                 .shareToken(shareToken)
                 .build();
-            return playlistRepository.save(playlist);
+            return playlistJooqRepository.insert(playlist);
         }
     }
 
@@ -420,6 +423,6 @@ public class TestDataFactory {
             .trackId(track.getId())
             .position(position)
             .build();
-        return playlistTrackRepository.save(pt);
+        return playlistTrackJooqRepository.insert(pt);
     }
 }

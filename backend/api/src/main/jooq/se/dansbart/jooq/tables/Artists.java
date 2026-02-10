@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -30,8 +31,9 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import se.dansbart.jooq.DefaultSchema;
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
+import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Albums.AlbumsPath;
 import se.dansbart.jooq.tables.TrackArtists.TrackArtistsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
@@ -46,7 +48,7 @@ public class Artists extends TableImpl<Record> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>ARTISTS</code>
+     * The reference instance of <code>public.artists</code>
      */
     public static final Artists ARTISTS = new Artists();
 
@@ -59,29 +61,29 @@ public class Artists extends TableImpl<Record> {
     }
 
     /**
-     * The column <code>ARTISTS.ID</code>.
+     * The column <code>public.artists.id</code>.
      */
-    public final TableField<Record, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("RANDOM_UUID()"), SQLDataType.UUID)), this, "");
+    public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>ARTISTS.NAME</code>.
+     * The column <code>public.artists.name</code>.
      */
-    public final TableField<Record, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(1000000000).nullable(false), this, "");
+    public final TableField<Record, String> NAME = createField(DSL.name("name"), SQLDataType.VARCHAR.nullable(false), this, "");
 
     /**
-     * The column <code>ARTISTS.IMAGE_URL</code>.
+     * The column <code>public.artists.spotify_id</code>.
      */
-    public final TableField<Record, String> IMAGE_URL = createField(DSL.name("IMAGE_URL"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, String> SPOTIFY_ID = createField(DSL.name("spotify_id"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>ARTISTS.SPOTIFY_ID</code>.
+     * The column <code>public.artists.image_url</code>.
      */
-    public final TableField<Record, String> SPOTIFY_ID = createField(DSL.name("SPOTIFY_ID"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, String> IMAGE_URL = createField(DSL.name("image_url"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>ARTISTS.IS_VERIFIED</code>.
+     * The column <code>public.artists.is_verified</code>.
      */
-    public final TableField<Record, Boolean> IS_VERIFIED = createField(DSL.name("IS_VERIFIED"), SQLDataType.BOOLEAN.defaultValue(DSL.field(DSL.raw("FALSE"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<Record, Boolean> IS_VERIFIED = createField(DSL.name("is_verified"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
     private Artists(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -92,24 +94,24 @@ public class Artists extends TableImpl<Record> {
     }
 
     /**
-     * Create an aliased <code>ARTISTS</code> table reference
+     * Create an aliased <code>public.artists</code> table reference
      */
     public Artists(String alias) {
         this(DSL.name(alias), ARTISTS);
     }
 
     /**
-     * Create an aliased <code>ARTISTS</code> table reference
+     * Create an aliased <code>public.artists</code> table reference
      */
     public Artists(Name alias) {
         this(alias, ARTISTS);
     }
 
     /**
-     * Create a <code>ARTISTS</code> table reference
+     * Create a <code>public.artists</code> table reference
      */
     public Artists() {
-        this(DSL.name("ARTISTS"), null);
+        this(DSL.name("artists"), null);
     }
 
     public <O extends Record> Artists(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
@@ -147,28 +149,33 @@ public class Artists extends TableImpl<Record> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+        return aliased() ? null : Public.PUBLIC;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IX_ARTISTS_NAME);
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
-        return Keys.CONSTRAINT_F;
+        return Keys.ARTISTS_PKEY;
     }
 
     @Override
     public List<UniqueKey<Record>> getUniqueKeys() {
-        return Arrays.asList(Keys.CONSTRAINT_FF);
+        return Arrays.asList(Keys.ARTISTS_SPOTIFY_ID_KEY);
     }
 
     private transient AlbumsPath _albums;
 
     /**
-     * Get the implicit to-many join path to the <code>PUBLIC.ALBUMS</code>
+     * Get the implicit to-many join path to the <code>public.albums</code>
      * table
      */
     public AlbumsPath albums() {
         if (_albums == null)
-            _albums = new AlbumsPath(this, null, Keys.CONSTRAINT_733.getInverseKey());
+            _albums = new AlbumsPath(this, null, Keys.ALBUMS__ALBUMS_ARTIST_ID_FKEY.getInverseKey());
 
         return _albums;
     }
@@ -177,17 +184,17 @@ public class Artists extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_ARTISTS</code> table
+     * <code>public.track_artists</code> table
      */
     public TrackArtistsPath trackArtists() {
         if (_trackArtists == null)
-            _trackArtists = new TrackArtistsPath(this, null, Keys.CONSTRAINT_72EF.getInverseKey());
+            _trackArtists = new TrackArtistsPath(this, null, Keys.TRACK_ARTISTS__TRACK_ARTISTS_ARTIST_ID_FKEY.getInverseKey());
 
         return _trackArtists;
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>PUBLIC.TRACKS</code>
+     * Get the implicit many-to-many join path to the <code>public.tracks</code>
      * table
      */
     public TracksPath tracks() {

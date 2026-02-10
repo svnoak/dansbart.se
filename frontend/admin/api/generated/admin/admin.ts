@@ -80,7 +80,7 @@ export const triggerReclassify = async (
 };
 
 /**
- * @summary Trigger backfill for an artist
+ * @summary Trigger backfill for an artist (by internal artist UUID)
  */
 export type triggerBackfillResponse200 = {
   data: TriggerBackfill200;

@@ -4,8 +4,6 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { TrackArtist } from './trackArtist';
-import type { Album } from './album';
 
 export interface Artist {
   id?: string;
@@ -13,6 +11,4 @@ export interface Artist {
   imageUrl?: string;
   spotifyId?: string;
   isVerified?: boolean;
-  trackLinks?: TrackArtist[];
-  albums?: Album[];
 }

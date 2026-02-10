@@ -2,11 +2,10 @@ package se.dansbart.domain.admin.track;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.RejectionLog;
-import se.dansbart.domain.admin.RejectionLogRepository;
+import se.dansbart.domain.admin.RejectionLogJooqRepository;
 import se.dansbart.domain.track.*;
 import se.dansbart.worker.TaskDispatcher;
 
@@ -16,57 +15,45 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AdminTrackService {
 
-    private final TrackRepository trackRepository;
-    private final RejectionLogRepository rejectionLogRepository;
+    private final TrackJooqRepository trackJooqRepository;
+    private final RejectionLogJooqRepository rejectionLogJooqRepository;
     private final TrackFeedbackService feedbackService;
     private final TaskDispatcher taskDispatcher;
+    private final AdminTrackJooqRepository adminTrackJooqRepository;
 
     @Transactional(readOnly = true)
-    public Page<Track> getTracks(String search, String status, Boolean flagged, int limit, int offset) {
-        // For simplicity, returning all tracks with pagination
-        // In production, you'd add filtering logic
-        return trackRepository.findAll(PageRequest.of(offset / limit, limit));
+    public Page<AdminTrackDto> getTracks(String search, String status, Boolean flagged, int limit, int offset) {
+        return adminTrackJooqRepository.findAllWithRelationships(search, status, flagged, limit, offset);
     }
 
     @Transactional
     public Map<String, Object> triggerReanalysis(UUID trackId) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
-        if (trackOpt.isEmpty()) {
+        if (!trackJooqRepository.existsById(trackId)) {
             throw new IllegalArgumentException("Track not found");
         }
 
-        Track track = trackOpt.get();
-        track.setProcessingStatus("PENDING");
-        trackRepository.save(track);
-
-        // Queue analysis task
+        trackJooqRepository.setProcessingStatus(trackId, "PENDING");
         taskDispatcher.dispatchAudioAnalysis(trackId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
-        result.put("message", "Re-analysis queued for: " + track.getTitle());
+        result.put("message", "Re-analysis queued for track " + trackId);
         return result;
     }
 
     @Transactional
     public Map<String, Object> triggerBulkReanalysis(String statusFilter, int limit) {
-        List<Track> tracks;
+        List<UUID> trackIds;
 
         if ("everything".equals(statusFilter)) {
-            tracks = trackRepository.findAll().stream().limit(limit).toList();
+            trackIds = trackJooqRepository.findIdsOrderByCreatedAtDesc(limit);
         } else if ("all".equals(statusFilter)) {
-            tracks = trackRepository.findAll().stream()
-                .filter(t -> !"DONE".equals(t.getProcessingStatus()))
-                .limit(limit)
-                .toList();
+            trackIds = trackJooqRepository.findIdsWhereProcessingStatusNotDone(limit);
         } else {
-            tracks = trackRepository.findAll().stream()
-                .filter(t -> statusFilter.equals(t.getProcessingStatus()))
-                .limit(limit)
-                .toList();
+            trackIds = trackJooqRepository.findIdsByProcessingStatusOrderByCreatedAtDesc(statusFilter, limit);
         }
 
-        if (tracks.isEmpty()) {
+        if (trackIds.isEmpty()) {
             return Map.of(
                 "status", "success",
                 "message", "No tracks found with status: " + statusFilter,
@@ -74,32 +61,32 @@ public class AdminTrackService {
             );
         }
 
+        trackJooqRepository.setProcessingStatusBatch(trackIds, "PENDING");
+
         List<Map<String, String>> queuedTracks = new ArrayList<>();
+        List<Track> tracks = trackJooqRepository.findByIds(trackIds);
         for (Track track : tracks) {
-            track.setProcessingStatus("PENDING");
             queuedTracks.add(Map.of(
                 "id", track.getId().toString(),
                 "title", track.getTitle()
             ));
         }
-        trackRepository.saveAll(tracks);
 
-        // Queue all tracks
-        for (Map<String, String> trackInfo : queuedTracks) {
-            taskDispatcher.dispatchAudioAnalysis(UUID.fromString(trackInfo.get("id")));
+        for (UUID id : trackIds) {
+            taskDispatcher.dispatchAudioAnalysis(id);
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
-        result.put("message", "Queued " + queuedTracks.size() + " tracks for re-analysis");
-        result.put("queued", queuedTracks.size());
+        result.put("message", "Queued " + trackIds.size() + " tracks for re-analysis");
+        result.put("queued", trackIds.size());
         result.put("tracks", queuedTracks);
         return result;
     }
 
     @Transactional
     public Map<String, Object> triggerReclassify(UUID trackId) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             throw new IllegalArgumentException("Track not found");
         }
@@ -116,12 +103,12 @@ public class AdminTrackService {
 
     @Transactional
     public Map<String, Object> deleteTrack(UUID trackId) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             throw new IllegalArgumentException("Track not found");
         }
 
-        trackRepository.deleteById(trackId);
+        trackJooqRepository.deleteById(trackId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
@@ -131,7 +118,7 @@ public class AdminTrackService {
 
     @Transactional
     public Map<String, Object> rejectTrack(UUID trackId, String reason, boolean dryRun) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             throw new IllegalArgumentException("Track not found");
         }
@@ -139,9 +126,9 @@ public class AdminTrackService {
         Track track = trackOpt.get();
 
         Map<String, Object> result = new HashMap<>();
-        result.put("track_id", trackId);
-        result.put("track_title", track.getTitle());
-        result.put("dry_run", dryRun);
+        result.put("trackId", trackId);
+        result.put("trackTitle", track.getTitle());
+        result.put("dryRun", dryRun);
 
         if (!dryRun) {
             // Add to rejection log if has spotify ID
@@ -152,10 +139,10 @@ public class AdminTrackService {
                     .entityName(track.getTitle())
                     .reason(reason)
                     .build();
-                rejectionLogRepository.save(rejection);
+                rejectionLogJooqRepository.insert(rejection);
             }
 
-            trackRepository.deleteById(trackId);
+            trackJooqRepository.deleteById(trackId);
             result.put("status", "rejected");
             result.put("message", "Track rejected and deleted");
         } else {

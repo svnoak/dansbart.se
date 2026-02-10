@@ -37,17 +37,17 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Data JPA -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
 
-        <!-- PostgreSQL -->
+        <!-- PostgreSQL (compile scope needed for pgvector type registration) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
+        </dependency>
+
+        <!-- JDBC for jOOQ DataSource proxies (TransactionAwareDataSourceProxy, DelegatingDataSource) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
         <!-- Flyway for database migrations -->
@@ -126,17 +126,7 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.hibernate.orm</groupId>
-            <artifactId>hibernate-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.hypersistence</groupId>
-            <artifactId>hypersistence-utils-hibernate-63</artifactId>
-            <version>3.7.0</version>
-        </dependency>
-
-        <!-- jOOQ for type-safe SQL (alongside JPA) -->
+        <!-- jOOQ for type-safe SQL -->
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
@@ -180,26 +170,6 @@
 
     <build>
         <plugins>
-            <!-- Add jOOQ generated sources (src/main/jooq) to compile path -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.5.0</version>
-                <executions>
-                    <execution>
-                        <id>add-jooq-source</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${project.basedir}/src/main/jooq</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <!-- Flyway migrate before jOOQ so schema is up to date (runs on every build; needs PostgreSQL) -->
             <plugin>
                 <groupId>org.flywaydb</groupId>
@@ -257,7 +227,7 @@
                                 <database>
                                     <name>org.jooq.meta.postgres.PostgresDatabase</name>
                                     <includes>.*</includes>
-                                    <excludes>flyway_schema_history</excludes>
+                                    <excludes>flyway_schema_history|alembic_version</excludes>
                                     <inputSchema>public</inputSchema>
                                 </database>
                                 <generate>
@@ -274,7 +244,7 @@
                                 </generate>
                                 <target>
                                     <packageName>se.dansbart.jooq</packageName>
-                                    <directory>${project.basedir}/src/main/jooq</directory>
+                                    <directory>${project.basedir}/src/main/java</directory>
                                 </target>
                             </generator>
                         </configuration>
@@ -292,6 +262,26 @@
                         </exclude>
                     </excludes>
                 </configuration>
+                <executions>
+                    <!-- Start the app before integration-test so springdoc-openapi-maven-plugin can fetch /v3/api-docs from running code -->
+                    <execution>
+                        <id>start-spring-boot</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <jvmArguments>-Dspring.application.admin.enabled=true</jvmArguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop-spring-boot</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -333,6 +323,7 @@
                     <apiDocsUrl>http://localhost:8000/v3/api-docs</apiDocsUrl>
                     <outputFileName>openapi.yaml</outputFileName>
                     <outputDir>${project.basedir}/../../api-spec</outputDir>
+                    <failOnError>true</failOnError>
                 </configuration>
             </plugin>
         </plugins>

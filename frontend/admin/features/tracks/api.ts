@@ -12,10 +12,13 @@ import {
 } from '../../api/generated/admin-tracks/admin-tracks';
 import { getArtists1, rejectArtist as rejectArtistGenerated } from '../../api/generated/admin-artists/admin-artists';
 import { getAlbums1, rejectAlbum as rejectAlbumGenerated } from '../../api/generated/admin-albums/admin-albums';
-import { useAdminApi } from '../../shared/composables/useAdminApi.js';
+import type { RejectRequest } from '../../api/models/rejectRequest';
+import { useAdminApi } from '../../shared/composables/useAdminApi';
+import type { Ref } from 'vue';
 
-export function useTracksApi(token: string) {
-  // Keep fetchWithAuth for endpoints that need admin auth but are tagged as public
+type MaybeRef<T> = T | Ref<T>;
+
+export function useTracksApi(token: MaybeRef<string | null | undefined>) {
   const { fetchWithAuth } = useAdminApi(token);
 
   const loadTracks = async (params: Parameters<typeof getTracks1>[0]) => {
@@ -53,17 +56,20 @@ export function useTracksApi(token: string) {
   };
 
   const rejectArtist = async (artistId: string, reason: string) => {
-    const response = await rejectArtistGenerated(artistId, { reason } as any);
+    const body: RejectRequest = { reason };
+    const response = await rejectArtistGenerated(artistId, body);
     return response.data;
   };
 
   const rejectAlbum = async (albumId: string, reason: string) => {
-    const response = await rejectAlbumGenerated(albumId, { reason } as any);
+    const body: RejectRequest = { reason };
+    const response = await rejectAlbumGenerated(albumId, body);
     return response.data;
   };
 
   const rejectTrack = async (trackId: string, reason: string) => {
-    const response = await rejectTrackGenerated(trackId, { reason } as any);
+    const body: RejectRequest = { reason };
+    const response = await rejectTrackGenerated(trackId, body);
     return response.data;
   };
 

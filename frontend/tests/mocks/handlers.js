@@ -39,7 +39,8 @@ export const authConfigHandler = http.get(`${API_BASE}/config/auth`, () => {
 export const adminLoginHandler = http.post(`${API_BASE}/admin/auth/login`, async ({ request }) => {
   const body = await request.json();
   
-  if (body.password === 'correct-password') {
+  const b = /** @type {{ password?: string }} */ (body);
+  if (b.password === 'correct-password') {
     return HttpResponse.json({
       token: MOCK_ADMIN_TOKEN,
       expiresIn: 86400, // 24 hours

@@ -6,7 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.RejectionLog;
-import se.dansbart.domain.admin.RejectionLogRepository;
+import se.dansbart.domain.admin.RejectionLogJooqRepository;
 
 import java.util.*;
 
@@ -14,7 +14,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AdminRejectionService {
 
-    private final RejectionLogRepository rejectionLogRepository;
+    private final RejectionLogJooqRepository rejectionLogJooqRepository;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getRejectionsPaginated(String entityType, int limit, int offset) {
@@ -22,9 +22,9 @@ public class AdminRejectionService {
         Page<RejectionLog> page;
 
         if (entityType != null && !entityType.isBlank()) {
-            page = rejectionLogRepository.findByEntityTypeOrderByRejectedAtDesc(entityType, pageable);
+            page = rejectionLogJooqRepository.findByEntityTypeOrderByRejectedAtDesc(entityType, pageable);
         } else {
-            page = rejectionLogRepository.findAllByOrderByRejectedAtDesc(pageable);
+            page = rejectionLogJooqRepository.findAllByOrderByRejectedAtDesc(pageable);
         }
 
         List<Map<String, Object>> items = page.getContent().stream()
@@ -42,28 +42,28 @@ public class AdminRejectionService {
     private Map<String, Object> mapRejection(RejectionLog log) {
         Map<String, Object> item = new HashMap<>();
         item.put("id", log.getId().toString());
-        item.put("entity_type", log.getEntityType());
-        item.put("spotify_id", log.getSpotifyId());
-        item.put("entity_name", log.getEntityName());
+        item.put("entityType", log.getEntityType());
+        item.put("spotifyId", log.getSpotifyId());
+        item.put("entityName", log.getEntityName());
         item.put("reason", log.getReason());
-        item.put("rejected_at", log.getRejectedAt() != null ? log.getRejectedAt().toString() : null);
-        item.put("deleted_content", log.getDeletedContent());
+        item.put("rejectedAt", log.getRejectedAt() != null ? log.getRejectedAt().toString() : null);
+        item.put("deletedContent", log.getDeletedContent());
         return item;
     }
 
     @Transactional
     public String removeFromBlocklist(UUID rejectionId) {
-        RejectionLog log = rejectionLogRepository.findById(rejectionId)
+        RejectionLog log = rejectionLogJooqRepository.findById(rejectionId)
             .orElseThrow(() -> new IllegalArgumentException("Rejection not found"));
 
         String entityName = log.getEntityName();
-        rejectionLogRepository.delete(log);
+        rejectionLogJooqRepository.delete(log);
         return entityName;
     }
 
     @Transactional(readOnly = true)
     public boolean checkIfBlocked(String spotifyId, String entityType) {
-        return rejectionLogRepository.existsBySpotifyIdAndEntityType(spotifyId, entityType);
+        return rejectionLogJooqRepository.existsBySpotifyIdAndEntityType(spotifyId, entityType);
     }
 
     @Transactional
@@ -75,6 +75,6 @@ public class AdminRejectionService {
             .reason(reason)
             .deletedContent(false)
             .build();
-        rejectionLogRepository.save(rejection);
+        rejectionLogJooqRepository.insert(rejection);
     }
 }

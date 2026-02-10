@@ -5,13 +5,17 @@ package se.dansbart.jooq.tables;
 
 
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
+import org.jooq.JSONB;
 import org.jooq.Name;
 import org.jooq.Path;
 import org.jooq.PlainSQL;
@@ -26,11 +30,13 @@ import org.jooq.TableField;
 import org.jooq.TableOptions;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
+import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import se.dansbart.jooq.DefaultSchema;
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
+import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Albums.AlbumsPath;
 import se.dansbart.jooq.tables.AnalysisSources.AnalysisSourcesPath;
 import se.dansbart.jooq.tables.Artists.ArtistsPath;
@@ -45,6 +51,7 @@ import se.dansbart.jooq.tables.TrackPlaybacks.TrackPlaybacksPath;
 import se.dansbart.jooq.tables.TrackStructureVersions.TrackStructureVersionsPath;
 import se.dansbart.jooq.tables.TrackStyleVotes.TrackStyleVotesPath;
 import se.dansbart.jooq.tables.UserInteractions.UserInteractionsPath;
+import se.dansbart.jooq.tables.Users.UsersPath;
 
 
 /**
@@ -56,7 +63,7 @@ public class Tracks extends TableImpl<Record> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>TRACKS</code>
+     * The reference instance of <code>public.tracks</code>
      */
     public static final Tracks TRACKS = new Tracks();
 
@@ -69,139 +76,155 @@ public class Tracks extends TableImpl<Record> {
     }
 
     /**
-     * The column <code>TRACKS.ID</code>.
+     * The column <code>public.tracks.id</code>.
      */
-    public final TableField<Record, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("RANDOM_UUID()"), SQLDataType.UUID)), this, "");
+    public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>TRACKS.TITLE</code>.
+     * The column <code>public.tracks.title</code>.
      */
-    public final TableField<Record, String> TITLE = createField(DSL.name("TITLE"), SQLDataType.VARCHAR(1000000000).nullable(false), this, "");
+    public final TableField<Record, String> TITLE = createField(DSL.name("title"), SQLDataType.VARCHAR.nullable(false), this, "");
 
     /**
-     * The column <code>TRACKS.ISRC</code>.
+     * The column <code>public.tracks.isrc</code>.
      */
-    public final TableField<Record, String> ISRC = createField(DSL.name("ISRC"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, String> ISRC = createField(DSL.name("isrc"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>TRACKS.DURATION_MS</code>.
+     * The column <code>public.tracks.created_at</code>.
      */
-    public final TableField<Record, Integer> DURATION_MS = createField(DSL.name("DURATION_MS"), SQLDataType.INTEGER, this, "");
+    public final TableField<Record, OffsetDateTime> CREATED_AT = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
 
     /**
-     * The column <code>TRACKS.CREATED_AT</code>.
+     * The column <code>public.tracks.has_vocals</code>.
      */
-    public final TableField<Record, OffsetDateTime> CREATED_AT = createField(DSL.name("CREATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
+    public final TableField<Record, Boolean> HAS_VOCALS = createField(DSL.name("has_vocals"), SQLDataType.BOOLEAN, this, "");
 
     /**
-     * The column <code>TRACKS.HAS_VOCALS</code>.
+     * The column <code>public.tracks.duration_ms</code>.
      */
-    public final TableField<Record, Boolean> HAS_VOCALS = createField(DSL.name("HAS_VOCALS"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<Record, Integer> DURATION_MS = createField(DSL.name("duration_ms"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>TRACKS.SWING_RATIO</code>.
+     * The column <code>public.tracks.bars</code>.
      */
-    public final TableField<Record, Double> SWING_RATIO = createField(DSL.name("SWING_RATIO"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, JSONB> BARS = createField(DSL.name("bars"), SQLDataType.JSONB, this, "");
 
     /**
-     * The column <code>TRACKS.ARTICULATION</code>.
+     * The column <code>public.tracks.sections</code>.
      */
-    public final TableField<Record, Double> ARTICULATION = createField(DSL.name("ARTICULATION"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, JSONB> SECTIONS = createField(DSL.name("sections"), SQLDataType.JSONB, this, "");
 
     /**
-     * The column <code>TRACKS.BOUNCINESS</code>.
+     * The column <code>public.tracks.section_labels</code>.
      */
-    public final TableField<Record, Double> BOUNCINESS = createField(DSL.name("BOUNCINESS"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, JSONB> SECTION_LABELS = createField(DSL.name("section_labels"), SQLDataType.JSONB, this, "");
 
     /**
-     * The column <code>TRACKS.LOUDNESS</code>.
+     * The column <code>public.tracks.processing_status</code>.
      */
-    public final TableField<Record, Double> LOUDNESS = createField(DSL.name("LOUDNESS"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, String> PROCESSING_STATUS = createField(DSL.name("processing_status"), SQLDataType.VARCHAR.nullable(false).defaultValue(DSL.field(DSL.raw("'PENDING'::character varying"), SQLDataType.VARCHAR)), this, "");
 
     /**
-     * The column <code>TRACKS.PUNCHINESS</code>.
+     * The column <code>public.tracks.swing_ratio</code>.
      */
-    public final TableField<Record, Double> PUNCHINESS = createField(DSL.name("PUNCHINESS"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, Double> SWING_RATIO = createField(DSL.name("swing_ratio"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.VOICE_PROBABILITY</code>.
+     * The column <code>public.tracks.articulation</code>.
      */
-    public final TableField<Record, Double> VOICE_PROBABILITY = createField(DSL.name("VOICE_PROBABILITY"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, Double> ARTICULATION = createField(DSL.name("articulation"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.POLSKA_SCORE</code>.
+     * The column <code>public.tracks.bounciness</code>.
      */
-    public final TableField<Record, Double> POLSKA_SCORE = createField(DSL.name("POLSKA_SCORE"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, Double> BOUNCINESS = createField(DSL.name("bounciness"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.HAMBO_SCORE</code>.
+     * The column <code>public.tracks.music_genre</code>.
      */
-    public final TableField<Record, Double> HAMBO_SCORE = createField(DSL.name("HAMBO_SCORE"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, String> MUSIC_GENRE = createField(DSL.name("music_genre"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>TRACKS.BPM_STABILITY</code>.
+     * The column <code>public.tracks.genre_confidence</code>.
      */
-    public final TableField<Record, Double> BPM_STABILITY = createField(DSL.name("BPM_STABILITY"), SQLDataType.DOUBLE, this, "");
+    public final TableField<Record, Double> GENRE_CONFIDENCE = createField(DSL.name("genre_confidence"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.EMBEDDING</code>.
+     * The column <code>public.tracks.is_flagged</code>.
      */
-    public final TableField<Record, byte[]> EMBEDDING = createField(DSL.name("EMBEDDING"), SQLDataType.BLOB, this, "");
+    public final TableField<Record, Boolean> IS_FLAGGED = createField(DSL.name("is_flagged"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
     /**
-     * The column <code>TRACKS.ANALYSIS_VERSION</code>.
+     * The column <code>public.tracks.flagged_at</code>.
      */
-    public final TableField<Record, String> ANALYSIS_VERSION = createField(DSL.name("ANALYSIS_VERSION"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, OffsetDateTime> FLAGGED_AT = createField(DSL.name("flagged_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>TRACKS.MUSIC_GENRE</code>.
+     * The column <code>public.tracks.flag_reason</code>.
      */
-    public final TableField<Record, String> MUSIC_GENRE = createField(DSL.name("MUSIC_GENRE"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, String> FLAG_REASON = createField(DSL.name("flag_reason"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>TRACKS.GENRE_CONFIDENCE</code>.
+     * @deprecated Unknown data type. If this is a qualified, user-defined type,
+     * it may have been excluded from code generation. If this is a built-in
+     * type, you can define an explicit {@link org.jooq.Binding} to specify how
+     * this type should be handled. Deprecation can be turned off using
+     * {@literal <deprecationOnUnknownTypes/>} in your code generator
+     * configuration.
      */
-    public final TableField<Record, Double> GENRE_CONFIDENCE = createField(DSL.name("GENRE_CONFIDENCE"), SQLDataType.DOUBLE, this, "");
+    @Deprecated
+    public final TableField<Record, Object> EMBEDDING = createField(DSL.name("embedding"), DefaultDataType.getDefaultDataType("\"public\".\"vector\""), this, "");
 
     /**
-     * The column <code>TRACKS.IS_FLAGGED</code>.
+     * The column <code>public.tracks.analysis_version</code>.
      */
-    public final TableField<Record, Boolean> IS_FLAGGED = createField(DSL.name("IS_FLAGGED"), SQLDataType.BOOLEAN.defaultValue(DSL.field(DSL.raw("FALSE"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<Record, String> ANALYSIS_VERSION = createField(DSL.name("analysis_version"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>TRACKS.FLAGGED_AT</code>.
+     * The column <code>public.tracks.loudness</code>.
      */
-    public final TableField<Record, OffsetDateTime> FLAGGED_AT = createField(DSL.name("FLAGGED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<Record, Double> LOUDNESS = createField(DSL.name("loudness"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.FLAG_REASON</code>.
+     * The column <code>public.tracks.punchiness</code>.
      */
-    public final TableField<Record, String> FLAG_REASON = createField(DSL.name("FLAG_REASON"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, Double> PUNCHINESS = createField(DSL.name("punchiness"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.UPLOADER_ID</code>.
+     * The column <code>public.tracks.voice_probability</code>.
      */
-    public final TableField<Record, String> UPLOADER_ID = createField(DSL.name("UPLOADER_ID"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<Record, Double> VOICE_PROBABILITY = createField(DSL.name("voice_probability"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.PROCESSING_STATUS</code>.
+     * The column <code>public.tracks.polska_score</code>.
      */
-    public final TableField<Record, String> PROCESSING_STATUS = createField(DSL.name("PROCESSING_STATUS"), SQLDataType.VARCHAR(1000000000).defaultValue(DSL.field(DSL.raw("'PENDING'"), SQLDataType.VARCHAR)), this, "");
+    public final TableField<Record, Double> POLSKA_SCORE = createField(DSL.name("polska_score"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.BARS</code>.
+     * The column <code>public.tracks.hambo_score</code>.
      */
-    public final TableField<Record, String> BARS = createField(DSL.name("BARS"), SQLDataType.CLOB, this, "");
+    public final TableField<Record, Double> HAMBO_SCORE = createField(DSL.name("hambo_score"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.SECTIONS</code>.
+     * The column <code>public.tracks.bpm_stability</code>.
      */
-    public final TableField<Record, String> SECTIONS = createField(DSL.name("SECTIONS"), SQLDataType.CLOB, this, "");
+    public final TableField<Record, Double> BPM_STABILITY = createField(DSL.name("bpm_stability"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>TRACKS.SECTION_LABELS</code>.
+     * The column <code>public.tracks.uploader_id</code>.
      */
-    public final TableField<Record, String> SECTION_LABELS = createField(DSL.name("SECTION_LABELS"), SQLDataType.CLOB, this, "");
+    public final TableField<Record, String> UPLOADER_ID = createField(DSL.name("uploader_id"), SQLDataType.VARCHAR(255), this, "");
+
+    /**
+     * The column <code>public.tracks.tempo_bpm</code>.
+     */
+    public final TableField<Record, Double> TEMPO_BPM = createField(DSL.name("tempo_bpm"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.is_instrumental</code>.
+     */
+    public final TableField<Record, Boolean> IS_INSTRUMENTAL = createField(DSL.name("is_instrumental"), SQLDataType.BOOLEAN, this, "");
 
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -212,24 +235,24 @@ public class Tracks extends TableImpl<Record> {
     }
 
     /**
-     * Create an aliased <code>TRACKS</code> table reference
+     * Create an aliased <code>public.tracks</code> table reference
      */
     public Tracks(String alias) {
         this(DSL.name(alias), TRACKS);
     }
 
     /**
-     * Create an aliased <code>TRACKS</code> table reference
+     * Create an aliased <code>public.tracks</code> table reference
      */
     public Tracks(Name alias) {
         this(alias, TRACKS);
     }
 
     /**
-     * Create a <code>TRACKS</code> table reference
+     * Create a <code>public.tracks</code> table reference
      */
     public Tracks() {
-        this(DSL.name("TRACKS"), null);
+        this(DSL.name("tracks"), null);
     }
 
     public <O extends Record> Tracks(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
@@ -267,23 +290,59 @@ public class Tracks extends TableImpl<Record> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+        return aliased() ? null : Public.PUBLIC;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_ISRC, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_UPLOADER_ID);
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
-        return Keys.CONSTRAINT_9;
+        return Keys.TRACKS_PKEY;
+    }
+
+    @Override
+    public List<ForeignKey<Record, ?>> getReferences() {
+        return Arrays.asList(Keys.TRACKS__FK_TRACKS_UPLOADER, Keys.TRACKS__TRACKS_UPLOADER_ID_FKEY);
+    }
+
+    private transient UsersPath _fkTracksUploader;
+
+    /**
+     * Get the implicit join path to the <code>public.users</code> table, via
+     * the <code>fk_tracks_uploader</code> key.
+     */
+    public UsersPath fkTracksUploader() {
+        if (_fkTracksUploader == null)
+            _fkTracksUploader = new UsersPath(this, Keys.TRACKS__FK_TRACKS_UPLOADER, null);
+
+        return _fkTracksUploader;
+    }
+
+    private transient UsersPath _tracksUploaderIdFkey;
+
+    /**
+     * Get the implicit join path to the <code>public.users</code> table, via
+     * the <code>tracks_uploader_id_fkey</code> key.
+     */
+    public UsersPath tracksUploaderIdFkey() {
+        if (_tracksUploaderIdFkey == null)
+            _tracksUploaderIdFkey = new UsersPath(this, Keys.TRACKS__TRACKS_UPLOADER_ID_FKEY, null);
+
+        return _tracksUploaderIdFkey;
     }
 
     private transient AnalysisSourcesPath _analysisSources;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.ANALYSIS_SOURCES</code> table
+     * <code>public.analysis_sources</code> table
      */
     public AnalysisSourcesPath analysisSources() {
         if (_analysisSources == null)
-            _analysisSources = new AnalysisSourcesPath(this, null, Keys.CONSTRAINT_BB.getInverseKey());
+            _analysisSources = new AnalysisSourcesPath(this, null, Keys.ANALYSIS_SOURCES__ANALYSIS_SOURCES_TRACK_ID_FKEY.getInverseKey());
 
         return _analysisSources;
     }
@@ -292,11 +351,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.PLAYBACK_LINKS</code> table
+     * <code>public.playback_links</code> table
      */
     public PlaybackLinksPath playbackLinks() {
         if (_playbackLinks == null)
-            _playbackLinks = new PlaybackLinksPath(this, null, Keys.CONSTRAINT_11F.getInverseKey());
+            _playbackLinks = new PlaybackLinksPath(this, null, Keys.PLAYBACK_LINKS__PLAYBACK_LINKS_TRACK_ID_FKEY.getInverseKey());
 
         return _playbackLinks;
     }
@@ -305,11 +364,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.PLAYLIST_TRACKS</code> table
+     * <code>public.playlist_tracks</code> table
      */
     public PlaylistTracksPath playlistTracks() {
         if (_playlistTracks == null)
-            _playlistTracks = new PlaylistTracksPath(this, null, Keys.CONSTRAINT_98C2.getInverseKey());
+            _playlistTracks = new PlaylistTracksPath(this, null, Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_TRACK_ID_FKEY.getInverseKey());
 
         return _playlistTracks;
     }
@@ -318,11 +377,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_ALBUMS</code> table
+     * <code>public.track_albums</code> table
      */
     public TrackAlbumsPath trackAlbums() {
         if (_trackAlbums == null)
-            _trackAlbums = new TrackAlbumsPath(this, null, Keys.CONSTRAINT_8F.getInverseKey());
+            _trackAlbums = new TrackAlbumsPath(this, null, Keys.TRACK_ALBUMS__TRACK_ALBUMS_TRACK_ID_FKEY.getInverseKey());
 
         return _trackAlbums;
     }
@@ -331,11 +390,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_ARTISTS</code> table
+     * <code>public.track_artists</code> table
      */
     public TrackArtistsPath trackArtists() {
         if (_trackArtists == null)
-            _trackArtists = new TrackArtistsPath(this, null, Keys.CONSTRAINT_72E.getInverseKey());
+            _trackArtists = new TrackArtistsPath(this, null, Keys.TRACK_ARTISTS__TRACK_ARTISTS_TRACK_ID_FKEY.getInverseKey());
 
         return _trackArtists;
     }
@@ -344,11 +403,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_DANCE_STYLES</code> table
+     * <code>public.track_dance_styles</code> table
      */
     public TrackDanceStylesPath trackDanceStyles() {
         if (_trackDanceStyles == null)
-            _trackDanceStyles = new TrackDanceStylesPath(this, null, Keys.CONSTRAINT_18.getInverseKey());
+            _trackDanceStyles = new TrackDanceStylesPath(this, null, Keys.TRACK_DANCE_STYLES__TRACK_DANCE_STYLES_TRACK_ID_FKEY.getInverseKey());
 
         return _trackDanceStyles;
     }
@@ -357,11 +416,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_FEEL_VOTES</code> table
+     * <code>public.track_feel_votes</code> table
      */
     public TrackFeelVotesPath trackFeelVotes() {
         if (_trackFeelVotes == null)
-            _trackFeelVotes = new TrackFeelVotesPath(this, null, Keys.CONSTRAINT_31.getInverseKey());
+            _trackFeelVotes = new TrackFeelVotesPath(this, null, Keys.TRACK_FEEL_VOTES__TRACK_FEEL_VOTES_TRACK_ID_FKEY.getInverseKey());
 
         return _trackFeelVotes;
     }
@@ -370,11 +429,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_PLAYBACKS</code> table
+     * <code>public.track_playbacks</code> table
      */
     public TrackPlaybacksPath trackPlaybacks() {
         if (_trackPlaybacks == null)
-            _trackPlaybacks = new TrackPlaybacksPath(this, null, Keys.CONSTRAINT_E4.getInverseKey());
+            _trackPlaybacks = new TrackPlaybacksPath(this, null, Keys.TRACK_PLAYBACKS__TRACK_PLAYBACKS_TRACK_ID_FKEY.getInverseKey());
 
         return _trackPlaybacks;
     }
@@ -383,11 +442,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_STRUCTURE_VERSIONS</code> table
+     * <code>public.track_structure_versions</code> table
      */
     public TrackStructureVersionsPath trackStructureVersions() {
         if (_trackStructureVersions == null)
-            _trackStructureVersions = new TrackStructureVersionsPath(this, null, Keys.CONSTRAINT_956.getInverseKey());
+            _trackStructureVersions = new TrackStructureVersionsPath(this, null, Keys.TRACK_STRUCTURE_VERSIONS__TRACK_STRUCTURE_VERSIONS_TRACK_ID_FKEY.getInverseKey());
 
         return _trackStructureVersions;
     }
@@ -396,11 +455,11 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_STYLE_VOTES</code> table
+     * <code>public.track_style_votes</code> table
      */
     public TrackStyleVotesPath trackStyleVotes() {
         if (_trackStyleVotes == null)
-            _trackStyleVotes = new TrackStyleVotesPath(this, null, Keys.CONSTRAINT_1B7.getInverseKey());
+            _trackStyleVotes = new TrackStyleVotesPath(this, null, Keys.TRACK_STYLE_VOTES__TRACK_STYLE_VOTES_TRACK_ID_FKEY.getInverseKey());
 
         return _trackStyleVotes;
     }
@@ -409,25 +468,25 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.USER_INTERACTIONS</code> table
+     * <code>public.user_interactions</code> table
      */
     public UserInteractionsPath userInteractions() {
         if (_userInteractions == null)
-            _userInteractions = new UserInteractionsPath(this, null, Keys.CONSTRAINT_D8.getInverseKey());
+            _userInteractions = new UserInteractionsPath(this, null, Keys.USER_INTERACTIONS__USER_INTERACTIONS_TRACK_ID_FKEY.getInverseKey());
 
         return _userInteractions;
     }
 
     /**
      * Get the implicit many-to-many join path to the
-     * <code>PUBLIC.PLAYLISTS</code> table
+     * <code>public.playlists</code> table
      */
     public PlaylistsPath playlists() {
         return playlistTracks().playlists();
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>PUBLIC.ALBUMS</code>
+     * Get the implicit many-to-many join path to the <code>public.albums</code>
      * table
      */
     public AlbumsPath albums() {
@@ -436,7 +495,7 @@ public class Tracks extends TableImpl<Record> {
 
     /**
      * Get the implicit many-to-many join path to the
-     * <code>PUBLIC.ARTISTS</code> table
+     * <code>public.artists</code> table
      */
     public ArtistsPath artists() {
         return trackArtists().artists();

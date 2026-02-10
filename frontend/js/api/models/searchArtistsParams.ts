@@ -4,9 +4,9 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { Pageable } from './pageable';
 
 export type SearchArtistsParams = {
   q: string;
-  pageable: Pageable;
+  limit?: number;
+  offset?: number;
 };

@@ -16,7 +16,8 @@ import {
   getRejections,
 } from '../../api/generated/admin-rejections/admin-rejections';
 
-export function useApprovalsApi() {
+/** @param _token - Optional admin token (kept for API compatibility with tabs that pass it) */
+export function useApprovalsApi(_token?: unknown) {
   const loadIsolatedArtists = async (limit = 100, offset = 0, search = '') => {
     const params: Record<string, unknown> = { limit, offset };
     if (search) {

@@ -6,26 +6,32 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.RejectionLog;
-import se.dansbart.domain.admin.RejectionLogRepository;
+import se.dansbart.domain.admin.RejectionLogJooqRepository;
 import se.dansbart.domain.album.Album;
-import se.dansbart.domain.album.AlbumRepository;
+import se.dansbart.domain.album.AlbumJooqRepository;
 import se.dansbart.domain.artist.Artist;
-import se.dansbart.domain.artist.ArtistRepository;
-import se.dansbart.domain.artist.TrackArtist;
+import se.dansbart.domain.artist.ArtistJooqRepository;
 import se.dansbart.domain.track.Track;
-import se.dansbart.domain.track.TrackRepository;
+import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.worker.TaskDispatcher;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AdminArtistService {
 
-    private final ArtistRepository artistRepository;
-    private final AlbumRepository albumRepository;
-    private final TrackRepository trackRepository;
-    private final RejectionLogRepository rejectionLogRepository;
+    private final ArtistJooqRepository artistJooqRepository;
+    private final AlbumJooqRepository albumJooqRepository;
+    private final TrackJooqRepository trackJooqRepository;
+    private final RejectionLogJooqRepository rejectionLogJooqRepository;
     private final TaskDispatcher taskDispatcher;
 
     @Transactional(readOnly = true)
@@ -34,18 +40,16 @@ public class AdminArtistService {
         Page<Artist> page;
 
         if (search != null && !search.isBlank()) {
-            page = artistRepository.searchByName(search, pageable);
+            page = artistJooqRepository.searchByName(search, pageable);
         } else if ("true".equalsIgnoreCase(isolated)) {
             // Isolated artists = not verified and have pending tracks
-            page = artistRepository.findAll(pageable);
+            page = artistJooqRepository.findAll(pageable);
             // Filter in memory for isolation (simplified - could be optimized with custom query)
         } else {
-            page = artistRepository.findAll(pageable);
+            page = artistJooqRepository.findAll(pageable);
         }
 
-        List<Map<String, Object>> items = page.getContent().stream()
-            .map(this::mapArtistToAdmin)
-            .toList();
+        List<Map<String, Object>> items = mapArtistsToAdmin(page.getContent());
 
         Map<String, Object> result = new HashMap<>();
         result.put("items", items);
@@ -55,52 +59,56 @@ public class AdminArtistService {
         return result;
     }
 
-    private Map<String, Object> mapArtistToAdmin(Artist artist) {
-        long trackCount = artist.getTrackLinks() != null ? artist.getTrackLinks().size() : 0;
-        long pendingCount = artist.getTrackLinks() != null ?
-            artist.getTrackLinks().stream()
-                .filter(tl -> tl.getTrack() != null && "PENDING".equals(tl.getTrack().getProcessingStatus()))
-                .count() : 0;
+    private List<Map<String, Object>> mapArtistsToAdmin(List<Artist> artists) {
+        if (artists.isEmpty()) return List.of();
+        List<UUID> artistIds = artists.stream().map(Artist::getId).toList();
+        Map<UUID, Long> pendingByArtist = new HashMap<>();
+        for (Object[] row : artistJooqRepository.countPendingTracksByArtistIds(artistIds)) {
+            UUID id = row[0] instanceof UUID ? (UUID) row[0] : UUID.fromString(row[0].toString());
+            long count = ((Number) row[1]).longValue();
+            pendingByArtist.put(id, count);
+        }
+        Map<UUID, Long> trackCountByArtist = artistJooqRepository.findTrackCountByArtistIds(artistIds);
+        return artists.stream()
+            .map(a -> mapArtistToAdmin(a, pendingByArtist.getOrDefault(a.getId(), 0L), trackCountByArtist.getOrDefault(a.getId(), 0L)))
+            .toList();
+    }
 
+    private Map<String, Object> mapArtistToAdmin(Artist artist, long pendingCount, long trackCount) {
         Map<String, Object> item = new HashMap<>();
         item.put("id", artist.getId().toString());
         item.put("name", artist.getName());
-        item.put("spotify_id", artist.getSpotifyId());
-        item.put("image_url", artist.getImageUrl());
-        item.put("is_verified", artist.getIsVerified());
-        item.put("track_count", trackCount);
-        item.put("pending_count", pendingCount);
+        item.put("spotifyId", artist.getSpotifyId());
+        item.put("imageUrl", artist.getImageUrl());
+        item.put("isVerified", artist.getIsVerified());
+        item.put("trackCount", trackCount);
+        item.put("pendingCount", pendingCount);
         return item;
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getArtistIsolationInfo(UUID artistId) {
-        Artist artist = artistRepository.findById(artistId).orElse(null);
+        Artist artist = artistJooqRepository.findById(artistId).orElse(null);
         if (artist == null) {
             return Map.of("error", "Artist not found");
         }
 
-        // Get all tracks by this artist
-        List<Track> artistTracks = artist.getTrackLinks().stream()
-            .map(TrackArtist::getTrack)
-            .filter(Objects::nonNull)
-            .toList();
-
-        // Check for collaborating artists
+        List<UUID> trackIds = artistJooqRepository.getTrackIdsByArtistId(artistId);
         Set<UUID> collaboratingArtistIds = new HashSet<>();
-        for (Track track : artistTracks) {
-            for (TrackArtist ta : track.getArtistLinks()) {
-                if (!ta.getArtist().getId().equals(artistId)) {
-                    collaboratingArtistIds.add(ta.getArtist().getId());
+        if (!trackIds.isEmpty()) {
+            for (Object[] row : artistJooqRepository.getTrackArtistsByTrackIds(trackIds)) {
+                UUID aid = (UUID) row[1];
+                if (!aid.equals(artistId)) {
+                    collaboratingArtistIds.add(aid);
                 }
             }
         }
 
         // Get shared albums
-        List<Album> artistAlbums = albumRepository.findByArtistId(artistId);
+        List<Album> artistAlbums = albumJooqRepository.findByArtistId(artistId);
         Set<UUID> sharedAlbumIds = new HashSet<>();
         for (Album album : artistAlbums) {
-            if (album.getTrackLinks() != null && album.getTrackLinks().size() > artistTracks.size()) {
+            if (album.getTrackLinks() != null && album.getTrackLinks().size() > trackIds.size()) {
                 sharedAlbumIds.add(album.getId());
             }
         }
@@ -108,79 +116,74 @@ public class AdminArtistService {
         boolean isIsolated = collaboratingArtistIds.isEmpty() && sharedAlbumIds.isEmpty();
 
         Map<String, Object> result = new HashMap<>();
-        result.put("is_isolated", isIsolated);
-        result.put("collaborating_artist_count", collaboratingArtistIds.size());
-        result.put("shared_album_count", sharedAlbumIds.size());
-        result.put("total_tracks", artistTracks.size());
+        result.put("isIsolated", isIsolated);
+        result.put("collaboratingArtistCount", collaboratingArtistIds.size());
+        result.put("sharedAlbumCount", sharedAlbumIds.size());
+        result.put("totalTracks", trackIds.size());
         return result;
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getCollaborationNetwork(UUID artistId) {
-        Artist artist = artistRepository.findById(artistId)
+        Artist artist = artistJooqRepository.findById(artistId)
             .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
 
-        List<Track> artistTracks = artist.getTrackLinks().stream()
-            .map(TrackArtist::getTrack)
-            .filter(Objects::nonNull)
-            .toList();
-
-        // Get collaborating artists
-        Map<UUID, Artist> collaborators = new HashMap<>();
-        for (Track track : artistTracks) {
-            for (TrackArtist ta : track.getArtistLinks()) {
-                if (!ta.getArtist().getId().equals(artistId)) {
-                    collaborators.put(ta.getArtist().getId(), ta.getArtist());
+        List<UUID> trackIds = artistJooqRepository.getTrackIdsByArtistId(artistId);
+        Set<UUID> collaboratorIds = new HashSet<>();
+        if (!trackIds.isEmpty()) {
+            for (Object[] row : artistJooqRepository.getTrackArtistsByTrackIds(trackIds)) {
+                UUID aid = (UUID) row[1];
+                if (!aid.equals(artistId)) {
+                    collaboratorIds.add(aid);
                 }
             }
         }
 
-        List<Map<String, Object>> collaboratorList = collaborators.values().stream()
+        List<Artist> collaboratorsList = collaboratorIds.isEmpty() ? List.of() : artistJooqRepository.findByIds(new ArrayList<>(collaboratorIds));
+        List<Map<String, Object>> collaboratorList = collaboratorsList.stream()
             .map(a -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", a.getId().toString());
                 m.put("name", a.getName());
-                m.put("spotify_id", a.getSpotifyId());
+                m.put("spotifyId", a.getSpotifyId());
                 return m;
             })
             .toList();
 
-        // Get albums
-        List<Album> albums = albumRepository.findByArtistId(artistId);
+        List<Album> albums = albumJooqRepository.findByArtistId(artistId);
         List<Map<String, Object>> albumList = albums.stream()
             .map(a -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", a.getId().toString());
                 m.put("title", a.getTitle());
-                m.put("spotify_id", a.getSpotifyId());
+                m.put("spotifyId", a.getSpotifyId());
                 return m;
             })
             .toList();
 
         Map<String, Object> result = new HashMap<>();
-        result.put("artist_id", artistId.toString());
-        result.put("artist_name", artist.getName());
-        result.put("collaborating_artists", collaboratorList);
+        result.put("artistId", artistId.toString());
+        result.put("artistName", artist.getName());
+        result.put("collaboratingArtists", collaboratorList);
         result.put("albums", albumList);
         return result;
     }
 
     @Transactional
     public Map<String, Object> rejectArtist(UUID artistId, String reason, boolean dryRun, boolean deleteContent) {
-        Artist artist = artistRepository.findById(artistId)
+        Artist artist = artistJooqRepository.findById(artistId)
             .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
 
-        // Get pending tracks
-        List<Track> pendingTracks = artist.getTrackLinks().stream()
-            .map(TrackArtist::getTrack)
-            .filter(t -> t != null && "PENDING".equals(t.getProcessingStatus()))
+        // Get pending tracks for this artist
+        List<Track> pendingTracks = trackJooqRepository.findByArtistId(artistId).stream()
+            .filter(t -> "PENDING".equals(t.getProcessingStatus()))
             .toList();
 
         Map<String, Object> result = new HashMap<>();
-        result.put("artist_id", artistId.toString());
-        result.put("artist_name", artist.getName());
-        result.put("pending_tracks_to_delete", pendingTracks.size());
-        result.put("dry_run", dryRun);
+        result.put("artistId", artistId.toString());
+        result.put("artistName", artist.getName());
+        result.put("pendingTracksToDelete", pendingTracks.size());
+        result.put("dryRun", dryRun);
 
         if (!dryRun) {
             // Add to blocklist
@@ -192,15 +195,16 @@ public class AdminArtistService {
                     .reason(reason)
                     .deletedContent(deleteContent)
                     .build();
-                rejectionLogRepository.save(rejection);
+                rejectionLogJooqRepository.insert(rejection);
             }
 
             // Delete pending tracks if requested
             if (deleteContent) {
                 for (Track track : pendingTracks) {
-                    trackRepository.delete(track);
+                    // Delete track along with all non-cascading relations (artists, albums, playbacks, interactions)
+                    trackJooqRepository.deleteWithRelations(track.getId());
                 }
-                result.put("deleted_tracks", pendingTracks.size());
+                result.put("deletedTracks", pendingTracks.size());
             }
 
             result.put("status", "success");
@@ -212,17 +216,16 @@ public class AdminArtistService {
 
     @Transactional
     public Map<String, Object> approveArtist(UUID artistId) {
-        Artist artist = artistRepository.findById(artistId)
+        Artist artist = artistJooqRepository.findById(artistId)
             .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
 
         // Mark as verified
         artist.setIsVerified(true);
-        artistRepository.save(artist);
+        artistJooqRepository.update(artist);
 
         // Queue pending tracks for analysis
-        List<Track> pendingTracks = artist.getTrackLinks().stream()
-            .map(TrackArtist::getTrack)
-            .filter(t -> t != null && "PENDING".equals(t.getProcessingStatus()))
+        List<Track> pendingTracks = trackJooqRepository.findByArtistId(artistId).stream()
+            .filter(t -> "PENDING".equals(t.getProcessingStatus()))
             .toList();
 
         for (Track track : pendingTracks) {
@@ -231,9 +234,9 @@ public class AdminArtistService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
-        result.put("artist_id", artistId.toString());
-        result.put("artist_name", artist.getName());
-        result.put("queued_tracks", pendingTracks.size());
+        result.put("artistId", artistId.toString());
+        result.put("artistName", artist.getName());
+        result.put("queuedTracks", pendingTracks.size());
         return result;
     }
 
@@ -270,7 +273,7 @@ public class AdminArtistService {
                 UUID id = UUID.fromString(idStr);
                 Map<String, Object> approvalResult = approveArtist(id);
                 approved++;
-                queuedTracks += (int) approvalResult.getOrDefault("queued_tracks", 0);
+                queuedTracks += (int) approvalResult.getOrDefault("queuedTracks", 0);
             } catch (Exception e) {
                 failed.add(idStr + ": " + e.getMessage());
             }
@@ -279,7 +282,7 @@ public class AdminArtistService {
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
         result.put("approved", approved);
-        result.put("queued_tracks", queuedTracks);
+        result.put("queuedTracks", queuedTracks);
         result.put("failed", failed);
         return result;
     }
@@ -296,7 +299,7 @@ public class AdminArtistService {
                 UUID id = UUID.fromString(idStr);
                 Map<String, Object> result = rejectArtist(id, reason, false, true);
                 rejectedArtists++;
-                deletedTracks += (int) result.getOrDefault("deleted_tracks", 0);
+                deletedTracks += (int) result.getOrDefault("deletedTracks", 0);
             } catch (Exception ignored) {}
         }
 
@@ -304,7 +307,7 @@ public class AdminArtistService {
         for (String idStr : albumIds) {
             try {
                 UUID id = UUID.fromString(idStr);
-                Album album = albumRepository.findById(id).orElse(null);
+                Album album = albumJooqRepository.findById(id).orElse(null);
                 if (album != null && album.getSpotifyId() != null) {
                     RejectionLog rejection = RejectionLog.builder()
                         .entityType("album")
@@ -313,7 +316,7 @@ public class AdminArtistService {
                         .reason(reason)
                         .deletedContent(true)
                         .build();
-                    rejectionLogRepository.save(rejection);
+                    rejectionLogJooqRepository.insert(rejection);
                     rejectedAlbums++;
                 }
             } catch (Exception ignored) {}
@@ -321,9 +324,9 @@ public class AdminArtistService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
-        result.put("rejected_artists", rejectedArtists);
-        result.put("rejected_albums", rejectedAlbums);
-        result.put("deleted_tracks", deletedTracks);
+        result.put("rejectedArtists", rejectedArtists);
+        result.put("rejectedAlbums", rejectedAlbums);
+        result.put("deletedTracks", deletedTracks);
         return result;
     }
 }

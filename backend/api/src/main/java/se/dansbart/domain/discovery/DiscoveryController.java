@@ -6,9 +6,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import se.dansbart.domain.track.Track;
 import se.dansbart.dto.CuratedPlaylistDto;
 import se.dansbart.dto.StyleOverviewDto;
+import se.dansbart.dto.TrackListDto;
 
 import java.util.Collections;
 import java.util.List;
@@ -23,7 +23,7 @@ public class DiscoveryController {
 
     @GetMapping("/popular")
     @Operation(summary = "Get popular tracks based on play count and completion rate")
-    public ResponseEntity<List<Track>> getPopularTracks(
+    public ResponseEntity<List<TrackListDto>> getPopularTracks(
             @Parameter(description = "Number of tracks to return (1-20)")
             @RequestParam(defaultValue = "6") int limit,
             @Parameter(description = "Days to look back for popularity (1-90)")
@@ -38,7 +38,7 @@ public class DiscoveryController {
 
     @GetMapping("/recent")
     @Operation(summary = "Get recently added tracks with verified classification")
-    public ResponseEntity<List<Track>> getRecentTracks(
+    public ResponseEntity<List<TrackListDto>> getRecentTracks(
             @Parameter(description = "Number of tracks to return (1-20)")
             @RequestParam(defaultValue = "6") int limit) {
 
@@ -48,7 +48,7 @@ public class DiscoveryController {
 
     @GetMapping("/curated")
     @Operation(summary = "Get curated high-quality tracks")
-    public ResponseEntity<List<Track>> getCuratedTracks(
+    public ResponseEntity<List<TrackListDto>> getCuratedTracks(
             @Parameter(description = "Number of tracks to return (1-20)")
             @RequestParam(defaultValue = "6") int limit) {
 

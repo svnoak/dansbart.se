@@ -1,11 +1,13 @@
 package se.dansbart.dto;
 
 import lombok.*;
+import java.util.List;
 import java.util.UUID;
 
 /**
  * Minimal Track DTO for list views.
  * Reduces payload size for paginated responses.
+ * Album cover is intentionally excluded (copyright).
  */
 @Getter
 @Setter
@@ -28,10 +30,10 @@ public class TrackListDto {
     // Primary artist name (flattened)
     private String artistName;
 
-    // Album cover for display
-    private String albumCoverUrl;
+    // All working playback links (Spotify, YouTube, etc.) so UI can show both
+    private List<PlaybackLinkDto> playbackLinks;
 
-    // First playback link
+    // First playback link (backward compatibility; primary source for play button)
     private String playbackPlatform;
     private String playbackLink;
 }

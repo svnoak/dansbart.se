@@ -1,7 +1,5 @@
 package se.dansbart.repository;
 
-import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -15,8 +13,7 @@ import se.dansbart.e2e.fixture.TestDataFactory;
 /**
  * Base class for repository tests. Uses Testcontainers (PostgreSQL, Redis),
  * full Spring context, and transaction rollback for isolation.
- * Call {@link #flush()} after creating data with TestDataFactory when testing jOOQ
- * so that inserts are visible to the same transaction.
+ * jOOQ inserts are visible in the same transaction; no flush needed.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
@@ -24,14 +21,8 @@ import se.dansbart.e2e.fixture.TestDataFactory;
 @Transactional
 public abstract class AbstractRepositoryTest {
 
-    @Autowired(required = false)
-    private EntityManager entityManager;
-
-    /** Flush JPA persistence context so jOOQ queries see inserted data in the same transaction. */
+    /** No-op for compatibility; jOOQ does not use a persistence context. */
     protected void flush() {
-        if (entityManager != null) {
-            entityManager.flush();
-        }
     }
 
     @DynamicPropertySource

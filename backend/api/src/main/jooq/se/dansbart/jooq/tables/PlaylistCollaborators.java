@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -31,8 +32,9 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import se.dansbart.jooq.DefaultSchema;
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
+import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
 
@@ -46,7 +48,7 @@ public class PlaylistCollaborators extends TableImpl<Record> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>PLAYLIST_COLLABORATORS</code>
+     * The reference instance of <code>public.playlist_collaborators</code>
      */
     public static final PlaylistCollaborators PLAYLIST_COLLABORATORS = new PlaylistCollaborators();
 
@@ -59,44 +61,44 @@ public class PlaylistCollaborators extends TableImpl<Record> {
     }
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.ID</code>.
+     * The column <code>public.playlist_collaborators.id</code>.
      */
-    public final TableField<Record, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("RANDOM_UUID()"), SQLDataType.UUID)), this, "");
+    public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuid_generate_v4()"), SQLDataType.UUID)), this, "");
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.PLAYLIST_ID</code>.
+     * The column <code>public.playlist_collaborators.playlist_id</code>.
      */
-    public final TableField<Record, UUID> PLAYLIST_ID = createField(DSL.name("PLAYLIST_ID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<Record, UUID> PLAYLIST_ID = createField(DSL.name("playlist_id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.USER_ID</code>.
+     * The column <code>public.playlist_collaborators.user_id</code>.
      */
-    public final TableField<Record, String> USER_ID = createField(DSL.name("USER_ID"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<Record, String> USER_ID = createField(DSL.name("user_id"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.PERMISSION</code>.
+     * The column <code>public.playlist_collaborators.permission</code>.
      */
-    public final TableField<Record, String> PERMISSION = createField(DSL.name("PERMISSION"), SQLDataType.VARCHAR(1000000000).defaultValue(DSL.field(DSL.raw("'view'"), SQLDataType.VARCHAR)), this, "");
+    public final TableField<Record, String> PERMISSION = createField(DSL.name("permission"), SQLDataType.VARCHAR(10).nullable(false), this, "");
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.STATUS</code>.
+     * The column <code>public.playlist_collaborators.invited_by</code>.
      */
-    public final TableField<Record, String> STATUS = createField(DSL.name("STATUS"), SQLDataType.VARCHAR(1000000000).defaultValue(DSL.field(DSL.raw("'pending'"), SQLDataType.VARCHAR)), this, "");
+    public final TableField<Record, String> INVITED_BY = createField(DSL.name("invited_by"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.INVITED_BY</code>.
+     * The column <code>public.playlist_collaborators.invited_at</code>.
      */
-    public final TableField<Record, String> INVITED_BY = createField(DSL.name("INVITED_BY"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<Record, OffsetDateTime> INVITED_AT = createField(DSL.name("invited_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.INVITED_AT</code>.
+     * The column <code>public.playlist_collaborators.status</code>.
      */
-    public final TableField<Record, OffsetDateTime> INVITED_AT = createField(DSL.name("INVITED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
+    public final TableField<Record, String> STATUS = createField(DSL.name("status"), SQLDataType.VARCHAR(20).nullable(false).defaultValue(DSL.field(DSL.raw("'pending'::character varying"), SQLDataType.VARCHAR)), this, "");
 
     /**
-     * The column <code>PLAYLIST_COLLABORATORS.ACCEPTED_AT</code>.
+     * The column <code>public.playlist_collaborators.accepted_at</code>.
      */
-    public final TableField<Record, OffsetDateTime> ACCEPTED_AT = createField(DSL.name("ACCEPTED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<Record, OffsetDateTime> ACCEPTED_AT = createField(DSL.name("accepted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     private PlaylistCollaborators(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -107,24 +109,26 @@ public class PlaylistCollaborators extends TableImpl<Record> {
     }
 
     /**
-     * Create an aliased <code>PLAYLIST_COLLABORATORS</code> table reference
+     * Create an aliased <code>public.playlist_collaborators</code> table
+     * reference
      */
     public PlaylistCollaborators(String alias) {
         this(DSL.name(alias), PLAYLIST_COLLABORATORS);
     }
 
     /**
-     * Create an aliased <code>PLAYLIST_COLLABORATORS</code> table reference
+     * Create an aliased <code>public.playlist_collaborators</code> table
+     * reference
      */
     public PlaylistCollaborators(Name alias) {
         this(alias, PLAYLIST_COLLABORATORS);
     }
 
     /**
-     * Create a <code>PLAYLIST_COLLABORATORS</code> table reference
+     * Create a <code>public.playlist_collaborators</code> table reference
      */
     public PlaylistCollaborators() {
-        this(DSL.name("PLAYLIST_COLLABORATORS"), null);
+        this(DSL.name("playlist_collaborators"), null);
     }
 
     public <O extends Record> PlaylistCollaborators(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
@@ -162,12 +166,17 @@ public class PlaylistCollaborators extends TableImpl<Record> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+        return aliased() ? null : Public.PUBLIC;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IDX_PLAYLIST_COLLABORATORS_PLAYLIST, Indexes.IDX_PLAYLIST_COLLABORATORS_STATUS, Indexes.IDX_PLAYLIST_COLLABORATORS_USER, Indexes.IX_PLAYLIST_COLLABORATORS_PLAYLIST_ID, Indexes.IX_PLAYLIST_COLLABORATORS_STATUS, Indexes.IX_PLAYLIST_COLLABORATORS_USER_ID);
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
-        return Keys.CONSTRAINT_B8;
+        return Keys.PLAYLIST_COLLABORATORS_PKEY;
     }
 
     @Override
@@ -177,45 +186,45 @@ public class PlaylistCollaborators extends TableImpl<Record> {
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.CONSTRAINT_B8C, Keys.CONSTRAINT_B8CF, Keys.CONSTRAINT_B8CFD);
+        return Arrays.asList(Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_PLAYLIST_ID_FKEY, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_USER_ID_FKEY, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_INVITED_BY_FKEY);
     }
 
     private transient PlaylistsPath _playlists;
 
     /**
-     * Get the implicit join path to the <code>PUBLIC.PLAYLISTS</code> table.
+     * Get the implicit join path to the <code>public.playlists</code> table.
      */
     public PlaylistsPath playlists() {
         if (_playlists == null)
-            _playlists = new PlaylistsPath(this, Keys.CONSTRAINT_B8C, null);
+            _playlists = new PlaylistsPath(this, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_PLAYLIST_ID_FKEY, null);
 
         return _playlists;
     }
 
-    private transient UsersPath _constraintB8cf;
+    private transient UsersPath _playlistCollaboratorsUserIdFkey;
 
     /**
-     * Get the implicit join path to the <code>PUBLIC.USERS</code> table, via
-     * the <code>CONSTRAINT_B8CF</code> key.
+     * Get the implicit join path to the <code>public.users</code> table, via
+     * the <code>playlist_collaborators_user_id_fkey</code> key.
      */
-    public UsersPath constraintB8cf() {
-        if (_constraintB8cf == null)
-            _constraintB8cf = new UsersPath(this, Keys.CONSTRAINT_B8CF, null);
+    public UsersPath playlistCollaboratorsUserIdFkey() {
+        if (_playlistCollaboratorsUserIdFkey == null)
+            _playlistCollaboratorsUserIdFkey = new UsersPath(this, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_USER_ID_FKEY, null);
 
-        return _constraintB8cf;
+        return _playlistCollaboratorsUserIdFkey;
     }
 
-    private transient UsersPath _constraintB8cfd;
+    private transient UsersPath _playlistCollaboratorsInvitedByFkey;
 
     /**
-     * Get the implicit join path to the <code>PUBLIC.USERS</code> table, via
-     * the <code>CONSTRAINT_B8CFD</code> key.
+     * Get the implicit join path to the <code>public.users</code> table, via
+     * the <code>playlist_collaborators_invited_by_fkey</code> key.
      */
-    public UsersPath constraintB8cfd() {
-        if (_constraintB8cfd == null)
-            _constraintB8cfd = new UsersPath(this, Keys.CONSTRAINT_B8CFD, null);
+    public UsersPath playlistCollaboratorsInvitedByFkey() {
+        if (_playlistCollaboratorsInvitedByFkey == null)
+            _playlistCollaboratorsInvitedByFkey = new UsersPath(this, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_INVITED_BY_FKEY, null);
 
-        return _constraintB8cfd;
+        return _playlistCollaboratorsInvitedByFkey;
     }
 
     @Override

@@ -6,5 +6,5 @@
  */
 
 export interface IngestTrackRequest {
-  spotify_track_id?: string;
+  spotifyTrackId?: string;
 }

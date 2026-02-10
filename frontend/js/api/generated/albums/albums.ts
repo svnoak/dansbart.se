@@ -4,7 +4,13 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { Album, GetAlbumsParams, PageAlbum, SearchAlbumsParams, Track } from '../../models';
+import type {
+  AlbumDto,
+  GetAlbumsParams,
+  PageResponseAlbum,
+  SearchAlbumsParams,
+  TrackListDto,
+} from '../../models';
 
 import { customFetch } from '../../custom-fetch';
 
@@ -12,7 +18,7 @@ import { customFetch } from '../../custom-fetch';
  * @summary Get all albums with pagination
  */
 export type getAlbumsResponse200 = {
-  data: PageAlbum;
+  data: PageResponseAlbum;
   status: 200;
 };
 
@@ -21,7 +27,7 @@ export type getAlbumsResponseSuccess = getAlbumsResponse200 & {
 };
 export type getAlbumsResponse = getAlbumsResponseSuccess;
 
-export const getGetAlbumsUrl = (params: GetAlbumsParams) => {
+export const getGetAlbumsUrl = (params?: GetAlbumsParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -36,7 +42,7 @@ export const getGetAlbumsUrl = (params: GetAlbumsParams) => {
 };
 
 export const getAlbums = async (
-  params: GetAlbumsParams,
+  params?: GetAlbumsParams,
   options?: RequestInit
 ): Promise<getAlbumsResponse> => {
   return customFetch<getAlbumsResponse>(getGetAlbumsUrl(params), {
@@ -49,7 +55,7 @@ export const getAlbums = async (
  * @summary Get album by ID
  */
 export type getAlbumResponse200 = {
-  data: Album;
+  data: AlbumDto;
   status: 200;
 };
 
@@ -73,7 +79,7 @@ export const getAlbum = async (id: string, options?: RequestInit): Promise<getAl
  * @summary Get all tracks in album
  */
 export type getAlbumTracksResponse200 = {
-  data: Track[];
+  data: TrackListDto[];
   status: 200;
 };
 
@@ -100,7 +106,7 @@ export const getAlbumTracks = async (
  * @summary Search albums by title
  */
 export type searchAlbumsResponse200 = {
-  data: PageAlbum;
+  data: PageResponseAlbum;
   status: 200;
 };
 

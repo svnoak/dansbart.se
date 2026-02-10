@@ -179,12 +179,12 @@ def backfill_artist_task(self, artist_spotify_id: str = None, max_artists: int =
 @celery_app.task(bind=True, acks_late=True, queue='light')
 def spotify_ingest_task(self, resource_type: str, spotify_id: str):
     """
-    Ingest a Spotify resource (playlist, album, or artist).
+    Ingest a Spotify resource (playlist, album, artist, or single track).
     Dispatched by the Java API; routes to the appropriate ingestion method.
 
     Args:
-        resource_type: One of 'playlist', 'album', 'artist'
-        spotify_id: Spotify ID of the playlist, album, or artist
+        resource_type: One of 'playlist', 'album', 'artist', 'track'
+        spotify_id: Spotify ID of the playlist, album, artist, or track
 
     Returns:
         dict: Ingestion result with status and counts
@@ -200,11 +200,47 @@ def spotify_ingest_task(self, resource_type: str, spotify_id: str):
         return _ingest_album(spotify_id)
     if resource_type == "artist":
         return _backfill_artist(spotify_id)
+    if resource_type == "track":
+        return _ingest_track(spotify_id)
 
     return {
         "status": "failed",
-        "message": f"Invalid resource_type: {resource_type}. Must be playlist, album, or artist."
+        "message": f"Invalid resource_type: {resource_type}. Must be playlist, album, artist, or track."
     }
+
+
+def _ingest_track(spotify_track_id: str) -> dict:
+    """Helper function to ingest a single track by Spotify ID (used by spotify_ingest_task)."""
+    print(f"[Light Worker] Ingesting track {spotify_track_id}...")
+
+    db = SessionLocal()
+    try:
+        from app.workers.ingestion.spotify import SpotifyIngestor
+
+        ingestor = SpotifyIngestor(db)
+        track_data = ingestor.sp.track(spotify_track_id)
+        if not track_data:
+            return {
+                "status": "failed",
+                "message": f"Track not found on Spotify: {spotify_track_id}"
+            }
+
+        pending_ids = ingestor.ingest_tracks_from_list([track_data])
+        dispatched = _dispatch_audio_analysis(pending_ids)
+
+        return {
+            "status": "success",
+            "message": f"Ingested track. {dispatched} track(s) queued for analysis.",
+            "tracks_queued": dispatched
+        }
+    except Exception as e:
+        print(f"[Light Worker] Track ingestion failed: {e}")
+        return {
+            "status": "failed",
+            "message": str(e)
+        }
+    finally:
+        db.close()
 
 
 def _ingest_playlist(playlist_id: str) -> dict:

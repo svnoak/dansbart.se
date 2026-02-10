@@ -8,6 +8,9 @@ import pytest
 from unittest.mock import patch, MagicMock
 import uuid
 
+# Spotify track ID used for single-track ingest tests (matches conftest.TEST_SPOTIFY_TRACK_ID)
+TEST_SPOTIFY_TRACK_ID = "4uLU6hMCjMI75M1A2tKUQC"
+
 
 class TestSpotifyTrackIngestion:
     """Tests for single track ingestion from Spotify."""
@@ -446,7 +449,7 @@ class TestSpotifyTaskIntegration:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.core.database.SessionLocal', return_value=mock_db_session):
+        with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
             with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
                 with patch('spotipy.Spotify', return_value=mock_spotify_client):
                     with patch('spotipy.oauth2.SpotifyClientCredentials'):
@@ -472,7 +475,7 @@ class TestSpotifyTaskIntegration:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.core.database.SessionLocal', return_value=mock_db_session):
+        with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
             with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
                 with patch('spotipy.Spotify', return_value=mock_spotify_client):
                     with patch('spotipy.oauth2.SpotifyClientCredentials'):
@@ -482,3 +485,69 @@ class TestSpotifyTaskIntegration:
 
         assert result['status'] == 'success'
         assert 'tracks_queued' in result
+
+
+class TestSpotifyIngestTrackTask:
+    """
+    E2E tests for single-track ingest via spotify_ingest_task (resource_type='track').
+
+    Run from project root with deps installed:
+      cd backend/workers/feature && pip install -r requirements.txt && pytest tests/e2e/test_spotify_ingestion.py::TestSpotifyIngestTrackTask -v -m e2e
+    """
+
+    @pytest.mark.e2e
+    def test_spotify_ingest_task_track_end_to_end(
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
+    ):
+        """
+        End-to-end: spotify_ingest_task with resource_type='track' fetches the track from Spotify,
+        creates it in the DB (PENDING), and dispatches it to the audio queue.
+        """
+        from app.workers.tasks_light import spotify_ingest_task
+
+        mock_repo = MagicMock()
+        mock_repo.get_by_isrc.return_value = None
+
+        mock_track = MagicMock()
+        mock_track.id = uuid.uuid4()
+        mock_track.processing_status = "PENDING"
+        mock_repo.create_track.return_value = mock_track
+        mock_repo.add_playback_link.return_value = MagicMock()
+
+        with patch('app.workers.tasks_light._dispatch_audio_analysis') as mock_dispatch:
+            mock_dispatch.return_value = 1
+
+            with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
+                with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+                    with patch('spotipy.Spotify', return_value=mock_spotify_client):
+                        with patch('spotipy.oauth2.SpotifyClientCredentials'):
+                            result = spotify_ingest_task.apply(
+                                args=["track", TEST_SPOTIFY_TRACK_ID]
+                            ).get()
+
+        assert result["status"] == "success"
+        assert result["tracks_queued"] == 1
+        mock_dispatch.assert_called_once()
+        call_args = mock_dispatch.call_args[0][0]
+        assert len(call_args) == 1
+        assert call_args[0] == str(mock_track.id)
+
+    @pytest.mark.e2e
+    def test_spotify_ingest_task_track_not_found(
+        self, mock_db_session, mock_spotify_credentials, e2e_env_vars
+    ):
+        """When Spotify returns no track, the task returns failed with a clear message."""
+        from app.workers.tasks_light import spotify_ingest_task
+
+        mock_client = MagicMock()
+        mock_client.track.return_value = None  # Track not found
+
+        with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
+            with patch('spotipy.Spotify', return_value=mock_client):
+                with patch('spotipy.oauth2.SpotifyClientCredentials'):
+                    result = spotify_ingest_task.apply(
+                        args=["track", TEST_SPOTIFY_TRACK_ID]
+                    ).get()
+
+        assert result["status"] == "failed"
+        assert "not found" in result["message"].lower() or "track" in result["message"].lower()

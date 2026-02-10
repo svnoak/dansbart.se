@@ -8,9 +8,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackService;
+import se.dansbart.dto.AlbumDto;
 import se.dansbart.dto.PageResponse;
+import se.dansbart.dto.TrackListDto;
 
 import java.util.List;
 import java.util.UUID;
@@ -39,16 +40,16 @@ public class AlbumController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get album by ID")
-    public ResponseEntity<Album> getAlbum(@PathVariable UUID id) {
-        return albumService.findById(id)
+    public ResponseEntity<AlbumDto> getAlbum(@PathVariable UUID id) {
+        return albumService.findByIdAsDto(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{id}/tracks")
     @Operation(summary = "Get all tracks in album")
-    public ResponseEntity<List<Track>> getAlbumTracks(@PathVariable UUID id) {
-        return ResponseEntity.ok(trackService.findByAlbumId(id));
+    public ResponseEntity<List<TrackListDto>> getAlbumTracks(@PathVariable UUID id) {
+        return ResponseEntity.ok(trackService.findByAlbumIdAsListDtos(id));
     }
 
     @GetMapping("/search")

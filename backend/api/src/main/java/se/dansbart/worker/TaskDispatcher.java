@@ -85,15 +85,20 @@ public class TaskDispatcher {
 
     /**
      * Dispatch artist backfill task to the light worker.
+     * Must pass the artist's Spotify ID (e.g. from PendingArtistApproval or Artist.spotifyId).
      */
-    public void dispatchBackfillArtist(UUID artistId) {
+    public void dispatchBackfillArtist(String spotifyArtistId) {
+        if (spotifyArtistId == null || spotifyArtistId.isBlank()) {
+            log.warn("Cannot dispatch backfill: spotifyArtistId is null or blank");
+            return;
+        }
         String taskMessage = buildCeleryMessage(
             "app.workers.tasks_light.backfill_artist_task",
-            List.of(artistId.toString()),
+            List.of(spotifyArtistId),
             Map.of()
         );
         pushToQueue(LIGHT_QUEUE, taskMessage);
-        log.info("Dispatched backfill for artist {}", artistId);
+        log.info("Dispatched backfill for artist (Spotify ID) {}", spotifyArtistId);
     }
 
     /**

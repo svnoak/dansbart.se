@@ -6,9 +6,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.PendingArtistApproval;
-import se.dansbart.domain.admin.PendingArtistApprovalRepository;
+import se.dansbart.domain.admin.PendingArtistApprovalJooqRepository;
 import se.dansbart.domain.admin.RejectionLog;
-import se.dansbart.domain.admin.RejectionLogRepository;
+import se.dansbart.domain.admin.RejectionLogJooqRepository;
 import se.dansbart.worker.TaskDispatcher;
 
 import java.time.OffsetDateTime;
@@ -18,8 +18,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class PendingApprovalService {
 
-    private final PendingArtistApprovalRepository pendingRepository;
-    private final RejectionLogRepository rejectionLogRepository;
+    private final PendingArtistApprovalJooqRepository pendingRepository;
+    private final RejectionLogJooqRepository rejectionLogJooqRepository;
     private final TaskDispatcher taskDispatcher;
 
     @Transactional(readOnly = true)
@@ -42,15 +42,15 @@ public class PendingApprovalService {
     private Map<String, Object> mapPendingArtist(PendingArtistApproval pending) {
         Map<String, Object> item = new HashMap<>();
         item.put("id", pending.getId().toString());
-        item.put("spotify_id", pending.getSpotifyId());
+        item.put("spotifyId", pending.getSpotifyId());
         item.put("name", pending.getName());
-        item.put("image_url", pending.getImageUrl());
-        item.put("discovery_source", pending.getDiscoverySource());
-        item.put("detected_genres", pending.getDetectedGenres());
-        item.put("music_genre_classification", pending.getMusicGenreClassification());
-        item.put("genre_confidence", pending.getGenreConfidence());
+        item.put("imageUrl", pending.getImageUrl());
+        item.put("discoverySource", pending.getDiscoverySource());
+        item.put("detectedGenres", pending.getDetectedGenres());
+        item.put("musicGenreClassification", pending.getMusicGenreClassification());
+        item.put("genreConfidence", pending.getGenreConfidence());
         item.put("status", pending.getStatus());
-        item.put("discovered_at", pending.getDiscoveredAt() != null ? pending.getDiscoveredAt().toString() : null);
+        item.put("discoveredAt", pending.getDiscoveredAt() != null ? pending.getDiscoveredAt().toString() : null);
         return item;
     }
 
@@ -68,14 +68,14 @@ public class PendingApprovalService {
         pending.setReviewedAt(OffsetDateTime.now());
         pendingRepository.save(pending);
 
-        // Dispatch ingestion task for the artist
-        taskDispatcher.dispatchBackfillArtist(id);
+        // Dispatch ingestion task for the artist (light worker expects Spotify ID)
+        taskDispatcher.dispatchBackfillArtist(pending.getSpotifyId());
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
         result.put("message", "Artist approved and queued for ingestion");
-        result.put("artist_id", id.toString());
-        result.put("artist_name", pending.getName());
+        result.put("artistId", id.toString());
+        result.put("artistName", pending.getName());
         return result;
     }
 
@@ -97,13 +97,13 @@ public class PendingApprovalService {
             .reason(reason)
             .deletedContent(false)
             .build();
-        rejectionLogRepository.save(rejection);
+        rejectionLogJooqRepository.insert(rejection);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
         result.put("message", "Artist rejected and added to blocklist");
-        result.put("artist_id", id.toString());
-        result.put("artist_name", pending.getName());
+        result.put("artistId", id.toString());
+        result.put("artistName", pending.getName());
         return result;
     }
 

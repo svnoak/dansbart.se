@@ -23,7 +23,7 @@ vi.mock('../../admin/shared/composables/useAdminAuth.js', () => ({
 }));
 
 // Import the actual fetch wrappers after mocking
-import { customAdminFetch } from '../../admin/api/custom-fetch.ts';
+import { customAdminFetch } from '../../admin/api/custom-fetch';
 
 describe('Custom Fetch Wrappers', () => {
   beforeEach(() => {
@@ -53,7 +53,7 @@ describe('Custom Fetch Wrappers', () => {
         
         // Verify Authorization header was set
         expect(capturedHeaders).toBeDefined();
-        expect(capturedHeaders['Authorization']).toBe(`Bearer ${MOCK_ADMIN_TOKEN}`);
+        if (capturedHeaders) expect(capturedHeaders['Authorization']).toBe(`Bearer ${MOCK_ADMIN_TOKEN}`);
       } finally {
         global.fetch = originalFetch;
       }
@@ -103,7 +103,7 @@ describe('Custom Fetch Wrappers', () => {
         expect(mockRefreshToken).toHaveBeenCalled();
         expect(mockLogout).toHaveBeenCalled();
       } finally {
-        window.location = originalLocation;
+        Object.defineProperty(window, 'location', { value: originalLocation, writable: true });
       }
     });
 

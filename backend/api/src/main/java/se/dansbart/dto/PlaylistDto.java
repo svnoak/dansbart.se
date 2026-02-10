@@ -19,6 +19,7 @@ public class PlaylistDto {
     private String name;
     private String description;
     private Boolean isPublic;
+    private String shareToken;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 

@@ -57,6 +57,7 @@ services:
     volumes:
       - ./audio-worker/app:/app/app:ro  # Mount for development hot-reload
       - audio_models:/app/models  # Persistent volume for ML models
+      - style_head_data:/app/neckenml_style_head  # Production-trained custom_style_head.pkl
       - ../neckenml-analyzer:/neckenml  # Mount neckenml for local development (rw for pip install -e)
     environment:
       - POSTGRES_USER=postgres
@@ -97,3 +98,4 @@ services:
 volumes:
   postgres_data:
   audio_models:  # Persistent storage for ML models (survives container updates)
+  style_head_data:  # Production-trained custom_style_head.pkl; persists across worker upgrades

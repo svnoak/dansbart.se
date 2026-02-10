@@ -30,8 +30,8 @@ public class AdminSpotifyService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
-        result.put("task_id", taskId);
-        result.put("spotify_artist_id", spotifyArtistId);
+        result.put("taskId", taskId);
+        result.put("spotifyArtistId", spotifyArtistId);
         result.put("message", "Artist albums preview queued");
         return result;
     }
@@ -48,8 +48,8 @@ public class AdminSpotifyService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
-        result.put("task_id", taskId);
-        result.put("spotify_album_id", spotifyAlbumId);
+        result.put("taskId", taskId);
+        result.put("spotifyAlbumId", spotifyAlbumId);
         result.put("message", "Album tracks preview queued");
         return result;
     }
@@ -66,8 +66,8 @@ public class AdminSpotifyService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
-        result.put("task_id", taskId);
-        result.put("spotify_album_id", spotifyAlbumId);
+        result.put("taskId", taskId);
+        result.put("spotifyAlbumId", spotifyAlbumId);
         result.put("message", "Album ingestion queued");
         return result;
     }
@@ -83,8 +83,8 @@ public class AdminSpotifyService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
-        result.put("task_id", taskId);
-        result.put("spotify_track_id", spotifyTrackId);
+        result.put("taskId", taskId);
+        result.put("spotifyTrackId", spotifyTrackId);
         result.put("message", "Track ingestion queued");
         return result;
     }

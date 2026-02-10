@@ -52,17 +52,17 @@ class AdminArtistControllerTest {
     void getIsolationStatus_shouldReturnIsolationInfo() throws Exception {
         UUID artistId = UUID.randomUUID();
         Map<String, Object> response = Map.of(
-            "is_isolated", true,
-            "collaborating_artist_count", 0,
-            "shared_album_count", 0,
-            "total_tracks", 5
+            "isIsolated", true,
+            "collaboratingArtistCount", 0,
+            "sharedAlbumCount", 0,
+            "totalTracks", 5
         );
 
         when(artistService.getArtistIsolationInfo(artistId)).thenReturn(response);
 
         mockMvc.perform(get("/api/admin/artists/{artistId}/isolation-check", artistId))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.is_isolated").value(true));
+            .andExpect(jsonPath("$.isIsolated").value(true));
     }
 
     @Test
@@ -71,8 +71,8 @@ class AdminArtistControllerTest {
         UUID artistId = UUID.randomUUID();
         Map<String, Object> response = Map.of(
             "status", "success",
-            "artist_id", artistId.toString(),
-            "queued_tracks", 3
+            "artistId", artistId.toString(),
+            "queuedTracks", 3
         );
 
         when(artistService.approveArtist(artistId)).thenReturn(response);
@@ -89,7 +89,7 @@ class AdminArtistControllerTest {
         UUID artistId = UUID.randomUUID();
         Map<String, Object> response = Map.of(
             "status", "success",
-            "artist_id", artistId.toString(),
+            "artistId", artistId.toString(),
             "message", "Artist rejected and added to blocklist"
         );
 

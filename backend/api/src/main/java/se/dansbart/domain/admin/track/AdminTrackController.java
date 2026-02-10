@@ -6,8 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import se.dansbart.domain.track.Track;
-import se.dansbart.dto.PageResponse;
 
 import java.util.Map;
 import java.util.UUID;
@@ -22,14 +20,14 @@ public class AdminTrackController {
 
     @GetMapping
     @Operation(summary = "Get all tracks with filtering")
-    public ResponseEntity<PageResponse<Track>> getTracks(
+    public ResponseEntity<AdminTrackPageResponse> getTracks(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean flagged,
             @RequestParam(defaultValue = "50") int limit,
             @RequestParam(defaultValue = "0") int offset) {
-        Page<Track> page = adminTrackService.getTracks(search, status, flagged, limit, offset);
-        return ResponseEntity.ok(PageResponse.from(page));
+        Page<AdminTrackDto> page = adminTrackService.getTracks(search, status, flagged, limit, offset);
+        return ResponseEntity.ok(AdminTrackPageResponse.from(page));
     }
 
     @PostMapping("/{trackId}/reanalyze")

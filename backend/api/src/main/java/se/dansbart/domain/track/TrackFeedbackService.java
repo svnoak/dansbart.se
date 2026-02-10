@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.DanceMovementFeedback;
-import se.dansbart.domain.admin.DanceMovementFeedbackRepository;
+import se.dansbart.domain.admin.DanceMovementFeedbackJooqRepository;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -17,11 +17,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TrackFeedbackService {
 
-    private final TrackStyleVoteRepository voteRepository;
-    private final TrackRepository trackRepository;
-    private final TrackDanceStyleRepository danceStyleRepository;
-    private final TrackStructureVersionRepository structureVersionRepository;
-    private final DanceMovementFeedbackRepository movementFeedbackRepository;
+    private final TrackStyleVoteJooqRepository voteRepository;
+    private final TrackJooqRepository trackJooqRepository;
+    private final TrackDanceStyleJooqRepository danceStyleRepository;
+    private final TrackStructureVersionJooqRepository structureVersionRepository;
+    private final DanceMovementFeedbackJooqRepository movementFeedbackRepository;
 
     @Transactional
     public Optional<TrackStyleVote> submitStyleFeedback(
@@ -30,7 +30,7 @@ public class TrackFeedbackService {
             String suggestedStyle,
             String tempoCorrection) {
 
-        if (!trackRepository.existsById(trackId)) {
+        if (!trackJooqRepository.existsById(trackId)) {
             return Optional.empty();
         }
 
@@ -60,7 +60,7 @@ public class TrackFeedbackService {
      */
     @Transactional
     public Optional<Map<String, Object>> confirmSecondaryStyle(UUID trackId, String style) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -85,7 +85,7 @@ public class TrackFeedbackService {
      */
     @Transactional
     public boolean processMovementFeedback(UUID trackId, String danceStyle, List<String> tags) {
-        if (!trackRepository.existsById(trackId)) {
+        if (!trackJooqRepository.existsById(trackId)) {
             return false;
         }
 
@@ -116,7 +116,7 @@ public class TrackFeedbackService {
      */
     @Transactional
     public Optional<Map<String, Object>> flagTrack(UUID trackId, String reason) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -125,7 +125,7 @@ public class TrackFeedbackService {
         track.setIsFlagged(true);
         track.setFlaggedAt(OffsetDateTime.now());
         track.setFlagReason(reason != null ? reason : "not_folk_music");
-        trackRepository.save(track);
+        trackJooqRepository.updateTrack(track);
 
         Map<String, Object> result = new HashMap<>();
         result.put("trackId", trackId);
@@ -138,7 +138,7 @@ public class TrackFeedbackService {
      */
     @Transactional
     public Optional<Map<String, Object>> unflagTrack(UUID trackId) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -147,7 +147,7 @@ public class TrackFeedbackService {
         track.setIsFlagged(false);
         track.setFlaggedAt(null);
         track.setFlagReason(null);
-        trackRepository.save(track);
+        trackJooqRepository.updateTrack(track);
 
         Map<String, Object> result = new HashMap<>();
         result.put("trackId", trackId);
@@ -167,7 +167,7 @@ public class TrackFeedbackService {
             String description,
             String authorAlias) {
 
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -256,7 +256,7 @@ public class TrackFeedbackService {
      */
     @Transactional
     public Optional<Map<String, Object>> resetTrackStructure(UUID trackId) {
-        Optional<Track> trackOpt = trackRepository.findById(trackId);
+        Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             return Optional.empty();
         }

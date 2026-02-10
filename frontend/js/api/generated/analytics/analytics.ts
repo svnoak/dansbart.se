@@ -16,6 +16,64 @@ import type {
 import { customFetch } from '../../custom-fetch';
 
 /**
+ * @summary Record a user interaction event
+ */
+export type recordInteractionResponse200 = {
+  data: UserInteraction;
+  status: 200;
+};
+
+export type recordInteractionResponseSuccess = recordInteractionResponse200 & {
+  headers: Headers;
+};
+export type recordInteractionResponse = recordInteractionResponseSuccess;
+
+export const getRecordInteractionUrl = () => {
+  return `/api/analytics/track/interaction`;
+};
+
+export const recordInteraction = async (
+  recordInteractionRequest: RecordInteractionRequest,
+  options?: RequestInit
+): Promise<recordInteractionResponse> => {
+  return customFetch<recordInteractionResponse>(getRecordInteractionUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(recordInteractionRequest),
+  });
+};
+
+/**
+ * @summary Record a user interaction event
+ */
+export type recordInteraction1Response200 = {
+  data: UserInteraction;
+  status: 200;
+};
+
+export type recordInteraction1ResponseSuccess = recordInteraction1Response200 & {
+  headers: Headers;
+};
+export type recordInteraction1Response = recordInteraction1ResponseSuccess;
+
+export const getRecordInteraction1Url = () => {
+  return `/api/analytics/interaction`;
+};
+
+export const recordInteraction1 = async (
+  recordInteractionRequest: RecordInteractionRequest,
+  options?: RequestInit
+): Promise<recordInteraction1Response> => {
+  return customFetch<recordInteraction1Response>(getRecordInteraction1Url(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(recordInteractionRequest),
+  });
+};
+
+/**
  * @summary Create or update a visitor session
  */
 export type createOrUpdateSessionResponse200 = {
@@ -71,34 +129,5 @@ export const recordPlayback = async (
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(recordPlaybackRequest),
-  });
-};
-
-/**
- * @summary Record a user interaction event
- */
-export type recordInteractionResponse200 = {
-  data: UserInteraction;
-  status: 200;
-};
-
-export type recordInteractionResponseSuccess = recordInteractionResponse200 & {
-  headers: Headers;
-};
-export type recordInteractionResponse = recordInteractionResponseSuccess;
-
-export const getRecordInteractionUrl = () => {
-  return `/api/analytics/interaction`;
-};
-
-export const recordInteraction = async (
-  recordInteractionRequest: RecordInteractionRequest,
-  options?: RequestInit
-): Promise<recordInteractionResponse> => {
-  return customFetch<recordInteractionResponse>(getRecordInteractionUrl(), {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(recordInteractionRequest),
   });
 };

@@ -3,6 +3,8 @@ package se.dansbart.domain.admin;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.admin.StyleKeyword;
+import se.dansbart.domain.admin.StyleKeywordJooqRepository;
 
 import java.util.List;
 
@@ -11,7 +13,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class StyleService {
 
-    private final StyleKeywordRepository styleKeywordRepository;
+    private final StyleKeywordJooqRepository styleKeywordRepository;
 
     public List<StyleNode> getStyleTree() {
         List<String> mainStyles = styleKeywordRepository.findDistinctMainStyles();

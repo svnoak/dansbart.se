@@ -4,12 +4,23 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { Pageable } from './pageable';
 
 export type GetTracksParams = {
-  style?: string;
+  mainStyle?: string;
+  subStyle?: string;
+  search?: string;
+  source?: string;
+  vocals?: string;
+  styleConfirmed?: boolean;
+  musicGenre?: string;
   minBpm?: number;
   maxBpm?: number;
-  hasVocals?: boolean;
-  pageable: Pageable;
+  minDuration?: number;
+  maxDuration?: number;
+  minBounciness?: number;
+  maxBounciness?: number;
+  minArticulation?: number;
+  maxArticulation?: number;
+  limit?: number;
+  offset?: number;
 };

@@ -5,11 +5,11 @@
  * OpenAPI spec version: v0
  */
 import type {
+  AdminTrackPageResponse,
   BulkReanalyze200,
   BulkReanalyzeRequest,
   DeleteTrack200,
   GetTracks1Params,
-  PageTrack,
   ReanalyzeTrack200,
   ReclassifyTrack200,
   RejectRequest,
@@ -164,7 +164,7 @@ export const bulkReanalyze = async (
  * @summary Get all tracks with filtering
  */
 export type getTracks1Response200 = {
-  data: PageTrack;
+  data: AdminTrackPageResponse;
   status: 200;
 };
 

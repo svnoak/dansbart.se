@@ -6,5 +6,5 @@
  */
 
 export interface IngestAlbumRequest {
-  spotify_album_id?: string;
+  spotifyAlbumId?: string;
 }

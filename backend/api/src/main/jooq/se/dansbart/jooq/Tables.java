@@ -5,6 +5,7 @@ package se.dansbart.jooq;
 
 
 import se.dansbart.jooq.tables.Albums;
+import se.dansbart.jooq.tables.AlembicVersion;
 import se.dansbart.jooq.tables.AnalysisSources;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
@@ -31,128 +32,133 @@ import se.dansbart.jooq.tables.VisitorSessions;
 
 
 /**
- * Convenience access to all tables in the default schema.
+ * Convenience access to all tables in public.
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Tables {
 
     /**
-     * The table <code>ALBUMS</code>.
+     * The table <code>public.albums</code>.
      */
     public static final Albums ALBUMS = Albums.ALBUMS;
 
     /**
-     * The table <code>ANALYSIS_SOURCES</code>.
+     * The table <code>public.alembic_version</code>.
+     */
+    public static final AlembicVersion ALEMBIC_VERSION = AlembicVersion.ALEMBIC_VERSION;
+
+    /**
+     * The table <code>public.analysis_sources</code>.
      */
     public static final AnalysisSources ANALYSIS_SOURCES = AnalysisSources.ANALYSIS_SOURCES;
 
     /**
-     * The table <code>ARTIST_CRAWL_LOGS</code>.
+     * The table <code>public.artist_crawl_logs</code>.
      */
     public static final ArtistCrawlLogs ARTIST_CRAWL_LOGS = ArtistCrawlLogs.ARTIST_CRAWL_LOGS;
 
     /**
-     * The table <code>ARTISTS</code>.
+     * The table <code>public.artists</code>.
      */
     public static final Artists ARTISTS = Artists.ARTISTS;
 
     /**
-     * The table <code>DANCE_MOVEMENT_FEEDBACK</code>.
+     * The table <code>public.dance_movement_feedback</code>.
      */
     public static final DanceMovementFeedback DANCE_MOVEMENT_FEEDBACK = DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK;
 
     /**
-     * The table <code>GENRE_PROFILES</code>.
+     * The table <code>public.genre_profiles</code>.
      */
     public static final GenreProfiles GENRE_PROFILES = GenreProfiles.GENRE_PROFILES;
 
     /**
-     * The table <code>PENDING_ARTIST_APPROVALS</code>.
+     * The table <code>public.pending_artist_approvals</code>.
      */
     public static final PendingArtistApprovals PENDING_ARTIST_APPROVALS = PendingArtistApprovals.PENDING_ARTIST_APPROVALS;
 
     /**
-     * The table <code>PLAYBACK_LINKS</code>.
+     * The table <code>public.playback_links</code>.
      */
     public static final PlaybackLinks PLAYBACK_LINKS = PlaybackLinks.PLAYBACK_LINKS;
 
     /**
-     * The table <code>PLAYLIST_COLLABORATORS</code>.
+     * The table <code>public.playlist_collaborators</code>.
      */
     public static final PlaylistCollaborators PLAYLIST_COLLABORATORS = PlaylistCollaborators.PLAYLIST_COLLABORATORS;
 
     /**
-     * The table <code>PLAYLIST_TRACKS</code>.
+     * The table <code>public.playlist_tracks</code>.
      */
     public static final PlaylistTracks PLAYLIST_TRACKS = PlaylistTracks.PLAYLIST_TRACKS;
 
     /**
-     * The table <code>PLAYLISTS</code>.
+     * The table <code>public.playlists</code>.
      */
     public static final Playlists PLAYLISTS = Playlists.PLAYLISTS;
 
     /**
-     * The table <code>REJECTION_LOGS</code>.
+     * The table <code>public.rejection_logs</code>.
      */
     public static final RejectionLogs REJECTION_LOGS = RejectionLogs.REJECTION_LOGS;
 
     /**
-     * The table <code>STYLE_KEYWORDS</code>.
+     * The table <code>public.style_keywords</code>.
      */
     public static final StyleKeywords STYLE_KEYWORDS = StyleKeywords.STYLE_KEYWORDS;
 
     /**
-     * The table <code>TRACK_ALBUMS</code>.
+     * The table <code>public.track_albums</code>.
      */
     public static final TrackAlbums TRACK_ALBUMS = TrackAlbums.TRACK_ALBUMS;
 
     /**
-     * The table <code>TRACK_ARTISTS</code>.
+     * The table <code>public.track_artists</code>.
      */
     public static final TrackArtists TRACK_ARTISTS = TrackArtists.TRACK_ARTISTS;
 
     /**
-     * The table <code>TRACK_DANCE_STYLES</code>.
+     * The table <code>public.track_dance_styles</code>.
      */
     public static final TrackDanceStyles TRACK_DANCE_STYLES = TrackDanceStyles.TRACK_DANCE_STYLES;
 
     /**
-     * The table <code>TRACK_FEEL_VOTES</code>.
+     * The table <code>public.track_feel_votes</code>.
      */
     public static final TrackFeelVotes TRACK_FEEL_VOTES = TrackFeelVotes.TRACK_FEEL_VOTES;
 
     /**
-     * The table <code>TRACK_PLAYBACKS</code>.
+     * The table <code>public.track_playbacks</code>.
      */
     public static final TrackPlaybacks TRACK_PLAYBACKS = TrackPlaybacks.TRACK_PLAYBACKS;
 
     /**
-     * The table <code>TRACK_STRUCTURE_VERSIONS</code>.
+     * The table <code>public.track_structure_versions</code>.
      */
     public static final TrackStructureVersions TRACK_STRUCTURE_VERSIONS = TrackStructureVersions.TRACK_STRUCTURE_VERSIONS;
 
     /**
-     * The table <code>TRACK_STYLE_VOTES</code>.
+     * The table <code>public.track_style_votes</code>.
      */
     public static final TrackStyleVotes TRACK_STYLE_VOTES = TrackStyleVotes.TRACK_STYLE_VOTES;
 
     /**
-     * The table <code>TRACKS</code>.
+     * The table <code>public.tracks</code>.
      */
     public static final Tracks TRACKS = Tracks.TRACKS;
 
     /**
-     * The table <code>USER_INTERACTIONS</code>.
+     * The table <code>public.user_interactions</code>.
      */
     public static final UserInteractions USER_INTERACTIONS = UserInteractions.USER_INTERACTIONS;
 
     /**
-     * The table <code>USERS</code>.
+     * The table <code>public.users</code>.
      */
     public static final Users USERS = Users.USERS;
 
     /**
-     * The table <code>VISITOR_SESSIONS</code>.
+     * The table <code>public.visitor_sessions</code>.
      */
     public static final VisitorSessions VISITOR_SESSIONS = VisitorSessions.VISITOR_SESSIONS;
 }

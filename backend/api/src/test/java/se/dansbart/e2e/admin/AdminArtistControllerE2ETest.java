@@ -86,6 +86,24 @@ class AdminArtistControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(2)));
         }
+
+        @Test
+        @DisplayName("should include pendingCount for artists with pending tracks")
+        void getArtists_shouldIncludePendingCount() throws Exception {
+            Artist artist = testData.artist().withName("Artist With Pending").build();
+            testData.track().withTitle("Done Track").withArtist(artist).complete().build();
+            testData.track().withTitle("Pending Track").withArtist(artist).pending().build();
+
+            mockMvc.perform(get("/api/admin/artists")
+                    .with(jwt.adminToken(ADMIN_USER_ID))
+                    .param("search", "Artist With Pending")
+                    .param("limit", "10")
+                    .param("offset", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].id").value(artist.getId().toString()))
+                .andExpect(jsonPath("$.items[0].pendingCount").value(1));
+        }
     }
 
     @Nested
@@ -101,7 +119,7 @@ class AdminArtistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/admin/artists/{id}/isolation-check", artist.getId())
                     .with(jwt.adminToken(ADMIN_USER_ID)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.is_isolated").value(true));
+                .andExpect(jsonPath("$.isIsolated").value(true));
         }
 
         @Test
@@ -129,7 +147,7 @@ class AdminArtistControllerE2ETest extends AbstractE2ETest {
                     .with(jwt.adminToken(ADMIN_USER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.artist_id").value(artist.getId().toString()));
+                .andExpect(jsonPath("$.artistId").value(artist.getId().toString()));
         }
 
         @Test
@@ -189,7 +207,7 @@ class AdminArtistControllerE2ETest extends AbstractE2ETest {
                         "deleteContent", true
                     ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.dry_run").value(true));
+                .andExpect(jsonPath("$.dryRun").value(true));
         }
     }
 
@@ -264,7 +282,7 @@ class AdminArtistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/admin/artists/{id}/collaboration-network", artist.getId())
                     .with(jwt.adminToken(ADMIN_USER_ID)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.artist_id").value(artist.getId().toString()));
+                .andExpect(jsonPath("$.artistId").value(artist.getId().toString()));
         }
 
         @Test

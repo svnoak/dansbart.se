@@ -17,7 +17,8 @@ type SpiderSettings = {
   discoverFromAlbums?: boolean;
 };
 
-export function useSpiderApi() {
+/** @param _token - Optional (kept for API compatibility with tabs that pass it) */
+export function useSpiderApi(_token?: unknown) {
   const crawl = async (settings: SpiderSettings) => {
     // Map settings object to query params expected by generated API
     const params: Record<string, unknown> = {};

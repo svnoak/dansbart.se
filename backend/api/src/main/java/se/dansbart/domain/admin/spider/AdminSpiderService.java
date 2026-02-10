@@ -9,7 +9,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.ArtistCrawlLog;
-import se.dansbart.domain.admin.ArtistCrawlLogRepository;
+import se.dansbart.domain.admin.ArtistCrawlLogJooqRepository;
 import se.dansbart.worker.TaskDispatcher;
 
 import java.util.*;
@@ -19,7 +19,7 @@ import java.util.*;
 @Slf4j
 public class AdminSpiderService {
 
-    private final ArtistCrawlLogRepository crawlLogRepository;
+    private final ArtistCrawlLogJooqRepository crawlLogRepository;
     private final TaskDispatcher taskDispatcher;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
@@ -34,11 +34,11 @@ public class AdminSpiderService {
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
         result.put("message", "Spider crawl queued in background (" + mode + " mode)");
-        result.put("task_id", UUID.randomUUID().toString());
+        result.put("taskId", UUID.randomUUID().toString());
         result.put("mode", mode);
         result.put("parameters", Map.of(
-            "max_discoveries", maxDiscoveries,
-            "discover_from_albums", discoverFromAlbums
+            "maxDiscoveries", maxDiscoveries,
+            "discoverFromAlbums", discoverFromAlbums
         ));
         return result;
     }
@@ -56,14 +56,14 @@ public class AdminSpiderService {
             .map(log -> {
                 Map<String, Object> item = new HashMap<>();
                 item.put("id", log.getId().toString());
-                item.put("artist_name", log.getArtistName());
-                item.put("spotify_id", log.getSpotifyArtistId());
-                item.put("tracks_found", log.getTracksFound());
-                item.put("music_genre", log.getMusicGenreClassification());
-                item.put("detected_genres", log.getDetectedGenres());
+                item.put("artistName", log.getArtistName());
+                item.put("spotifyId", log.getSpotifyArtistId());
+                item.put("tracksFound", log.getTracksFound());
+                item.put("musicGenre", log.getMusicGenreClassification());
+                item.put("detectedGenres", log.getDetectedGenres());
                 item.put("status", log.getStatus());
-                item.put("discovery_source", log.getDiscoverySource());
-                item.put("crawled_at", log.getCrawledAt() != null ? log.getCrawledAt().toString() : null);
+                item.put("discoverySource", log.getDiscoverySource());
+                item.put("crawledAt", log.getCrawledAt() != null ? log.getCrawledAt().toString() : null);
                 return item;
             })
             .toList();
@@ -81,7 +81,7 @@ public class AdminSpiderService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getSpiderStats() {
-        long totalCrawled = crawlLogRepository.count();
+        long totalCrawled = crawlLogRepository.countLogs();
         Long totalTracks = crawlLogRepository.sumTracksFound();
 
         Map<String, Long> byGenre = new HashMap<>();
@@ -97,10 +97,10 @@ public class AdminSpiderService {
         }
 
         Map<String, Object> result = new HashMap<>();
-        result.put("total_artists_crawled", totalCrawled);
-        result.put("total_tracks_found", totalTracks != null ? totalTracks : 0);
-        result.put("by_genre", byGenre);
-        result.put("by_status", byStatus);
+        result.put("totalArtistsCrawled", totalCrawled);
+        result.put("totalTracksFound", totalTracks != null ? totalTracks : 0);
+        result.put("byGenre", byGenre);
+        result.put("byStatus", byStatus);
         return result;
     }
 
@@ -110,7 +110,7 @@ public class AdminSpiderService {
     @SuppressWarnings("unchecked")
     public Map<String, Object> getTaskStatus(String taskId) {
         Map<String, Object> result = new HashMap<>();
-        result.put("task_id", taskId);
+        result.put("taskId", taskId);
 
         try {
             // Celery stores task results in Redis with this key pattern

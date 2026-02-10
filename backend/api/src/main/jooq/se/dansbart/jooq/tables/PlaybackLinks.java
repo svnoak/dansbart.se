@@ -30,8 +30,8 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import se.dansbart.jooq.DefaultSchema;
 import se.dansbart.jooq.Keys;
+import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 
 
@@ -44,7 +44,7 @@ public class PlaybackLinks extends TableImpl<Record> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>PLAYBACK_LINKS</code>
+     * The reference instance of <code>public.playback_links</code>
      */
     public static final PlaybackLinks PLAYBACK_LINKS = new PlaybackLinks();
 
@@ -57,29 +57,29 @@ public class PlaybackLinks extends TableImpl<Record> {
     }
 
     /**
-     * The column <code>PLAYBACK_LINKS.ID</code>.
+     * The column <code>public.playback_links.id</code>.
      */
-    public final TableField<Record, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("RANDOM_UUID()"), SQLDataType.UUID)), this, "");
+    public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>PLAYBACK_LINKS.TRACK_ID</code>.
+     * The column <code>public.playback_links.track_id</code>.
      */
-    public final TableField<Record, UUID> TRACK_ID = createField(DSL.name("TRACK_ID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<Record, UUID> TRACK_ID = createField(DSL.name("track_id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>PLAYBACK_LINKS.PLATFORM</code>.
+     * The column <code>public.playback_links.platform</code>.
      */
-    public final TableField<Record, String> PLATFORM = createField(DSL.name("PLATFORM"), SQLDataType.VARCHAR(1000000000).nullable(false), this, "");
+    public final TableField<Record, String> PLATFORM = createField(DSL.name("platform"), SQLDataType.VARCHAR.nullable(false), this, "");
 
     /**
-     * The column <code>PLAYBACK_LINKS.DEEP_LINK</code>.
+     * The column <code>public.playback_links.deep_link</code>.
      */
-    public final TableField<Record, String> DEEP_LINK = createField(DSL.name("DEEP_LINK"), SQLDataType.VARCHAR(1000000000).nullable(false), this, "");
+    public final TableField<Record, String> DEEP_LINK = createField(DSL.name("deep_link"), SQLDataType.VARCHAR.nullable(false), this, "");
 
     /**
-     * The column <code>PLAYBACK_LINKS.IS_WORKING</code>.
+     * The column <code>public.playback_links.is_working</code>.
      */
-    public final TableField<Record, Boolean> IS_WORKING = createField(DSL.name("IS_WORKING"), SQLDataType.BOOLEAN.defaultValue(DSL.field(DSL.raw("TRUE"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<Record, Boolean> IS_WORKING = createField(DSL.name("is_working"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     private PlaybackLinks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -90,24 +90,24 @@ public class PlaybackLinks extends TableImpl<Record> {
     }
 
     /**
-     * Create an aliased <code>PLAYBACK_LINKS</code> table reference
+     * Create an aliased <code>public.playback_links</code> table reference
      */
     public PlaybackLinks(String alias) {
         this(DSL.name(alias), PLAYBACK_LINKS);
     }
 
     /**
-     * Create an aliased <code>PLAYBACK_LINKS</code> table reference
+     * Create an aliased <code>public.playback_links</code> table reference
      */
     public PlaybackLinks(Name alias) {
         this(alias, PLAYBACK_LINKS);
     }
 
     /**
-     * Create a <code>PLAYBACK_LINKS</code> table reference
+     * Create a <code>public.playback_links</code> table reference
      */
     public PlaybackLinks() {
-        this(DSL.name("PLAYBACK_LINKS"), null);
+        this(DSL.name("playback_links"), null);
     }
 
     public <O extends Record> PlaybackLinks(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
@@ -145,27 +145,27 @@ public class PlaybackLinks extends TableImpl<Record> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+        return aliased() ? null : Public.PUBLIC;
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
-        return Keys.CONSTRAINT_11;
+        return Keys.PLAYBACK_LINKS_PKEY;
     }
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.CONSTRAINT_11F);
+        return Arrays.asList(Keys.PLAYBACK_LINKS__PLAYBACK_LINKS_TRACK_ID_FKEY);
     }
 
     private transient TracksPath _tracks;
 
     /**
-     * Get the implicit join path to the <code>PUBLIC.TRACKS</code> table.
+     * Get the implicit join path to the <code>public.tracks</code> table.
      */
     public TracksPath tracks() {
         if (_tracks == null)
-            _tracks = new TracksPath(this, Keys.CONSTRAINT_11F, null);
+            _tracks = new TracksPath(this, Keys.PLAYBACK_LINKS__PLAYBACK_LINKS_TRACK_ID_FKEY, null);
 
         return _tracks;
     }

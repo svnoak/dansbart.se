@@ -36,7 +36,6 @@ public interface TrackMapper {
     @Mapping(target = "effectiveBpm", source = "track", qualifiedByName = "primaryEffectiveBpm")
     @Mapping(target = "confidence", source = "track", qualifiedByName = "primaryConfidence")
     @Mapping(target = "artistName", source = "track", qualifiedByName = "primaryArtistName")
-    @Mapping(target = "albumCoverUrl", source = "track", qualifiedByName = "primaryAlbumCoverUrl")
     @Mapping(target = "playbackPlatform", source = "track", qualifiedByName = "firstPlaybackPlatform")
     @Mapping(target = "playbackLink", source = "track", qualifiedByName = "firstPlaybackLink")
     TrackListDto toListDto(Track track);
@@ -132,14 +131,6 @@ public interface TrackMapper {
                 .coverImageUrl(album.getCoverImageUrl())
                 .releaseDate(album.getReleaseDate())
                 .build();
-    }
-
-    @Named("primaryAlbumCoverUrl")
-    default String getPrimaryAlbumCoverUrl(Track track) {
-        return track.getAlbumLinks().stream()
-                .findFirst()
-                .map(al -> al.getAlbum().getCoverImageUrl())
-                .orElse(null);
     }
 
     @Named("firstPlaybackPlatform")

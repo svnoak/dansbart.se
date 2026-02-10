@@ -10,7 +10,7 @@ import type {
   GetPopularTracksParams,
   GetRecentTracksParams,
   StyleOverviewDto,
-  Track,
+  TrackListDto,
 } from '../../models';
 
 import { customFetch } from '../../custom-fetch';
@@ -19,7 +19,7 @@ import { customFetch } from '../../custom-fetch';
  * @summary Get recently added tracks with verified classification
  */
 export type getRecentTracksResponse200 = {
-  data: Track[];
+  data: TrackListDto[];
   status: 200;
 };
 
@@ -58,7 +58,7 @@ export const getRecentTracks = async (
  * @summary Get popular tracks based on play count and completion rate
  */
 export type getPopularTracksResponse200 = {
-  data: Track[];
+  data: TrackListDto[];
   status: 200;
 };
 
@@ -123,7 +123,7 @@ export const getCuratedPlaylists = async (
  * @summary Get curated high-quality tracks
  */
 export type getCuratedTracksResponse200 = {
-  data: Track[];
+  data: TrackListDto[];
   status: 200;
 };
 

@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import se.dansbart.domain.artist.Artist;
+import se.dansbart.domain.artist.ArtistJooqRepository;
+
 import java.util.Map;
 import java.util.UUID;
 
@@ -19,6 +22,7 @@ import java.util.UUID;
 public class AdminTaskController {
 
     private final TaskDispatcher taskDispatcher;
+    private final ArtistJooqRepository artistJooqRepository;
 
     @PostMapping("/trigger/reclassify")
     @Operation(summary = "Trigger library reclassification")
@@ -43,9 +47,16 @@ public class AdminTaskController {
     }
 
     @PostMapping("/trigger/backfill/{artistId}")
-    @Operation(summary = "Trigger backfill for an artist")
-    public ResponseEntity<Map<String, String>> triggerBackfill(@PathVariable UUID artistId) {
-        taskDispatcher.dispatchBackfillArtist(artistId);
-        return ResponseEntity.ok(Map.of("status", "dispatched", "task", "backfill_artist", "artistId", artistId.toString()));
+    @Operation(summary = "Trigger backfill for an artist (by internal artist UUID)")
+    public ResponseEntity<Map<String, Object>> triggerBackfill(@PathVariable UUID artistId) {
+        Artist artist = artistJooqRepository.findById(artistId).orElse(null);
+        if (artist == null || artist.getSpotifyId() == null || artist.getSpotifyId().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Artist not found or has no Spotify ID",
+                "artistId", artistId.toString()
+            ));
+        }
+        taskDispatcher.dispatchBackfillArtist(artist.getSpotifyId());
+        return ResponseEntity.ok(Map.of("status", "dispatched", "task", "backfill_artist", "artistId", artistId.toString(), "spotifyId", artist.getSpotifyId()));
     }
 }

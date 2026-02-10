@@ -32,7 +32,7 @@ class AdminSpiderControllerTest {
         Map<String, Object> response = Map.of(
             "status", "queued",
             "message", "Spider crawl queued in background (discover mode)",
-            "task_id", UUID.randomUUID().toString()
+            "taskId", UUID.randomUUID().toString()
         );
 
         when(spiderService.triggerSpiderCrawl(anyString(), anyInt(), anyBoolean()))
@@ -51,7 +51,7 @@ class AdminSpiderControllerTest {
     void getCrawlHistory_shouldReturnPaginatedList() throws Exception {
         Map<String, Object> response = new HashMap<>();
         response.put("items", List.of(
-            Map.of("id", "1", "artist_name", "Test Artist", "tracks_found", 10)
+            Map.of("id", "1", "artistName", "Test Artist", "tracksFound", 10)
         ));
         response.put("total", 1);
         response.put("limit", 50);
@@ -71,17 +71,17 @@ class AdminSpiderControllerTest {
     @WithMockUser(roles = "ADMIN")
     void getSpiderStats_shouldReturnStats() throws Exception {
         Map<String, Object> response = Map.of(
-            "total_artists_crawled", 100,
-            "total_tracks_found", 500,
-            "by_genre", Map.of("nordic_folk", 80, "other", 20),
-            "by_status", Map.of("success", 90, "rejected", 10)
+            "totalArtistsCrawled", 100,
+            "totalTracksFound", 500,
+            "byGenre", Map.of("nordic_folk", 80, "other", 20),
+            "byStatus", Map.of("success", 90, "rejected", 10)
         );
 
         when(spiderService.getSpiderStats()).thenReturn(response);
 
         mockMvc.perform(get("/api/admin/spider/stats"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.total_artists_crawled").value(100))
-            .andExpect(jsonPath("$.total_tracks_found").value(500));
+            .andExpect(jsonPath("$.totalArtistsCrawled").value(100))
+            .andExpect(jsonPath("$.totalTracksFound").value(500));
     }
 }

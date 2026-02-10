@@ -4,12 +4,16 @@
 package se.dansbart.jooq.tables;
 
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -28,10 +32,12 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import se.dansbart.jooq.DefaultSchema;
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
+import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
+import se.dansbart.jooq.tables.Tracks.TracksPath;
 
 
 /**
@@ -43,7 +49,7 @@ public class Users extends TableImpl<Record> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>USERS</code>
+     * The reference instance of <code>public.users</code>
      */
     public static final Users USERS = new Users();
 
@@ -56,34 +62,39 @@ public class Users extends TableImpl<Record> {
     }
 
     /**
-     * The column <code>USERS.ID</code>.
+     * The column <code>public.users.id</code>.
      */
-    public final TableField<Record, String> ID = createField(DSL.name("ID"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<Record, String> ID = createField(DSL.name("id"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>USERS.USERNAME</code>.
+     * The column <code>public.users.display_name</code>.
      */
-    public final TableField<Record, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(50), this, "");
+    public final TableField<Record, String> DISPLAY_NAME = createField(DSL.name("display_name"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>USERS.DISPLAY_NAME</code>.
+     * The column <code>public.users.avatar_url</code>.
      */
-    public final TableField<Record, String> DISPLAY_NAME = createField(DSL.name("DISPLAY_NAME"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, String> AVATAR_URL = createField(DSL.name("avatar_url"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>USERS.AVATAR_URL</code>.
+     * The column <code>public.users.created_at</code>.
      */
-    public final TableField<Record, String> AVATAR_URL = createField(DSL.name("AVATAR_URL"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, LocalDateTime> CREATED_AT = createField(DSL.name("created_at"), SQLDataType.LOCALDATETIME(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.LOCALDATETIME)), this, "");
 
     /**
-     * The column <code>USERS.CREATED_AT</code>.
+     * The column <code>public.users.updated_at</code>.
      */
-    public final TableField<Record, OffsetDateTime> CREATED_AT = createField(DSL.name("CREATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
+    public final TableField<Record, LocalDateTime> UPDATED_AT = createField(DSL.name("updated_at"), SQLDataType.LOCALDATETIME(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.LOCALDATETIME)), this, "");
 
     /**
-     * The column <code>USERS.LAST_LOGIN_AT</code>.
+     * The column <code>public.users.last_login_at</code>.
      */
-    public final TableField<Record, OffsetDateTime> LAST_LOGIN_AT = createField(DSL.name("LAST_LOGIN_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<Record, OffsetDateTime> LAST_LOGIN_AT = createField(DSL.name("last_login_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+
+    /**
+     * The column <code>public.users.username</code>.
+     */
+    public final TableField<Record, String> USERNAME = createField(DSL.name("username"), SQLDataType.VARCHAR(50).nullable(false), this, "");
 
     private Users(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -94,24 +105,24 @@ public class Users extends TableImpl<Record> {
     }
 
     /**
-     * Create an aliased <code>USERS</code> table reference
+     * Create an aliased <code>public.users</code> table reference
      */
     public Users(String alias) {
         this(DSL.name(alias), USERS);
     }
 
     /**
-     * Create an aliased <code>USERS</code> table reference
+     * Create an aliased <code>public.users</code> table reference
      */
     public Users(Name alias) {
         this(alias, USERS);
     }
 
     /**
-     * Create a <code>USERS</code> table reference
+     * Create a <code>public.users</code> table reference
      */
     public Users() {
-        this(DSL.name("USERS"), null);
+        this(DSL.name("users"), null);
     }
 
     public <O extends Record> Users(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
@@ -149,53 +160,84 @@ public class Users extends TableImpl<Record> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+        return aliased() ? null : Public.PUBLIC;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IX_USERS_USERNAME);
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
-        return Keys.CONSTRAINT_4;
+        return Keys.USERS_PKEY;
+    }
+
+    private transient PlaylistCollaboratorsPath _playlistCollaboratorsInvitedByFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.playlist_collaborators</code> table, via the
+     * <code>playlist_collaborators_invited_by_fkey</code> key
+     */
+    public PlaylistCollaboratorsPath playlistCollaboratorsInvitedByFkey() {
+        if (_playlistCollaboratorsInvitedByFkey == null)
+            _playlistCollaboratorsInvitedByFkey = new PlaylistCollaboratorsPath(this, null, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_INVITED_BY_FKEY.getInverseKey());
+
+        return _playlistCollaboratorsInvitedByFkey;
+    }
+
+    private transient PlaylistCollaboratorsPath _playlistCollaboratorsUserIdFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.playlist_collaborators</code> table, via the
+     * <code>playlist_collaborators_user_id_fkey</code> key
+     */
+    public PlaylistCollaboratorsPath playlistCollaboratorsUserIdFkey() {
+        if (_playlistCollaboratorsUserIdFkey == null)
+            _playlistCollaboratorsUserIdFkey = new PlaylistCollaboratorsPath(this, null, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_USER_ID_FKEY.getInverseKey());
+
+        return _playlistCollaboratorsUserIdFkey;
     }
 
     private transient PlaylistsPath _playlists;
 
     /**
-     * Get the implicit to-many join path to the <code>PUBLIC.PLAYLISTS</code>
+     * Get the implicit to-many join path to the <code>public.playlists</code>
      * table
      */
     public PlaylistsPath playlists() {
         if (_playlists == null)
-            _playlists = new PlaylistsPath(this, null, Keys.CONSTRAINT_36E.getInverseKey());
+            _playlists = new PlaylistsPath(this, null, Keys.PLAYLISTS__PLAYLISTS_USER_ID_FKEY.getInverseKey());
 
         return _playlists;
     }
 
-    private transient PlaylistCollaboratorsPath _constraintB8cf;
+    private transient TracksPath _fkTracksUploader;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>PUBLIC.PLAYLIST_COLLABORATORS</code> table, via the
-     * <code>CONSTRAINT_B8CF</code> key
+     * Get the implicit to-many join path to the <code>public.tracks</code>
+     * table, via the <code>fk_tracks_uploader</code> key
      */
-    public PlaylistCollaboratorsPath constraintB8cf() {
-        if (_constraintB8cf == null)
-            _constraintB8cf = new PlaylistCollaboratorsPath(this, null, Keys.CONSTRAINT_B8CF.getInverseKey());
+    public TracksPath fkTracksUploader() {
+        if (_fkTracksUploader == null)
+            _fkTracksUploader = new TracksPath(this, null, Keys.TRACKS__FK_TRACKS_UPLOADER.getInverseKey());
 
-        return _constraintB8cf;
+        return _fkTracksUploader;
     }
 
-    private transient PlaylistCollaboratorsPath _constraintB8cfd;
+    private transient TracksPath _tracksUploaderIdFkey;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>PUBLIC.PLAYLIST_COLLABORATORS</code> table, via the
-     * <code>CONSTRAINT_B8CFD</code> key
+     * Get the implicit to-many join path to the <code>public.tracks</code>
+     * table, via the <code>tracks_uploader_id_fkey</code> key
      */
-    public PlaylistCollaboratorsPath constraintB8cfd() {
-        if (_constraintB8cfd == null)
-            _constraintB8cfd = new PlaylistCollaboratorsPath(this, null, Keys.CONSTRAINT_B8CFD.getInverseKey());
+    public TracksPath tracksUploaderIdFkey() {
+        if (_tracksUploaderIdFkey == null)
+            _tracksUploaderIdFkey = new TracksPath(this, null, Keys.TRACKS__TRACKS_UPLOADER_ID_FKEY.getInverseKey());
 
-        return _constraintB8cfd;
+        return _tracksUploaderIdFkey;
     }
 
     @Override

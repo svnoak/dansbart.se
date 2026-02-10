@@ -19,7 +19,8 @@ import {
 } from '../../api/generated/admin-artists/admin-artists';
 import { rejectAlbum as rejectAlbumGenerated } from '../../api/generated/admin-albums/admin-albums';
 
-export function useRejectApi() {
+/** @param _token - Optional (kept for API compatibility with tabs that pass it) */
+export function useRejectApi(_token?: unknown) {
   const loadPendingArtists = async (limit = 50, offset = 0, search = '') => {
     const params: Record<string, unknown> = { limit, offset };
     if (search) params.search = search;

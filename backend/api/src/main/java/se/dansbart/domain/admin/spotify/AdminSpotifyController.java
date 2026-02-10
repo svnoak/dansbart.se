@@ -1,6 +1,5 @@
 package se.dansbart.domain.admin.spotify;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +40,6 @@ public class AdminSpotifyController {
         return ResponseEntity.ok(spotifyService.ingestTrack(request.spotifyTrackId()));
     }
 
-    public record IngestAlbumRequest(@JsonProperty("spotify_album_id") String spotifyAlbumId) {}
-    public record IngestTrackRequest(@JsonProperty("spotify_track_id") String spotifyTrackId) {}
+    public record IngestAlbumRequest(String spotifyAlbumId) {}
+    public record IngestTrackRequest(String spotifyTrackId) {}
 }

@@ -32,7 +32,7 @@ public class AnalyticsController {
         return ResponseEntity.ok(playback);
     }
 
-    @PostMapping("/interaction")
+    @PostMapping({"/interaction", "/track/interaction"})
     @Operation(summary = "Record a user interaction event")
     public ResponseEntity<UserInteraction> recordInteraction(@RequestBody RecordInteractionRequest request) {
         UserInteraction interaction = analyticsService.recordInteraction(

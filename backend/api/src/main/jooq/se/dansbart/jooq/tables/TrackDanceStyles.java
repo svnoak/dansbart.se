@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -30,8 +31,9 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import se.dansbart.jooq.DefaultSchema;
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
+import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 
 
@@ -44,7 +46,7 @@ public class TrackDanceStyles extends TableImpl<Record> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>TRACK_DANCE_STYLES</code>
+     * The reference instance of <code>public.track_dance_styles</code>
      */
     public static final TrackDanceStyles TRACK_DANCE_STYLES = new TrackDanceStyles();
 
@@ -57,59 +59,59 @@ public class TrackDanceStyles extends TableImpl<Record> {
     }
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.ID</code>.
+     * The column <code>public.track_dance_styles.id</code>.
      */
-    public final TableField<Record, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("RANDOM_UUID()"), SQLDataType.UUID)), this, "");
+    public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.TRACK_ID</code>.
+     * The column <code>public.track_dance_styles.track_id</code>.
      */
-    public final TableField<Record, UUID> TRACK_ID = createField(DSL.name("TRACK_ID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<Record, UUID> TRACK_ID = createField(DSL.name("track_id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.DANCE_STYLE</code>.
+     * The column <code>public.track_dance_styles.dance_style</code>.
      */
-    public final TableField<Record, String> DANCE_STYLE = createField(DSL.name("DANCE_STYLE"), SQLDataType.VARCHAR(1000000000).nullable(false), this, "");
+    public final TableField<Record, String> DANCE_STYLE = createField(DSL.name("dance_style"), SQLDataType.VARCHAR.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.SUB_STYLE</code>.
+     * The column <code>public.track_dance_styles.is_primary</code>.
      */
-    public final TableField<Record, String> SUB_STYLE = createField(DSL.name("SUB_STYLE"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, Boolean> IS_PRIMARY = createField(DSL.name("is_primary"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.IS_PRIMARY</code>.
+     * The column <code>public.track_dance_styles.confidence</code>.
      */
-    public final TableField<Record, Boolean> IS_PRIMARY = createField(DSL.name("IS_PRIMARY"), SQLDataType.BOOLEAN.defaultValue(DSL.field(DSL.raw("FALSE"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<Record, Double> CONFIDENCE = createField(DSL.name("confidence"), SQLDataType.DOUBLE.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.CONFIDENCE</code>.
+     * The column <code>public.track_dance_styles.tempo_category</code>.
      */
-    public final TableField<Record, Double> CONFIDENCE = createField(DSL.name("CONFIDENCE"), SQLDataType.DOUBLE.defaultValue(DSL.field(DSL.raw("0.0"), SQLDataType.DOUBLE)), this, "");
+    public final TableField<Record, String> TEMPO_CATEGORY = createField(DSL.name("tempo_category"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.TEMPO_CATEGORY</code>.
+     * The column <code>public.track_dance_styles.bpm_multiplier</code>.
      */
-    public final TableField<Record, String> TEMPO_CATEGORY = createField(DSL.name("TEMPO_CATEGORY"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, Double> BPM_MULTIPLIER = createField(DSL.name("bpm_multiplier"), SQLDataType.DOUBLE.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.BPM_MULTIPLIER</code>.
+     * The column <code>public.track_dance_styles.effective_bpm</code>.
      */
-    public final TableField<Record, Double> BPM_MULTIPLIER = createField(DSL.name("BPM_MULTIPLIER"), SQLDataType.DOUBLE.defaultValue(DSL.field(DSL.raw("1.0"), SQLDataType.DOUBLE)), this, "");
+    public final TableField<Record, Integer> EFFECTIVE_BPM = createField(DSL.name("effective_bpm"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.EFFECTIVE_BPM</code>.
+     * The column <code>public.track_dance_styles.confirmation_count</code>.
      */
-    public final TableField<Record, Integer> EFFECTIVE_BPM = createField(DSL.name("EFFECTIVE_BPM"), SQLDataType.INTEGER, this, "");
+    public final TableField<Record, Integer> CONFIRMATION_COUNT = createField(DSL.name("confirmation_count"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.CONFIRMATION_COUNT</code>.
+     * The column <code>public.track_dance_styles.is_user_confirmed</code>.
      */
-    public final TableField<Record, Integer> CONFIRMATION_COUNT = createField(DSL.name("CONFIRMATION_COUNT"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "");
+    public final TableField<Record, Boolean> IS_USER_CONFIRMED = createField(DSL.name("is_user_confirmed"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>TRACK_DANCE_STYLES.IS_USER_CONFIRMED</code>.
+     * The column <code>public.track_dance_styles.sub_style</code>.
      */
-    public final TableField<Record, Boolean> IS_USER_CONFIRMED = createField(DSL.name("IS_USER_CONFIRMED"), SQLDataType.BOOLEAN.defaultValue(DSL.field(DSL.raw("FALSE"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<Record, String> SUB_STYLE = createField(DSL.name("sub_style"), SQLDataType.VARCHAR, this, "");
 
     private TrackDanceStyles(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -120,24 +122,24 @@ public class TrackDanceStyles extends TableImpl<Record> {
     }
 
     /**
-     * Create an aliased <code>TRACK_DANCE_STYLES</code> table reference
+     * Create an aliased <code>public.track_dance_styles</code> table reference
      */
     public TrackDanceStyles(String alias) {
         this(DSL.name(alias), TRACK_DANCE_STYLES);
     }
 
     /**
-     * Create an aliased <code>TRACK_DANCE_STYLES</code> table reference
+     * Create an aliased <code>public.track_dance_styles</code> table reference
      */
     public TrackDanceStyles(Name alias) {
         this(alias, TRACK_DANCE_STYLES);
     }
 
     /**
-     * Create a <code>TRACK_DANCE_STYLES</code> table reference
+     * Create a <code>public.track_dance_styles</code> table reference
      */
     public TrackDanceStyles() {
-        this(DSL.name("TRACK_DANCE_STYLES"), null);
+        this(DSL.name("track_dance_styles"), null);
     }
 
     public <O extends Record> TrackDanceStyles(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
@@ -175,27 +177,32 @@ public class TrackDanceStyles extends TableImpl<Record> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+        return aliased() ? null : Public.PUBLIC;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IX_TRACK_DANCE_STYLES_DANCE_STYLE, Indexes.IX_TRACK_DANCE_STYLES_SUB_STYLE);
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
-        return Keys.CONSTRAINT_1;
+        return Keys.TRACK_DANCE_STYLES_PKEY;
     }
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.CONSTRAINT_18);
+        return Arrays.asList(Keys.TRACK_DANCE_STYLES__TRACK_DANCE_STYLES_TRACK_ID_FKEY);
     }
 
     private transient TracksPath _tracks;
 
     /**
-     * Get the implicit join path to the <code>PUBLIC.TRACKS</code> table.
+     * Get the implicit join path to the <code>public.tracks</code> table.
      */
     public TracksPath tracks() {
         if (_tracks == null)
-            _tracks = new TracksPath(this, Keys.CONSTRAINT_18, null);
+            _tracks = new TracksPath(this, Keys.TRACK_DANCE_STYLES__TRACK_DANCE_STYLES_TRACK_ID_FKEY, null);
 
         return _tracks;
     }

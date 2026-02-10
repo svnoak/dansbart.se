@@ -12,7 +12,7 @@ import type {
   GetSimilarTracksParams,
   GetTracksParams,
   MovementVoteRequest,
-  PageTrack,
+  PageResponseTrackListDto,
   PlaybackLink,
   SearchTracksParams,
   SecondaryStyleRequest,
@@ -293,7 +293,7 @@ export const reportBrokenLink = async (
  * @summary Get playable tracks with optional filters
  */
 export type getTracksResponse200 = {
-  data: PageTrack;
+  data: PageResponseTrackListDto;
   status: 200;
 };
 
@@ -302,7 +302,7 @@ export type getTracksResponseSuccess = getTracksResponse200 & {
 };
 export type getTracksResponse = getTracksResponseSuccess;
 
-export const getGetTracksUrl = (params: GetTracksParams) => {
+export const getGetTracksUrl = (params?: GetTracksParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -317,7 +317,7 @@ export const getGetTracksUrl = (params: GetTracksParams) => {
 };
 
 export const getTracks = async (
-  params: GetTracksParams,
+  params?: GetTracksParams,
   options?: RequestInit
 ): Promise<getTracksResponse> => {
   return customFetch<getTracksResponse>(getGetTracksUrl(params), {
@@ -421,7 +421,7 @@ export const getSimilarTracks = async (
  * @summary Search tracks by title
  */
 export type searchTracksResponse200 = {
-  data: PageTrack;
+  data: PageResponseTrackListDto;
   status: 200;
 };
 

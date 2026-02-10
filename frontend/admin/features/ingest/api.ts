@@ -6,7 +6,8 @@
 
 import { ingest as ingestGenerated } from '../../api/generated/admin-maintenance/admin-maintenance';
 
-export function useIngestApi() {
+/** @param _token - Optional (kept for API compatibility with tabs that pass it) */
+export function useIngestApi(_token?: unknown) {
   const ingest = async (resourceType: string, resourceId: string) => {
     const response = await ingestGenerated({
       resourceId,

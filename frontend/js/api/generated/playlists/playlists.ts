@@ -12,6 +12,7 @@ import type {
   InviteCollaboratorRequest,
   Playlist,
   PlaylistCollaborator,
+  PlaylistDto,
   PlaylistTrack,
   ReorderTracksRequest,
   RespondToInvitationRequest,
@@ -25,7 +26,7 @@ import { customFetch } from '../../custom-fetch';
  * @summary Get playlist by ID
  */
 export type getPlaylistResponse200 = {
-  data: Playlist;
+  data: PlaylistDto;
   status: 200;
 };
 
@@ -421,7 +422,7 @@ export const getSharedPlaylists1 = async (
  * @summary Get playlist by share token
  */
 export type getPlaylistByShareTokenResponse200 = {
-  data: Playlist;
+  data: PlaylistDto;
   status: 200;
 };
 

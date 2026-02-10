@@ -4,12 +4,12 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { Track } from './track';
+import type { TrackListDto } from './trackListDto';
 
 export interface CuratedPlaylistDto {
   id?: string;
   name?: string;
   description?: string;
   trackCount?: number;
-  tracks?: Track[];
+  tracks?: TrackListDto[];
 }

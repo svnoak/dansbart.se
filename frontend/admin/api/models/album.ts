@@ -4,8 +4,6 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { Artist } from './artist';
-import type { TrackAlbum } from './trackAlbum';
 
 export interface Album {
   id?: string;
@@ -14,6 +12,4 @@ export interface Album {
   releaseDate?: string;
   spotifyId?: string;
   artistId?: string;
-  artist?: Artist;
-  trackLinks?: TrackAlbum[];
 }

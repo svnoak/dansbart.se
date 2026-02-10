@@ -14,21 +14,21 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ArtistService {
 
-    private final ArtistRepository artistRepository;
+    private final ArtistJooqRepository artistJooqRepository;
 
     public Optional<Artist> findById(UUID id) {
-        return artistRepository.findById(id);
+        return artistJooqRepository.findById(id);
     }
 
     public Page<Artist> findAll(Pageable pageable) {
-        return artistRepository.findAll(pageable);
+        return artistJooqRepository.findAll(pageable);
     }
 
     public Page<Artist> searchByName(String query, Pageable pageable) {
-        return artistRepository.searchByName(query, pageable);
+        return artistJooqRepository.searchByName(query, pageable);
     }
 
     public Page<Artist> findVerifiedArtists(Pageable pageable) {
-        return artistRepository.findVerifiedArtists(pageable);
+        return artistJooqRepository.findVerifiedArtists(pageable);
     }
 }

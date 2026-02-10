@@ -29,24 +29,24 @@ class AdminAnalyticsControllerTest {
     @WithMockUser(roles = "ADMIN")
     void getDashboard_shouldReturnComprehensiveStats() throws Exception {
         Map<String, Object> dashboard = new HashMap<>();
-        dashboard.put("visitors", Map.of("total_visitors", 100, "total_page_views", 500));
-        dashboard.put("listen_time", Map.of("total_hours", 24));
-        dashboard.put("most_played_tracks", List.of());
+        dashboard.put("visitors", Map.of("totalVisitors", 100, "totalPageViews", 500));
+        dashboard.put("listenTime", Map.of("totalHours", 24));
+        dashboard.put("mostPlayedTracks", List.of());
 
         when(analyticsService.getDashboard(anyInt())).thenReturn(dashboard);
 
         mockMvc.perform(get("/api/admin/analytics/dashboard")
                 .param("days", "30"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.visitors.total_visitors").value(100));
+            .andExpect(jsonPath("$.visitors.totalVisitors").value(100));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void getVisitorStats_shouldReturnVisitorData() throws Exception {
         Map<String, Object> response = Map.of(
-            "total_visitors", 100,
-            "total_page_views", 500,
+            "totalVisitors", 100,
+            "totalPageViews", 500,
             "days", 30
         );
 
@@ -55,14 +55,14 @@ class AdminAnalyticsControllerTest {
         mockMvc.perform(get("/api/admin/analytics/visitors")
                 .param("days", "30"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.total_visitors").value(100));
+            .andExpect(jsonPath("$.totalVisitors").value(100));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void getHourlyVisits_shouldReturnHourlyPattern() throws Exception {
         Map<String, Object> response = Map.of(
-            "by_hour", Map.of(9, 10, 10, 15, 11, 20),
+            "byHour", Map.of(9, 10, 10, 15, 11, 20),
             "days", 30
         );
 
@@ -71,14 +71,14 @@ class AdminAnalyticsControllerTest {
         mockMvc.perform(get("/api/admin/analytics/visits/hourly")
                 .param("days", "30"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.by_hour").isMap());
+            .andExpect(jsonPath("$.byHour").isMap());
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void getMostPlayedTracks_shouldReturnTrackList() throws Exception {
         List<Map<String, Object>> tracks = List.of(
-            Map.of("track_id", "123", "title", "Test Track", "play_count", 50)
+            Map.of("trackId", "123", "title", "Test Track", "playCount", 50)
         );
 
         when(analyticsService.getMostPlayedTracks(anyInt(), any())).thenReturn(tracks);
@@ -93,16 +93,16 @@ class AdminAnalyticsControllerTest {
     @WithMockUser(roles = "ADMIN")
     void getListenTime_shouldReturnTotalTime() throws Exception {
         Map<String, Object> response = Map.of(
-            "total_seconds", 86400,
-            "total_minutes", 1440,
-            "total_hours", 24
+            "totalSeconds", 86400,
+            "totalMinutes", 1440,
+            "totalHours", 24
         );
 
         when(analyticsService.getListenTime(any())).thenReturn(response);
 
         mockMvc.perform(get("/api/admin/analytics/listen-time"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.total_hours").value(24));
+            .andExpect(jsonPath("$.totalHours").value(24));
     }
 
     @Test
@@ -110,8 +110,8 @@ class AdminAnalyticsControllerTest {
     void getPlatformStats_shouldReturnPlatformBreakdown() throws Exception {
         Map<String, Object> response = Map.of(
             "platforms", List.of(
-                Map.of("platform", "spotify", "play_count", 100),
-                Map.of("platform", "youtube", "play_count", 50)
+                Map.of("platform", "spotify", "playCount", 100),
+                Map.of("platform", "youtube", "playCount", 50)
             )
         );
 

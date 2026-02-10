@@ -5,4 +5,4 @@
  * OpenAPI spec version: v0
  */
 
-export type TriggerBackfill200 = { [key: string]: string };
+export type TriggerBackfill200 = { [key: string]: { [key: string]: unknown } };

@@ -13,9 +13,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AnalyticsService {
 
-    private final TrackPlaybackRepository trackPlaybackRepository;
-    private final UserInteractionRepository userInteractionRepository;
-    private final VisitorSessionRepository visitorSessionRepository;
+    private final TrackPlaybackJooqRepository trackPlaybackJooqRepository;
+    private final UserInteractionJooqRepository userInteractionJooqRepository;
+    private final VisitorSessionJooqRepository visitorSessionJooqRepository;
 
     @Transactional
     public TrackPlayback recordPlayback(UUID trackId, String platform, Integer durationSeconds, Boolean completed, String sessionId) {
@@ -26,7 +26,7 @@ public class AnalyticsService {
             .completed(completed != null ? completed : false)
             .sessionId(sessionId)
             .build();
-        return trackPlaybackRepository.save(playback);
+        return trackPlaybackJooqRepository.insert(playback);
     }
 
     @Transactional
@@ -37,7 +37,7 @@ public class AnalyticsService {
             .eventData(eventData)
             .sessionId(sessionId)
             .build();
-        return userInteractionRepository.save(interaction);
+        return userInteractionJooqRepository.insert(interaction);
     }
 
     @Transactional
@@ -51,12 +51,12 @@ public class AnalyticsService {
         // Normalize userAgent to null-safe value (so we don't accidentally propagate the literal "null").
         final String normalizedUserAgent = Objects.equals(userAgent, "null") ? null : userAgent;
 
-        return visitorSessionRepository.findBySessionId(normalizedSessionId)
+        return visitorSessionJooqRepository.findBySessionId(normalizedSessionId)
             .map(session -> {
                 session.setLastSeen(OffsetDateTime.now());
                 session.setPageViews(session.getPageViews() + 1);
                 session.setIsReturning(true);
-                return visitorSessionRepository.save(session);
+                return visitorSessionJooqRepository.update(session);
             })
             .orElseGet(() -> {
                 VisitorSession session = VisitorSession.builder()
@@ -66,7 +66,7 @@ public class AnalyticsService {
                     .pageViews(1)
                     .isReturning(false)
                     .build();
-                return visitorSessionRepository.save(session);
+                return visitorSessionJooqRepository.insert(session);
             });
     }
 }

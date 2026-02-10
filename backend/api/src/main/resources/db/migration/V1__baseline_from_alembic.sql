@@ -1,404 +1,1957 @@
--- =====================================================
--- BASELINE MIGRATION - Dansbart Database Schema
--- =====================================================
--- This documents the existing schema created by 32+ Alembic migrations.
--- Flyway will NOT execute this file on existing databases due to
--- baseline-on-migrate configuration - it's already applied.
+-- PostgreSQL schema baseline generated from current dansbart database.
+-- This file is intended to reflect the exact structure of the existing
+-- database (tables, columns, types, constraints, and indexes), so that
+-- Flyway-managed environments match the imported production data.
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
 --
--- Source: dansbart.se/backend/alembic/versions/
--- Created: From Python SQLAlchemy models
--- =====================================================
+-- Extensions
+--
 
--- Required extension for vector similarity search
-CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
 
--- =====================================================
--- CORE TABLES
--- =====================================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
--- Tracks: Central entity for music tracks
-CREATE TABLE IF NOT EXISTS tracks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR NOT NULL,
-    isrc VARCHAR,
-    duration_ms INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
-    -- Audio features
-    has_vocals BOOLEAN,
-    swing_ratio FLOAT,
-    articulation FLOAT,
-    bounciness FLOAT,
-    loudness FLOAT,
-    punchiness FLOAT,
-    voice_probability FLOAT,
-    polska_score FLOAT,
-    hambo_score FLOAT,
-    bpm_stability FLOAT,
+SET default_tablespace = '';
+SET default_table_access_method = heap;
 
-    -- Vector embedding for similarity search
-    embedding vector,
-    analysis_version VARCHAR,
+--
+-- Tables
+--
 
-    -- Genre classification
-    music_genre VARCHAR,
-    genre_confidence FLOAT,
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'albums'
+  ) THEN
+    CREATE TABLE public.albums (
+        id uuid NOT NULL,
+        title character varying NOT NULL,
+        cover_image_url character varying,
+        release_date character varying,
+        artist_id uuid,
+        spotify_id character varying
+    );
+  END IF;
+END
+$$;
 
-    -- User flagging
-    is_flagged BOOLEAN DEFAULT FALSE,
-    flagged_at TIMESTAMP WITH TIME ZONE,
-    flag_reason VARCHAR,
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'alembic_version'
+  ) THEN
+    CREATE TABLE public.alembic_version (
+        version_num character varying(32) NOT NULL
+    );
+  END IF;
+END
+$$;
 
-    -- User uploads
-    uploader_id VARCHAR(255),
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'analysis_sources'
+  ) THEN
+    CREATE TABLE public.analysis_sources (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        source_type character varying NOT NULL,
+        raw_data jsonb NOT NULL,
+        confidence_score double precision NOT NULL,
+        analyzed_at timestamp with time zone DEFAULT now() NOT NULL
+    );
+  END IF;
+END
+$$;
 
-    -- Processing status
-    processing_status VARCHAR DEFAULT 'PENDING',
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'artist_crawl_logs'
+  ) THEN
+    CREATE TABLE public.artist_crawl_logs (
+        id uuid NOT NULL,
+        spotify_artist_id character varying NOT NULL,
+        artist_name character varying NOT NULL,
+        crawled_at timestamp with time zone DEFAULT now() NOT NULL,
+        tracks_found integer NOT NULL,
+        status character varying NOT NULL,
+        detected_genres jsonb,
+        music_genre_classification character varying,
+        discovery_source character varying
+    );
+  END IF;
+END
+$$;
 
-    -- Structure data (JSONB)
-    bars JSONB,
-    sections JSONB,
-    section_labels JSONB
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'artists'
+  ) THEN
+    CREATE TABLE public.artists (
+        id uuid NOT NULL,
+        name character varying NOT NULL,
+        spotify_id character varying,
+        image_url character varying,
+        is_verified boolean DEFAULT false NOT NULL
+    );
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_tracks_title ON tracks(title);
-CREATE INDEX IF NOT EXISTS ix_tracks_isrc ON tracks(isrc);
-CREATE INDEX IF NOT EXISTS ix_tracks_analysis_version ON tracks(analysis_version);
-CREATE INDEX IF NOT EXISTS ix_tracks_music_genre ON tracks(music_genre);
-CREATE INDEX IF NOT EXISTS ix_tracks_processing_status ON tracks(processing_status);
-CREATE INDEX IF NOT EXISTS ix_tracks_is_flagged ON tracks(is_flagged);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'dance_movement_feedback'
+  ) THEN
+    CREATE TABLE public.dance_movement_feedback (
+        id uuid NOT NULL,
+        dance_style character varying NOT NULL,
+        movement_tag character varying NOT NULL,
+        score double precision NOT NULL,
+        occurrences integer NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- Artists
-CREATE TABLE IF NOT EXISTS artists (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR NOT NULL,
-    image_url VARCHAR,
-    spotify_id VARCHAR UNIQUE,
-    is_verified BOOLEAN DEFAULT FALSE
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'genre_profiles'
+  ) THEN
+    CREATE TABLE public.genre_profiles (
+        id uuid NOT NULL,
+        genre_name character varying NOT NULL,
+        avg_note_density double precision NOT NULL,
+        common_meters jsonb NOT NULL,
+        rhythm_patterns jsonb NOT NULL,
+        sample_size integer NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL
+    );
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_artists_name ON artists(name);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'pending_artist_approvals'
+  ) THEN
+    CREATE TABLE public.pending_artist_approvals (
+        id uuid NOT NULL,
+        spotify_id character varying NOT NULL,
+        name character varying NOT NULL,
+        image_url character varying,
+        discovered_at timestamp with time zone DEFAULT now() NOT NULL,
+        discovery_source character varying NOT NULL,
+        detected_genres jsonb,
+        music_genre_classification character varying,
+        genre_confidence double precision,
+        status character varying NOT NULL,
+        reviewed_at timestamp with time zone,
+        additional_data jsonb
+    );
+  END IF;
+END
+$$;
 
--- Albums
-CREATE TABLE IF NOT EXISTS albums (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR NOT NULL,
-    cover_image_url VARCHAR,
-    release_date VARCHAR,
-    spotify_id VARCHAR UNIQUE,
-    artist_id UUID REFERENCES artists(id)
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'playback_links'
+  ) THEN
+    CREATE TABLE public.playback_links (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        platform character varying NOT NULL,
+        deep_link character varying NOT NULL,
+        is_working boolean NOT NULL
+    );
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_albums_title ON albums(title);
-CREATE INDEX IF NOT EXISTS ix_albums_spotify_id ON albums(spotify_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'playlist_collaborators'
+  ) THEN
+    CREATE TABLE public.playlist_collaborators (
+        id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+        playlist_id uuid NOT NULL,
+        user_id character varying(255) NOT NULL,
+        permission character varying(10) NOT NULL,
+        invited_by character varying(255),
+        invited_at timestamp with time zone DEFAULT now() NOT NULL,
+        status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+        accepted_at timestamp with time zone
+    );
+  END IF;
+END
+$$;
 
--- Track-Artist junction (many-to-many)
-CREATE TABLE IF NOT EXISTS track_artists (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    artist_id UUID NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
-    role VARCHAR DEFAULT 'primary',
-    CONSTRAINT unique_track_artist UNIQUE (track_id, artist_id)
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'playlist_tracks'
+  ) THEN
+    CREATE TABLE public.playlist_tracks (
+        id uuid NOT NULL,
+        playlist_id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        "position" integer NOT NULL,
+        added_at timestamp without time zone DEFAULT now() NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- Track-Album junction (many-to-many)
-CREATE TABLE IF NOT EXISTS track_albums (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    album_id UUID NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-    CONSTRAINT unique_track_album UNIQUE (track_id, album_id)
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'playlists'
+  ) THEN
+    CREATE TABLE public.playlists (
+        id uuid NOT NULL,
+        user_id character varying(255) NOT NULL,
+        name character varying NOT NULL,
+        description text,
+        is_public boolean DEFAULT false NOT NULL,
+        share_token character varying,
+        created_at timestamp without time zone DEFAULT now() NOT NULL,
+        updated_at timestamp without time zone DEFAULT now() NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- =====================================================
--- DANCE STYLE TABLES
--- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'rejection_logs'
+  ) THEN
+    CREATE TABLE public.rejection_logs (
+        id uuid DEFAULT gen_random_uuid() NOT NULL,
+        entity_type character varying NOT NULL,
+        spotify_id character varying NOT NULL,
+        entity_name character varying NOT NULL,
+        reason character varying,
+        rejected_at timestamp with time zone DEFAULT now() NOT NULL,
+        additional_data jsonb,
+        deleted_content boolean DEFAULT true NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- Track dance style classifications
-CREATE TABLE IF NOT EXISTS track_dance_styles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    dance_style VARCHAR NOT NULL,
-    sub_style VARCHAR,
-    is_primary BOOLEAN DEFAULT FALSE,
-    confidence FLOAT DEFAULT 0.0,
-    tempo_category VARCHAR,
-    bpm_multiplier FLOAT DEFAULT 1.0,
-    effective_bpm INTEGER,
-    confirmation_count INTEGER DEFAULT 0,
-    is_user_confirmed BOOLEAN DEFAULT FALSE
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'style_keywords'
+  ) THEN
+    CREATE TABLE public.style_keywords (
+        id uuid DEFAULT gen_random_uuid() NOT NULL,
+        keyword character varying NOT NULL,
+        main_style character varying NOT NULL,
+        sub_style character varying,
+        is_active boolean DEFAULT true NOT NULL,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        updated_at timestamp with time zone DEFAULT now() NOT NULL
+    );
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_track_dance_styles_dance_style ON track_dance_styles(dance_style);
-CREATE INDEX IF NOT EXISTS ix_track_dance_styles_sub_style ON track_dance_styles(sub_style);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'track_albums'
+  ) THEN
+    CREATE TABLE public.track_albums (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        album_id uuid NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- Style keywords for classification
-CREATE TABLE IF NOT EXISTS style_keywords (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    keyword VARCHAR NOT NULL UNIQUE,
-    main_style VARCHAR NOT NULL,
-    sub_style VARCHAR,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'track_artists'
+  ) THEN
+    CREATE TABLE public.track_artists (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        artist_id uuid NOT NULL,
+        role character varying NOT NULL
+    );
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_style_keywords_keyword ON style_keywords(keyword);
-CREATE INDEX IF NOT EXISTS ix_style_keywords_main_style ON style_keywords(main_style);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'track_dance_styles'
+  ) THEN
+    CREATE TABLE public.track_dance_styles (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        dance_style character varying NOT NULL,
+        is_primary boolean NOT NULL,
+        confidence double precision NOT NULL,
+        tempo_category character varying,
+        bpm_multiplier double precision NOT NULL,
+        effective_bpm integer NOT NULL,
+        confirmation_count integer NOT NULL,
+        is_user_confirmed boolean NOT NULL,
+        sub_style character varying
+    );
+  END IF;
+END
+$$;
 
--- Dance movement feedback (global consensus)
-CREATE TABLE IF NOT EXISTS dance_movement_feedback (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    dance_style VARCHAR NOT NULL,
-    movement_tag VARCHAR NOT NULL,
-    score FLOAT DEFAULT 0.0,
-    occurrences INTEGER DEFAULT 0,
-    CONSTRAINT _dance_move_uc UNIQUE (dance_style, movement_tag)
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'track_feel_votes'
+  ) THEN
+    CREATE TABLE public.track_feel_votes (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        feel_tag character varying NOT NULL,
+        created_at timestamp with time zone DEFAULT now() NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- Genre profiles for classification
-CREATE TABLE IF NOT EXISTS genre_profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    genre_name VARCHAR NOT NULL UNIQUE,
-    avg_note_density FLOAT,
-    common_meters JSONB,
-    rhythm_patterns JSONB,
-    sample_size INTEGER,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'track_playbacks'
+  ) THEN
+    CREATE TABLE public.track_playbacks (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        platform character varying NOT NULL,
+        played_at timestamp with time zone DEFAULT now() NOT NULL,
+        session_id character varying,
+        duration_seconds integer,
+        completed boolean DEFAULT false NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- =====================================================
--- ANALYSIS & PLAYBACK TABLES
--- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'track_structure_versions'
+  ) THEN
+    CREATE TABLE public.track_structure_versions (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        description character varying,
+        structure_data jsonb NOT NULL,
+        vote_count integer NOT NULL,
+        report_count integer NOT NULL,
+        is_active boolean NOT NULL,
+        is_hidden boolean NOT NULL,
+        author_alias character varying
+    );
+  END IF;
+END
+$$;
 
--- Analysis sources
-CREATE TABLE IF NOT EXISTS analysis_sources (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    source_type VARCHAR NOT NULL,
-    raw_data JSONB,
-    confidence_score FLOAT DEFAULT 1.0,
-    analyzed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'track_style_votes'
+  ) THEN
+    CREATE TABLE public.track_style_votes (
+        id uuid NOT NULL,
+        track_id uuid NOT NULL,
+        suggested_style character varying,
+        tempo_correction character varying,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        voter_id character varying NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- Playback links (Spotify, YouTube, etc.)
-CREATE TABLE IF NOT EXISTS playback_links (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    platform VARCHAR NOT NULL,
-    deep_link VARCHAR NOT NULL,
-    is_working BOOLEAN DEFAULT TRUE
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'tracks'
+  ) THEN
+    CREATE TABLE public.tracks (
+        id uuid NOT NULL,
+        title character varying NOT NULL,
+        isrc character varying,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        has_vocals boolean,
+        duration_ms integer,
+        bars jsonb,
+        sections jsonb,
+        section_labels jsonb,
+        processing_status character varying DEFAULT 'PENDING'::character varying NOT NULL,
+        swing_ratio double precision,
+        articulation double precision,
+        bounciness double precision,
+        music_genre character varying,
+        genre_confidence double precision,
+        is_flagged boolean DEFAULT false NOT NULL,
+        flagged_at timestamp with time zone,
+        flag_reason character varying,
+        embedding public.vector,
+        analysis_version character varying,
+        loudness double precision,
+        punchiness double precision,
+        voice_probability double precision,
+        polska_score double precision,
+        hambo_score double precision,
+        bpm_stability double precision,
+        uploader_id character varying(255)
+    );
+  END IF;
+END
+$$;
 
--- Track structure versions (crowdsourced)
-CREATE TABLE IF NOT EXISTS track_structure_versions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    description VARCHAR,
-    structure_data JSONB,
-    vote_count INTEGER DEFAULT 1,
-    report_count INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT FALSE,
-    is_hidden BOOLEAN DEFAULT FALSE,
-    author_alias VARCHAR
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'user_interactions'
+  ) THEN
+    CREATE TABLE public.user_interactions (
+        id uuid NOT NULL,
+        track_id uuid,
+        event_type character varying NOT NULL,
+        event_data jsonb,
+        created_at timestamp with time zone DEFAULT now() NOT NULL,
+        session_id character varying
+    );
+  END IF;
+END
+$$;
 
--- =====================================================
--- VOTING & FEEDBACK TABLES
--- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'users'
+  ) THEN
+    CREATE TABLE public.users (
+        id character varying(255) NOT NULL,
+        display_name character varying,
+        avatar_url character varying,
+        created_at timestamp without time zone DEFAULT now() NOT NULL,
+        updated_at timestamp without time zone DEFAULT now() NOT NULL,
+        last_login_at timestamp with time zone,
+        username character varying(50) NOT NULL
+    );
+  END IF;
+END
+$$;
 
--- Track style votes
-CREATE TABLE IF NOT EXISTS track_style_votes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    voter_id VARCHAR,
-    suggested_style VARCHAR,
-    tempo_correction VARCHAR,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname = 'public'
+      AND c.relname = 'visitor_sessions'
+  ) THEN
+    CREATE TABLE public.visitor_sessions (
+        id uuid NOT NULL,
+        session_id character varying NOT NULL,
+        first_seen timestamp with time zone DEFAULT now() NOT NULL,
+        last_seen timestamp with time zone DEFAULT now() NOT NULL,
+        user_agent character varying,
+        is_returning boolean DEFAULT false NOT NULL,
+        page_views integer DEFAULT 1 NOT NULL
+    );
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_track_style_votes_voter_id ON track_style_votes(voter_id);
+--
+-- Constraints
+--
 
--- Track feel votes
-CREATE TABLE IF NOT EXISTS track_feel_votes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    feel_tag VARCHAR NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = '_dance_move_uc'
+  ) THEN
+    ALTER TABLE ONLY public.dance_movement_feedback
+        ADD CONSTRAINT _dance_move_uc UNIQUE (dance_style, movement_tag);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_track_feel_votes_feel_tag ON track_feel_votes(feel_tag);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'albums_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.albums
+        ADD CONSTRAINT albums_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- =====================================================
--- USER & PLAYLIST TABLES
--- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'alembic_version_pkc'
+  ) THEN
+    ALTER TABLE ONLY public.alembic_version
+        ADD CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num);
+  END IF;
+END
+$$;
 
--- Users (linked to Authentik OIDC)
-CREATE TABLE IF NOT EXISTS users (
-    id VARCHAR(255) PRIMARY KEY,  -- Authentik 'sub' claim (hex string)
-    username VARCHAR(50),
-    display_name VARCHAR,
-    avatar_url VARCHAR,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_login_at TIMESTAMP WITH TIME ZONE
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'analysis_sources_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.analysis_sources
+        ADD CONSTRAINT analysis_sources_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_users_username ON users(username);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users(LOWER(username));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'artist_crawl_logs_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.artist_crawl_logs
+        ADD CONSTRAINT artist_crawl_logs_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- Playlists
-CREATE TABLE IF NOT EXISTS playlists (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id VARCHAR(255) NOT NULL REFERENCES users(id),
-    name VARCHAR NOT NULL,
-    description VARCHAR,
-    is_public BOOLEAN DEFAULT FALSE,
-    share_token VARCHAR UNIQUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'artists_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.artists
+        ADD CONSTRAINT artists_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_playlists_user_id ON playlists(user_id);
-CREATE INDEX IF NOT EXISTS ix_playlists_share_token ON playlists(share_token);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'artists_spotify_id_key'
+  ) THEN
+    ALTER TABLE ONLY public.artists
+        ADD CONSTRAINT artists_spotify_id_key UNIQUE (spotify_id);
+  END IF;
+END
+$$;
 
--- Playlist tracks (junction)
-CREATE TABLE IF NOT EXISTS playlist_tracks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    playlist_id UUID NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
-    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
-    position INTEGER NOT NULL,
-    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT unique_playlist_track UNIQUE (playlist_id, track_id)
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'dance_movement_feedback_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.dance_movement_feedback
+        ADD CONSTRAINT dance_movement_feedback_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_playlist_tracks_playlist_id ON playlist_tracks(playlist_id);
-CREATE INDEX IF NOT EXISTS ix_playlist_tracks_track_id ON playlist_tracks(track_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'genre_profiles_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.genre_profiles
+        ADD CONSTRAINT genre_profiles_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- Playlist collaborators
-CREATE TABLE IF NOT EXISTS playlist_collaborators (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    playlist_id UUID NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
-    user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    permission VARCHAR DEFAULT 'view',
-    status VARCHAR DEFAULT 'pending',
-    invited_by VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
-    invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    accepted_at TIMESTAMP WITH TIME ZONE,
-    CONSTRAINT unique_playlist_user_collaboration UNIQUE (playlist_id, user_id)
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'pending_artist_approvals_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.pending_artist_approvals
+        ADD CONSTRAINT pending_artist_approvals_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_playlist_collaborators_playlist_id ON playlist_collaborators(playlist_id);
-CREATE INDEX IF NOT EXISTS ix_playlist_collaborators_user_id ON playlist_collaborators(user_id);
-CREATE INDEX IF NOT EXISTS ix_playlist_collaborators_status ON playlist_collaborators(status);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playback_links_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.playback_links
+        ADD CONSTRAINT playback_links_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- =====================================================
--- ADMIN & CURATION TABLES
--- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlist_collaborators_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_collaborators
+        ADD CONSTRAINT playlist_collaborators_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- Artist crawl logs
-CREATE TABLE IF NOT EXISTS artist_crawl_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    spotify_artist_id VARCHAR NOT NULL UNIQUE,
-    artist_name VARCHAR NOT NULL,
-    crawled_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    tracks_found INTEGER DEFAULT 0,
-    status VARCHAR DEFAULT 'success',
-    detected_genres JSONB,
-    music_genre_classification VARCHAR,
-    discovery_source VARCHAR
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlist_tracks_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_tracks
+        ADD CONSTRAINT playlist_tracks_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_artist_crawl_logs_spotify_artist_id ON artist_crawl_logs(spotify_artist_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlists_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlists
+        ADD CONSTRAINT playlists_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- Rejection logs (blocklist)
-CREATE TABLE IF NOT EXISTS rejection_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    entity_type VARCHAR NOT NULL,
-    spotify_id VARCHAR NOT NULL,
-    entity_name VARCHAR NOT NULL,
-    reason VARCHAR,
-    rejected_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    deleted_content BOOLEAN DEFAULT TRUE,
-    additional_data JSONB,
-    CONSTRAINT unique_rejection UNIQUE (spotify_id, entity_type)
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'rejection_logs_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.rejection_logs
+        ADD CONSTRAINT rejection_logs_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_rejection_logs_entity_type ON rejection_logs(entity_type);
-CREATE INDEX IF NOT EXISTS ix_rejection_logs_spotify_id ON rejection_logs(spotify_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'style_keywords_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.style_keywords
+        ADD CONSTRAINT style_keywords_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- Pending artist approvals
-CREATE TABLE IF NOT EXISTS pending_artist_approvals (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    spotify_id VARCHAR NOT NULL UNIQUE,
-    name VARCHAR NOT NULL,
-    image_url VARCHAR,
-    discovered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    discovery_source VARCHAR NOT NULL,
-    detected_genres JSONB,
-    music_genre_classification VARCHAR,
-    genre_confidence FLOAT,
-    status VARCHAR DEFAULT 'pending',
-    reviewed_at TIMESTAMP WITH TIME ZONE,
-    additional_data JSONB
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_albums_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_albums
+        ADD CONSTRAINT track_albums_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_pending_artist_approvals_spotify_id ON pending_artist_approvals(spotify_id);
-CREATE INDEX IF NOT EXISTS ix_pending_artist_approvals_status ON pending_artist_approvals(status);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_artists_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_artists
+        ADD CONSTRAINT track_artists_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- =====================================================
--- ANALYTICS TABLES
--- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_dance_styles_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_dance_styles
+        ADD CONSTRAINT track_dance_styles_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- Track playbacks
-CREATE TABLE IF NOT EXISTS track_playbacks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID REFERENCES tracks(id),
-    platform VARCHAR,
-    played_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    duration_seconds INTEGER,
-    completed BOOLEAN DEFAULT FALSE,
-    session_id VARCHAR
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_feel_votes_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_feel_votes
+        ADD CONSTRAINT track_feel_votes_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_track_playbacks_track_id ON track_playbacks(track_id);
-CREATE INDEX IF NOT EXISTS ix_track_playbacks_played_at ON track_playbacks(played_at);
-CREATE INDEX IF NOT EXISTS ix_track_playbacks_session_id ON track_playbacks(session_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_playbacks_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_playbacks
+        ADD CONSTRAINT track_playbacks_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- User interactions
-CREATE TABLE IF NOT EXISTS user_interactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    track_id UUID REFERENCES tracks(id),
-    event_type VARCHAR NOT NULL,
-    event_data JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    session_id VARCHAR
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_structure_versions_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_structure_versions
+        ADD CONSTRAINT track_structure_versions_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_user_interactions_track_id ON user_interactions(track_id);
-CREATE INDEX IF NOT EXISTS ix_user_interactions_event_type ON user_interactions(event_type);
-CREATE INDEX IF NOT EXISTS ix_user_interactions_created_at ON user_interactions(created_at);
-CREATE INDEX IF NOT EXISTS ix_user_interactions_session_id ON user_interactions(session_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_style_votes_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_style_votes
+        ADD CONSTRAINT track_style_votes_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
--- Visitor sessions
-CREATE TABLE IF NOT EXISTS visitor_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id VARCHAR NOT NULL UNIQUE,
-    first_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    user_agent VARCHAR,
-    is_returning BOOLEAN DEFAULT FALSE,
-    page_views INTEGER DEFAULT 1
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'tracks_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.tracks
+        ADD CONSTRAINT tracks_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
 
-CREATE INDEX IF NOT EXISTS ix_visitor_sessions_session_id ON visitor_sessions(session_id);
-CREATE INDEX IF NOT EXISTS ix_visitor_sessions_first_seen ON visitor_sessions(first_seen);
-CREATE INDEX IF NOT EXISTS ix_visitor_sessions_last_seen ON visitor_sessions(last_seen);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'unique_keyword'
+  ) THEN
+    ALTER TABLE ONLY public.style_keywords
+        ADD CONSTRAINT unique_keyword UNIQUE (keyword);
+  END IF;
+END
+$$;
 
--- =====================================================
--- FOREIGN KEY for track uploader
--- =====================================================
-ALTER TABLE tracks
-    ADD CONSTRAINT fk_tracks_uploader
-    FOREIGN KEY (uploader_id)
-    REFERENCES users(id)
-    ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'unique_pending_artist'
+  ) THEN
+    ALTER TABLE ONLY public.pending_artist_approvals
+        ADD CONSTRAINT unique_pending_artist UNIQUE (spotify_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'unique_playlist_user_collaboration'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_collaborators
+        ADD CONSTRAINT unique_playlist_user_collaboration UNIQUE (playlist_id, user_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'unique_rejection'
+  ) THEN
+    ALTER TABLE ONLY public.rejection_logs
+        ADD CONSTRAINT unique_rejection UNIQUE (spotify_id, entity_type);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'unique_spotify_artist_crawl'
+  ) THEN
+    ALTER TABLE ONLY public.artist_crawl_logs
+        ADD CONSTRAINT unique_spotify_artist_crawl UNIQUE (spotify_artist_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'unique_track_album'
+  ) THEN
+    ALTER TABLE ONLY public.track_albums
+        ADD CONSTRAINT unique_track_album UNIQUE (track_id, album_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'unique_track_artist'
+  ) THEN
+    ALTER TABLE ONLY public.track_artists
+        ADD CONSTRAINT unique_track_artist UNIQUE (track_id, artist_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'uq_playlist_track'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_tracks
+        ADD CONSTRAINT uq_playlist_track UNIQUE (playlist_id, track_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'user_interactions_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.user_interactions
+        ADD CONSTRAINT user_interactions_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'users_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.users
+        ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'visitor_sessions_pkey'
+  ) THEN
+    ALTER TABLE ONLY public.visitor_sessions
+        ADD CONSTRAINT visitor_sessions_pkey PRIMARY KEY (id);
+  END IF;
+END
+$$;
+
+--
+-- Indexes
+--
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'idx_playlist_collaborators_playlist'
+  ) THEN
+    CREATE INDEX idx_playlist_collaborators_playlist ON public.playlist_collaborators USING btree (playlist_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'idx_playlist_collaborators_status'
+  ) THEN
+    CREATE INDEX idx_playlist_collaborators_status ON public.playlist_collaborators USING btree (status);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'idx_playlist_collaborators_user'
+  ) THEN
+    CREATE INDEX idx_playlist_collaborators_user ON public.playlist_collaborators USING btree (user_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'idx_tracks_isrc_non_unique'
+  ) THEN
+    CREATE INDEX idx_tracks_isrc_non_unique ON public.tracks USING btree (isrc);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'idx_tracks_processing_status'
+  ) THEN
+    CREATE INDEX idx_tracks_processing_status ON public.tracks USING btree (processing_status);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'idx_users_username_lower'
+  ) THEN
+    CREATE UNIQUE INDEX idx_users_username_lower ON public.users USING btree (lower((username)::text));
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_albums_spotify_id'
+  ) THEN
+    CREATE UNIQUE INDEX ix_albums_spotify_id ON public.albums USING btree (spotify_id) WHERE (spotify_id IS NOT NULL);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_albums_title'
+  ) THEN
+    CREATE INDEX ix_albums_title ON public.albums USING btree (title);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_albums_title_trgm'
+  ) THEN
+    CREATE INDEX ix_albums_title_trgm ON public.albums USING gin (title public.gin_trgm_ops);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_artist_crawl_logs_spotify_artist_id'
+  ) THEN
+    CREATE INDEX ix_artist_crawl_logs_spotify_artist_id ON public.artist_crawl_logs USING btree (spotify_artist_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_artists_name'
+  ) THEN
+    CREATE INDEX ix_artists_name ON public.artists USING btree (name);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_artists_name_trgm'
+  ) THEN
+    CREATE INDEX ix_artists_name_trgm ON public.artists USING gin (name public.gin_trgm_ops);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_dance_movement_feedback_dance_style'
+  ) THEN
+    CREATE INDEX ix_dance_movement_feedback_dance_style ON public.dance_movement_feedback USING btree (dance_style);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_dance_movement_feedback_movement_tag'
+  ) THEN
+    CREATE INDEX ix_dance_movement_feedback_movement_tag ON public.dance_movement_feedback USING btree (movement_tag);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_genre_profiles_genre_name'
+  ) THEN
+    CREATE UNIQUE INDEX ix_genre_profiles_genre_name ON public.genre_profiles USING btree (genre_name);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_pending_artist_approvals_spotify_id'
+  ) THEN
+    CREATE INDEX ix_pending_artist_approvals_spotify_id ON public.pending_artist_approvals USING btree (spotify_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_pending_artist_approvals_status'
+  ) THEN
+    CREATE INDEX ix_pending_artist_approvals_status ON public.pending_artist_approvals USING btree (status);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_playback_links_track_platform_working'
+  ) THEN
+    CREATE INDEX ix_playback_links_track_platform_working ON public.playback_links USING btree (track_id, platform, is_working) WHERE (((platform)::text = 'youtube'::text) AND (is_working = true));
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_playlist_tracks_playlist_id'
+  ) THEN
+    CREATE INDEX ix_playlist_tracks_playlist_id ON public.playlist_tracks USING btree (playlist_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_playlist_tracks_track_id'
+  ) THEN
+    CREATE INDEX ix_playlist_tracks_track_id ON public.playlist_tracks USING btree (track_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_playlists_share_token'
+  ) THEN
+    CREATE UNIQUE INDEX ix_playlists_share_token ON public.playlists USING btree (share_token);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_playlists_user_id'
+  ) THEN
+    CREATE INDEX ix_playlists_user_id ON public.playlists USING btree (user_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_rejection_logs_entity_type'
+  ) THEN
+    CREATE INDEX ix_rejection_logs_entity_type ON public.rejection_logs USING btree (entity_type);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_rejection_logs_spotify_id'
+  ) THEN
+    CREATE INDEX ix_rejection_logs_spotify_id ON public.rejection_logs USING btree (spotify_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_style_keywords_keyword'
+  ) THEN
+    CREATE INDEX ix_style_keywords_keyword ON public.style_keywords USING btree (keyword);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_style_keywords_main_style'
+  ) THEN
+    CREATE INDEX ix_style_keywords_main_style ON public.style_keywords USING btree (main_style);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_dance_styles_confidence'
+  ) THEN
+    CREATE INDEX ix_track_dance_styles_confidence ON public.track_dance_styles USING btree (track_id, confidence) WHERE (confidence >= (0.98)::double precision);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_dance_styles_dance_style'
+  ) THEN
+    CREATE INDEX ix_track_dance_styles_dance_style ON public.track_dance_styles USING btree (dance_style);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_dance_styles_sub_style'
+  ) THEN
+    CREATE INDEX ix_track_dance_styles_sub_style ON public.track_dance_styles USING btree (sub_style);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_feel_votes_feel_tag'
+  ) THEN
+    CREATE INDEX ix_track_feel_votes_feel_tag ON public.track_feel_votes USING btree (feel_tag);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_playbacks_played_at'
+  ) THEN
+    CREATE INDEX ix_track_playbacks_played_at ON public.track_playbacks USING btree (played_at);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_playbacks_session_id'
+  ) THEN
+    CREATE INDEX ix_track_playbacks_session_id ON public.track_playbacks USING btree (session_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_playbacks_track_id'
+  ) THEN
+    CREATE INDEX ix_track_playbacks_track_id ON public.track_playbacks USING btree (track_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_track_style_votes_voter_id'
+  ) THEN
+    CREATE INDEX ix_track_style_votes_voter_id ON public.track_style_votes USING btree (voter_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_tracks_analysis_version'
+  ) THEN
+    CREATE INDEX ix_tracks_analysis_version ON public.tracks USING btree (analysis_version);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_tracks_is_flagged'
+  ) THEN
+    CREATE INDEX ix_tracks_is_flagged ON public.tracks USING btree (is_flagged);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_tracks_music_genre'
+  ) THEN
+    CREATE INDEX ix_tracks_music_genre ON public.tracks USING btree (music_genre);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_tracks_title'
+  ) THEN
+    CREATE INDEX ix_tracks_title ON public.tracks USING btree (title);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_tracks_title_trgm'
+  ) THEN
+    CREATE INDEX ix_tracks_title_trgm ON public.tracks USING gin (title public.gin_trgm_ops);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_tracks_uploader_id'
+  ) THEN
+    CREATE INDEX ix_tracks_uploader_id ON public.tracks USING btree (uploader_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_user_interactions_created_at'
+  ) THEN
+    CREATE INDEX ix_user_interactions_created_at ON public.user_interactions USING btree (created_at);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_user_interactions_event_type'
+  ) THEN
+    CREATE INDEX ix_user_interactions_event_type ON public.user_interactions USING btree (event_type);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_user_interactions_session_id'
+  ) THEN
+    CREATE INDEX ix_user_interactions_session_id ON public.user_interactions USING btree (session_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_user_interactions_track_id'
+  ) THEN
+    CREATE INDEX ix_user_interactions_track_id ON public.user_interactions USING btree (track_id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_visitor_sessions_first_seen'
+  ) THEN
+    CREATE INDEX ix_visitor_sessions_first_seen ON public.visitor_sessions USING btree (first_seen);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_visitor_sessions_last_seen'
+  ) THEN
+    CREATE INDEX ix_visitor_sessions_last_seen ON public.visitor_sessions USING btree (last_seen);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'ix_visitor_sessions_session_id'
+  ) THEN
+    CREATE UNIQUE INDEX ix_visitor_sessions_session_id ON public.visitor_sessions USING btree (session_id);
+  END IF;
+END
+$$;
+
+--
+-- Foreign keys
+--
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'albums_artist_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.albums
+        ADD CONSTRAINT albums_artist_id_fkey FOREIGN KEY (artist_id) REFERENCES public.artists(id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'analysis_sources_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.analysis_sources
+        ADD CONSTRAINT analysis_sources_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playback_links_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.playback_links
+        ADD CONSTRAINT playback_links_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlist_collaborators_invited_by_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_collaborators
+        ADD CONSTRAINT playlist_collaborators_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES public.users(id) ON DELETE SET NULL;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlist_collaborators_playlist_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_collaborators
+        ADD CONSTRAINT playlist_collaborators_playlist_id_fkey FOREIGN KEY (playlist_id) REFERENCES public.playlists(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlist_collaborators_user_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_collaborators
+        ADD CONSTRAINT playlist_collaborators_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlist_tracks_playlist_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_tracks
+        ADD CONSTRAINT playlist_tracks_playlist_id_fkey FOREIGN KEY (playlist_id) REFERENCES public.playlists(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlist_tracks_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlist_tracks
+        ADD CONSTRAINT playlist_tracks_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'playlists_user_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.playlists
+        ADD CONSTRAINT playlists_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_albums_album_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_albums
+        ADD CONSTRAINT track_albums_album_id_fkey FOREIGN KEY (album_id) REFERENCES public.albums(id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_albums_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_albums
+        ADD CONSTRAINT track_albums_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_artists_artist_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_artists
+        ADD CONSTRAINT track_artists_artist_id_fkey FOREIGN KEY (artist_id) REFERENCES public.artists(id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_artists_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_artists
+        ADD CONSTRAINT track_artists_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_dance_styles_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_dance_styles
+        ADD CONSTRAINT track_dance_styles_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_feel_votes_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_feel_votes
+        ADD CONSTRAINT track_feel_votes_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_playbacks_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_playbacks
+        ADD CONSTRAINT track_playbacks_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_structure_versions_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_structure_versions
+        ADD CONSTRAINT track_structure_versions_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'track_style_votes_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.track_style_votes
+        ADD CONSTRAINT track_style_votes_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id) ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'tracks_uploader_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.tracks
+        ADD CONSTRAINT tracks_uploader_id_fkey FOREIGN KEY (uploader_id) REFERENCES public.users(id) ON DELETE SET NULL;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'user_interactions_track_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY public.user_interactions
+        ADD CONSTRAINT user_interactions_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.tracks(id);
+  END IF;
+END
+$$;

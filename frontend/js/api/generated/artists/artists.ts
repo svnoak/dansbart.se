@@ -7,7 +7,7 @@
 import type {
   Artist,
   GetArtistsParams,
-  PageArtist,
+  PageResponseArtist,
   SearchArtistsParams,
   Track,
 } from '../../models';
@@ -18,7 +18,7 @@ import { customFetch } from '../../custom-fetch';
  * @summary Get all artists with pagination
  */
 export type getArtistsResponse200 = {
-  data: PageArtist;
+  data: PageResponseArtist;
   status: 200;
 };
 
@@ -27,7 +27,7 @@ export type getArtistsResponseSuccess = getArtistsResponse200 & {
 };
 export type getArtistsResponse = getArtistsResponseSuccess;
 
-export const getGetArtistsUrl = (params: GetArtistsParams) => {
+export const getGetArtistsUrl = (params?: GetArtistsParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -42,7 +42,7 @@ export const getGetArtistsUrl = (params: GetArtistsParams) => {
 };
 
 export const getArtists = async (
-  params: GetArtistsParams,
+  params?: GetArtistsParams,
   options?: RequestInit
 ): Promise<getArtistsResponse> => {
   return customFetch<getArtistsResponse>(getGetArtistsUrl(params), {
@@ -106,7 +106,7 @@ export const getArtistTracks = async (
  * @summary Search artists by name
  */
 export type searchArtistsResponse200 = {
-  data: PageArtist;
+  data: PageResponseArtist;
   status: 200;
 };
 

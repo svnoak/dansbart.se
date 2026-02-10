@@ -3,11 +3,12 @@ package se.dansbart.domain.discovery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.dansbart.domain.analytics.TrackPlaybackRepository;
+import se.dansbart.domain.analytics.TrackPlaybackJooqRepository;
 import se.dansbart.domain.track.Track;
-import se.dansbart.domain.track.TrackRepository;
+import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.dto.CuratedPlaylistDto;
 import se.dansbart.dto.StyleOverviewDto;
+import se.dansbart.dto.TrackListDto;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -18,8 +19,8 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class DiscoveryService {
 
-    private final TrackRepository trackRepository;
-    private final TrackPlaybackRepository trackPlaybackRepository;
+    private final TrackJooqRepository trackJooqRepository;
+    private final TrackPlaybackJooqRepository trackPlaybackRepository;
 
     private static final float MIN_COMPLETION_RATE = 50.0f;
     private static final List<String> COMMON_STYLES = List.of("Hambo", "Polska", "Vals", "Schottis", "Engelska", "Mazurka");
@@ -28,7 +29,7 @@ public class DiscoveryService {
      * Get popular tracks based on play count and completion rate.
      * Falls back to recent high-confidence tracks if not enough quality plays.
      */
-    public List<Track> findPopularTracks(int limit, int days) {
+    public List<TrackListDto> findPopularTracks(int limit, int days) {
         OffsetDateTime since = OffsetDateTime.now().minusDays(days);
 
         // Get most played tracks with completion rate
@@ -45,27 +46,28 @@ public class DiscoveryService {
             .toList();
 
         if (qualityTrackIds.size() >= limit) {
-            // Fetch full track objects preserving order
-            List<Track> tracks = trackRepository.findByIds(qualityTrackIds);
-            return orderByIds(tracks, qualityTrackIds);
+            return trackJooqRepository.findTrackListDtosByIds(qualityTrackIds);
         }
 
         // Fallback: use recent high-confidence tracks
-        return trackRepository.findFallbackTracks(limit);
+        List<Track> fallback = trackJooqRepository.findFallbackTracks(limit);
+        return trackJooqRepository.findTrackListDtosByIds(fallback.stream().map(Track::getId).toList());
     }
 
     /**
      * Get recently added tracks with verified classification (confidence = 1.0).
      */
-    public List<Track> findRecentTracks(int limit) {
-        return trackRepository.findRecentVerifiedTracks(limit);
+    public List<TrackListDto> findRecentTracks(int limit) {
+        List<Track> tracks = trackJooqRepository.findRecentVerifiedTracks(limit);
+        return trackJooqRepository.findTrackListDtosByIds(tracks.stream().map(Track::getId).toList());
     }
 
     /**
      * Get curated tracks: user-confirmed, analyzed, sorted by popularity.
      */
-    public List<Track> findCuratedTracks(int limit) {
-        return trackRepository.findCuratedTracks(limit);
+    public List<TrackListDto> findCuratedTracks(int limit) {
+        List<Track> tracks = trackJooqRepository.findCuratedTracks(limit);
+        return trackJooqRepository.findTrackListDtosByIds(tracks.stream().map(Track::getId).toList());
     }
 
     /**
@@ -73,14 +75,14 @@ public class DiscoveryService {
      */
     public List<StyleOverviewDto> getStyleOverview() {
         // Get style counts
-        List<Object[]> styleCounts = trackRepository.findStyleCounts();
+        List<Object[]> styleCounts = trackJooqRepository.findStyleCounts();
 
         // Build style overview with sub-styles
         return styleCounts.stream()
             .map(row -> {
                 String style = (String) row[0];
                 Long count = ((Number) row[1]).longValue();
-                List<String> subStyles = trackRepository.findSubStylesForStyle(style);
+                List<String> subStyles = trackJooqRepository.findSubStylesForStyle(style);
 
                 return StyleOverviewDto.builder()
                     .style(style)
@@ -127,28 +129,30 @@ public class DiscoveryService {
         List<Track> allTracks = new ArrayList<>();
 
         // Get 2 polskas
-        allTracks.addAll(trackRepository.findByStyleWithConfidence("Polska", 0.8f, 2));
+        allTracks.addAll(trackJooqRepository.findByStyleWithConfidence("Polska", 0.8f, 2));
 
         // Get 1 schottis
-        allTracks.addAll(trackRepository.findByStyleWithConfidence("Schottis", 0.8f, 1));
+        allTracks.addAll(trackJooqRepository.findByStyleWithConfidence("Schottis", 0.8f, 1));
 
         // Get 1 vals
-        allTracks.addAll(trackRepository.findByStyleWithConfidence("Vals", 0.8f, 1));
+        allTracks.addAll(trackJooqRepository.findByStyleWithConfidence("Vals", 0.8f, 1));
 
         // Get variety (hambo, engelska, mazurka)
-        allTracks.addAll(trackRepository.findByStylesWithConfidence(
+        allTracks.addAll(trackJooqRepository.findByStylesWithConfidence(
             List.of("Hambo", "Engelska", "Mazurka"), 0.8f, 4));
 
         if (allTracks.isEmpty()) {
             return null;
         }
 
+        List<TrackListDto> dtos = trackJooqRepository.findTrackListDtosByIds(
+            allTracks.stream().limit(6).map(Track::getId).toList());
         return CuratedPlaylistDto.builder()
             .id("party")
             .name("Festspellista")
             .description("2 polskor, 1 schottis, 1 vals och lite variation")
             .trackCount(allTracks.size())
-            .tracks(allTracks.stream().limit(6).toList())
+            .tracks(dtos)
             .build();
     }
 
@@ -159,7 +163,7 @@ public class DiscoveryService {
         List<Track> allTracks = new ArrayList<>();
 
         for (String style : COMMON_STYLES) {
-            List<Track> styleTracks = trackRepository.findBeginnerFriendlyByStyle(style, 4);
+            List<Track> styleTracks = trackJooqRepository.findBeginnerFriendlyByStyle(style, 4);
             allTracks.addAll(styleTracks);
         }
 
@@ -167,12 +171,14 @@ public class DiscoveryService {
             return null;
         }
 
+        List<TrackListDto> dtos = trackJooqRepository.findTrackListDtosByIds(
+            allTracks.stream().limit(6).map(Track::getId).toList());
         return CuratedPlaylistDto.builder()
             .id("beginner-friendly")
             .name("Perfekt för nybörjare")
             .description("En av varje dansstil, instrumental och lagom tempo")
             .trackCount(allTracks.size())
-            .tracks(allTracks.stream().limit(6).toList())
+            .tracks(dtos)
             .build();
     }
 
@@ -180,18 +186,20 @@ public class DiscoveryService {
      * Get instrumental playlist.
      */
     private CuratedPlaylistDto getInstrumentalPlaylist() {
-        List<Track> tracks = trackRepository.findInstrumentalTracks(0.7f, 8);
+        List<Track> tracks = trackJooqRepository.findInstrumentalTracks(0.7f, 8);
 
         if (tracks.isEmpty()) {
             return null;
         }
 
+        List<TrackListDto> dtos = trackJooqRepository.findTrackListDtosByIds(
+            tracks.stream().limit(6).map(Track::getId).toList());
         return CuratedPlaylistDto.builder()
             .id("instrumental")
             .name("Rent instrumental")
             .description("Utan sång")
             .trackCount(tracks.size())
-            .tracks(tracks.stream().limit(6).toList())
+            .tracks(dtos)
             .build();
     }
 
@@ -199,18 +207,20 @@ public class DiscoveryService {
      * Get slow dances playlist (BPM <= 100).
      */
     private CuratedPlaylistDto getSlowDancesPlaylist() {
-        List<Track> tracks = trackRepository.findSlowTracks(100, 0.7f, 8);
+        List<Track> tracks = trackJooqRepository.findSlowTracks(100, 0.7f, 8);
 
         if (tracks.isEmpty()) {
             return null;
         }
 
+        List<TrackListDto> dtos = trackJooqRepository.findTrackListDtosByIds(
+            tracks.stream().limit(6).map(Track::getId).toList());
         return CuratedPlaylistDto.builder()
             .id("slow")
             .name("Lugna danser")
             .description("Lågt tempo och avslappnad känsla")
             .trackCount(tracks.size())
-            .tracks(tracks.stream().limit(6).toList())
+            .tracks(dtos)
             .build();
     }
 
@@ -218,18 +228,20 @@ public class DiscoveryService {
      * Get fast dances playlist (BPM >= 140).
      */
     private CuratedPlaylistDto getFastDancesPlaylist() {
-        List<Track> tracks = trackRepository.findFastTracks(140, 0.7f, 8);
+        List<Track> tracks = trackJooqRepository.findFastTracks(140, 0.7f, 8);
 
         if (tracks.isEmpty()) {
             return null;
         }
 
+        List<TrackListDto> dtos = trackJooqRepository.findTrackListDtosByIds(
+            tracks.stream().limit(6).map(Track::getId).toList());
         return CuratedPlaylistDto.builder()
             .id("fast")
             .name("Snabba danser")
             .description("Högt tempo och energi")
             .trackCount(tracks.size())
-            .tracks(tracks.stream().limit(6).toList())
+            .tracks(dtos)
             .build();
     }
 

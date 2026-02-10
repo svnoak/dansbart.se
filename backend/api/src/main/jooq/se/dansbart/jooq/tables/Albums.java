@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -30,8 +31,9 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import se.dansbart.jooq.DefaultSchema;
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
+import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Artists.ArtistsPath;
 import se.dansbart.jooq.tables.TrackAlbums.TrackAlbumsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
@@ -46,7 +48,7 @@ public class Albums extends TableImpl<Record> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>ALBUMS</code>
+     * The reference instance of <code>public.albums</code>
      */
     public static final Albums ALBUMS = new Albums();
 
@@ -59,34 +61,34 @@ public class Albums extends TableImpl<Record> {
     }
 
     /**
-     * The column <code>ALBUMS.ID</code>.
+     * The column <code>public.albums.id</code>.
      */
-    public final TableField<Record, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("RANDOM_UUID()"), SQLDataType.UUID)), this, "");
+    public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>ALBUMS.TITLE</code>.
+     * The column <code>public.albums.title</code>.
      */
-    public final TableField<Record, String> TITLE = createField(DSL.name("TITLE"), SQLDataType.VARCHAR(1000000000).nullable(false), this, "");
+    public final TableField<Record, String> TITLE = createField(DSL.name("title"), SQLDataType.VARCHAR.nullable(false), this, "");
 
     /**
-     * The column <code>ALBUMS.COVER_IMAGE_URL</code>.
+     * The column <code>public.albums.cover_image_url</code>.
      */
-    public final TableField<Record, String> COVER_IMAGE_URL = createField(DSL.name("COVER_IMAGE_URL"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, String> COVER_IMAGE_URL = createField(DSL.name("cover_image_url"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>ALBUMS.RELEASE_DATE</code>.
+     * The column <code>public.albums.release_date</code>.
      */
-    public final TableField<Record, String> RELEASE_DATE = createField(DSL.name("RELEASE_DATE"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, String> RELEASE_DATE = createField(DSL.name("release_date"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>ALBUMS.SPOTIFY_ID</code>.
+     * The column <code>public.albums.artist_id</code>.
      */
-    public final TableField<Record, String> SPOTIFY_ID = createField(DSL.name("SPOTIFY_ID"), SQLDataType.VARCHAR(1000000000), this, "");
+    public final TableField<Record, UUID> ARTIST_ID = createField(DSL.name("artist_id"), SQLDataType.UUID, this, "");
 
     /**
-     * The column <code>ALBUMS.ARTIST_ID</code>.
+     * The column <code>public.albums.spotify_id</code>.
      */
-    public final TableField<Record, UUID> ARTIST_ID = createField(DSL.name("ARTIST_ID"), SQLDataType.UUID, this, "");
+    public final TableField<Record, String> SPOTIFY_ID = createField(DSL.name("spotify_id"), SQLDataType.VARCHAR, this, "");
 
     private Albums(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -97,24 +99,24 @@ public class Albums extends TableImpl<Record> {
     }
 
     /**
-     * Create an aliased <code>ALBUMS</code> table reference
+     * Create an aliased <code>public.albums</code> table reference
      */
     public Albums(String alias) {
         this(DSL.name(alias), ALBUMS);
     }
 
     /**
-     * Create an aliased <code>ALBUMS</code> table reference
+     * Create an aliased <code>public.albums</code> table reference
      */
     public Albums(Name alias) {
         this(alias, ALBUMS);
     }
 
     /**
-     * Create a <code>ALBUMS</code> table reference
+     * Create a <code>public.albums</code> table reference
      */
     public Albums() {
-        this(DSL.name("ALBUMS"), null);
+        this(DSL.name("albums"), null);
     }
 
     public <O extends Record> Albums(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
@@ -152,32 +154,32 @@ public class Albums extends TableImpl<Record> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+        return aliased() ? null : Public.PUBLIC;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IX_ALBUMS_SPOTIFY_ID, Indexes.IX_ALBUMS_TITLE);
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
-        return Keys.CONSTRAINT_7;
-    }
-
-    @Override
-    public List<UniqueKey<Record>> getUniqueKeys() {
-        return Arrays.asList(Keys.CONSTRAINT_73);
+        return Keys.ALBUMS_PKEY;
     }
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.CONSTRAINT_733);
+        return Arrays.asList(Keys.ALBUMS__ALBUMS_ARTIST_ID_FKEY);
     }
 
     private transient ArtistsPath _artists;
 
     /**
-     * Get the implicit join path to the <code>PUBLIC.ARTISTS</code> table.
+     * Get the implicit join path to the <code>public.artists</code> table.
      */
     public ArtistsPath artists() {
         if (_artists == null)
-            _artists = new ArtistsPath(this, Keys.CONSTRAINT_733, null);
+            _artists = new ArtistsPath(this, Keys.ALBUMS__ALBUMS_ARTIST_ID_FKEY, null);
 
         return _artists;
     }
@@ -186,17 +188,17 @@ public class Albums extends TableImpl<Record> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>PUBLIC.TRACK_ALBUMS</code> table
+     * <code>public.track_albums</code> table
      */
     public TrackAlbumsPath trackAlbums() {
         if (_trackAlbums == null)
-            _trackAlbums = new TrackAlbumsPath(this, null, Keys.CONSTRAINT_8FB.getInverseKey());
+            _trackAlbums = new TrackAlbumsPath(this, null, Keys.TRACK_ALBUMS__TRACK_ALBUMS_ALBUM_ID_FKEY.getInverseKey());
 
         return _trackAlbums;
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>PUBLIC.TRACKS</code>
+     * Get the implicit many-to-many join path to the <code>public.tracks</code>
      * table
      */
     public TracksPath tracks() {

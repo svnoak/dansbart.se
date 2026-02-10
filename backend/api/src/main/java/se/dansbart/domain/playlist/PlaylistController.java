@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.InvitationDto;
+import se.dansbart.dto.PlaylistDto;
 
 import java.net.URI;
 import java.util.List;
@@ -39,8 +40,8 @@ public class PlaylistController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get playlist by ID")
-    public ResponseEntity<Playlist> getPlaylist(@PathVariable UUID id) {
-        return playlistService.findById(id)
+    public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID id) {
+        return playlistService.findByIdAsDto(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
@@ -108,8 +109,8 @@ public class PlaylistController {
 
     @GetMapping("/share/{shareToken}")
     @Operation(summary = "Get playlist by share token")
-    public ResponseEntity<Playlist> getPlaylistByShareToken(@PathVariable String shareToken) {
-        return playlistService.findByShareToken(shareToken)
+    public ResponseEntity<PlaylistDto> getPlaylistByShareToken(@PathVariable String shareToken) {
+        return playlistService.findByShareTokenAsDto(shareToken)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }

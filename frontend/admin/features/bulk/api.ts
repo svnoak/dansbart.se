@@ -11,7 +11,8 @@ import {
   backfillIsrcs as backfillIsrcsGenerated,
 } from '../../api/generated/admin-maintenance/admin-maintenance';
 
-export function useBulkApi() {
+/** @param _token - Optional (kept for API compatibility with tabs that pass it) */
+export function useBulkApi(_token?: unknown) {
   // Heuristic Classification (Fast)
   const reclassifyAll = async () => {
     const response = await reclassifyAllGenerated();

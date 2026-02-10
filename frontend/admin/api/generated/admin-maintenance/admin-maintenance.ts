@@ -12,6 +12,8 @@ import type {
   GetIsrcStats200,
   Ingest200,
   IngestRequest,
+  QueuePendingTracks200,
+  QueuePendingTracksParams,
   ReclassifyAll200,
   ResetCrawlData200,
 } from '../../models';
@@ -37,6 +39,46 @@ export const getReclassifyAllUrl = () => {
 
 export const reclassifyAll = async (options?: RequestInit): Promise<reclassifyAllResponse> => {
   return customAdminFetch<reclassifyAllResponse>(getReclassifyAllUrl(), {
+    ...options,
+    method: 'POST',
+  });
+};
+
+/**
+ * Dispatches up to 'limit' tracks with status PENDING to the audio worker. Use when pending tracks were not picked up (e.g. after ingest or manual changes).
+ * @summary Queue PENDING tracks for audio analysis
+ */
+export type queuePendingTracksResponse200 = {
+  data: QueuePendingTracks200;
+  status: 200;
+};
+
+export type queuePendingTracksResponseSuccess = queuePendingTracksResponse200 & {
+  headers: Headers;
+};
+export type queuePendingTracksResponse = queuePendingTracksResponseSuccess;
+
+export const getQueuePendingTracksUrl = (params?: QueuePendingTracksParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/maintenance/queue-pending-tracks?${stringifiedParams}`
+    : `/api/admin/maintenance/queue-pending-tracks`;
+};
+
+export const queuePendingTracks = async (
+  params?: QueuePendingTracksParams,
+  options?: RequestInit
+): Promise<queuePendingTracksResponse> => {
+  return customAdminFetch<queuePendingTracksResponse>(getQueuePendingTracksUrl(params), {
     ...options,
     method: 'POST',
   });

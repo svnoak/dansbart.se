@@ -2,16 +2,21 @@
 # Run E2E tests against the full stack.
 # Usage: from repo root: ./dansbart.se/e2e/run-e2e.sh
 # Or:     cd dansbart.se/e2e && ./run-e2e.sh  (compose must be run from repo root separately)
+#
+# Uses docker-compose.e2e.yml so worker-audio is built from dansbart.se/audio-worker (single clone).
 
 set -e
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-echo "Starting stack (db, redis, api, frontend, worker-feature)..."
-docker compose up -d db redis api frontend worker-feature
+COMPOSE_FILES="-f docker-compose.yml -f dansbart.se/docker-compose.e2e.yml"
+
+echo "Starting stack (db, redis, api, frontend, worker-feature, worker-audio)..."
+echo "worker-audio is built from dansbart.se/audio-worker (E2E override)."
+docker compose $COMPOSE_FILES up -d db redis api frontend worker-feature worker-audio
 
 echo "Clearing any stale Celery messages from Redis queues..."
-docker compose exec -T redis redis-cli DEL light feature audio celery || true
+docker compose $COMPOSE_FILES exec -T redis redis-cli DEL light feature audio celery 2>/dev/null || true
 
 echo "Waiting for API health (up to 90s)..."
 for i in $(seq 1 30); do
@@ -28,25 +33,45 @@ done
 
 echo "Waiting for worker-feature to be ready (up to 60s)..."
 for i in $(seq 1 20); do
-  # Check if celery worker has registered tasks (look for tasks_light in output)
-  if docker compose logs worker-feature 2>&1 | grep -q "celery@.*ready"; then
-    echo "Worker is ready."
+  if docker compose $COMPOSE_FILES logs worker-feature 2>&1 | grep -q "celery@.*ready"; then
+    echo "worker-feature is ready."
     break
   fi
   if [ "$i" -eq 20 ]; then
-    echo "Warning: Worker may not be fully ready, but continuing..."
+    echo "Warning: worker-feature may not be fully ready, continuing..."
   fi
   sleep 3
 done
 
-# Show worker status for debugging
-echo "Worker status:"
-docker compose logs worker-feature --tail=10
+echo "Waiting for worker-audio to be ready (up to 120s)..."
+for i in $(seq 1 40); do
+  if docker compose $COMPOSE_FILES logs worker-audio 2>&1 | grep -q "celery@.*ready"; then
+    echo "worker-audio is ready."
+    break
+  fi
+  if [ "$i" -eq 40 ]; then
+    echo "ERROR: worker-audio did not become ready. Tracks will stay PENDING."
+    echo "Check: docker compose $COMPOSE_FILES logs worker-audio"
+    exit 1
+  fi
+  sleep 3
+done
 
-# Check Redis queue state
-echo "Redis queue state:"
-docker compose exec -T redis redis-cli LLEN light || true
-docker compose exec -T redis redis-cli LLEN feature || true
+# Verify worker-audio is still running (may exit if e.g. model load fails)
+if ! docker compose $COMPOSE_FILES ps worker-audio 2>/dev/null | grep -q "Up"; then
+  echo "ERROR: worker-audio container is not running (exited?). Tracks will not be analysed."
+  docker compose $COMPOSE_FILES logs worker-audio --tail=50
+  exit 1
+fi
+
+echo "Worker status:"
+docker compose $COMPOSE_FILES logs worker-feature --tail=5
+docker compose $COMPOSE_FILES logs worker-audio --tail=5
+
+echo "Redis queue state (before tests):"
+docker compose $COMPOSE_FILES exec -T redis redis-cli LLEN light 2>/dev/null || echo "?"
+docker compose $COMPOSE_FILES exec -T redis redis-cli LLEN feature 2>/dev/null || echo "?"
+docker compose $COMPOSE_FILES exec -T redis redis-cli LLEN audio 2>/dev/null || echo "?"
 
 echo "Running E2E tests..."
 cd dansbart.se/e2e

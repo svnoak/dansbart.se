@@ -4,21 +4,13 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { User } from './user';
-import type { TrackArtist } from './trackArtist';
-import type { TrackAlbum } from './trackAlbum';
-import type { TrackDanceStyle } from './trackDanceStyle';
-import type { PlaybackLink } from './playbackLink';
-import type { AnalysisSource } from './analysisSource';
-import type { TrackStyleVote } from './trackStyleVote';
-import type { TrackFeelVote } from './trackFeelVote';
-import type { TrackStructureVersion } from './trackStructureVersion';
 
 export interface Track {
   id?: string;
   title?: string;
   isrc?: string;
   durationMs?: number;
+  tempoBpm?: number;
   createdAt?: string;
   hasVocals?: boolean;
   swingRatio?: number;
@@ -30,7 +22,7 @@ export interface Track {
   polskaScore?: number;
   hamboScore?: number;
   bpmStability?: number;
-  embedding?: number[];
+  isInstrumental?: boolean;
   analysisVersion?: string;
   musicGenre?: string;
   genreConfidence?: number;
@@ -38,17 +30,8 @@ export interface Track {
   flaggedAt?: string;
   flagReason?: string;
   uploaderId?: string;
-  uploader?: User;
   processingStatus?: string;
   bars?: number[];
   sections?: number[];
   sectionLabels?: string[];
-  artistLinks?: TrackArtist[];
-  albumLinks?: TrackAlbum[];
-  danceStyles?: TrackDanceStyle[];
-  playbackLinks?: PlaybackLink[];
-  analysisSources?: AnalysisSource[];
-  styleVotes?: TrackStyleVote[];
-  feelVotes?: TrackFeelVote[];
-  structureVersions?: TrackStructureVersion[];
 }

@@ -17,21 +17,21 @@ type GetKeywordsParams = {
   limit?: number;
   offset?: number;
   search?: string;
-  main_style?: string;
-  is_active?: string | boolean | null;
+  mainStyle?: string;
+  isActive?: string | boolean | null;
 };
 
-export function useStyleKeywordsApi() {
+/** @param _token - Optional (kept for API compatibility with tabs that pass it) */
+export function useStyleKeywordsApi(_token?: unknown) {
   const getKeywords = async (params: GetKeywordsParams) => {
-    // Map snake_case params to camelCase for generated API
     const apiParams: Record<string, unknown> = {
       limit: params.limit || 50,
       offset: params.offset || 0,
     };
     if (params.search) apiParams.search = params.search;
-    if (params.main_style) apiParams.mainStyle = params.main_style;
-    if (params.is_active !== null && params.is_active !== '') {
-      apiParams.isActive = params.is_active === 'true' || params.is_active === true;
+    if (params.mainStyle) apiParams.mainStyle = params.mainStyle;
+    if (params.isActive !== null && params.isActive !== '') {
+      apiParams.isActive = params.isActive === 'true' || params.isActive === true;
     }
 
     const response = await getKeywords1(apiParams);

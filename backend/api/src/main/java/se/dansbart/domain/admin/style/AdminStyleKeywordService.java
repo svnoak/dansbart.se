@@ -6,7 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.StyleKeyword;
-import se.dansbart.domain.admin.StyleKeywordRepository;
+import se.dansbart.domain.admin.StyleKeywordJooqRepository;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -15,7 +15,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AdminStyleKeywordService {
 
-    private final StyleKeywordRepository keywordRepository;
+    private final StyleKeywordJooqRepository keywordRepository;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getKeywordsPaginated(String search, String mainStyle, Boolean isActive, int limit, int offset) {
@@ -48,11 +48,11 @@ public class AdminStyleKeywordService {
         Map<String, Object> item = new HashMap<>();
         item.put("id", keyword.getId().toString());
         item.put("keyword", keyword.getKeyword());
-        item.put("main_style", keyword.getMainStyle());
-        item.put("sub_style", keyword.getSubStyle());
-        item.put("is_active", keyword.getIsActive());
-        item.put("created_at", keyword.getCreatedAt() != null ? keyword.getCreatedAt().toString() : null);
-        item.put("updated_at", keyword.getUpdatedAt() != null ? keyword.getUpdatedAt().toString() : null);
+        item.put("mainStyle", keyword.getMainStyle());
+        item.put("subStyle", keyword.getSubStyle());
+        item.put("isActive", keyword.getIsActive());
+        item.put("createdAt", keyword.getCreatedAt() != null ? keyword.getCreatedAt().toString() : null);
+        item.put("updatedAt", keyword.getUpdatedAt() != null ? keyword.getUpdatedAt().toString() : null);
         return item;
     }
 
@@ -69,10 +69,10 @@ public class AdminStyleKeywordService {
         List<String> uniqueStyles = keywordRepository.findDistinctMainStyles();
 
         Map<String, Object> result = new HashMap<>();
-        result.put("total_active", totalActive);
-        result.put("total_inactive", totalInactive);
-        result.put("by_style", byStyle);
-        result.put("unique_styles", uniqueStyles);
+        result.put("totalActive", totalActive);
+        result.put("totalInactive", totalInactive);
+        result.put("byStyle", byStyle);
+        result.put("uniqueStyles", uniqueStyles);
         return result;
     }
 
@@ -96,8 +96,7 @@ public class AdminStyleKeywordService {
             .isActive(true)
             .build();
 
-        keywordRepository.save(newKeyword);
-        return mapKeyword(newKeyword);
+        return mapKeyword(keywordRepository.save(newKeyword));
     }
 
     @Transactional
@@ -117,8 +116,7 @@ public class AdminStyleKeywordService {
         if (isActive != null) existing.setIsActive(isActive);
         existing.setUpdatedAt(OffsetDateTime.now());
 
-        keywordRepository.save(existing);
-        return mapKeyword(existing);
+        return mapKeyword(keywordRepository.save(existing));
     }
 
     @Transactional

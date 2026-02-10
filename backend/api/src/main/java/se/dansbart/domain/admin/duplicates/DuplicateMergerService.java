@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.track.Track;
-import se.dansbart.domain.track.TrackRepository;
+import se.dansbart.domain.track.TrackJooqRepository;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -13,26 +13,26 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DuplicateMergerService {
 
-    private final TrackRepository trackRepository;
+    private final TrackJooqRepository trackJooqRepository;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getDuplicateTracks(int limit, int offset) {
         // Find ISRCs that have multiple tracks
-        List<Object[]> duplicateIsrcs = trackRepository.findDuplicateIsrcs(limit, offset);
+        List<Object[]> duplicateIsrcs = trackJooqRepository.findDuplicateIsrcs(limit, offset);
 
         List<Map<String, Object>> groups = new ArrayList<>();
         for (Object[] row : duplicateIsrcs) {
             String isrc = (String) row[0];
             long count = ((Number) row[1]).longValue();
 
-            List<Track> tracks = trackRepository.findByIsrc(isrc);
+            List<Track> tracks = trackJooqRepository.findByIsrc(isrc);
             List<Map<String, Object>> trackList = tracks.stream()
                 .map(t -> {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", t.getId().toString());
                     m.put("title", t.getTitle());
                     m.put("status", t.getProcessingStatus());
-                    m.put("created_at", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
+                    m.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
                     return m;
                 })
                 .toList();
@@ -46,7 +46,7 @@ public class DuplicateMergerService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("groups", groups);
-        result.put("total_groups", groups.size());
+        result.put("totalGroups", groups.size());
         result.put("limit", limit);
         result.put("offset", offset);
         return result;
@@ -54,7 +54,7 @@ public class DuplicateMergerService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> findMergeableDuplicates(int limit) {
-        List<Object[]> duplicates = trackRepository.findDuplicateIsrcs(limit, 0);
+        List<Object[]> duplicates = trackJooqRepository.findDuplicateIsrcs(limit, 0);
 
         List<Map<String, Object>> mergeables = new ArrayList<>();
         for (Object[] row : duplicates) {
@@ -68,14 +68,14 @@ public class DuplicateMergerService {
         }
 
         Map<String, Object> result = new HashMap<>();
-        result.put("mergeable_isrcs", mergeables);
+        result.put("mergeableIsrcs", mergeables);
         result.put("total", mergeables.size());
         return result;
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getDuplicateAnalysis(String isrc) {
-        List<Track> tracks = trackRepository.findByIsrc(isrc);
+        List<Track> tracks = trackJooqRepository.findByIsrc(isrc);
 
         if (tracks.isEmpty()) {
             return Map.of("error", "No tracks found with ISRC: " + isrc);
@@ -95,23 +95,23 @@ public class DuplicateMergerService {
                 m.put("id", t.getId().toString());
                 m.put("title", t.getTitle());
                 m.put("status", t.getProcessingStatus());
-                m.put("is_canonical", t.getId().equals(canonical.getId()));
-                m.put("created_at", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
+                m.put("isCanonical", t.getId().equals(canonical.getId()));
+                m.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
                 return m;
             })
             .toList();
 
         Map<String, Object> result = new HashMap<>();
         result.put("isrc", isrc);
-        result.put("total_duplicates", tracks.size());
-        result.put("canonical_id", canonical.getId().toString());
+        result.put("totalDuplicates", tracks.size());
+        result.put("canonicalId", canonical.getId().toString());
         result.put("tracks", trackDetails);
         return result;
     }
 
     @Transactional
     public Map<String, Object> mergeDuplicatesByIsrc(String isrc, boolean dryRun) {
-        List<Track> tracks = trackRepository.findByIsrc(isrc);
+        List<Track> tracks = trackJooqRepository.findByIsrc(isrc);
 
         if (tracks.size() < 2) {
             return Map.of("message", "No duplicates to merge for ISRC: " + isrc);
@@ -131,17 +131,18 @@ public class DuplicateMergerService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("isrc", isrc);
-        result.put("canonical_id", canonical.getId().toString());
-        result.put("duplicates_to_delete", toDelete.size());
-        result.put("dry_run", dryRun);
+        result.put("canonicalId", canonical.getId().toString());
+        result.put("duplicatesToDelete", toDelete.size());
+        result.put("dryRun", dryRun);
 
         if (!dryRun) {
             // In a real implementation, we would migrate album links, playback links, etc.
             // For now, just delete the duplicates
-            trackRepository.deleteAll(toDelete);
+            trackJooqRepository.deleteAllById(toDelete.stream().map(Track::getId).toList());
 
             result.put("status", "success");
             result.put("deleted", toDelete.size());
+            result.put("deletedTracks", toDelete.size());
         }
 
         return result;
@@ -150,7 +151,7 @@ public class DuplicateMergerService {
     @Transactional
     public Map<String, Object> mergeAllDuplicates(boolean dryRun, Integer limit) {
         int maxLimit = limit != null ? limit : 1000;
-        List<Object[]> duplicateIsrcs = trackRepository.findDuplicateIsrcs(maxLimit, 0);
+        List<Object[]> duplicateIsrcs = trackJooqRepository.findDuplicateIsrcs(maxLimit, 0);
 
         int totalMerged = 0;
         int totalDeleted = 0;
@@ -169,12 +170,12 @@ public class DuplicateMergerService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
-        result.put("dry_run", dryRun);
-        result.put("isrc_groups_processed", duplicateIsrcs.size());
-        result.put("total_merged", totalMerged);
-        result.put("total_deleted", totalDeleted);
+        result.put("dryRun", dryRun);
+        result.put("isrcGroupsProcessed", duplicateIsrcs.size());
+        result.put("totalMerged", totalMerged);
+        result.put("totalDeleted", totalDeleted);
         if (!dryRun) {
-            result.put("merged_isrcs", mergedIsrcs);
+            result.put("mergedIsrcs", mergedIsrcs);
         }
         return result;
     }

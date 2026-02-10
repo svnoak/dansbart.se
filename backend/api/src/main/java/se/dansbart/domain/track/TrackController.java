@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.PageResponse;
+import se.dansbart.dto.TrackListDto;
 
 import java.util.HashMap;
 import java.util.List;
@@ -27,25 +28,25 @@ public class TrackController {
 
     @GetMapping
     @Operation(summary = "Get playable tracks with optional filters")
-    public ResponseEntity<PageResponse<Track>> getTracks(
-            @RequestParam(name = "main_style", required = false) String mainStyle,
-            @RequestParam(name = "sub_style", required = false) String subStyle,
+    public ResponseEntity<PageResponse<TrackListDto>> getTracks(
+            @RequestParam(name = "mainStyle", required = false) String mainStyle,
+            @RequestParam(name = "subStyle", required = false) String subStyle,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String source,
             @RequestParam(required = false) String vocals,
-            @RequestParam(name = "style_confirmed", required = false) Boolean styleConfirmed,
-            @RequestParam(name = "music_genre", required = false) String musicGenre,
-            @RequestParam(name = "min_bpm", required = false) Integer minBpm,
-            @RequestParam(name = "max_bpm", required = false) Integer maxBpm,
-            @RequestParam(name = "min_duration", required = false) Integer minDuration,
-            @RequestParam(name = "max_duration", required = false) Integer maxDuration,
-            @RequestParam(name = "min_bounciness", required = false) Float minBounciness,
-            @RequestParam(name = "max_bounciness", required = false) Float maxBounciness,
-            @RequestParam(name = "min_articulation", required = false) Float minArticulation,
-            @RequestParam(name = "max_articulation", required = false) Float maxArticulation,
+            @RequestParam(name = "styleConfirmed", required = false) Boolean styleConfirmed,
+            @RequestParam(name = "musicGenre", required = false) String musicGenre,
+            @RequestParam(name = "minBpm", required = false) Integer minBpm,
+            @RequestParam(name = "maxBpm", required = false) Integer maxBpm,
+            @RequestParam(name = "minDuration", required = false) Integer minDuration,
+            @RequestParam(name = "maxDuration", required = false) Integer maxDuration,
+            @RequestParam(name = "minBounciness", required = false) Float minBounciness,
+            @RequestParam(name = "maxBounciness", required = false) Float maxBounciness,
+            @RequestParam(name = "minArticulation", required = false) Float minArticulation,
+            @RequestParam(name = "maxArticulation", required = false) Float maxArticulation,
             @RequestParam(defaultValue = "20") Integer limit,
             @RequestParam(defaultValue = "0") Integer offset) {
-        Page<Track> page = trackService.findPlayableTracks(
+        var page = trackService.findPlayableTracksAsListDtos(
             mainStyle, subStyle, search, source, vocals, styleConfirmed, musicGenre,
             minBpm, maxBpm, minDuration, maxDuration,
             minBounciness, maxBounciness, minArticulation, maxArticulation,
@@ -72,10 +73,10 @@ public class TrackController {
 
     @GetMapping("/search")
     @Operation(summary = "Search tracks by title")
-    public ResponseEntity<PageResponse<Track>> searchTracks(
+    public ResponseEntity<PageResponse<TrackListDto>> searchTracks(
             @RequestParam String q,
             Pageable pageable) {
-        return ResponseEntity.ok(PageResponse.from(trackService.searchByTitle(q, pageable)));
+        return ResponseEntity.ok(PageResponse.from(trackService.searchByTitleAsListDtos(q, pageable)));
     }
 
     @PostMapping("/{id}/feedback")
@@ -162,8 +163,8 @@ public class TrackController {
                 Map<String, Object> response = new HashMap<>();
                 response.put("status", "success");
                 response.put("message", "Version created");
-                response.put("version_id", version.getId());
-                response.put("is_active", version.getIsActive());
+                response.put("versionId", version.getId());
+                response.put("isActive", version.getIsActive());
                 return ResponseEntity.ok(response);
             })
             .orElse(ResponseEntity.notFound().build());

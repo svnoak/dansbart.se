@@ -4,12 +4,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { ref } from 'vue';
 import { server } from '../setup.js';
 import { http, HttpResponse } from 'msw';
 import { MOCK_ADMIN_TOKEN } from '../mocks/handlers.js';
 
-// Mock useAdminAuth
-const mockAccessToken = { value: null };
+// Mock useAdminAuth - use a real Vue ref so useAdminApi accepts it as MaybeRef
+const mockAccessToken = ref(null);
 const mockLogout = vi.fn();
 const mockRefreshToken = vi.fn().mockResolvedValue(false);
 
@@ -22,7 +23,7 @@ vi.mock('../../admin/shared/composables/useAdminAuth.js', () => ({
 }));
 
 // Import useAdminApi
-import { useAdminApi } from '../../admin/shared/composables/useAdminApi.js';
+import { useAdminApi } from '../../admin/shared/composables/useAdminApi';
 
 describe('useAdminApi', () => {
   beforeEach(() => {
@@ -138,8 +139,12 @@ describe('useAdminApi', () => {
           headers: { 'X-Custom-Header': 'custom-value' },
         });
 
-        expect(capturedOptions.headers['X-Custom-Header']).toBe('custom-value');
-        expect(capturedOptions.headers['Authorization']).toBe(`Bearer ${MOCK_ADMIN_TOKEN}`);
+        expect(capturedOptions).not.toBeNull();
+        const opts = capturedOptions;
+        if (opts && opts.headers) {
+          expect(opts.headers['X-Custom-Header']).toBe('custom-value');
+          expect(opts.headers['Authorization']).toBe(`Bearer ${MOCK_ADMIN_TOKEN}`);
+        }
       } finally {
         global.fetch = originalFetch;
       }

@@ -1,0 +1,11 @@
+# E2E override: use audio-worker from this repo so E2E works with a single clone.
+# Usage from repo root: docker compose -f docker-compose.yml -f dansbart.se/docker-compose.e2e.yml up -d ...
+# run-e2e.sh uses this so worker-audio is always built from dansbart.se/audio-worker.
+
+services:
+  worker-audio:
+    build:
+      context: ./dansbart.se/audio-worker
+      dockerfile: Dockerfile
+    volumes:
+      - ./dansbart.se/audio-worker/app:/app/app:ro

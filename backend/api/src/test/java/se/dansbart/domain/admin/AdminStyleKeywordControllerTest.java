@@ -32,7 +32,7 @@ class AdminStyleKeywordControllerTest {
     void getKeywords_shouldReturnPaginatedList() throws Exception {
         Map<String, Object> response = new HashMap<>();
         response.put("items", List.of(
-            Map.of("id", "1", "keyword", "polska", "main_style", "polska")
+            Map.of("id", "1", "keyword", "polska", "mainStyle", "polska")
         ));
         response.put("total", 1);
         response.put("limit", 50);
@@ -73,7 +73,7 @@ class AdminStyleKeywordControllerTest {
         Map<String, Object> response = Map.of(
             "id", keywordId.toString(),
             "keyword", "polska",
-            "main_style", "polska",
+            "mainStyle", "polska",
             "is_active", true
         );
 
@@ -90,7 +90,7 @@ class AdminStyleKeywordControllerTest {
         Map<String, Object> keyword = Map.of(
             "id", UUID.randomUUID().toString(),
             "keyword", "hambo",
-            "main_style", "hambo"
+            "mainStyle", "hambo"
         );
 
         when(keywordService.createKeyword(anyString(), anyString(), any()))
@@ -111,7 +111,7 @@ class AdminStyleKeywordControllerTest {
         Map<String, Object> keyword = Map.of(
             "id", keywordId.toString(),
             "keyword", "polska_updated",
-            "main_style", "polska"
+            "mainStyle", "polska"
         );
 
         when(keywordService.updateKeyword(eq(keywordId), any(), any(), any(), any()))

@@ -2,8 +2,13 @@
  * Library API
  * Unified API for managing tracks, albums, artists, and blocklist
  * Uses generated API client from OpenAPI spec
+ *
+ * Note: Backend returns custom PageResponse { items, total, page, size, hasMore }
+ * rather than Spring Page { content, totalElements, ... }. The generated PageTrack
+ * type uses the Spring shape; we use LibraryPageResponse for correct typings.
  */
 
+import type { Track } from '../../api/models/track';
 import {
   getTracks1,
   reanalyzeTrack as reanalyzeTrackGenerated,
@@ -46,6 +51,15 @@ import {
   ingestTrack as ingestTrackGenerated,
 } from '../../api/generated/admin-spotify/admin-spotify';
 
+// Backend PageResponse shape (items/total), not Spring Page (content/totalElements)
+export interface LibraryPageResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+  hasMore: boolean;
+}
+
 // Helper to support both generated client shape ({ data, status, headers })
 // and plain JSON responses ({ items, total, message, ... }).
 // This avoids runtime errors when response.data is undefined.
@@ -54,9 +68,22 @@ const unwrapResponse = (response: any) =>
 
 export function useLibraryApi() {
   // ===== TRACKS =====
-  const loadTracks = async (params: Parameters<typeof getTracks1>[0]) => {
-    const response = await getTracks1(params);
-    return unwrapResponse(response);
+  const loadTracks = async (
+    params: Parameters<typeof getTracks1>[0] & { albumId?: string }
+  ): Promise<LibraryPageResponse<Track>> => {
+    const response = await getTracks1(params as Parameters<typeof getTracks1>[0]);
+    const data = unwrapResponse(response);
+    // Backend returns { items, total, ... }; generated type says { content, totalElements, ... }
+    if (data && 'items' in data) return data as LibraryPageResponse<Track>;
+    if (data && 'content' in data)
+      return {
+        items: (data as { content: Track[] }).content,
+        total: (data as { totalElements?: number }).totalElements ?? 0,
+        page: (data as { number?: number }).number ?? 0,
+        size: (data as { size?: number }).size ?? 50,
+        hasMore: !(data as { last?: boolean }).last,
+      };
+    return { items: [], total: 0, page: 0, size: 50, hasMore: false };
   };
 
   const reanalyzeTrack = async (trackId: string) => {
@@ -204,12 +231,12 @@ export function useLibraryApi() {
 
   // ===== SPOTIFY INGESTION =====
   const ingestSpotifyAlbum = async (spotifyAlbumId: string) => {
-    const response = await ingestAlbumGenerated({ spotify_album_id: spotifyAlbumId });
+    const response = await ingestAlbumGenerated({ spotifyAlbumId });
     return unwrapResponse(response);
   };
 
   const ingestSpotifyTrack = async (spotifyTrackId: string) => {
-    const response = await ingestTrackGenerated({ spotify_track_id: spotifyTrackId });
+    const response = await ingestTrackGenerated({ spotifyTrackId });
     return unwrapResponse(response);
   };
 
