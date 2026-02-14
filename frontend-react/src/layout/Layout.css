@@ -1,0 +1,131 @@
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header-root {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.header-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.header-brand {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.header-search {
+  flex: 1;
+}
+
+.header-search input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid #d1d5db;
+}
+
+.app-shell {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1rem;
+  gap: 1.5rem;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.app-sidebar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .app-sidebar {
+    display: block;
+  }
+}
+
+.sidebar-root {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-link {
+  text-align: left;
+  border-radius: 9999px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.sidebar-link.active {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+.sidebar-cta {
+  margin-top: 1.5rem;
+}
+
+.sidebar-cta-button {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #111827;
+  padding: 0.75rem;
+  background-color: #111827;
+  color: #f9fafb;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.player-shell {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  border-top: 1px solid #e5e7eb;
+  background-color: #ffffff;
+}
+
+.player-shell-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+

@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* Use class-based dark mode (toggle) instead of prefers-color-scheme */
+@custom-variant dark (&& :where(.dark, .dark *));
+
+/* Global theme – semantic tokens for light/dark and customization */
+:root {
+  --color-bg: 250 250 250;
+  --color-bg-elevated: 255 255 255;
+  --color-border: 229 231 235;
+  --color-text: 17 24 39;
+  --color-text-muted: 107 114 128;
+  --color-accent: 29 78 216;
+  --color-accent-hover: 30 64 175;
+  --color-accent-muted: 219 234 254;
+  --color-pill-bg: 243 232 255;
+  --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08);
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+}
+
+/* Dark theme – applied when user selects dark mode (data-theme="dark") */
+html.dark,
+[data-theme="dark"] {
+  --color-bg: 17 24 39;
+  --color-bg-elevated: 31 41 55;
+  --color-border: 75 85 99;
+  --color-text: 243 244 246;
+  --color-text-muted: 156 163 175;
+  --color-accent: 96 165 250;
+  --color-accent-hover: 147 197 253;
+  --color-accent-muted: 30 58 138;
+  --color-pill-bg: 55 48 163;
+  --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+}
+
+body {
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
+  font-family: ui-sans-serif, system-ui, sans-serif, "Segoe UI", Roboto, sans-serif;
+}
+
+@keyframes cookie-banner-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

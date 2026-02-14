@@ -1,0 +1,275 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { getTracks } from '@/api/generated/tracks/tracks';
+import { searchArtists, getArtists } from '@/api/generated/artists/artists';
+import { searchAlbums, getAlbums } from '@/api/generated/albums/albums';
+import { getStyleOverview } from '@/api/generated/discovery/discovery';
+import type { TrackListDto } from '@/api/models/trackListDto';
+import type { Artist } from '@/api/models/artist';
+import type { Album } from '@/api/models/album';
+import type { StyleOverviewDto } from '@/api/models/styleOverviewDto';
+import {
+  useSearchParamsState,
+  DEFAULT_FILTERS,
+  filtersEqual,
+} from '@/hooks/useSearchParamsState';
+import { SearchBar } from '@/components/SearchBar';
+import { FilterBar } from '@/components/FilterBar';
+import { TrackCard, ArtistCard, AlbumCard } from '@/components';
+import { Button } from '@/ui';
+
+const PAGE_SIZE = 20;
+
+export function SearchPage() {
+  const [searchParams] = useSearchParams();
+  const { filters, setFilters, toTracksParams } = useSearchParamsState();
+
+  const [draftFilters, setDraftFilters] = useState(filters);
+  const hasUnsavedChanges = useMemo(
+    () => !filtersEqual(draftFilters, filters),
+    [draftFilters, filters]
+  );
+  const hasActiveFiltersDraft = useMemo(
+    () =>
+      draftFilters.style !== '' ||
+      draftFilters.subStyle !== '' ||
+      draftFilters.source !== '' ||
+      draftFilters.vocals !== '' ||
+      draftFilters.confirmed ||
+      draftFilters.tempoEnabled ||
+      draftFilters.minBpm != null ||
+      draftFilters.maxBpm != null ||
+      draftFilters.minDuration != null ||
+      draftFilters.maxDuration != null,
+    [draftFilters]
+  );
+  const applyDraft = useCallback(() => {
+    setFilters({ ...draftFilters, offset: 0 });
+  }, [draftFilters, setFilters]);
+
+  const [styleOverview, setStyleOverview] = useState<StyleOverviewDto[] | null>(null);
+  const [tracks, setTracks] = useState<TrackListDto[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Sync draft from URL when applied filters change (e.g. after Apply or browser back)
+  useEffect(() => {
+    setDraftFilters(filters);
+  }, [filters]);
+
+  // Sync filters from URL on mount / when search params change
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    if (q !== filters.q) setFilters({ q, offset: 0 });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
+
+  // Fetch style overview for filter dropdowns
+  useEffect(() => {
+    getStyleOverview()
+      .then((data) => setStyleOverview(data ?? null))
+      .catch(() => setStyleOverview([]));
+  }, []);
+
+  // Fetch results based on searchType and filters
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    if (filters.searchType !== 'tracks') setTracks([]);
+    if (filters.searchType !== 'artists') setArtists([]);
+    if (filters.searchType !== 'albums') setAlbums([]);
+
+    const limit = filters.limit;
+    const offset = filters.offset;
+
+    if (filters.searchType === 'tracks') {
+      getTracks(toTracksParams)
+        .then((data) => {
+          const items = data?.items ?? [];
+          const totalCount = data?.total ?? items.length;
+          setTracks(offset === 0 ? items : (prev) => [...prev, ...items]);
+          setTotal(totalCount);
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Kunde inte hämta låtar');
+          setTracks([]);
+          setTotal(0);
+        })
+        .finally(() => setLoading(false));
+    } else if (filters.searchType === 'artists') {
+      const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
+      const promise = filters.q
+        ? searchArtists({ q: filters.q, limit, offset })
+        : getArtists(params);
+      promise
+        .then((data) => {
+          const items = data?.items ?? [];
+          const totalCount = data?.total ?? items.length;
+          setArtists(offset === 0 ? items : (prev) => [...prev, ...items]);
+          setTotal(totalCount);
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Kunde inte hämta artister');
+          setArtists([]);
+          setTotal(0);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
+      const promise = filters.q
+        ? searchAlbums({ q: filters.q, limit, offset })
+        : getAlbums(params);
+      promise
+        .then((data) => {
+          const items = data?.items ?? [];
+          const totalCount = data?.total ?? items.length;
+          setAlbums(offset === 0 ? items : (prev) => [...prev, ...items]);
+          setTotal(totalCount);
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Kunde inte hämta album');
+          setAlbums([]);
+          setTotal(0);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [
+    filters.searchType,
+    filters.q,
+    filters.offset,
+    filters.limit,
+    filters.style,
+    filters.subStyle,
+    filters.source,
+    filters.vocals,
+    filters.confirmed,
+    filters.tempoEnabled,
+    filters.minBpm,
+    filters.maxBpm,
+    filters.minDuration,
+    filters.maxDuration,
+    toTracksParams,
+  ]);
+
+  const loadMore = () => {
+    setFilters({ offset: filters.offset + PAGE_SIZE });
+  };
+
+  const hasMore =
+    (filters.searchType === 'tracks' && tracks.length < total) ||
+    (filters.searchType === 'artists' && artists.length < total) ||
+    (filters.searchType === 'albums' && albums.length < total);
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
+        Bibliotek & Sök
+      </h1>
+
+      <SearchBar
+        query={draftFilters.q}
+        searchType={draftFilters.searchType}
+        onQueryChange={(q) => setDraftFilters((prev) => ({ ...prev, q, offset: 0 }))}
+        onSearchTypeChange={(t) =>
+          setDraftFilters((prev) => ({ ...prev, searchType: t, offset: 0 }))
+        }
+        onSearch={applyDraft}
+      />
+
+      <FilterBar
+        filters={draftFilters}
+        setFilters={(u) => setDraftFilters((prev) => ({ ...prev, ...u }))}
+        searchType={draftFilters.searchType}
+        styleOverview={styleOverview}
+        onClearFilters={() =>
+          setDraftFilters((prev) => ({
+            ...DEFAULT_FILTERS,
+            q: prev.q,
+            limit: prev.limit,
+            searchType: prev.searchType,
+            offset: 0,
+          }))
+        }
+        hasActiveFilters={hasActiveFiltersDraft}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onApply={applyDraft}
+      />
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+          Resultat ({total.toLocaleString('sv-SE')})
+        </h2>
+      </div>
+
+      {error && (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+
+      {loading && tracks.length === 0 && artists.length === 0 && albums.length === 0 && (
+        <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>
+      )}
+
+      {!loading && filters.searchType === 'tracks' && (
+        <ul className="space-y-3">
+          {tracks.map((track) => (
+            <li key={track.id ?? track.title ?? Math.random()}>
+              <TrackCard
+                track={track}
+                onApplyStyleFilter={(style) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    style,
+                    subStyle: '',
+                    offset: 0,
+                  }))
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!loading && filters.searchType === 'artists' && (
+        <ul className="space-y-3">
+          {artists.map((artist) => (
+            <li key={artist.id ?? artist.name ?? Math.random()}>
+              <ArtistCard artist={artist} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!loading && filters.searchType === 'albums' && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          {albums.map((album) => (
+            <li key={album.id ?? album.title ?? Math.random()} className="list-none">
+              <AlbumCard album={album} />
+            </li>
+          ))}
+        </div>
+      )}
+
+      {!loading &&
+        tracks.length === 0 &&
+        artists.length === 0 &&
+        albums.length === 0 &&
+        !error && (
+          <p className="text-[rgb(var(--color-text-muted))]">
+            Inga resultat. Prova att ändra sökord eller filter.
+          </p>
+        )}
+
+      {hasMore && !loading && (
+        <div className="flex justify-center py-4">
+          <Button variant="secondary" onClick={loadMore}>
+            Ladda fler
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
