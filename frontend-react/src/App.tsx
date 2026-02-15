@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { ConsentProvider } from '@/consent/ConsentContext';
 import { CookieBanner } from '@/consent/CookieBanner';
@@ -15,28 +15,77 @@ import { SearchPage } from '@/pages/SearchPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { TrackPage } from '@/pages/TrackPage';
 
+import { AuthProvider } from '@/auth/AuthContext';
+import { ProtectedRoute } from '@/auth/ProtectedRoute';
+import { AdminLayout } from '@/admin/layout/AdminLayout';
+import { AdminLoginPage } from '@/admin/pages/AdminLoginPage';
+import { AdminLibraryPage } from '@/admin/pages/AdminLibraryPage';
+import { AdminArtistsPage } from '@/admin/pages/AdminArtistsPage';
+import { AdminAlbumsPage } from '@/admin/pages/AdminAlbumsPage';
+import { AdminStatsPage } from '@/admin/pages/AdminStatsPage';
+import { AdminKeywordsPage } from '@/admin/pages/AdminKeywordsPage';
+import { AdminIngestPage } from '@/admin/pages/AdminIngestPage';
+import { AdminPendingPage } from '@/admin/pages/AdminPendingPage';
+import { AdminDuplicatesPage } from '@/admin/pages/AdminDuplicatesPage';
+import { AdminMaintenancePage } from '@/admin/pages/AdminMaintenancePage';
+
 export function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <ConsentProvider>
-          <PlayerProvider>
-            <Layout>
-              <CookieBanner />
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/classify" element={<ClassifyPage />} />
-                <Route path="/artist/:id" element={<ArtistPage />} />
-                <Route path="/album/:id" element={<AlbumPage />} />
-                <Route path="/track/:id" element={<TrackPage />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-              </Routes>
-            </Layout>
-          </PlayerProvider>
-        </ConsentProvider>
+        <AuthProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route
+              path="/*"
+              element={
+                <ConsentProvider>
+                  <PlayerProvider>
+                    <Layout>
+                      <CookieBanner />
+                      <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/search" element={<SearchPage />} />
+                        <Route path="/classify" element={<ClassifyPage />} />
+                        <Route path="/artist/:id" element={<ArtistPage />} />
+                        <Route path="/album/:id" element={<AlbumPage />} />
+                        <Route path="/track/:id" element={<TrackPage />} />
+                        <Route path="/about" element={<AboutPage />} />
+                        <Route path="/terms" element={<TermsPage />} />
+                        <Route path="/privacy" element={<PrivacyPage />} />
+                      </Routes>
+                    </Layout>
+                  </PlayerProvider>
+                </ConsentProvider>
+              }
+            />
+
+            {/* Admin routes */}
+            <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/admin" element={<Navigate to="/admin/library" replace />} />
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout>
+                    <Routes>
+                      <Route path="library" element={<AdminLibraryPage />} />
+                      <Route path="artists" element={<AdminArtistsPage />} />
+                      <Route path="albums" element={<AdminAlbumsPage />} />
+                      <Route path="stats" element={<AdminStatsPage />} />
+                      <Route path="keywords" element={<AdminKeywordsPage />} />
+                      <Route path="ingest" element={<AdminIngestPage />} />
+                      <Route path="pending" element={<AdminPendingPage />} />
+                      <Route path="duplicates" element={<AdminDuplicatesPage />} />
+                      <Route path="maintenance" element={<AdminMaintenancePage />} />
+                      <Route path="*" element={<Navigate to="/admin/library" replace />} />
+                    </Routes>
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

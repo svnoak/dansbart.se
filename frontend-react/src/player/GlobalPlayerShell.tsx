@@ -21,6 +21,7 @@ import {
   QueueListIcon,
   SpotifyIcon,
   YouTubeIcon,
+  ChevronDownIcon,
 } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { formatDurationMs } from '@/utils/formatDuration';
@@ -50,6 +51,9 @@ export function GlobalPlayerShell() {
   const [playbackPositionMs, setPlaybackPositionMs] = useState(0);
   const [playbackDurationMs, setPlaybackDurationMs] = useState(0);
   const [ytPlayerReady, setYtPlayerReady] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 768
+  );
   const hasYt = hasYouTube(currentTrack);
   const hasSpot = hasSpotify(currentTrack);
   const embedUrl = getEmbedUrlForSource(currentTrack, activeSource);
@@ -82,6 +86,20 @@ export function GlobalPlayerShell() {
   useEffect(() => {
     if (currentTrack && embedUrl) setExpanded(true);
   }, [currentTrack?.id, embedUrl]);
+
+  // Track window width for responsive behavior
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Auto-close mobile overlay when resizing to desktop
+  useEffect(() => {
+    if (windowWidth >= 768 && expanded) {
+      setExpanded(false);
+    }
+  }, [windowWidth, expanded]);
 
   // Load YouTube IFrame API and create player only when consent is granted and source is YouTube
   useEffect(() => {
@@ -223,21 +241,61 @@ export function GlobalPlayerShell() {
   };
   const isSpotifyActive = activeSource === 'spotify';
   const fullMode = expanded;
+  const controlsDisabled = isSpotifyActive; // Spotify embed doesn't expose playback API
 
   // Match Vue: only render player when there is a current track
   if (!currentTrack) return null;
 
+  // Video embed positioning based on screen size and expanded state
+  const isMobile = windowWidth < 768;
+  const getEmbedStyle = (): React.CSSProperties => {
+    if (isMobile && expanded) {
+      // Mobile expanded: centered in overlay
+      return {
+        position: 'fixed',
+        top: '120px',
+        left: '1.5rem',
+        right: '1.5rem',
+        width: 'auto',
+        height: 'auto',
+        aspectRatio: isYouTubeEmbed ? '16/9' : 'auto',
+        zIndex: 101,
+      };
+    } else if (!isMobile) {
+      // Desktop: fixed bottom-left
+      return {
+        position: 'fixed',
+        bottom: '112px',
+        left: '16px',
+        width: isYouTubeEmbed ? '400px' : '320px',
+        height: isYouTubeEmbed ? '225px' : '82px',
+        zIndex: 120,
+      };
+    } else {
+      // Mobile collapsed: small bottom-right
+      return {
+        position: 'fixed',
+        bottom: '96px',
+        right: '16px',
+        width: isYouTubeEmbed ? '160px' : '300px',
+        height: isYouTubeEmbed ? '90px' : '82px',
+        zIndex: 30,
+      };
+    }
+  };
+
   return (
     <>
-      {/* Embed: YouTube IFrame API when YouTube; Spotify iframe when Spotify. Match Vue positioning. */}
-      {embedUrl && (isYouTubeEmbed || expanded) && (
+      {/* Embed: YouTube IFrame API when YouTube; Spotify iframe when Spotify */}
+      {embedUrl && (isYouTubeEmbed || !isMobile || expanded) && (
         <div
-          className={`fixed bottom-24 right-4 z-30 w-80 overflow-hidden rounded-lg border border-[rgb(var(--color-border))] bg-black shadow-xl transition-all duration-300 ease-in-out ${
-            isYouTubeEmbed
-              ? 'h-48 ' + (isPlaying ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')
-              : 'h-[82px]'
+          style={getEmbedStyle()}
+          className={`overflow-hidden rounded-lg border border-[rgb(var(--color-border))] bg-black shadow-xl transition-all duration-300 ease-in-out ${
+            isYouTubeEmbed && !isPlaying && !expanded
+              ? 'opacity-0 pointer-events-none'
+              : 'opacity-100 pointer-events-auto'
           }`}
-          aria-hidden={isYouTubeEmbed && !isPlaying}
+          aria-hidden={isYouTubeEmbed && !isPlaying && !expanded}
         >
           {isYouTubeEmbed ? (
             <div id={YT_PLAYER_CONTAINER_ID} className="h-full w-full" />
@@ -254,9 +312,324 @@ export function GlobalPlayerShell() {
         </div>
       )}
 
+      {/* Mobile full-screen overlay - shown when expanded on mobile */}
+      {expanded && isMobile && (
+        <div className="fixed inset-0 bg-[rgb(var(--color-bg))] z-[100] flex flex-col overflow-y-auto transition-transform duration-300 ease-in-out">
+          {/* Header bar */}
+          <div className="flex items-center justify-between px-6 pt-12 pb-4 shrink-0">
+            <button
+              onClick={() => setExpanded(false)}
+              aria-label="Stäng spelare"
+              className="text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))] transition-colors"
+            >
+              <ChevronDownIcon className="w-8 h-8" />
+            </button>
+            {(hasYt || hasSpot) && (
+              <div className="flex gap-2 bg-[rgb(var(--color-border))]/30 rounded-lg p-1">
+                {hasYt && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSource('youtube')}
+                    className={`p-2 rounded transition-all ${
+                      activeSource === 'youtube'
+                        ? 'bg-red-50 text-red-600'
+                        : 'bg-transparent text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
+                    }`}
+                    aria-label="YouTube som källa"
+                  >
+                    <YouTubeIcon className="w-5 h-5" />
+                  </button>
+                )}
+                {hasSpot && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSource('spotify')}
+                    className={`p-2 rounded transition-all ${
+                      activeSource === 'spotify'
+                        ? 'bg-green-50 text-green-600'
+                        : 'bg-transparent text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
+                    }`}
+                    aria-label="Spotify som källa"
+                  >
+                    <SpotifyIcon className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Content area - scrollable */}
+          <div className="flex-1 flex flex-col px-6 pb-10 min-h-0 overflow-y-auto">
+            {/* Video/Spotify embed placeholder (actual embed positioned fixed over this) */}
+            {embedUrl && (
+              <div
+                className="w-full mb-6 rounded-lg bg-[rgb(var(--color-border))]/20"
+                style={{ aspectRatio: isYouTubeEmbed ? '16/9' : '300/82' }}
+              />
+            )}
+
+            {/* Track info */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-extrabold text-[rgb(var(--color-text))] mb-2">
+                {currentTrack.title}
+              </h2>
+              <p className="text-lg text-[rgb(var(--color-accent))] font-bold mb-1">
+                {currentTrack.artistName ?? 'Okänd artist'}
+              </p>
+              {currentTrack.danceStyle && (
+                <p className="text-sm text-[rgb(var(--color-text-muted))]">
+                  {currentTrack.danceStyle}
+                  {currentTrack.subStyle && ` · ${currentTrack.subStyle}`}
+                </p>
+              )}
+            </div>
+
+            {/* Spacer */}
+            <div className="flex-1 min-h-[20px]" />
+
+            {/* Spotify controls message */}
+            {controlsDisabled && (
+              <div className="mb-4 px-4 py-2 rounded-lg bg-[rgb(var(--color-border))]/30 text-center">
+                <p className="text-sm text-[rgb(var(--color-text-muted))]">
+                  Använd Spotify-spelaren ovan för att kontrollera uppspelning
+                </p>
+              </div>
+            )}
+
+            {/* Progress bar */}
+            <div className="mb-2 shrink-0">
+              <div
+                ref={progressBarRef}
+                className={`relative h-2 w-full rounded-full bg-[rgb(var(--color-border))] ${
+                  isYouTubeEmbed && durationMs > 0 && !controlsDisabled ? 'cursor-pointer' : ''
+                }`}
+                onClick={(e) => {
+                  if (controlsDisabled) return;
+                  e.stopPropagation();
+                  handleSeek(e.clientX);
+                }}
+                onPointerDown={(e) => {
+                  if (controlsDisabled || !isYouTubeEmbed || durationMs <= 0) return;
+                  e.preventDefault();
+                  isDraggingRef.current = true;
+                  const target = e.currentTarget;
+                  const pointerId = e.pointerId;
+                  target.setPointerCapture(pointerId);
+                  handleSeek(e.clientX);
+                  const onMove = (moveEvent: PointerEvent) => handleSeek(moveEvent.clientX);
+                  const onUp = () => {
+                    isDraggingRef.current = false;
+                    target.releasePointerCapture(pointerId);
+                    document.removeEventListener('pointermove', onMove);
+                    document.removeEventListener('pointerup', onUp);
+                  };
+                  document.addEventListener('pointermove', onMove);
+                  document.addEventListener('pointerup', onUp);
+                }}
+                role="slider"
+                aria-label="Spola i låten"
+                aria-valuemin={0}
+                aria-valuemax={durationMs}
+                aria-valuenow={Math.round(playbackPositionMs)}
+                aria-valuetext={`${formatDurationMs(Math.round(playbackPositionMs))} av ${durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}`}
+              >
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))] pointer-events-none"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Time display */}
+            <div className="flex justify-between text-xs mb-8 text-[rgb(var(--color-text-muted))] font-mono">
+              <span>{formatDurationMs(Math.round(playbackPositionMs))}</span>
+              <span>{durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}</span>
+            </div>
+
+            {/* Controls - all visible */}
+            <div className="flex justify-center items-center gap-6 mb-8">
+              <IconButton
+                aria-label={isShuffled ? 'Shuffle påslaget' : 'Shuffle avslaget'}
+                aria-pressed={isShuffled}
+                onClick={() => setIsShuffled((s) => !s)}
+                className={`w-10 h-10 flex items-center justify-center transition-colors ${
+                  isShuffled
+                    ? 'text-[rgb(var(--color-accent))]'
+                    : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+                }`}
+              >
+                <ShuffleIcon className="w-6 h-6" />
+              </IconButton>
+
+              <button
+                type="button"
+                onClick={handleJumpBack}
+                disabled={controlsDisabled}
+                aria-label={`Spola tillbaka ${jumpLabel}`}
+                className={`group relative w-12 h-12 flex items-center justify-center transition-colors ${
+                  controlsDisabled
+                    ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                    : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+                }`}
+              >
+                <JumpBackIcon className="w-8 h-8" />
+                <span
+                  className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[10px] font-bold select-none pointer-events-none ${
+                    controlsDisabled
+                      ? 'text-[rgb(var(--color-border))]'
+                      : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                  }`}
+                  aria-hidden
+                >
+                  {JUMP_SECONDS}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={prev}
+                disabled={controlsDisabled}
+                aria-label="Föregående spår"
+                className={`transition-colors ${
+                  controlsDisabled
+                    ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                    : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+                }`}
+              >
+                <SkipPreviousIcon className="w-8 h-8" />
+              </button>
+
+              <button
+                type="button"
+                onClick={togglePlayPause}
+                disabled={controlsDisabled}
+                aria-label={
+                  controlsDisabled
+                    ? 'Använd Spotify-spelaren för att kontrollera uppspelning'
+                    : isPlaying
+                      ? 'Pausa'
+                      : 'Spela'
+                }
+                className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 w-20 h-20 ${
+                  controlsDisabled
+                    ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
+                    : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
+                }`}
+              >
+                {isPlaying ? (
+                  <PauseIcon className="w-10 h-10" aria-hidden />
+                ) : (
+                  <PlayIcon className="w-10 h-10 ml-0.5" aria-hidden />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={next}
+                disabled={controlsDisabled}
+                aria-label="Nästa spår"
+                className={`transition-colors ${
+                  controlsDisabled
+                    ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                    : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+                }`}
+              >
+                <SkipNextIcon className="w-8 h-8" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleJumpForward}
+                disabled={controlsDisabled}
+                aria-label={`Spola framåt ${jumpLabel}`}
+                className={`group relative w-12 h-12 flex items-center justify-center transition-colors ${
+                  controlsDisabled
+                    ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                    : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+                }`}
+              >
+                <JumpForwardIcon className="w-8 h-8" />
+                <span
+                  className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[10px] font-bold select-none pointer-events-none ${
+                    controlsDisabled
+                      ? 'text-[rgb(var(--color-border))]'
+                      : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                  }`}
+                  aria-hidden
+                >
+                  {JUMP_SECONDS}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                aria-label={
+                  repeatMode === 'one'
+                    ? 'Repetera en låt'
+                    : repeatMode === 'all'
+                      ? 'Repetera alla'
+                      : 'Repetera av'
+                }
+                aria-pressed={repeatMode !== 'none'}
+                onClick={() => setRepeatMode((m) => (m === 'none' ? 'all' : m === 'all' ? 'one' : 'none'))}
+                className={`relative w-10 h-10 flex items-center justify-center transition-colors ${
+                  repeatMode !== 'none'
+                    ? 'text-[rgb(var(--color-accent))]'
+                    : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+                }`}
+              >
+                <RepeatIcon className="w-6 h-6" />
+                {repeatMode === 'one' && (
+                  <span
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-[rgb(var(--color-accent))]"
+                    aria-hidden
+                  >
+                    1
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Queue if non-empty */}
+            {queue.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-[rgb(var(--color-text-muted))]">
+                    Kö ({queue.length})
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearQueue();
+                    }}
+                    className="text-xs text-[rgb(var(--color-accent))] hover:underline"
+                  >
+                    Rensa kö
+                  </button>
+                </div>
+                <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+                  {queue.map((t, i) => (
+                    <QueueItem
+                      key={t.id ?? i}
+                      track={t}
+                      isCurrent={currentTrack?.id === t.id}
+                      onPlay={() => playFromQueue(i)}
+                      onRemove={() => removeFromQueue(i)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Fixed bottom bar: progress on top, then 3-column row (Vue PlayerDockedView) */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-[120] flex flex-col border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"
+        className={`fixed bottom-0 left-0 right-0 z-[120] flex flex-col border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out ${
+          expanded && isMobile ? 'translate-y-full' : 'translate-y-0'
+        }`}
         aria-label="Global spelare"
       >
         {/* Progress bar on top - full width (Vue: progress-bar above h-20 row) */}
@@ -268,13 +641,14 @@ export function GlobalPlayerShell() {
         >
           <div
             ref={progressBarRef}
-            className={`relative h-1.5 w-full rounded-full bg-[rgb(var(--color-border))] ${isYouTubeEmbed && durationMs > 0 ? 'cursor-pointer' : ''}`}
+            className={`relative h-1.5 w-full rounded-full bg-[rgb(var(--color-border))] ${isYouTubeEmbed && durationMs > 0 && !controlsDisabled ? 'cursor-pointer' : ''}`}
             onClick={(e) => {
+              if (controlsDisabled) return;
               e.stopPropagation();
               handleSeek(e.clientX);
             }}
             onPointerDown={(e) => {
-              if (!isYouTubeEmbed || durationMs <= 0) return;
+              if (controlsDisabled || !isYouTubeEmbed || durationMs <= 0) return;
               e.preventDefault();
               isDraggingRef.current = true;
               const target = e.currentTarget;
@@ -314,18 +688,18 @@ export function GlobalPlayerShell() {
 
         {/* Main row: left (art + title) | center (controls) | right (source) - Vue h-20 */}
         <div
-          className="flex h-20 items-center justify-between px-4 py-3 cursor-pointer md:cursor-default"
-          onClick={(e) => !(e.target as HTMLElement).closest('button') && currentTrack && setExpanded((e) => !e)}
+          className={`flex h-20 items-center justify-between px-4 py-3 ${isMobile ? 'cursor-pointer' : ''}`}
+          onClick={(e) => isMobile && !(e.target as HTMLElement).closest('button') && currentTrack && setExpanded((e) => !e)}
           onKeyDown={(e) => {
-            if (currentTrack && (e.key === 'Enter' || e.key === ' ')) {
+            if (isMobile && currentTrack && (e.key === 'Enter' || e.key === ' ')) {
               e.preventDefault();
               setExpanded((e) => !e);
             }
           }}
-          role="button"
-          tabIndex={currentTrack ? 0 : -1}
-          aria-expanded={expanded}
-          aria-label={currentTrack ? 'Öppna spelaren' : undefined}
+          role={isMobile ? "button" : undefined}
+          tabIndex={isMobile && currentTrack ? 0 : -1}
+          aria-expanded={isMobile ? expanded : undefined}
+          aria-label={isMobile && currentTrack ? 'Öppna spelaren' : undefined}
         >
           {/* Left: art + title + time (Vue w-2/3 md:w-1/3) */}
           <div className="flex min-w-0 w-2/3 md:w-1/3 items-center gap-3">
@@ -349,11 +723,17 @@ export function GlobalPlayerShell() {
 
           {/* Center: controls (Vue order: shuffle, jump back, prev, play, next, jump forward, repeat, queue) */}
           <div
-            className="flex items-center justify-end md:justify-center w-1/3 md:w-1/3 gap-2 md:gap-4"
+            className="flex flex-col items-center justify-end md:justify-center w-1/3 md:w-1/3 gap-1"
             onClick={(e) => e.stopPropagation()}
             role="group"
             aria-label="Spelarkontroller"
           >
+            {controlsDisabled && (
+              <p className="hidden md:block text-[9px] text-[rgb(var(--color-text-muted))] text-center mb-1">
+                Använd Spotify-spelaren
+              </p>
+            )}
+            <div className="flex items-center gap-2 md:gap-4">
             {/* Shuffle - hidden on small, visible md+ (Vue fullMode ? flex : hidden md:flex) */}
             <IconButton
               aria-label={isShuffled ? 'Shuffle påslaget, klicka för att stänga av' : 'Shuffle avslaget, klicka för att slå på'}
@@ -367,12 +747,24 @@ export function GlobalPlayerShell() {
             <button
               type="button"
               onClick={handleJumpBack}
+              disabled={controlsDisabled}
               aria-label={`Spola tillbaka ${jumpLabel}`}
               title={`Rewind ${jumpLabel}`}
-              className={`group relative w-10 h-10 flex items-center justify-center text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] transition-colors ${fullMode ? 'flex' : 'hidden md:flex'}`}
+              className={`group relative w-10 h-10 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${
+                controlsDisabled
+                  ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                  : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              }`}
             >
               <JumpBackIcon className="w-6 h-6" />
-              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[8px] font-bold select-none pointer-events-none text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]" aria-hidden>
+              <span
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[8px] font-bold select-none pointer-events-none ${
+                  controlsDisabled
+                    ? 'text-[rgb(var(--color-border))]'
+                    : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                }`}
+                aria-hidden
+              >
                 {JUMP_SECONDS}
               </span>
             </button>
@@ -380,19 +772,41 @@ export function GlobalPlayerShell() {
             <button
               type="button"
               onClick={prev}
+              disabled={controlsDisabled}
               aria-label="Föregående spår"
               title="Previous Track"
-              className="text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))] transition-colors"
+              className={`transition-colors ${
+                controlsDisabled
+                  ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                  : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+              }`}
             >
               <SkipPreviousIcon className="w-6 h-6" />
             </button>
-            {/* Main Play - Vue: rounded-full shadow-lg active:scale-95, green when Spotify */}
+            {/* Main Play - consistent color, disabled when Spotify active */}
             <button
               type="button"
               onClick={togglePlayPause}
-              aria-label={isPlaying ? 'Pausa' : 'Spela'}
-              title={isPlaying ? 'Pause' : 'Play'}
-              className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${isSpotifyActive ? 'bg-[#1DB954] hover:bg-[#1ed760]' : 'bg-[rgb(var(--color-accent))] hover:opacity-90'}`}
+              disabled={controlsDisabled}
+              aria-label={
+                controlsDisabled
+                  ? 'Använd Spotify-spelaren för att kontrollera uppspelning'
+                  : isPlaying
+                    ? 'Pausa'
+                    : 'Spela'
+              }
+              title={
+                controlsDisabled
+                  ? 'Använd Spotify-spelaren för att kontrollera uppspelning'
+                  : isPlaying
+                    ? 'Pause'
+                    : 'Play'
+              }
+              className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
+                controlsDisabled
+                  ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
+                  : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
+              }`}
             >
               {isPlaying ? (
                 <PauseIcon className={fullMode ? 'w-8 h-8' : 'w-6 h-6'} aria-hidden />
@@ -404,9 +818,14 @@ export function GlobalPlayerShell() {
             <button
               type="button"
               onClick={next}
+              disabled={controlsDisabled}
               aria-label="Nästa spår"
               title="Next Track"
-              className="text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))] transition-colors"
+              className={`transition-colors ${
+                controlsDisabled
+                  ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                  : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+              }`}
             >
               <SkipNextIcon className="w-6 h-6" />
             </button>
@@ -414,12 +833,24 @@ export function GlobalPlayerShell() {
             <button
               type="button"
               onClick={handleJumpForward}
+              disabled={controlsDisabled}
               aria-label={`Spola framåt ${jumpLabel}`}
               title={`Forward ${jumpLabel}`}
-              className={`group relative w-10 h-10 flex items-center justify-center text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] transition-colors ${fullMode ? 'flex' : 'hidden md:flex'}`}
+              className={`group relative w-10 h-10 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${
+                controlsDisabled
+                  ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
+                  : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              }`}
             >
               <JumpForwardIcon className="w-6 h-6" />
-              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[8px] font-bold select-none pointer-events-none text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]" aria-hidden>
+              <span
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[8px] font-bold select-none pointer-events-none ${
+                  controlsDisabled
+                    ? 'text-[rgb(var(--color-border))]'
+                    : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                }`}
+                aria-hidden
+              >
                 {JUMP_SECONDS}
               </span>
             </button>
@@ -455,6 +886,7 @@ export function GlobalPlayerShell() {
             >
               <QueueListIcon className="w-5 h-5" />
             </button>
+            </div>
           </div>
 
           {/* Right: source switcher (Vue hidden md:flex w-1/3) */}

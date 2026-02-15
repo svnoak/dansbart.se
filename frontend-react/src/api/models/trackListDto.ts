@@ -12,11 +12,11 @@ export interface TrackListDto {
   durationMs?: number;
   danceStyle?: string;
   subStyle?: string;
-  /** When listing with a style filter: the style that matched (may be secondary). Set when track matched on a non-primary style. */
-  matchedStyle?: string;
   effectiveBpm?: number;
   confidence?: number;
   hasVocals?: boolean;
   artistName?: string;
   playbackLinks?: PlaybackLinkDto[];
+  playbackPlatform?: string;
+  playbackLink?: string;
 }
