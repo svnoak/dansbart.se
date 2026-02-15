@@ -16,11 +16,11 @@ export function Pill({
 }: PillProps) {
   const activeClass =
     variant === 'green' && active
-      ? 'bg-green-600 text-white dark:bg-green-500'
+      ? 'bg-green-200 text-green-800 dark:bg-green-900/50 dark:text-green-200'
       : variant === 'red' && active
-        ? 'bg-red-600 text-white dark:bg-red-500'
+        ? 'bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-200'
         : active
-          ? 'bg-[rgb(var(--color-accent))] text-white'
+          ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] dark:bg-[rgb(var(--color-accent-muted))]/60'
           : 'bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]';
   return (
     <button

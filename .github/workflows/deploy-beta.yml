@@ -48,8 +48,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service == 'backend' && '.' || './frontend' }}
-          file: ./${{ matrix.service }}/${{ matrix.service == 'backend' && 'Dockerfile.api' || 'Dockerfile' }}
+          context: ${{ matrix.service == 'backend' && '.' || './frontend-react' }}
+          file: ${{ matrix.service == 'backend' && './backend/Dockerfile.api' || './frontend-react/Dockerfile' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -13,7 +13,7 @@
   --color-accent: 29 78 216;
   --color-accent-hover: 30 64 175;
   --color-accent-muted: 219 234 254;
-  --color-pill-bg: 243 232 255;
+  --color-pill-bg: 238 242 255;
   --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08);
   --radius: 0.5rem;
   --radius-lg: 0.75rem;
@@ -31,7 +31,7 @@ html.dark,
   --color-accent: 96 165 250;
   --color-accent-hover: 147 197 253;
   --color-accent-muted: 30 58 138;
-  --color-pill-bg: 55 48 163;
+  --color-pill-bg: 100 90 180;
   --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
 }
 
@@ -39,6 +39,12 @@ body {
   background-color: rgb(var(--color-bg));
   color: rgb(var(--color-text));
   font-family: ui-sans-serif, system-ui, sans-serif, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Buttons and clickable elements show pointer cursor */
+button,
+[role="button"] {
+  cursor: pointer;
 }
 
 @keyframes cookie-banner-enter {

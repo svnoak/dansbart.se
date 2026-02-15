@@ -61,7 +61,7 @@ export function Sidebar() {
           </svg>
         }
       >
-        Bibliotek & Sök
+        Sök
       </NavLink>
       <NavLink
         to="/"
@@ -72,29 +72,7 @@ export function Sidebar() {
           </svg>
         }
       >
-        Folkmusikkarta
-      </NavLink>
-      <NavLink
-        to="/search"
-        active={false}
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-            <path d="M2 4.5A2.5 2.5 0 014.5 2h11A2.5 2.5 0 0118 4.5v11a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 012 15.5v-11zM4.5 4a.5.5 0 00-.5.5v11c0 .276.224.5.5.5h11a.5.5 0 00.5-.5v-11a.5.5 0 00-.5-.5h-11zM8 7a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zM8 11a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zM8 15a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-          </svg>
-        }
-      >
-        Spellistor
-      </NavLink>
-      <NavLink
-        to="/search"
-        active={false}
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-            <path fillRule="evenodd" d="M8.157 2.175a1.5 1.5 0 00-1.147 0l-4.84 2.02a1.5 1.5 0 00-.657.657l-2.02 4.84a1.5 1.5 0 000 1.147l2.02 4.84a1.5 1.5 0 00.657.657l4.84 2.02a1.5 1.5 0 001.147 0l4.84-2.02a1.5 1.5 0 00.657-.657l2.02-4.84a1.5 1.5 0 000-1.147l-2.02-4.84a1.5 1.5 0 00-.657-.657l-4.84-2.02zM7.58 4.758a.75.75 0 01.575 0l3.02 1.262 1.262-3.02a.75.75 0 011.15 0l1.262 3.02 3.02 1.262a.75.75 0 010 1.15l-3.02 1.262-1.262 3.02a.75.75 0 01-1.15 0l-1.262-3.02-3.02-1.262a.75.75 0 010-1.15l3.02-1.262 1.262-3.02z" clipRule="evenodd" />
-          </svg>
-        }
-      >
-        Folk Map
+        Bibliotek
       </NavLink>
 
       <div className="mt-4">
@@ -141,37 +119,6 @@ export function Sidebar() {
             </NavLink>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-[rgb(var(--color-text-muted))]">
-          Community
-        </p>
-        <div className="flex flex-col gap-1">
-          <NavLink
-            to="/search"
-            active={false}
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                <path d="M9.25 13.25a.75.75 0 001.5 0V4.636l2.955 3.129a.75.75 0 001.09-1.03l-4.25-4.5a.75.75 0 00-1.09 0l-4.25 4.5a.75.75 0 101.09 1.03L9.25 4.636v8.614z" />
-                <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-              </svg>
-            }
-          >
-            My Studio
-          </NavLink>
-          <NavLink
-            to="/search"
-            active={false}
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                <path fillRule="evenodd" d="M4.5 2A2.5 2.5 0 002 4.5v3.879a2.5 2.5 0 00.732 1.767l7.5 7.5a2.5 2.5 0 003.536 0l3.878-3.878a2.5 2.5 0 000-3.536l-7.5-7.5A2.5 2.5 0 008.38 2H4.5zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-              </svg>
-            }
-          >
-            Placeholder
-          </NavLink>
         </div>
       </div>
 

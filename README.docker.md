@@ -1,5 +1,7 @@
 # Docker Deployment Guide
 
+The **frontend** service is the **React (Vite)** app in `frontend-react/`. The legacy Vue app is in `frontend/` and is not used by this compose file. If you see the Vue app after `docker compose up --build frontend`, run `docker compose build --no-cache frontend` then `docker compose up frontend`. Do not use `docker-compose.prod.yml` for local frontend (it uses a pre-built image that may be Vue).
+
 ## Development Mode
 
 Run with hot-reload and live editing:
@@ -81,7 +83,7 @@ The production frontend Dockerfile:
 - ✅ Minified JavaScript bundles
 - ✅ Tree-shaken Tailwind CSS (only used classes)
 - ✅ Optimized nginx:alpine base (~40MB)
-- ✅ Production Vue build (smaller, faster)
+- ✅ Production React (Vite) build (smaller, faster)
 
 ## Quick Commands
 

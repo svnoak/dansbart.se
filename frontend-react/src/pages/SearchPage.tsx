@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getTracks } from '@/api/generated/tracks/tracks';
 import { searchArtists, getArtists } from '@/api/generated/artists/artists';
@@ -16,7 +16,6 @@ import {
 import { SearchBar } from '@/components/SearchBar';
 import { FilterBar } from '@/components/FilterBar';
 import { TrackCard, ArtistCard, AlbumCard } from '@/components';
-import { Button } from '@/ui';
 
 const PAGE_SIZE = 20;
 
@@ -53,7 +52,10 @@ export function SearchPage() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
 
   // Sync draft from URL when applied filters change (e.g. after Apply or browser back)
   useEffect(() => {
@@ -75,7 +77,13 @@ export function SearchPage() {
 
   // Fetch results based on searchType and filters
   useEffect(() => {
-    setLoading(true);
+    const isLoadingMore = filters.offset > 0;
+    if (isLoadingMore) {
+      setLoadingMore(true);
+      isLoadingMoreRef.current = true;
+    } else {
+      setLoading(true);
+    }
     setError(null);
     if (filters.searchType !== 'tracks') setTracks([]);
     if (filters.searchType !== 'artists') setArtists([]);
@@ -97,7 +105,11 @@ export function SearchPage() {
           setTracks([]);
           setTotal(0);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          setLoading(false);
+          setLoadingMore(false);
+          isLoadingMoreRef.current = false;
+        });
     } else if (filters.searchType === 'artists') {
       const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
       const promise = filters.q
@@ -115,7 +127,11 @@ export function SearchPage() {
           setArtists([]);
           setTotal(0);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          setLoading(false);
+          setLoadingMore(false);
+          isLoadingMoreRef.current = false;
+        });
     } else {
       const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
       const promise = filters.q
@@ -133,7 +149,11 @@ export function SearchPage() {
           setAlbums([]);
           setTotal(0);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          setLoading(false);
+          setLoadingMore(false);
+          isLoadingMoreRef.current = false;
+        });
     }
   }, [
     filters.searchType,
@@ -153,14 +173,32 @@ export function SearchPage() {
     toTracksParams,
   ]);
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     setFilters({ offset: filters.offset + PAGE_SIZE });
-  };
+  }, [filters.offset, setFilters]);
 
   const hasMore =
     (filters.searchType === 'tracks' && tracks.length < total) ||
     (filters.searchType === 'artists' && artists.length < total) ||
     (filters.searchType === 'albums' && albums.length < total);
+
+  // Infinite scroll: observe sentinel element
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isLoadingMoreRef.current) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
 
   return (
     <div className="space-y-6">
@@ -263,11 +301,11 @@ export function SearchPage() {
           </p>
         )}
 
-      {hasMore && !loading && (
-        <div className="flex justify-center py-4">
-          <Button variant="secondary" onClick={loadMore}>
-            Ladda fler
-          </Button>
+      {hasMore && (
+        <div ref={sentinelRef} className="flex justify-center py-4">
+          {loadingMore && (
+            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
+          )}
         </div>
       )}
     </div>

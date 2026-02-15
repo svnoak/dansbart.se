@@ -11,6 +11,7 @@ import se.dansbart.dto.TrackListDto;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -116,6 +117,14 @@ public class TrackService {
         );
         List<UUID> ids = tracks.stream().map(Track::getId).toList();
         List<TrackListDto> content = trackJooqRepository.findTrackListDtosByIds(ids);
+        if (mainStyle != null && !mainStyle.isBlank()) {
+            Set<UUID> matchedOnSecondary = trackJooqRepository.findTrackIdsWithSecondaryStyle(ids, mainStyle);
+            for (TrackListDto dto : content) {
+                if (dto.getId() != null && matchedOnSecondary.contains(dto.getId())) {
+                    dto.setMatchedStyle(mainStyle);
+                }
+            }
+        }
         Pageable pageable = PageRequest.of(offset / limit, limit);
         return new PageImpl<>(content, pageable, total);
     }

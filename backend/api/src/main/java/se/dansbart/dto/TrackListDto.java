@@ -23,6 +23,8 @@ public class TrackListDto {
     // Primary classification
     private String danceStyle;
     private String subStyle;
+    /** When listing with a style filter: the style that matched (may be secondary). Omitted when not filtering by style or when primary matched. */
+    private String matchedStyle;
     private Integer effectiveBpm;
     private Float confidence;
     private Boolean hasVocals;
@@ -32,8 +34,4 @@ public class TrackListDto {
 
     // All working playback links (Spotify, YouTube, etc.) so UI can show both
     private List<PlaybackLinkDto> playbackLinks;
-
-    // First playback link (backward compatibility; primary source for play button)
-    private String playbackPlatform;
-    private String playbackLink;
 }

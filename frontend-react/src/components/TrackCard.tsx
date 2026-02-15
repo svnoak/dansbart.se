@@ -7,6 +7,7 @@ import {
   PauseIcon,
   PlayIcon,
   MoreVerticalIcon,
+  SparklesIcon,
   SpotifyIcon,
   YouTubeIcon,
 } from '@/icons';
@@ -23,8 +24,15 @@ export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isCurrent = currentTrack?.id === track.id;
 
-  const styleName = track.matchedStyle ?? track.danceStyle ?? track.subStyle ?? '';
-  const hasVocals = track.hasVocals === true;
+  const hasValidStyle =
+    typeof track.danceStyle === 'string' && track.danceStyle.length > 0;
+  const styleConfidence = track.confidence ?? 0;
+  const hasSubStyle =
+    !!track.subStyle && track.subStyle !== track.danceStyle;
+
+  const isHumanVerified = styleConfidence >= 1.0;
+  const isMlHigh = styleConfidence > 0.75 && !isHumanVerified;
+  const isMlLow = hasValidStyle && !isHumanVerified && !isMlHigh;
 
   return (
     <Card className="flex items-center gap-4 p-4 shadow-sm">
@@ -42,26 +50,95 @@ export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
       </button>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          {styleName && (
-            <span className="inline-flex rounded-full bg-[rgb(var(--color-accent))] px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-white">
-              <button
-                type="button"
-                onClick={() => onApplyStyleFilter?.(styleName)}
-                className="hover:underline"
-              >
-                {styleName}
-              </button>
+          {hasValidStyle ? (
+            <span className="flex items-center gap-1">
+              {/* Human verified: blue, no sparkles */}
+              {isHumanVerified && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
+                    className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                    title="Filtrera på huvudstil"
+                  >
+                    {track.danceStyle}
+                  </button>
+                  {hasSubStyle && (
+                    <>
+                      <span className="text-[10px] font-bold text-gray-300">›</span>
+                      <button
+                        type="button"
+                        onClick={() => onApplyStyleFilter?.(track.subStyle!)}
+                        className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                        title="Filtrera på understil"
+                      >
+                        {track.subStyle}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+              {/* ML high confidence: blue + sparkles on main */}
+              {isMlHigh && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
+                    className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                    title="Filtrera på huvudstil (AI-gissning)"
+                  >
+                    {track.danceStyle}
+                    <SparklesIcon className="h-3 w-3 text-blue-400" aria-hidden />
+                  </button>
+                  {hasSubStyle && (
+                    <>
+                      <span className="text-[10px] font-bold text-gray-300">›</span>
+                      <button
+                        type="button"
+                        onClick={() => onApplyStyleFilter?.(track.subStyle!)}
+                        className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                        title="Filtrera på understil (AI-gissning)"
+                      >
+                        {track.subStyle}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+              {/* ML low confidence: amber + sparkles on main */}
+              {isMlLow && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 transition-colors hover:border-amber-300 hover:bg-amber-100"
+                    title="Filtrera på huvudstil (Osäker)"
+                  >
+                    {track.danceStyle}
+                    <SparklesIcon className="h-3 w-3 text-amber-400" aria-hidden />
+                  </button>
+                  {hasSubStyle && (
+                    <>
+                      <span className="text-[10px] font-bold text-gray-300">›</span>
+                      <button
+                        type="button"
+                        onClick={() => onApplyStyleFilter?.(track.subStyle!)}
+                        className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 transition-colors hover:border-amber-300 hover:bg-amber-100"
+                        title="Filtrera på understil (Osäker)"
+                      >
+                        {track.subStyle}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
             </span>
-          )}
-          {hasVocals !== undefined && (
+          ) : (
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                hasVocals
-                  ? 'bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text-muted))]'
-                  : 'bg-green-600 text-white dark:bg-green-500'
-              }`}
+              className="inline-flex cursor-help items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600"
+              title="Kunde inte avgöra stil"
             >
-              {hasVocals ? 'Sång' : 'Instru'}
+              ❓ Okänd stil
             </span>
           )}
         </div>

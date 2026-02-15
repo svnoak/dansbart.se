@@ -37,8 +37,11 @@ services:
     ports:
       - "6379:6379"
 
+  # React (Vite) app – use frontend-react. (Legacy Vue app is in ./frontend.)
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
     ports:
       - "8080:80"
     depends_on:

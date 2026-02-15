@@ -14,6 +14,29 @@ export function getEmbedUrl(track: TrackListDto | null): string | null {
   return deepLinkToEmbedUrl(link);
 }
 
+export type PlaybackSource = 'youtube' | 'spotify';
+
+export function hasYouTube(track: TrackListDto | null): boolean {
+  return !!track?.playbackLinks?.some((l) => l.platform?.toUpperCase() === 'YOUTUBE');
+}
+
+export function hasSpotify(track: TrackListDto | null): boolean {
+  return !!track?.playbackLinks?.some((l) => l.platform?.toUpperCase() === 'SPOTIFY');
+}
+
+/** Embed URL for a specific source; null if that source is not available for the track. */
+export function getEmbedUrlForSource(
+  track: TrackListDto | null,
+  source: PlaybackSource
+): string | null {
+  if (!track?.playbackLinks?.length) return null;
+  const link =
+    source === 'youtube'
+      ? track.playbackLinks.find((l) => l.platform?.toUpperCase() === 'YOUTUBE')
+      : track.playbackLinks.find((l) => l.platform?.toUpperCase() === 'SPOTIFY');
+  return link ? deepLinkToEmbedUrl(link) : null;
+}
+
 /** YouTube video ID for the track's YouTube link, or null if none. Used by YouTube IFrame API. */
 export function getYouTubeVideoId(track: TrackListDto | null): string | null {
   if (!track?.playbackLinks?.length) return null;

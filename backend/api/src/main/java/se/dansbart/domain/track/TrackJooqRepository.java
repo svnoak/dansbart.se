@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.jooq.impl.DSL.coalesce;
@@ -169,9 +170,6 @@ public class TrackJooqRepository {
             List<PlaybackLinkDto> links = playbackByTrack.get(id);
             if (links != null && !links.isEmpty()) {
                 dto.setPlaybackLinks(links);
-                PlaybackLinkDto first = links.get(0);
-                dto.setPlaybackPlatform(first.getPlatform());
-                dto.setPlaybackLink(first.getDeepLink());
             }
             dto.setArtistName(artistNameByTrack.get(id));
         }
@@ -390,6 +388,20 @@ public class TrackJooqRepository {
             .orderBy(countDistinct(TRACKS.ID).desc())
             .fetch()
             .map(r -> new Object[]{r.get(TRACK_DANCE_STYLES.DANCE_STYLE), r.get("track_count", Long.class)});
+    }
+
+    /**
+     * Among the given track IDs, returns those that have a non-primary (secondary) style row with DANCE_STYLE = mainStyle.
+     * Used when listing tracks with a style filter so the UI can show the matching secondary style in the pill.
+     */
+    public Set<UUID> findTrackIdsWithSecondaryStyle(List<UUID> trackIds, String mainStyle) {
+        if (trackIds == null || trackIds.isEmpty() || mainStyle == null || mainStyle.isBlank()) return Set.of();
+        return dsl.selectDistinct(TRACK_DANCE_STYLES.TRACK_ID)
+            .from(TRACK_DANCE_STYLES)
+            .where(TRACK_DANCE_STYLES.TRACK_ID.in(trackIds))
+            .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(mainStyle))
+            .and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(false))
+            .fetchSet(TRACK_DANCE_STYLES.TRACK_ID);
     }
 
     public List<String> findSubStylesForStyle(String mainStyle) {
