@@ -12,6 +12,7 @@ import type {
   TriggerSpiderParams
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Trigger spider crawl
@@ -33,20 +34,14 @@ export const getTriggerSpiderUrl = (params?: TriggerSpiderParams,) => {
 
 export const triggerSpider = async (params?: TriggerSpiderParams, options?: RequestInit): Promise<TriggerSpider200> => {
   
-  const res = await fetch(getTriggerSpiderUrl(params),
+  return customFetch<TriggerSpider200>(getTriggerSpiderUrl(params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TriggerSpider200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -62,20 +57,14 @@ export const getTriggerReclassifyUrl = () => {
 
 export const triggerReclassify = async ( options?: RequestInit): Promise<TriggerReclassify200> => {
   
-  const res = await fetch(getTriggerReclassifyUrl(),
+  return customFetch<TriggerReclassify200>(getTriggerReclassifyUrl(),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TriggerReclassify200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -91,20 +80,14 @@ export const getTriggerBackfillUrl = (artistId: string,) => {
 
 export const triggerBackfill = async (artistId: string, options?: RequestInit): Promise<TriggerBackfill200> => {
   
-  const res = await fetch(getTriggerBackfillUrl(artistId),
+  return customFetch<TriggerBackfill200>(getTriggerBackfillUrl(artistId),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TriggerBackfill200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -120,19 +103,13 @@ export const getTriggerAnalysisUrl = (trackId: string,) => {
 
 export const triggerAnalysis = async (trackId: string, options?: RequestInit): Promise<TriggerAnalysis200> => {
   
-  const res = await fetch(getTriggerAnalysisUrl(trackId),
+  return customFetch<TriggerAnalysis200>(getTriggerAnalysisUrl(trackId),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TriggerAnalysis200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

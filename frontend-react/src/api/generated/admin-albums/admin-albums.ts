@@ -11,6 +11,7 @@ import type {
   RejectRequest
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Reject an album and delete pending tracks
@@ -26,7 +27,7 @@ export const getRejectAlbumUrl = (albumId: string,) => {
 export const rejectAlbum = async (albumId: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectAlbum200> => {
   
-  const res = await fetch(getRejectAlbumUrl(albumId),
+  return customFetch<RejectAlbum200>(getRejectAlbumUrl(albumId),
   {      
     ...options,
     method: 'POST',
@@ -34,13 +35,7 @@ export const rejectAlbum = async (albumId: string,
     body: JSON.stringify(
       rejectRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: RejectAlbum200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -63,19 +58,13 @@ export const getGetAlbums1Url = (params?: GetAlbums1Params,) => {
 
 export const getAlbums1 = async (params?: GetAlbums1Params, options?: RequestInit): Promise<GetAlbums1200> => {
   
-  const res = await fetch(getGetAlbums1Url(params),
+  return customFetch<GetAlbums1200>(getGetAlbums1Url(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetAlbums1200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

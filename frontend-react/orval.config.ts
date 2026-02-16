@@ -41,6 +41,10 @@ export default defineConfig({
       clean: true,
       prettier: true,
       override: {
+        mutator: {
+          path: './src/api/custom-fetch.ts',
+          name: 'customFetch',
+        },
         fetch: {
           // Return the response body only; types then match what the backend actually sends.
           includeHttpResponseReturnType: false,

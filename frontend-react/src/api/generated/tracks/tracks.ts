@@ -28,6 +28,7 @@ import type {
   UnflagTrack200
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Submit a structure proposal (creates candidate version)
@@ -52,7 +53,7 @@ export const submitStructureProposal = async (id: string,
     structureRequest: StructureRequest,
     params?: SubmitStructureProposalParams, options?: RequestInit): Promise<SubmitStructureProposal200> => {
   
-  const res = await fetch(getSubmitStructureProposalUrl(id,params),
+  return customFetch<SubmitStructureProposal200>(getSubmitStructureProposalUrl(id,params),
   {      
     ...options,
     method: 'POST',
@@ -60,13 +61,7 @@ export const submitStructureProposal = async (id: string,
     body: JSON.stringify(
       structureRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: SubmitStructureProposal200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -83,7 +78,7 @@ export const getSubmitMovementVoteUrl = (id: string,) => {
 export const submitMovementVote = async (id: string,
     movementVoteRequest: MovementVoteRequest, options?: RequestInit): Promise<SubmitMovementVote200> => {
   
-  const res = await fetch(getSubmitMovementVoteUrl(id),
+  return customFetch<SubmitMovementVote200>(getSubmitMovementVoteUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -91,13 +86,7 @@ export const submitMovementVote = async (id: string,
     body: JSON.stringify(
       movementVoteRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: SubmitMovementVote200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -114,7 +103,7 @@ export const getSubmitLinkUrl = (id: string,) => {
 export const submitLink = async (id: string,
     submitLinkRequest: SubmitLinkRequest, options?: RequestInit): Promise<PlaybackLink> => {
   
-  const res = await fetch(getSubmitLinkUrl(id),
+  return customFetch<PlaybackLink>(getSubmitLinkUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -122,13 +111,7 @@ export const submitLink = async (id: string,
     body: JSON.stringify(
       submitLinkRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PlaybackLink = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -153,20 +136,14 @@ export const getFlagTrackUrl = (id: string,
 export const flagTrack = async (id: string,
     params?: FlagTrackParams, options?: RequestInit): Promise<FlagTrack200> => {
   
-  const res = await fetch(getFlagTrackUrl(id,params),
+  return customFetch<FlagTrack200>(getFlagTrackUrl(id,params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: FlagTrack200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -182,20 +159,14 @@ export const getUnflagTrackUrl = (id: string,) => {
 
 export const unflagTrack = async (id: string, options?: RequestInit): Promise<UnflagTrack200> => {
   
-  const res = await fetch(getUnflagTrackUrl(id),
+  return customFetch<UnflagTrack200>(getUnflagTrackUrl(id),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UnflagTrack200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -212,7 +183,7 @@ export const getSubmitFeedbackUrl = (id: string,) => {
 export const submitFeedback = async (id: string,
     feedbackRequest: FeedbackRequest, options?: RequestInit): Promise<TrackStyleVote> => {
   
-  const res = await fetch(getSubmitFeedbackUrl(id),
+  return customFetch<TrackStyleVote>(getSubmitFeedbackUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -220,13 +191,7 @@ export const submitFeedback = async (id: string,
     body: JSON.stringify(
       feedbackRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TrackStyleVote = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -242,20 +207,14 @@ export const getGetSecondaryStylesUrl = (id: string,) => {
 
 export const getSecondaryStyles = async (id: string, options?: RequestInit): Promise<DanceStyleDto[]> => {
   
-  const res = await fetch(getGetSecondaryStylesUrl(id),
+  return customFetch<DanceStyleDto[]>(getGetSecondaryStylesUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: DanceStyleDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -272,7 +231,7 @@ export const getConfirmSecondaryStyleUrl = (id: string,) => {
 export const confirmSecondaryStyle = async (id: string,
     secondaryStyleRequest: SecondaryStyleRequest, options?: RequestInit): Promise<ConfirmSecondaryStyle200> => {
   
-  const res = await fetch(getConfirmSecondaryStyleUrl(id),
+  return customFetch<ConfirmSecondaryStyle200>(getConfirmSecondaryStyleUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -280,13 +239,7 @@ export const confirmSecondaryStyle = async (id: string,
     body: JSON.stringify(
       secondaryStyleRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ConfirmSecondaryStyle200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -302,20 +255,14 @@ export const getReportBrokenLinkUrl = (linkId: string,) => {
 
 export const reportBrokenLink = async (linkId: string, options?: RequestInit): Promise<void> => {
   
-  const res = await fetch(getReportBrokenLinkUrl(linkId),
+  return customFetch<void>(getReportBrokenLinkUrl(linkId),
   {      
     ...options,
     method: 'PATCH'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: void = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -338,20 +285,14 @@ export const getGetTracksUrl = (params?: GetTracksParams,) => {
 
 export const getTracks = async (params?: GetTracksParams, options?: RequestInit): Promise<PageResponseTrackListDto> => {
   
-  const res = await fetch(getGetTracksUrl(params),
+  return customFetch<PageResponseTrackListDto>(getGetTracksUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PageResponseTrackListDto = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -367,20 +308,14 @@ export const getGetTrackUrl = (id: string,) => {
 
 export const getTrack = async (id: string, options?: RequestInit): Promise<Track> => {
   
-  const res = await fetch(getGetTrackUrl(id),
+  return customFetch<Track>(getGetTrackUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Track = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -396,20 +331,14 @@ export const getGetStructureVersionsUrl = (id: string,) => {
 
 export const getStructureVersions = async (id: string, options?: RequestInit): Promise<TrackStructureVersion[]> => {
   
-  const res = await fetch(getGetStructureVersionsUrl(id),
+  return customFetch<TrackStructureVersion[]>(getGetStructureVersionsUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TrackStructureVersion[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -434,20 +363,14 @@ export const getGetSimilarTracksUrl = (id: string,
 export const getSimilarTracks = async (id: string,
     params?: GetSimilarTracksParams, options?: RequestInit): Promise<Track[]> => {
   
-  const res = await fetch(getGetSimilarTracksUrl(id,params),
+  return customFetch<Track[]>(getGetSimilarTracksUrl(id,params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Track[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -470,19 +393,13 @@ export const getSearchTracksUrl = (params: SearchTracksParams,) => {
 
 export const searchTracks = async (params: SearchTracksParams, options?: RequestInit): Promise<PageResponseTrackListDto> => {
   
-  const res = await fetch(getSearchTracksUrl(params),
+  return customFetch<PageResponseTrackListDto>(getSearchTracksUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PageResponseTrackListDto = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

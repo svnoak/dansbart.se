@@ -11,6 +11,7 @@ import type {
   GetExportStats200
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * Useful for understanding dataset size before downloading.
@@ -26,20 +27,14 @@ export const getGetExportStatsUrl = () => {
 
 export const getExportStats = async ( options?: RequestInit): Promise<GetExportStats200> => {
   
-  const res = await fetch(getGetExportStatsUrl(),
+  return customFetch<GetExportStats200>(getGetExportStatsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetExportStats200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -56,20 +51,14 @@ export const getExportFeedbackUrl = () => {
 
 export const exportFeedback = async ( options?: RequestInit): Promise<ExportFeedback200> => {
   
-  const res = await fetch(getExportFeedbackUrl(),
+  return customFetch<ExportFeedback200>(getExportFeedbackUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ExportFeedback200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -93,19 +82,13 @@ export const getExportDatasetUrl = (params?: ExportDatasetParams,) => {
 
 export const exportDataset = async (params?: ExportDatasetParams, options?: RequestInit): Promise<ExportDataset200> => {
   
-  const res = await fetch(getExportDatasetUrl(params),
+  return customFetch<ExportDataset200>(getExportDatasetUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ExportDataset200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

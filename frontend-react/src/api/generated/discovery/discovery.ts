@@ -13,6 +13,7 @@ import type {
   TrackListDto
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get recently added tracks with verified classification
@@ -34,20 +35,14 @@ export const getGetRecentTracksUrl = (params?: GetRecentTracksParams,) => {
 
 export const getRecentTracks = async (params?: GetRecentTracksParams, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  const res = await fetch(getGetRecentTracksUrl(params),
+  return customFetch<TrackListDto[]>(getGetRecentTracksUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TrackListDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -70,20 +65,14 @@ export const getGetPopularTracksUrl = (params?: GetPopularTracksParams,) => {
 
 export const getPopularTracks = async (params?: GetPopularTracksParams, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  const res = await fetch(getGetPopularTracksUrl(params),
+  return customFetch<TrackListDto[]>(getGetPopularTracksUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TrackListDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -99,20 +88,14 @@ export const getGetCuratedPlaylistsUrl = () => {
 
 export const getCuratedPlaylists = async ( options?: RequestInit): Promise<CuratedPlaylistDto[]> => {
   
-  const res = await fetch(getGetCuratedPlaylistsUrl(),
+  return customFetch<CuratedPlaylistDto[]>(getGetCuratedPlaylistsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: CuratedPlaylistDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -135,20 +118,14 @@ export const getGetCuratedTracksUrl = (params?: GetCuratedTracksParams,) => {
 
 export const getCuratedTracks = async (params?: GetCuratedTracksParams, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  const res = await fetch(getGetCuratedTracksUrl(params),
+  return customFetch<TrackListDto[]>(getGetCuratedTracksUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TrackListDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -164,19 +141,13 @@ export const getGetStyleOverviewUrl = () => {
 
 export const getStyleOverview = async ( options?: RequestInit): Promise<StyleOverviewDto[]> => {
   
-  const res = await fetch(getGetStyleOverviewUrl(),
+  return customFetch<StyleOverviewDto[]>(getGetStyleOverviewUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: StyleOverviewDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

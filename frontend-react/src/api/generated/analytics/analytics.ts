@@ -13,6 +13,7 @@ import type {
   VisitorSession
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Record a user interaction event
@@ -27,7 +28,7 @@ export const getRecordInteractionUrl = () => {
 
 export const recordInteraction = async (recordInteractionRequest: RecordInteractionRequest, options?: RequestInit): Promise<UserInteraction> => {
   
-  const res = await fetch(getRecordInteractionUrl(),
+  return customFetch<UserInteraction>(getRecordInteractionUrl(),
   {      
     ...options,
     method: 'POST',
@@ -35,13 +36,7 @@ export const recordInteraction = async (recordInteractionRequest: RecordInteract
     body: JSON.stringify(
       recordInteractionRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UserInteraction = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -57,7 +52,7 @@ export const getRecordInteraction1Url = () => {
 
 export const recordInteraction1 = async (recordInteractionRequest: RecordInteractionRequest, options?: RequestInit): Promise<UserInteraction> => {
   
-  const res = await fetch(getRecordInteraction1Url(),
+  return customFetch<UserInteraction>(getRecordInteraction1Url(),
   {      
     ...options,
     method: 'POST',
@@ -65,13 +60,7 @@ export const recordInteraction1 = async (recordInteractionRequest: RecordInterac
     body: JSON.stringify(
       recordInteractionRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UserInteraction = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -87,7 +76,7 @@ export const getCreateOrUpdateSessionUrl = () => {
 
 export const createOrUpdateSession = async (sessionRequest: SessionRequest, options?: RequestInit): Promise<VisitorSession> => {
   
-  const res = await fetch(getCreateOrUpdateSessionUrl(),
+  return customFetch<VisitorSession>(getCreateOrUpdateSessionUrl(),
   {      
     ...options,
     method: 'POST',
@@ -95,13 +84,7 @@ export const createOrUpdateSession = async (sessionRequest: SessionRequest, opti
     body: JSON.stringify(
       sessionRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: VisitorSession = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -118,7 +101,7 @@ export const getRecordPlaybackUrl = (trackId: string,) => {
 export const recordPlayback = async (trackId: string,
     recordPlaybackRequest: RecordPlaybackRequest, options?: RequestInit): Promise<TrackPlayback> => {
   
-  const res = await fetch(getRecordPlaybackUrl(trackId),
+  return customFetch<TrackPlayback>(getRecordPlaybackUrl(trackId),
   {      
     ...options,
     method: 'POST',
@@ -126,12 +109,6 @@ export const recordPlayback = async (trackId: string,
     body: JSON.stringify(
       recordPlaybackRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TrackPlayback = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

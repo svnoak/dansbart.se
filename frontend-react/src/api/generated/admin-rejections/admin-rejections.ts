@@ -14,6 +14,7 @@ import type {
   RemoveFromBlocklist200
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Reject a network of artists and albums together
@@ -28,7 +29,7 @@ export const getRejectNetworkUrl = () => {
 
 export const rejectNetwork = async (rejectNetworkRequest: RejectNetworkRequest, options?: RequestInit): Promise<RejectNetwork200> => {
   
-  const res = await fetch(getRejectNetworkUrl(),
+  return customFetch<RejectNetwork200>(getRejectNetworkUrl(),
   {      
     ...options,
     method: 'POST',
@@ -36,13 +37,7 @@ export const rejectNetwork = async (rejectNetworkRequest: RejectNetworkRequest, 
     body: JSON.stringify(
       rejectNetworkRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: RejectNetwork200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -58,7 +53,7 @@ export const getAddToBlocklistUrl = () => {
 
 export const addToBlocklist = async (blockSpotifyRequest: BlockSpotifyRequest, options?: RequestInit): Promise<AddToBlocklist200> => {
   
-  const res = await fetch(getAddToBlocklistUrl(),
+  return customFetch<AddToBlocklist200>(getAddToBlocklistUrl(),
   {      
     ...options,
     method: 'POST',
@@ -66,13 +61,7 @@ export const addToBlocklist = async (blockSpotifyRequest: BlockSpotifyRequest, o
     body: JSON.stringify(
       blockSpotifyRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: AddToBlocklist200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -95,20 +84,14 @@ export const getGetRejectionsUrl = (params?: GetRejectionsParams,) => {
 
 export const getRejections = async (params?: GetRejectionsParams, options?: RequestInit): Promise<GetRejections200> => {
   
-  const res = await fetch(getGetRejectionsUrl(params),
+  return customFetch<GetRejections200>(getGetRejectionsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetRejections200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -124,19 +107,13 @@ export const getRemoveFromBlocklistUrl = (rejectionId: string,) => {
 
 export const removeFromBlocklist = async (rejectionId: string, options?: RequestInit): Promise<RemoveFromBlocklist200> => {
   
-  const res = await fetch(getRemoveFromBlocklistUrl(rejectionId),
+  return customFetch<RemoveFromBlocklist200>(getRemoveFromBlocklistUrl(rejectionId),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: RemoveFromBlocklist200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

@@ -9,6 +9,7 @@ import type {
   StyleNode
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get dance style hierarchy tree
@@ -23,20 +24,14 @@ export const getGetStyleTreeUrl = () => {
 
 export const getStyleTree = async ( options?: RequestInit): Promise<StyleNode[]> => {
   
-  const res = await fetch(getGetStyleTreeUrl(),
+  return customFetch<StyleNode[]>(getGetStyleTreeUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: StyleNode[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -52,19 +47,13 @@ export const getGetKeywordsUrl = () => {
 
 export const getKeywords = async ( options?: RequestInit): Promise<StyleKeyword[]> => {
   
-  const res = await fetch(getGetKeywordsUrl(),
+  return customFetch<StyleKeyword[]>(getGetKeywordsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: StyleKeyword[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

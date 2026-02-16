@@ -25,6 +25,7 @@ import type {
   GetVisitorStatsParams
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get visit patterns by hour of day
@@ -46,20 +47,14 @@ export const getGetHourlyVisitsUrl = (params?: GetHourlyVisitsParams,) => {
 
 export const getHourlyVisits = async (params?: GetHourlyVisitsParams, options?: RequestInit): Promise<GetHourlyVisits200> => {
   
-  const res = await fetch(getGetHourlyVisitsUrl(params),
+  return customFetch<GetHourlyVisits200>(getGetHourlyVisitsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetHourlyVisits200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -82,20 +77,14 @@ export const getGetDailyVisitsUrl = (params?: GetDailyVisitsParams,) => {
 
 export const getDailyVisits = async (params?: GetDailyVisitsParams, options?: RequestInit): Promise<GetDailyVisits200> => {
   
-  const res = await fetch(getGetDailyVisitsUrl(params),
+  return customFetch<GetDailyVisits200>(getGetDailyVisitsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetDailyVisits200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -118,20 +107,14 @@ export const getGetVisitorStatsUrl = (params?: GetVisitorStatsParams,) => {
 
 export const getVisitorStats = async (params?: GetVisitorStatsParams, options?: RequestInit): Promise<GetVisitorStats200> => {
   
-  const res = await fetch(getGetVisitorStatsUrl(params),
+  return customFetch<GetVisitorStats200>(getGetVisitorStatsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetVisitorStats200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -154,20 +137,14 @@ export const getGetMostPlayedTracksUrl = (params?: GetMostPlayedTracksParams,) =
 
 export const getMostPlayedTracks = async (params?: GetMostPlayedTracksParams, options?: RequestInit): Promise<GetMostPlayedTracks200Item[]> => {
   
-  const res = await fetch(getGetMostPlayedTracksUrl(params),
+  return customFetch<GetMostPlayedTracks200Item[]>(getGetMostPlayedTracksUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetMostPlayedTracks200Item[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -190,20 +167,14 @@ export const getGetReportStatsUrl = (params?: GetReportStatsParams,) => {
 
 export const getReportStats = async (params?: GetReportStatsParams, options?: RequestInit): Promise<GetReportStats200> => {
   
-  const res = await fetch(getGetReportStatsUrl(params),
+  return customFetch<GetReportStats200>(getGetReportStatsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetReportStats200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -226,20 +197,14 @@ export const getGetPlatformStatsUrl = (params?: GetPlatformStatsParams,) => {
 
 export const getPlatformStats = async (params?: GetPlatformStatsParams, options?: RequestInit): Promise<GetPlatformStats200> => {
   
-  const res = await fetch(getGetPlatformStatsUrl(params),
+  return customFetch<GetPlatformStats200>(getGetPlatformStatsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetPlatformStats200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -262,20 +227,14 @@ export const getGetListenTimeUrl = (params?: GetListenTimeParams,) => {
 
 export const getListenTime = async (params?: GetListenTimeParams, options?: RequestInit): Promise<GetListenTime200> => {
   
-  const res = await fetch(getGetListenTimeUrl(params),
+  return customFetch<GetListenTime200>(getGetListenTimeUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetListenTime200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -298,20 +257,14 @@ export const getGetDiscoveryStatsUrl = (params?: GetDiscoveryStatsParams,) => {
 
 export const getDiscoveryStats = async (params?: GetDiscoveryStatsParams, options?: RequestInit): Promise<GetDiscoveryStats200> => {
   
-  const res = await fetch(getGetDiscoveryStatsUrl(params),
+  return customFetch<GetDiscoveryStats200>(getGetDiscoveryStatsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetDiscoveryStats200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -334,19 +287,13 @@ export const getGetDashboardUrl = (params?: GetDashboardParams,) => {
 
 export const getDashboard = async (params?: GetDashboardParams, options?: RequestInit): Promise<GetDashboard200> => {
   
-  const res = await fetch(getGetDashboardUrl(params),
+  return customFetch<GetDashboard200>(getGetDashboardUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetDashboard200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

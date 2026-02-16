@@ -8,6 +8,7 @@ import type {
   StatsDto
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get library statistics
@@ -22,19 +23,13 @@ export const getGetStatsUrl = () => {
 
 export const getStats = async ( options?: RequestInit): Promise<StatsDto> => {
   
-  const res = await fetch(getGetStatsUrl(),
+  return customFetch<StatsDto>(getGetStatsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: StatsDto = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

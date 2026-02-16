@@ -10,6 +10,10 @@ from app.repository.track import TrackRepository
 from app.core.config import settings
 from app.core.models import Album, TrackAlbum
 
+import structlog
+
+log = structlog.get_logger()
+
 
 class SpotifyIngestor:
     """Ingest tracks from Spotify playlists, albums, and artist discographies."""
@@ -37,11 +41,11 @@ class SpotifyIngestor:
         Returns:
             List of track IDs that need analysis (PENDING status only)
         """
-        print(f"[SpotifyIngestor] Starting ingestion for playlist: {playlist_id}")
+        log.info("starting_playlist_ingestion", playlist_id=playlist_id)
         try:
             results = self.sp.playlist_tracks(playlist_id)
         except Exception as e:
-            print(f"[SpotifyIngestor] Error: {e}")
+            log.error("playlist_ingestion_failed", playlist_id=playlist_id, error=str(e))
             return []
 
         processed_ids = []
@@ -56,7 +60,7 @@ class SpotifyIngestor:
             else:
                 results = None
 
-        print(f"[SpotifyIngestor] Complete. {len(processed_ids)} tracks queued for analysis.")
+        log.info("playlist_ingestion_complete", playlist_id=playlist_id, tracks_queued=len(processed_ids))
         return processed_ids
 
     def ingest_tracks_from_list(self, track_items: list) -> list[str]:
@@ -102,7 +106,7 @@ class SpotifyIngestor:
                         full_tracks.append(full_track)
 
             except Exception as e:
-                print(f"[SpotifyIngestor] Error fetching track details batch: {e}")
+                log.error("track_details_batch_fetch_failed", error=str(e))
                 # Fallback to simplified tracks if batch fetch fails
                 for track_id in batch_ids:
                     original_track = track_map.get(track_id)
@@ -123,21 +127,21 @@ class SpotifyIngestor:
                     else:
                         skipped_count += 1
             except Exception as e:
-                print(f"[SpotifyIngestor] Error processing track: {e}")
+                log.error("track_processing_failed", error=str(e))
 
         if skipped_count > 0:
-            print(f"   Skipped {skipped_count} tracks (already processed)")
+            log.info("tracks_skipped_already_processed", skipped_count=skipped_count)
 
         return pending_ids
 
     def ingest_album(self, album_id: str) -> list[str]:
         """Ingest all tracks from a single album."""
-        print(f"[SpotifyIngestor] Fetching album: {album_id}")
+        log.info("fetching_album", album_id=album_id)
 
         try:
             album = self.sp.album(album_id)
             album_name = album.get('name', 'Unknown')
-            print(f"   Album: {album_name}")
+            log.info("album_fetched", album_id=album_id, album_name=album_name)
 
             tracks_to_save = []
             album_tracks_results = self.sp.album_tracks(album_id)
@@ -154,11 +158,11 @@ class SpotifyIngestor:
                     album_tracks_results = None
 
             pending_ids = self.ingest_tracks_from_list(tracks_to_save)
-            print(f"[SpotifyIngestor] Album complete. {len(pending_ids)} tracks queued.")
+            log.info("album_ingestion_complete", album_id=album_id, album_name=album_name, tracks_queued=len(pending_ids))
             return pending_ids
 
         except Exception as e:
-            print(f"[SpotifyIngestor] Error ingesting album: {e}")
+            log.error("album_ingestion_failed", album_id=album_id, error=str(e))
             return []
 
     def ingest_artist_albums(self, artist_id: str) -> list[str]:
@@ -171,7 +175,7 @@ class SpotifyIngestor:
         Returns:
             List of track IDs that need analysis
         """
-        print(f"[SpotifyIngestor] Fetching discography for artist...")
+        log.info("fetching_artist_discography", artist_id=artist_id)
 
         # Get all albums (Albums + Singles)
         albums = []
@@ -186,7 +190,7 @@ class SpotifyIngestor:
             else:
                 results = None
 
-        print(f"   Found {len(albums)} releases. Fetching tracks...")
+        log.info("artist_releases_found", artist_id=artist_id, release_count=len(albums))
 
         # Loop through every album to get tracks
         all_pending_ids = []
@@ -215,9 +219,9 @@ class SpotifyIngestor:
                 all_pending_ids.extend(pending_ids)
 
             except Exception as e:
-                print(f"[SpotifyIngestor] Error processing album '{album['name']}': {e}")
+                log.error("artist_album_processing_failed", album_name=album['name'], error=str(e))
 
-        print(f"[SpotifyIngestor] Discography complete. {len(all_pending_ids)} new tracks queued.")
+        log.info("artist_discography_ingestion_complete", artist_id=artist_id, tracks_queued=len(all_pending_ids))
         return all_pending_ids
 
     def _process_single_track(self, sp_track: dict):
@@ -242,7 +246,7 @@ class SpotifyIngestor:
             hash_input = f"{title}|{first_artist}|{album_name}|{duration_ms}".lower()
             hash_digest = hashlib.md5(hash_input.encode()).hexdigest()
             isrc = f"FALLBACK-{hash_digest[:12]}"
-            print(f"   No ISRC for '{title}' - using fallback: {isrc}")
+            log.warn("no_isrc_using_fallback", title=title, fallback_isrc=isrc)
 
         # Extract Album Info
         album_obj = sp_track.get('album', {})
@@ -268,7 +272,7 @@ class SpotifyIngestor:
         db_track = self.repo.get_by_isrc(isrc)
 
         if not db_track:
-            print(f"   New Track: {title}")
+            log.info("new_track_found", title=title, isrc=isrc)
             db_track = self.repo.create_track(
                 title=title,
                 isrc=isrc,

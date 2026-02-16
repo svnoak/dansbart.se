@@ -16,6 +16,7 @@ import type {
   RejectRequest
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Reject a pending artist and add to blocklist
@@ -31,7 +32,7 @@ export const getRejectPendingArtistUrl = (id: string,) => {
 export const rejectPendingArtist = async (id: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectPendingArtist200> => {
   
-  const res = await fetch(getRejectPendingArtistUrl(id),
+  return customFetch<RejectPendingArtist200>(getRejectPendingArtistUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -39,13 +40,7 @@ export const rejectPendingArtist = async (id: string,
     body: JSON.stringify(
       rejectRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: RejectPendingArtist200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -61,20 +56,14 @@ export const getApprovePendingArtistUrl = (id: string,) => {
 
 export const approvePendingArtist = async (id: string, options?: RequestInit): Promise<ApprovePendingArtist200> => {
   
-  const res = await fetch(getApprovePendingArtistUrl(id),
+  return customFetch<ApprovePendingArtist200>(getApprovePendingArtistUrl(id),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ApprovePendingArtist200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -97,20 +86,14 @@ export const getGetPendingArtistsUrl = (params?: GetPendingArtistsParams,) => {
 
 export const getPendingArtists = async (params?: GetPendingArtistsParams, options?: RequestInit): Promise<GetPendingArtists200> => {
   
-  const res = await fetch(getGetPendingArtistsUrl(params),
+  return customFetch<GetPendingArtists200>(getGetPendingArtistsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetPendingArtists200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -133,20 +116,14 @@ export const getGetPendingAlbumsUrl = (params?: GetPendingAlbumsParams,) => {
 
 export const getPendingAlbums = async (params?: GetPendingAlbumsParams, options?: RequestInit): Promise<GetPendingAlbums200> => {
   
-  const res = await fetch(getGetPendingAlbumsUrl(params),
+  return customFetch<GetPendingAlbums200>(getGetPendingAlbumsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetPendingAlbums200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -169,19 +146,13 @@ export const getGetPendingArtistsForApprovalUrl = (params?: GetPendingArtistsFor
 
 export const getPendingArtistsForApproval = async (params?: GetPendingArtistsForApprovalParams, options?: RequestInit): Promise<GetPendingArtistsForApproval200> => {
   
-  const res = await fetch(getGetPendingArtistsForApprovalUrl(params),
+  return customFetch<GetPendingArtistsForApproval200>(getGetPendingArtistsForApprovalUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetPendingArtistsForApproval200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

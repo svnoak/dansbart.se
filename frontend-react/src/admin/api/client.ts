@@ -2,7 +2,7 @@ const TOKEN_KEY = 'dansbart-admin-token';
 
 /**
  * Auth-aware fetch wrapper for admin API calls.
- * Injects Authorization header and handles 401 auto-logout.
+ * Injects Authorization header, X-Trace-Id, and handles 401 auto-logout.
  */
 export function adminFetch(
   input: RequestInfo | URL,
@@ -10,6 +10,7 @@ export function adminFetch(
 ): Promise<Response> {
   const token = localStorage.getItem(TOKEN_KEY);
   const headers = new Headers(init?.headers);
+  headers.set('X-Trace-Id', crypto.randomUUID());
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -31,6 +32,7 @@ export function adminRequestOptions(extra?: RequestInit): RequestInit {
     ...extra,
     headers: {
       ...(extra?.headers as Record<string, string> | undefined),
+      'X-Trace-Id': crypto.randomUUID(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   };

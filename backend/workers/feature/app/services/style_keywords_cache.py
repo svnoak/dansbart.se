@@ -15,7 +15,11 @@ Usage:
 """
 import time
 from typing import Dict, Tuple, Optional, List
+
+import structlog
 from sqlalchemy.orm import Session
+
+log = structlog.get_logger()
 
 # Module-level cache
 _keyword_cache: Dict[str, Tuple[str, Optional[str]]] = {}
@@ -72,7 +76,7 @@ def invalidate_cache() -> None:
     global _keyword_cache, _cache_timestamp
     _keyword_cache = {}
     _cache_timestamp = 0
-    print("[StyleKeywordsCache] Cache invalidated")
+    log.info("cache_invalidated")
 
 
 def _refresh_cache(db: Session) -> None:
@@ -96,7 +100,7 @@ def _refresh_cache(db: Session) -> None:
     }
 
     _cache_timestamp = time.time()
-    print(f"[StyleKeywordsCache] Loaded {len(_keyword_cache)} keywords from DB")
+    log.info("cache_refreshed", keyword_count=len(_keyword_cache))
 
 
 def get_cache_info() -> dict:

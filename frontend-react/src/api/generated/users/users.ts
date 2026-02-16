@@ -15,6 +15,7 @@ import type {
   UsernameAvailability
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get current user profile
@@ -29,20 +30,14 @@ export const getGetCurrentUserUrl = () => {
 
 export const getCurrentUser = async ( options?: RequestInit): Promise<User> => {
   
-  const res = await fetch(getGetCurrentUserUrl(),
+  return customFetch<User>(getGetCurrentUserUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: User = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -58,7 +53,7 @@ export const getUpdateProfileUrl = () => {
 
 export const updateProfile = async (updateProfileRequest: UpdateProfileRequest, options?: RequestInit): Promise<User> => {
   
-  const res = await fetch(getUpdateProfileUrl(),
+  return customFetch<User>(getUpdateProfileUrl(),
   {      
     ...options,
     method: 'PUT',
@@ -66,13 +61,7 @@ export const updateProfile = async (updateProfileRequest: UpdateProfileRequest, 
     body: JSON.stringify(
       updateProfileRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: User = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -88,20 +77,14 @@ export const getGetUserByIdUrl = (id: string,) => {
 
 export const getUserById = async (id: string, options?: RequestInit): Promise<UserPublicProfile> => {
   
-  const res = await fetch(getGetUserByIdUrl(id),
+  return customFetch<UserPublicProfile>(getGetUserByIdUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UserPublicProfile = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -124,20 +107,14 @@ export const getCheckUsernameAvailabilityUrl = (params: CheckUsernameAvailabilit
 
 export const checkUsernameAvailability = async (params: CheckUsernameAvailabilityParams, options?: RequestInit): Promise<UsernameAvailability> => {
   
-  const res = await fetch(getCheckUsernameAvailabilityUrl(params),
+  return customFetch<UsernameAvailability>(getCheckUsernameAvailabilityUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UsernameAvailability = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -160,20 +137,14 @@ export const getSearchUsersUrl = (params: SearchUsersParams,) => {
 
 export const searchUsers = async (params: SearchUsersParams, options?: RequestInit): Promise<UserSummaryDto[]> => {
   
-  const res = await fetch(getSearchUsersUrl(params),
+  return customFetch<UserSummaryDto[]>(getSearchUsersUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UserSummaryDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -189,20 +160,14 @@ export const getGetSharedPlaylistsUrl = () => {
 
 export const getSharedPlaylists = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  const res = await fetch(getGetSharedPlaylistsUrl(),
+  return customFetch<Playlist[]>(getGetSharedPlaylistsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Playlist[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -218,19 +183,13 @@ export const getGetMyPlaylistsUrl = () => {
 
 export const getMyPlaylists = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  const res = await fetch(getGetMyPlaylistsUrl(),
+  return customFetch<Playlist[]>(getGetMyPlaylistsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Playlist[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

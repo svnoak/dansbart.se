@@ -5,11 +5,14 @@ Uses neckenml's StyleClassifier to predict dance styles from stored audio featur
 This service only reads from the database - the heavy ML analysis is done by the
 external dansbart-audio-worker.
 """
+import structlog
 from sqlalchemy.orm import Session
 from app.core.models import Track, AnalysisSource, TrackDanceStyle
 from neckenml.core import StyleClassifier, compute_derived_features
 from app.core.music_theory import categorize_tempo
 from app.services.style_keywords_cache import get_sorted_keywords
+
+log = structlog.get_logger()
 
 
 class ClassificationService:
@@ -41,7 +44,7 @@ class ClassificationService:
         - New format (neckenml_analyzer): raw_data contains artifacts
         """
         if source.source_type == "neckenml_analyzer":
-            print(f"   Computing features from stored artifacts (fast!)")
+            log.debug("computing_features_from_artifacts")
             return compute_derived_features(source.raw_data)
         else:
             return source.raw_data
@@ -71,7 +74,8 @@ class ClassificationService:
 
         except Exception as e:
             self.db.rollback()
-            print(f"   Error saving {track.title}: {e}")
+            log.error("save_predictions_failed", track_title=track.title,
+                      exc_info=True)
 
     def reclassify_library(self):
         """
@@ -82,7 +86,7 @@ class ClassificationService:
         Returns:
             dict: Statistics about the reclassification
         """
-        print("Re-evaluating library with new intelligence...")
+        log.info("reclassify_library_start")
 
         tracks = (self.db.query(Track)
                   .join(AnalysisSource)
@@ -111,9 +115,8 @@ class ClassificationService:
 
             updated_count += 1
 
-        print(f"Re-classification complete.")
-        print(f"   - Updated: {updated_count} tracks")
-        print(f"   - Skipped: {skipped_count} tracks (user locked)")
+        log.info("reclassify_library_complete", updated=updated_count,
+                 skipped=skipped_count)
 
         return {"updated": updated_count, "skipped": skipped_count}
 
@@ -128,7 +131,7 @@ class ClassificationService:
         # Check if user locked it
         for style in track.dance_styles:
             if style.is_user_confirmed:
-                print(f"   Skipping {track.title} (User Confirmed)")
+                log.info("skipping_user_confirmed", track_title=track.title)
                 return
 
         features = analysis_data
@@ -140,7 +143,7 @@ class ClassificationService:
                 features = self._get_features_from_source(source)
 
         if not features:
-            print(f"   No analysis data found for {track.title}")
+            log.warn("no_analysis_data", track_title=track.title)
             return
 
         # Update vocals flag
@@ -156,6 +159,8 @@ class ClassificationService:
 
         if predictions:
             primary = predictions[0]
-            print(f"   Classified: {primary['style']} ({primary['dance_tempo']})")
+            log.info("classified", track_title=track.title,
+                     style=primary['style'],
+                     dance_tempo=primary['dance_tempo'])
         else:
-            print(f"   Classifier returned no results for {track.title}")
+            log.warn("no_classification_results", track_title=track.title)

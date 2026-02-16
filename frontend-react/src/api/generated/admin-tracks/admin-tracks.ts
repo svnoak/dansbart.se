@@ -18,6 +18,7 @@ import type {
   UnflagTrack1200
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Reset track structure to AI defaults
@@ -32,20 +33,14 @@ export const getResetStructureUrl = (trackId: string,) => {
 
 export const resetStructure = async (trackId: string, options?: RequestInit): Promise<ResetStructure200> => {
   
-  const res = await fetch(getResetStructureUrl(trackId),
+  return customFetch<ResetStructure200>(getResetStructureUrl(trackId),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ResetStructure200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -62,7 +57,7 @@ export const getRejectTrackUrl = (trackId: string,) => {
 export const rejectTrack = async (trackId: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectTrack200> => {
   
-  const res = await fetch(getRejectTrackUrl(trackId),
+  return customFetch<RejectTrack200>(getRejectTrackUrl(trackId),
   {      
     ...options,
     method: 'POST',
@@ -70,13 +65,7 @@ export const rejectTrack = async (trackId: string,
     body: JSON.stringify(
       rejectRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: RejectTrack200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -92,20 +81,14 @@ export const getReclassifyTrackUrl = (trackId: string,) => {
 
 export const reclassifyTrack = async (trackId: string, options?: RequestInit): Promise<ReclassifyTrack200> => {
   
-  const res = await fetch(getReclassifyTrackUrl(trackId),
+  return customFetch<ReclassifyTrack200>(getReclassifyTrackUrl(trackId),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ReclassifyTrack200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -121,20 +104,14 @@ export const getReanalyzeTrackUrl = (trackId: string,) => {
 
 export const reanalyzeTrack = async (trackId: string, options?: RequestInit): Promise<ReanalyzeTrack200> => {
   
-  const res = await fetch(getReanalyzeTrackUrl(trackId),
+  return customFetch<ReanalyzeTrack200>(getReanalyzeTrackUrl(trackId),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ReanalyzeTrack200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -150,7 +127,7 @@ export const getBulkReanalyzeUrl = () => {
 
 export const bulkReanalyze = async (bulkReanalyzeRequest: BulkReanalyzeRequest, options?: RequestInit): Promise<BulkReanalyze200> => {
   
-  const res = await fetch(getBulkReanalyzeUrl(),
+  return customFetch<BulkReanalyze200>(getBulkReanalyzeUrl(),
   {      
     ...options,
     method: 'POST',
@@ -158,13 +135,7 @@ export const bulkReanalyze = async (bulkReanalyzeRequest: BulkReanalyzeRequest, 
     body: JSON.stringify(
       bulkReanalyzeRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: BulkReanalyze200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -187,20 +158,14 @@ export const getGetTracks1Url = (params?: GetTracks1Params,) => {
 
 export const getTracks1 = async (params?: GetTracks1Params, options?: RequestInit): Promise<AdminTrackPageResponse> => {
   
-  const res = await fetch(getGetTracks1Url(params),
+  return customFetch<AdminTrackPageResponse>(getGetTracks1Url(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: AdminTrackPageResponse = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -216,20 +181,14 @@ export const getDeleteTrackUrl = (trackId: string,) => {
 
 export const deleteTrack = async (trackId: string, options?: RequestInit): Promise<DeleteTrack200> => {
   
-  const res = await fetch(getDeleteTrackUrl(trackId),
+  return customFetch<DeleteTrack200>(getDeleteTrackUrl(trackId),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: DeleteTrack200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -245,19 +204,13 @@ export const getUnflagTrack1Url = (trackId: string,) => {
 
 export const unflagTrack1 = async (trackId: string, options?: RequestInit): Promise<UnflagTrack1200> => {
   
-  const res = await fetch(getUnflagTrack1Url(trackId),
+  return customFetch<UnflagTrack1200>(getUnflagTrack1Url(trackId),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UnflagTrack1200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

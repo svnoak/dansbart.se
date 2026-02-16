@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import org.slf4j.MDC;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -188,6 +190,10 @@ public class TaskDispatcher {
             headers.put("kwargsrepr", kwargs.toString());
         }
         headers.put("origin", "java-api");
+        String traceId = MDC.get("traceId");
+        if (traceId != null) {
+            headers.put("trace_id", traceId);
+        }
         headers.put("ignore_result", false);
         headers.put("replaced_task_nesting", 0);
         headers.put("stamped_headers", null);

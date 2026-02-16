@@ -12,7 +12,11 @@ Features:
 import time
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+
+import structlog
+
 from app.core.celery_app import celery_app
+from app.core.logging import canonical_bind
 from app.workers.ingestion.spotify import SpotifyIngestor
 from app.repository.track import TrackRepository
 from app.core.models import (
@@ -20,6 +24,8 @@ from app.core.models import (
     ArtistCrawlLog, RejectionLog, PendingArtistApproval
 )
 from app.services.genre_classifier import GenreClassifier
+
+log = structlog.get_logger()
 
 
 def _dispatch_audio_analysis(track_ids: list[str]) -> int:
@@ -73,8 +79,7 @@ class DiscoverySpider:
         Returns:
             dict: Crawl statistics
         """
-        print("[DiscoverySpider] Starting Search Mode...")
-        print(f"   Max discoveries: {max_discoveries}")
+        log.info("starting_search_mode", max_discoveries=max_discoveries)
 
         # Folk-related search queries
         search_queries = [
@@ -94,16 +99,16 @@ class DiscoverySpider:
 
         for query in search_queries:
             if discovered_count >= max_discoveries:
-                print(f"[DiscoverySpider] Reached max discoveries limit ({max_discoveries})")
+                log.info("max_discoveries_reached", max_discoveries=max_discoveries)
                 break
 
-            print(f"\n   Searching: '{query}'")
+            log.info("searching", query=query)
 
             try:
                 results = self.sp.search(q=query, type='artist', limit=20)
 
                 if not results.get('artists', {}).get('items'):
-                    print(f"   No results for '{query}'")
+                    log.info("search_no_results", query=query)
                     continue
 
                 for artist in results['artists']['items']:
@@ -114,9 +119,9 @@ class DiscoverySpider:
                         discovered_count += 1
 
             except Exception as e:
-                print(f"   Search error for '{query}': {e}")
+                log.error("search_error", query=query, error=str(e))
 
-        self._print_stats("Search Spider")
+        self._log_stats("Search Spider")
         return self.stats
 
     def backfill_existing_artists(
@@ -136,9 +141,11 @@ class DiscoverySpider:
         Returns:
             dict: Crawl statistics
         """
-        print("[DiscoverySpider] Starting Backfill Mode...")
-        print(f"   Max artists to backfill: {max_artists}")
-        print(f"   Discover from albums: {'Yes' if discover_from_albums else 'No'}")
+        log.info(
+            "starting_backfill_mode",
+            max_artists=max_artists,
+            discover_from_albums=discover_from_albums,
+        )
 
         # Get all artists in our database that have a Spotify ID
         artists = self.db.query(Artist).filter(
@@ -146,16 +153,16 @@ class DiscoverySpider:
         ).limit(max_artists * 2).all()
 
         if not artists:
-            print("[DiscoverySpider] No artists found in database with Spotify IDs!")
+            log.warn("no_artists_found", reason="no artists with Spotify IDs in database")
             return self.stats
 
-        print(f"   Found {len(artists)} artists in database")
+        log.info("artists_loaded_from_db", count=len(artists))
 
         backfilled_count = 0
 
         for artist in artists:
             if backfilled_count >= max_artists:
-                print(f"[DiscoverySpider] Reached max backfill limit ({max_artists})")
+                log.info("max_backfill_reached", max_artists=max_artists)
                 break
 
             artist_id = artist.spotify_id
@@ -168,10 +175,14 @@ class DiscoverySpider:
 
             if existing_log:
                 self.stats['artists_already_crawled'] += 1
-                print(f"   Skipping {artist_name} (already crawled on {existing_log.crawled_at.date()})")
+                log.debug(
+                    "artist_already_crawled",
+                    artist_name=artist_name,
+                    crawled_at=str(existing_log.crawled_at.date()),
+                )
                 continue
 
-            print(f"\n   Backfilling: {artist_name}")
+            log.info("backfilling_artist", artist_name=artist_name)
 
             try:
                 # Get artist details from Spotify for genre info
@@ -183,7 +194,12 @@ class DiscoverySpider:
                     artist_name, genres, None
                 )
 
-                print(f"      Genre: {music_genre} ({confidence:.2f} confidence)")
+                log.info(
+                    "artist_genre_classified",
+                    artist_name=artist_name,
+                    music_genre=music_genre,
+                    confidence=round(confidence, 2),
+                )
 
                 # Ingest full discography
                 track_ids = self.ingestor.ingest_artist_albums(artist_id)
@@ -191,7 +207,11 @@ class DiscoverySpider:
                 # Dispatch audio analysis for new tracks
                 if track_ids:
                     dispatched = _dispatch_audio_analysis(track_ids)
-                    print(f"      Dispatched {dispatched} tracks to audio queue")
+                    log.info(
+                        "audio_analysis_dispatched",
+                        artist_name=artist_name,
+                        dispatched=dispatched,
+                    )
 
                 # Log the backfill
                 crawl_log = ArtistCrawlLog(
@@ -210,14 +230,19 @@ class DiscoverySpider:
                 # Update track genres for this artist
                 tracks_updated = self.genre_classifier.classify_all_tracks_for_artist(artist_id)
                 if tracks_updated > 0:
-                    print(f"      Tagged {tracks_updated} tracks as '{music_genre}'")
+                    log.info(
+                        "tracks_tagged",
+                        artist_name=artist_name,
+                        tracks_updated=tracks_updated,
+                        music_genre=music_genre,
+                    )
 
                 self.stats['artists_crawled'] += 1
                 self.stats['tracks_found'] += len(track_ids) if isinstance(track_ids, list) else track_ids
                 backfilled_count += 1
 
             except Exception as e:
-                print(f"      Error backfilling {artist_name}: {e}")
+                log.error("backfill_error", artist_name=artist_name, error=str(e))
 
                 # Log the failure
                 try:
@@ -238,15 +263,13 @@ class DiscoverySpider:
         # PHASE 2: Discover new artists from albums (if enabled)
         discovered_from_albums = 0
         if discover_from_albums:
-            print("\n" + "="*60)
-            print("Phase 2: Discovering Artists from Albums")
-            print("="*60)
+            log.info("starting_album_discovery_phase")
             discovered_from_albums = self._discover_artists_from_albums(
                 max_artists - backfilled_count
             )
-            print(f"   Found {discovered_from_albums} new artists from albums")
+            log.info("album_discovery_complete", discovered=discovered_from_albums)
 
-        self._print_stats("Backfill Spider")
+        self._log_stats("Backfill Spider")
         return self.stats
 
     def _discover_artists_from_albums(self, max_to_discover: int) -> int:
@@ -257,7 +280,7 @@ class DiscoverySpider:
         other artists on those albums (compilations, collaborations, etc.)
         """
         if max_to_discover <= 0:
-            print("   Max discoveries limit reached, skipping album discovery")
+            log.info("album_discovery_skipped", reason="max discoveries limit reached")
             return 0
 
         discovered_count = 0
@@ -284,7 +307,7 @@ class DiscoverySpider:
             except Exception:
                 continue
 
-        print(f"   Found {len(album_spotify_ids)} unique albums to check for new artists")
+        log.info("albums_to_check", count=len(album_spotify_ids))
 
         # Check each album for new artists
         for album_id in list(album_spotify_ids)[:50]:
@@ -330,13 +353,21 @@ class DiscoverySpider:
                         sp_artist = self.sp.artist(artist_id)
                         if self._evaluate_and_ingest(sp_artist):
                             discovered_count += 1
-                            print(f"      Discovered from album: {album.get('name', 'Unknown')}")
+                            log.info(
+                                "discovered_from_album",
+                                artist_name=sp_artist.get('name', 'Unknown'),
+                                album_name=album.get('name', 'Unknown'),
+                            )
                     except Exception as e:
-                        print(f"      Error checking artist {artist_id}: {e}")
+                        log.error(
+                            "artist_check_error",
+                            artist_id=artist_id,
+                            error=str(e),
+                        )
                         continue
 
             except Exception as e:
-                print(f"      Error checking album {album_id}: {e}")
+                log.error("album_check_error", album_id=album_id, error=str(e))
                 continue
 
         return discovered_count
@@ -367,7 +398,11 @@ class DiscoverySpider:
 
         if rejected:
             self.stats['artists_rejected'] += 1
-            print(f"      Skipping {name} (on rejection blocklist: {rejected.reason})")
+            log.info(
+                "artist_rejected",
+                artist_name=name,
+                reason=rejected.reason,
+            )
             return False
 
         # STEP 2: CHECK EXISTING VERIFICATION STATUS
@@ -377,7 +412,7 @@ class DiscoverySpider:
         is_manually_verified = existing_db_artist and existing_db_artist.is_verified
 
         if is_manually_verified:
-            print(f"      Artist '{name}' is Manually Verified. Bypassing gatekeeper.")
+            log.info("artist_verified_bypass", artist_name=name)
         else:
             # Only run strict gatekeeper if NOT verified
             is_folk = self.genre_classifier.is_folk_artist(genres, name)
@@ -393,7 +428,11 @@ class DiscoverySpider:
 
         if existing_log:
             self.stats['artists_already_crawled'] += 1
-            print(f"      Skipping {name} (already crawled on {existing_log.crawled_at.date()})")
+            log.debug(
+                "artist_already_crawled",
+                artist_name=name,
+                crawled_at=str(existing_log.crawled_at.date()),
+            )
             return False
 
         # STEP 4: GENRE CLASSIFICATION
@@ -414,9 +453,13 @@ class DiscoverySpider:
 
         if not should_auto_approve:
             # Queue for manual approval
-            print(f"      Queuing for approval: {name}")
-            print(f"         Genres: {genres}")
-            print(f"         Classified as: {music_genre} ({confidence:.2f} confidence)")
+            log.info(
+                "queuing_for_approval",
+                artist_name=name,
+                genres=genres,
+                music_genre=music_genre,
+                confidence=round(confidence, 2),
+            )
 
             try:
                 existing_pending = self.db.query(PendingArtistApproval).filter(
@@ -424,7 +467,7 @@ class DiscoverySpider:
                 ).first()
 
                 if existing_pending:
-                    print(f"         Already pending approval")
+                    log.debug("already_pending_approval", artist_name=name)
                     return False
 
                 image_url = artist_obj.get('images', [{}])[0].get('url') if artist_obj.get('images') else None
@@ -443,7 +486,7 @@ class DiscoverySpider:
                 self.db.add(pending)
                 self.db.commit()
 
-                print(f"         Added to approval queue")
+                log.info("added_to_approval_queue", artist_name=name)
                 self.stats['artists_pending_approval'] = self.stats.get('artists_pending_approval', 0) + 1
                 return False
 
@@ -451,18 +494,27 @@ class DiscoverySpider:
                 self.db.rollback()
                 return False
             except Exception as e:
-                print(f"         Error queueing for approval: {e}")
+                log.error("approval_queue_error", artist_name=name, error=str(e))
                 self.db.rollback()
                 return False
 
         # Auto-approved - proceed with ingestion
         if is_manually_verified:
-            print(f"      Updating Verified Artist: {name}")
+            log.info(
+                "ingesting_verified_artist",
+                artist_name=name,
+                genres=genres,
+                music_genre=music_genre,
+                confidence=round(confidence, 2),
+            )
         else:
-            print(f"      Auto-approved Folk Artist: {name}")
-
-        print(f"         Genres: {genres}")
-        print(f"         Classified as: {music_genre} ({confidence:.2f} confidence)")
+            log.info(
+                "ingesting_auto_approved_artist",
+                artist_name=name,
+                genres=genres,
+                music_genre=music_genre,
+                confidence=round(confidence, 2),
+            )
 
         # STEP 6: INGEST FULL DISCOGRAPHY
         time.sleep(0.5)
@@ -473,7 +525,11 @@ class DiscoverySpider:
             # Dispatch audio analysis for new tracks
             if track_ids:
                 dispatched = _dispatch_audio_analysis(track_ids)
-                print(f"         Dispatched {dispatched} tracks to audio queue")
+                log.info(
+                    "audio_analysis_dispatched",
+                    artist_name=name,
+                    dispatched=dispatched,
+                )
 
             # STEP 7: LOG THE CRAWL
             crawl_log = ArtistCrawlLog(
@@ -492,7 +548,12 @@ class DiscoverySpider:
             # STEP 8: UPDATE TRACK GENRES
             tracks_updated = self.genre_classifier.classify_all_tracks_for_artist(artist_id)
             if tracks_updated > 0:
-                print(f"         Tagged {tracks_updated} tracks as '{music_genre}'")
+                log.info(
+                    "tracks_tagged",
+                    artist_name=name,
+                    tracks_updated=tracks_updated,
+                    music_genre=music_genre,
+                )
 
             self.stats['artists_crawled'] += 1
             self.stats['tracks_found'] += len(track_ids) if isinstance(track_ids, list) else track_ids
@@ -505,7 +566,7 @@ class DiscoverySpider:
             return False
 
         except Exception as e:
-            print(f"         Error ingesting {name}: {e}")
+            log.error("ingestion_error", artist_name=name, error=str(e))
             try:
                 crawl_log = ArtistCrawlLog(
                     spotify_artist_id=artist_id,
@@ -523,17 +584,26 @@ class DiscoverySpider:
 
             return False
 
-    def _print_stats(self, spider_name: str) -> None:
-        """Print final statistics."""
-        print("\n" + "="*60)
-        print(f"[{spider_name}] Session Complete")
-        print("="*60)
-        print(f"Artists Evaluated:         {self.stats['artists_evaluated']}")
-        print(f"Rejected (Blocklisted):    {self.stats['artists_rejected']}")
-        print(f"Passed Gatekeeper:         {self.stats['artists_passed_gatekeeper']}")
-        print(f"Already Crawled (Skipped): {self.stats['artists_already_crawled']}")
-        print(f"New Artists Crawled:       {self.stats['artists_crawled']}")
-        print(f"Total Tracks Found:        {self.stats['tracks_found']}")
+    def _log_stats(self, spider_name: str) -> None:
+        """Log final statistics as a structured log event."""
+        stats_kwargs = dict(
+            spider_name=spider_name,
+            artists_evaluated=self.stats['artists_evaluated'],
+            artists_rejected=self.stats['artists_rejected'],
+            artists_passed_gatekeeper=self.stats['artists_passed_gatekeeper'],
+            artists_already_crawled=self.stats['artists_already_crawled'],
+            artists_crawled=self.stats['artists_crawled'],
+            tracks_found=self.stats['tracks_found'],
+        )
+
         if 'artists_pending_approval' in self.stats:
-            print(f"Pending Approval:          {self.stats['artists_pending_approval']}")
-        print("="*60)
+            stats_kwargs['artists_pending_approval'] = self.stats['artists_pending_approval']
+
+        log.info("session_complete", **stats_kwargs)
+
+        canonical_bind(
+            spider_name=spider_name,
+            artists_evaluated=self.stats['artists_evaluated'],
+            artists_crawled=self.stats['artists_crawled'],
+            tracks_found=self.stats['tracks_found'],
+        )

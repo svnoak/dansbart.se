@@ -8,7 +8,11 @@ Simplified version for the feature worker, handling:
 """
 import uuid
 from typing import Optional
+
+import structlog
 from sqlalchemy.orm import Session
+
+log = structlog.get_logger()
 from app.core.models import (
     Track, Artist, Album, TrackArtist, TrackAlbum, PlaybackLink
 )
@@ -90,7 +94,7 @@ class TrackRepository:
                 )
                 self.db.add(album)
                 self.db.flush()
-                print(f"   [TrackRepo] Created album: '{album_data['name']}'")
+                log.info("created_album", album_name=album_data['name'])
             else:
                 album = existing_album
                 # Update spotify_id if album exists but doesn't have one

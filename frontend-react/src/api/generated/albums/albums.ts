@@ -12,6 +12,7 @@ import type {
   TrackListDto
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get all albums with pagination
@@ -33,20 +34,14 @@ export const getGetAlbumsUrl = (params?: GetAlbumsParams,) => {
 
 export const getAlbums = async (params?: GetAlbumsParams, options?: RequestInit): Promise<PageResponseAlbum> => {
   
-  const res = await fetch(getGetAlbumsUrl(params),
+  return customFetch<PageResponseAlbum>(getGetAlbumsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PageResponseAlbum = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -62,20 +57,14 @@ export const getGetAlbumUrl = (id: string,) => {
 
 export const getAlbum = async (id: string, options?: RequestInit): Promise<AlbumDto> => {
   
-  const res = await fetch(getGetAlbumUrl(id),
+  return customFetch<AlbumDto>(getGetAlbumUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: AlbumDto = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -91,20 +80,14 @@ export const getGetAlbumTracksUrl = (id: string,) => {
 
 export const getAlbumTracks = async (id: string, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  const res = await fetch(getGetAlbumTracksUrl(id),
+  return customFetch<TrackListDto[]>(getGetAlbumTracksUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TrackListDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -127,19 +110,13 @@ export const getSearchAlbumsUrl = (params: SearchAlbumsParams,) => {
 
 export const searchAlbums = async (params: SearchAlbumsParams, options?: RequestInit): Promise<PageResponseAlbum> => {
   
-  const res = await fetch(getSearchAlbumsUrl(params),
+  return customFetch<PageResponseAlbum>(getSearchAlbumsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PageResponseAlbum = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

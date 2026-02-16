@@ -10,6 +10,7 @@ import type {
   VoteRequest
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Upvote/downvote a specific structure version
@@ -25,7 +26,7 @@ export const getVoteOnVersionUrl = (versionId: string,) => {
 export const voteOnVersion = async (versionId: string,
     voteRequest: VoteRequest, options?: RequestInit): Promise<VoteOnVersion200> => {
   
-  const res = await fetch(getVoteOnVersionUrl(versionId),
+  return customFetch<VoteOnVersion200>(getVoteOnVersionUrl(versionId),
   {      
     ...options,
     method: 'POST',
@@ -33,13 +34,7 @@ export const voteOnVersion = async (versionId: string,
     body: JSON.stringify(
       voteRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: VoteOnVersion200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -55,19 +50,13 @@ export const getReportVersionUrl = (versionId: string,) => {
 
 export const reportVersion = async (versionId: string, options?: RequestInit): Promise<ReportVersion200> => {
   
-  const res = await fetch(getReportVersionUrl(versionId),
+  return customFetch<ReportVersion200>(getReportVersionUrl(versionId),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ReportVersion200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

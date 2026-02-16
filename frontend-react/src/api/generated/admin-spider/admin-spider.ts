@@ -13,6 +13,7 @@ import type {
   TriggerCrawlParams
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Trigger a spider crawl
@@ -34,20 +35,14 @@ export const getTriggerCrawlUrl = (params?: TriggerCrawlParams,) => {
 
 export const triggerCrawl = async (params?: TriggerCrawlParams, options?: RequestInit): Promise<TriggerCrawl200> => {
   
-  const res = await fetch(getTriggerCrawlUrl(params),
+  return customFetch<TriggerCrawl200>(getTriggerCrawlUrl(params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: TriggerCrawl200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -63,20 +58,14 @@ export const getGetTaskStatusUrl = (taskId: string,) => {
 
 export const getTaskStatus = async (taskId: string, options?: RequestInit): Promise<GetTaskStatus200> => {
   
-  const res = await fetch(getGetTaskStatusUrl(taskId),
+  return customFetch<GetTaskStatus200>(getGetTaskStatusUrl(taskId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetTaskStatus200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -92,20 +81,14 @@ export const getGetSpiderStatsUrl = () => {
 
 export const getSpiderStats = async ( options?: RequestInit): Promise<GetSpiderStats200> => {
   
-  const res = await fetch(getGetSpiderStatsUrl(),
+  return customFetch<GetSpiderStats200>(getGetSpiderStatsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetSpiderStats200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -128,19 +111,13 @@ export const getGetCrawlHistoryUrl = (params?: GetCrawlHistoryParams,) => {
 
 export const getCrawlHistory = async (params?: GetCrawlHistoryParams, options?: RequestInit): Promise<GetCrawlHistory200> => {
   
-  const res = await fetch(getGetCrawlHistoryUrl(params),
+  return customFetch<GetCrawlHistory200>(getGetCrawlHistoryUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetCrawlHistory200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

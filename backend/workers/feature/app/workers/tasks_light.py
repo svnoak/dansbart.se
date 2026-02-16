@@ -6,9 +6,13 @@ Spotify API calls, and database cleanup. No ML processing.
 
 MIT Licensed - No AGPL dependencies.
 """
+import structlog
 from celery import shared_task
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
+from app.core.logging import canonical_bind
+
+log = structlog.get_logger()
 
 
 def _dispatch_audio_analysis(track_ids: list[str]) -> int:
@@ -31,7 +35,7 @@ def _dispatch_audio_analysis(track_ids: list[str]) -> int:
         dispatched += 1
 
     if dispatched > 0:
-        print(f"[Light Worker] Dispatched {dispatched} tracks to audio queue")
+        log.info("dispatched_audio_tasks", count=dispatched)
 
     return dispatched
 
@@ -50,7 +54,7 @@ def spider_crawl_task(self, max_discoveries: int = 10):
     Returns:
         dict: Crawl statistics (artists found, tracks added, etc.)
     """
-    print(f"[Light Worker] Starting spider crawl (max_discoveries={max_discoveries})...")
+    log.info("starting_spider_crawl", max_discoveries=max_discoveries)
 
     db = SessionLocal()
     try:
@@ -58,6 +62,7 @@ def spider_crawl_task(self, max_discoveries: int = 10):
 
         spider = DiscoverySpider(db)
         stats = spider.crawl_by_search(max_discoveries=max_discoveries)
+        canonical_bind(artists_crawled=stats.get('artists_crawled', 0))
 
         return {
             "status": "success",
@@ -65,7 +70,7 @@ def spider_crawl_task(self, max_discoveries: int = 10):
             "stats": stats
         }
     except Exception as e:
-        print(f"[Light Worker] Spider crawl failed: {e}")
+        log.error("spider_crawl_failed", exc_info=True)
         return {
             "status": "failed",
             "message": str(e)
@@ -76,7 +81,7 @@ def spider_crawl_task(self, max_discoveries: int = 10):
 
 def _backfill_artist(artist_spotify_id: str = None, max_artists: int = 20) -> dict:
     """Helper function to backfill artist (used by both task and direct call)."""
-    print(f"[Light Worker] Backfilling artists...")
+    log.info("backfilling_artists", artist_spotify_id=artist_spotify_id)
 
     db = SessionLocal()
     try:
@@ -98,7 +103,7 @@ def _backfill_artist(artist_spotify_id: str = None, max_artists: int = 20) -> di
             artist_name = sp_artist.get('name', 'Unknown')
             genres = sp_artist.get('genres', [])
 
-            print(f"   Backfilling specific artist: {artist_name}")
+            log.info("backfilling_specific_artist", artist_name=artist_name)
 
             # Classify genre
             music_genre, confidence = genre_classifier.classify_artist_genre(
@@ -149,7 +154,7 @@ def _backfill_artist(artist_spotify_id: str = None, max_artists: int = 20) -> di
                 "stats": stats
             }
     except Exception as e:
-        print(f"[Light Worker] Backfill failed: {e}")
+        log.error("backfill_failed", exc_info=True)
         return {
             "status": "failed",
             "message": str(e)
@@ -189,7 +194,8 @@ def spotify_ingest_task(self, resource_type: str, spotify_id: str):
     Returns:
         dict: Ingestion result with status and counts
     """
-    print(f"[Light Worker] Spotify ingest: {resource_type} {spotify_id}...")
+    log.info("spotify_ingest", resource_type=resource_type,
+             spotify_id=spotify_id)
     resource_type = (resource_type or "playlist").lower().strip()
 
     # Call the task functions directly to avoid deadlock with --pool=solo
@@ -211,7 +217,7 @@ def spotify_ingest_task(self, resource_type: str, spotify_id: str):
 
 def _ingest_track(spotify_track_id: str) -> dict:
     """Helper function to ingest a single track by Spotify ID (used by spotify_ingest_task)."""
-    print(f"[Light Worker] Ingesting track {spotify_track_id}...")
+    log.info("ingesting_track", spotify_track_id=spotify_track_id)
 
     db = SessionLocal()
     try:
@@ -234,7 +240,8 @@ def _ingest_track(spotify_track_id: str) -> dict:
             "tracks_queued": dispatched
         }
     except Exception as e:
-        print(f"[Light Worker] Track ingestion failed: {e}")
+        log.error("track_ingestion_failed", spotify_track_id=spotify_track_id,
+                  exc_info=True)
         return {
             "status": "failed",
             "message": str(e)
@@ -245,7 +252,7 @@ def _ingest_track(spotify_track_id: str) -> dict:
 
 def _ingest_playlist(playlist_id: str) -> dict:
     """Helper function to ingest a playlist (used by both task and direct call)."""
-    print(f"[Light Worker] Ingesting playlist {playlist_id}...")
+    log.info("ingesting_playlist", playlist_id=playlist_id)
 
     db = SessionLocal()
     try:
@@ -263,7 +270,8 @@ def _ingest_playlist(playlist_id: str) -> dict:
             "tracks_queued": dispatched
         }
     except Exception as e:
-        print(f"[Light Worker] Playlist ingestion failed: {e}")
+        log.error("playlist_ingestion_failed", playlist_id=playlist_id,
+                  exc_info=True)
         return {
             "status": "failed",
             "message": str(e)
@@ -288,7 +296,7 @@ def ingest_playlist_task(self, playlist_id: str):
 
 def _ingest_album(album_id: str) -> dict:
     """Helper function to ingest an album (used by both task and direct call)."""
-    print(f"[Light Worker] Ingesting album {album_id}...")
+    log.info("ingesting_album", album_id=album_id)
 
     db = SessionLocal()
     try:
@@ -306,7 +314,7 @@ def _ingest_album(album_id: str) -> dict:
             "tracks_queued": dispatched
         }
     except Exception as e:
-        print(f"[Light Worker] Album ingestion failed: {e}")
+        log.error("album_ingestion_failed", album_id=album_id, exc_info=True)
         return {
             "status": "failed",
             "message": str(e)
@@ -342,7 +350,7 @@ def cleanup_orphans_task(self):
     Returns:
         dict: Cleanup statistics
     """
-    print("[Light Worker] Running orphan cleanup...")
+    log.info("starting_orphan_cleanup")
 
     db = SessionLocal()
     try:
@@ -381,7 +389,7 @@ def cleanup_orphans_task(self):
 
         db.commit()
 
-        print(f"[Light Worker] Cleanup complete: {stats}")
+        log.info("cleanup_complete", **stats)
 
         return {
             "status": "success",
@@ -389,7 +397,7 @@ def cleanup_orphans_task(self):
             "stats": stats
         }
     except Exception as e:
-        print(f"[Light Worker] Cleanup failed: {e}")
+        log.error("cleanup_failed", exc_info=True)
         db.rollback()
         return {
             "status": "failed",

@@ -12,6 +12,7 @@ import type {
   Track
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get all artists with pagination
@@ -33,20 +34,14 @@ export const getGetArtistsUrl = (params?: GetArtistsParams,) => {
 
 export const getArtists = async (params?: GetArtistsParams, options?: RequestInit): Promise<PageResponseArtist> => {
   
-  const res = await fetch(getGetArtistsUrl(params),
+  return customFetch<PageResponseArtist>(getGetArtistsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PageResponseArtist = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -62,20 +57,14 @@ export const getGetArtistUrl = (id: string,) => {
 
 export const getArtist = async (id: string, options?: RequestInit): Promise<Artist> => {
   
-  const res = await fetch(getGetArtistUrl(id),
+  return customFetch<Artist>(getGetArtistUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Artist = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -91,20 +80,14 @@ export const getGetArtistTracksUrl = (id: string,) => {
 
 export const getArtistTracks = async (id: string, options?: RequestInit): Promise<Track[]> => {
   
-  const res = await fetch(getGetArtistTracksUrl(id),
+  return customFetch<Track[]>(getGetArtistTracksUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Track[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -127,19 +110,13 @@ export const getSearchArtistsUrl = (params: SearchArtistsParams,) => {
 
 export const searchArtists = async (params: SearchArtistsParams, options?: RequestInit): Promise<PageResponseArtist> => {
   
-  const res = await fetch(getSearchArtistsUrl(params),
+  return customFetch<PageResponseArtist>(getSearchArtistsUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PageResponseArtist = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

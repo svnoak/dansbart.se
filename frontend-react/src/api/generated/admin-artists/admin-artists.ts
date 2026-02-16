@@ -18,6 +18,7 @@ import type {
   RejectRequest
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Reject an artist and delete pending tracks
@@ -33,7 +34,7 @@ export const getRejectArtistUrl = (artistId: string,) => {
 export const rejectArtist = async (artistId: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectArtist200> => {
   
-  const res = await fetch(getRejectArtistUrl(artistId),
+  return customFetch<RejectArtist200>(getRejectArtistUrl(artistId),
   {      
     ...options,
     method: 'POST',
@@ -41,13 +42,7 @@ export const rejectArtist = async (artistId: string,
     body: JSON.stringify(
       rejectRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: RejectArtist200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -63,20 +58,14 @@ export const getApproveArtistUrl = (artistId: string,) => {
 
 export const approveArtist = async (artistId: string, options?: RequestInit): Promise<ApproveArtist200> => {
   
-  const res = await fetch(getApproveArtistUrl(artistId),
+  return customFetch<ApproveArtist200>(getApproveArtistUrl(artistId),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ApproveArtist200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -92,7 +81,7 @@ export const getBulkRejectArtistsUrl = () => {
 
 export const bulkRejectArtists = async (bulkRejectRequest: BulkRejectRequest, options?: RequestInit): Promise<BulkRejectArtists200> => {
   
-  const res = await fetch(getBulkRejectArtistsUrl(),
+  return customFetch<BulkRejectArtists200>(getBulkRejectArtistsUrl(),
   {      
     ...options,
     method: 'POST',
@@ -100,13 +89,7 @@ export const bulkRejectArtists = async (bulkRejectRequest: BulkRejectRequest, op
     body: JSON.stringify(
       bulkRejectRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: BulkRejectArtists200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -122,7 +105,7 @@ export const getBulkApproveArtistsUrl = () => {
 
 export const bulkApproveArtists = async (bulkApproveRequest: BulkApproveRequest, options?: RequestInit): Promise<BulkApproveArtists200> => {
   
-  const res = await fetch(getBulkApproveArtistsUrl(),
+  return customFetch<BulkApproveArtists200>(getBulkApproveArtistsUrl(),
   {      
     ...options,
     method: 'POST',
@@ -130,13 +113,7 @@ export const bulkApproveArtists = async (bulkApproveRequest: BulkApproveRequest,
     body: JSON.stringify(
       bulkApproveRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: BulkApproveArtists200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -159,20 +136,14 @@ export const getGetArtists1Url = (params?: GetArtists1Params,) => {
 
 export const getArtists1 = async (params?: GetArtists1Params, options?: RequestInit): Promise<GetArtists1200> => {
   
-  const res = await fetch(getGetArtists1Url(params),
+  return customFetch<GetArtists1200>(getGetArtists1Url(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetArtists1200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -188,20 +159,14 @@ export const getGetIsolationStatusUrl = (artistId: string,) => {
 
 export const getIsolationStatus = async (artistId: string, options?: RequestInit): Promise<GetIsolationStatus200> => {
   
-  const res = await fetch(getGetIsolationStatusUrl(artistId),
+  return customFetch<GetIsolationStatus200>(getGetIsolationStatusUrl(artistId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetIsolationStatus200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -217,19 +182,13 @@ export const getGetCollaborationNetworkUrl = (artistId: string,) => {
 
 export const getCollaborationNetwork = async (artistId: string, options?: RequestInit): Promise<GetCollaborationNetwork200> => {
   
-  const res = await fetch(getGetCollaborationNetworkUrl(artistId),
+  return customFetch<GetCollaborationNetwork200>(getGetCollaborationNetworkUrl(artistId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetCollaborationNetwork200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

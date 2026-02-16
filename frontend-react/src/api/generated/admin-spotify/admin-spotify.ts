@@ -13,6 +13,7 @@ import type {
   IngestTrackRequest
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Ingest track from Spotify
@@ -27,7 +28,7 @@ export const getIngestTrackUrl = () => {
 
 export const ingestTrack = async (ingestTrackRequest: IngestTrackRequest, options?: RequestInit): Promise<IngestTrack200> => {
   
-  const res = await fetch(getIngestTrackUrl(),
+  return customFetch<IngestTrack200>(getIngestTrackUrl(),
   {      
     ...options,
     method: 'POST',
@@ -35,13 +36,7 @@ export const ingestTrack = async (ingestTrackRequest: IngestTrackRequest, option
     body: JSON.stringify(
       ingestTrackRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: IngestTrack200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -57,7 +52,7 @@ export const getIngestAlbumUrl = () => {
 
 export const ingestAlbum = async (ingestAlbumRequest: IngestAlbumRequest, options?: RequestInit): Promise<IngestAlbum200> => {
   
-  const res = await fetch(getIngestAlbumUrl(),
+  return customFetch<IngestAlbum200>(getIngestAlbumUrl(),
   {      
     ...options,
     method: 'POST',
@@ -65,13 +60,7 @@ export const ingestAlbum = async (ingestAlbumRequest: IngestAlbumRequest, option
     body: JSON.stringify(
       ingestAlbumRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: IngestAlbum200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -87,20 +76,14 @@ export const getGetArtistAlbumsUrl = (spotifyId: string,) => {
 
 export const getArtistAlbums = async (spotifyId: string, options?: RequestInit): Promise<GetArtistAlbums200> => {
   
-  const res = await fetch(getGetArtistAlbumsUrl(spotifyId),
+  return customFetch<GetArtistAlbums200>(getGetArtistAlbumsUrl(spotifyId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetArtistAlbums200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -116,19 +99,13 @@ export const getGetAlbumTracks1Url = (spotifyId: string,) => {
 
 export const getAlbumTracks1 = async (spotifyId: string, options?: RequestInit): Promise<GetAlbumTracks1200> => {
   
-  const res = await fetch(getGetAlbumTracks1Url(spotifyId),
+  return customFetch<GetAlbumTracks1200>(getGetAlbumTracks1Url(spotifyId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetAlbumTracks1200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

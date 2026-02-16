@@ -16,6 +16,7 @@ import type {
   MergeDuplicatesParams
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Merge all duplicate tracks with the given ISRC into a single canonical track
@@ -39,20 +40,14 @@ export const getMergeDuplicatesUrl = (isrc: string,
 export const mergeDuplicates = async (isrc: string,
     params?: MergeDuplicatesParams, options?: RequestInit): Promise<MergeDuplicates200> => {
   
-  const res = await fetch(getMergeDuplicatesUrl(isrc,params),
+  return customFetch<MergeDuplicates200>(getMergeDuplicatesUrl(isrc,params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: MergeDuplicates200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -75,20 +70,14 @@ export const getMergeAllDuplicatesUrl = (params?: MergeAllDuplicatesParams,) => 
 
 export const mergeAllDuplicates = async (params?: MergeAllDuplicatesParams, options?: RequestInit): Promise<MergeAllDuplicates200> => {
   
-  const res = await fetch(getMergeAllDuplicatesUrl(params),
+  return customFetch<MergeAllDuplicates200>(getMergeAllDuplicatesUrl(params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: MergeAllDuplicates200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -111,20 +100,14 @@ export const getGetDuplicatesUrl = (params?: GetDuplicatesParams,) => {
 
 export const getDuplicates = async (params?: GetDuplicatesParams, options?: RequestInit): Promise<GetDuplicates200> => {
   
-  const res = await fetch(getGetDuplicatesUrl(params),
+  return customFetch<GetDuplicates200>(getGetDuplicatesUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetDuplicates200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -147,20 +130,14 @@ export const getGetMergeableDuplicatesUrl = (params?: GetMergeableDuplicatesPara
 
 export const getMergeableDuplicates = async (params?: GetMergeableDuplicatesParams, options?: RequestInit): Promise<GetMergeableDuplicates200> => {
   
-  const res = await fetch(getGetMergeableDuplicatesUrl(params),
+  return customFetch<GetMergeableDuplicates200>(getGetMergeableDuplicatesUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetMergeableDuplicates200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -176,19 +153,13 @@ export const getAnalyzeDuplicatesUrl = (isrc: string,) => {
 
 export const analyzeDuplicates = async (isrc: string, options?: RequestInit): Promise<AnalyzeDuplicates200> => {
   
-  const res = await fetch(getAnalyzeDuplicatesUrl(isrc),
+  return customFetch<AnalyzeDuplicates200>(getAnalyzeDuplicatesUrl(isrc),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: AnalyzeDuplicates200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

@@ -20,6 +20,7 @@ import type {
   UpdatePlaylistRequest
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get playlist by ID
@@ -34,20 +35,14 @@ export const getGetPlaylistUrl = (id: string,) => {
 
 export const getPlaylist = async (id: string, options?: RequestInit): Promise<PlaylistDto> => {
   
-  const res = await fetch(getGetPlaylistUrl(id),
+  return customFetch<PlaylistDto>(getGetPlaylistUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PlaylistDto = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -64,7 +59,7 @@ export const getUpdatePlaylistUrl = (id: string,) => {
 export const updatePlaylist = async (id: string,
     updatePlaylistRequest: UpdatePlaylistRequest, options?: RequestInit): Promise<Playlist> => {
   
-  const res = await fetch(getUpdatePlaylistUrl(id),
+  return customFetch<Playlist>(getUpdatePlaylistUrl(id),
   {      
     ...options,
     method: 'PUT',
@@ -72,13 +67,7 @@ export const updatePlaylist = async (id: string,
     body: JSON.stringify(
       updatePlaylistRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Playlist = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -94,20 +83,14 @@ export const getDeletePlaylistUrl = (id: string,) => {
 
 export const deletePlaylist = async (id: string, options?: RequestInit): Promise<void> => {
   
-  const res = await fetch(getDeletePlaylistUrl(id),
+  return customFetch<void>(getDeletePlaylistUrl(id),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: void = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -124,7 +107,7 @@ export const getReorderTracksUrl = (id: string,) => {
 export const reorderTracks = async (id: string,
     reorderTracksRequest: ReorderTracksRequest, options?: RequestInit): Promise<void> => {
   
-  const res = await fetch(getReorderTracksUrl(id),
+  return customFetch<void>(getReorderTracksUrl(id),
   {      
     ...options,
     method: 'PUT',
@@ -132,13 +115,7 @@ export const reorderTracks = async (id: string,
     body: JSON.stringify(
       reorderTracksRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: void = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -157,7 +134,7 @@ export const updateCollaborator = async (id: string,
     collaboratorId: string,
     updateCollaboratorRequest: UpdateCollaboratorRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
   
-  const res = await fetch(getUpdateCollaboratorUrl(id,collaboratorId),
+  return customFetch<PlaylistCollaborator>(getUpdateCollaboratorUrl(id,collaboratorId),
   {      
     ...options,
     method: 'PUT',
@@ -165,13 +142,7 @@ export const updateCollaborator = async (id: string,
     body: JSON.stringify(
       updateCollaboratorRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PlaylistCollaborator = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -189,20 +160,14 @@ export const getRemoveCollaboratorUrl = (id: string,
 export const removeCollaborator = async (id: string,
     collaboratorId: string, options?: RequestInit): Promise<void> => {
   
-  const res = await fetch(getRemoveCollaboratorUrl(id,collaboratorId),
+  return customFetch<void>(getRemoveCollaboratorUrl(id,collaboratorId),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: void = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -219,7 +184,7 @@ export const getRespondToInvitationUrl = (invitationId: string,) => {
 export const respondToInvitation = async (invitationId: string,
     respondToInvitationRequest: RespondToInvitationRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
   
-  const res = await fetch(getRespondToInvitationUrl(invitationId),
+  return customFetch<PlaylistCollaborator>(getRespondToInvitationUrl(invitationId),
   {      
     ...options,
     method: 'PUT',
@@ -227,13 +192,7 @@ export const respondToInvitation = async (invitationId: string,
     body: JSON.stringify(
       respondToInvitationRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PlaylistCollaborator = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -249,20 +208,14 @@ export const getGetMyPlaylists1Url = () => {
 
 export const getMyPlaylists1 = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  const res = await fetch(getGetMyPlaylists1Url(),
+  return customFetch<Playlist[]>(getGetMyPlaylists1Url(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Playlist[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -278,7 +231,7 @@ export const getCreatePlaylistUrl = () => {
 
 export const createPlaylist = async (createPlaylistRequest: CreatePlaylistRequest, options?: RequestInit): Promise<Playlist> => {
   
-  const res = await fetch(getCreatePlaylistUrl(),
+  return customFetch<Playlist>(getCreatePlaylistUrl(),
   {      
     ...options,
     method: 'POST',
@@ -286,13 +239,7 @@ export const createPlaylist = async (createPlaylistRequest: CreatePlaylistReques
     body: JSON.stringify(
       createPlaylistRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Playlist = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -309,7 +256,7 @@ export const getAddTrackUrl = (id: string,) => {
 export const addTrack = async (id: string,
     addTrackRequest: AddTrackRequest, options?: RequestInit): Promise<PlaylistTrack> => {
   
-  const res = await fetch(getAddTrackUrl(id),
+  return customFetch<PlaylistTrack>(getAddTrackUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -317,13 +264,7 @@ export const addTrack = async (id: string,
     body: JSON.stringify(
       addTrackRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PlaylistTrack = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -339,20 +280,14 @@ export const getGenerateShareTokenUrl = (id: string,) => {
 
 export const generateShareToken = async (id: string, options?: RequestInit): Promise<Playlist> => {
   
-  const res = await fetch(getGenerateShareTokenUrl(id),
+  return customFetch<Playlist>(getGenerateShareTokenUrl(id),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Playlist = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -368,20 +303,14 @@ export const getGetCollaboratorsUrl = (id: string,) => {
 
 export const getCollaborators = async (id: string, options?: RequestInit): Promise<CollaboratorDto[]> => {
   
-  const res = await fetch(getGetCollaboratorsUrl(id),
+  return customFetch<CollaboratorDto[]>(getGetCollaboratorsUrl(id),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: CollaboratorDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -398,7 +327,7 @@ export const getInviteCollaboratorUrl = (id: string,) => {
 export const inviteCollaborator = async (id: string,
     inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
   
-  const res = await fetch(getInviteCollaboratorUrl(id),
+  return customFetch<PlaylistCollaborator>(getInviteCollaboratorUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -406,13 +335,7 @@ export const inviteCollaborator = async (id: string,
     body: JSON.stringify(
       inviteCollaboratorRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PlaylistCollaborator = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -428,20 +351,14 @@ export const getGetSharedPlaylists1Url = () => {
 
 export const getSharedPlaylists1 = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  const res = await fetch(getGetSharedPlaylists1Url(),
+  return customFetch<Playlist[]>(getGetSharedPlaylists1Url(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Playlist[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -457,20 +374,14 @@ export const getGetPlaylistByShareTokenUrl = (shareToken: string,) => {
 
 export const getPlaylistByShareToken = async (shareToken: string, options?: RequestInit): Promise<PlaylistDto> => {
   
-  const res = await fetch(getGetPlaylistByShareTokenUrl(shareToken),
+  return customFetch<PlaylistDto>(getGetPlaylistByShareTokenUrl(shareToken),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: PlaylistDto = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -486,20 +397,14 @@ export const getGetInvitationsUrl = () => {
 
 export const getInvitations = async ( options?: RequestInit): Promise<InvitationDto[]> => {
   
-  const res = await fetch(getGetInvitationsUrl(),
+  return customFetch<InvitationDto[]>(getGetInvitationsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: InvitationDto[] = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -517,19 +422,13 @@ export const getRemoveTrackUrl = (id: string,
 export const removeTrack = async (id: string,
     trackId: string, options?: RequestInit): Promise<void> => {
   
-  const res = await fetch(getRemoveTrackUrl(id,trackId),
+  return customFetch<void>(getRemoveTrackUrl(id,trackId),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: void = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

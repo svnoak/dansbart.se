@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import se.dansbart.logging.CanonicalLog;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -22,6 +23,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
+        enrichCanonicalLog("error", "ResourceNotFoundException",
+                "error_message", ex.getMessage());
         return ResponseEntity
             .status(HttpStatus.NOT_FOUND)
             .body(new ErrorResponse(
@@ -104,6 +107,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         log.error("Unhandled exception", ex);
+        enrichCanonicalLog("error", ex.getClass().getSimpleName(),
+                "error_message", ex.getMessage());
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(new ErrorResponse(
@@ -112,6 +117,15 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred",
                 OffsetDateTime.now()
             ));
+    }
+
+    private void enrichCanonicalLog(String... kvPairs) {
+        CanonicalLog canonical = CanonicalLog.current();
+        if (canonical != null) {
+            for (int i = 0; i < kvPairs.length - 1; i += 2) {
+                canonical.put(kvPairs[i], kvPairs[i + 1]);
+            }
+        }
     }
 
     public record ErrorResponse(

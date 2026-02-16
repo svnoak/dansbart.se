@@ -4,11 +4,14 @@ Feature worker tasks - Classification from stored analysis data.
 These tasks use neckenml-core (MIT licensed) only.
 No audio processing - just re-classification from stored artifacts.
 """
+import structlog
 from celery import shared_task
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
 from app.core.models import Track
 from app.services.classification import ClassificationService
+
+log = structlog.get_logger()
 
 
 @celery_app.task(bind=True, acks_late=True, queue='feature')
@@ -22,16 +25,16 @@ def reclassify_library_task(self):
     Returns:
         dict: Statistics about the reclassification (updated, skipped counts)
     """
-    print("[Feature Worker] Starting library reclassification...")
+    log.info("starting_library_reclassification")
 
     db = SessionLocal()
     try:
         service = ClassificationService(db)
         result = service.reclassify_library()
-        print(f"[Feature Worker] Reclassification complete: {result}")
+        log.info("reclassification_complete", result=result)
         return result
     except Exception as e:
-        print(f"[Feature Worker] Error during reclassification: {e}")
+        log.error("reclassification_failed", exc_info=True)
         raise
     finally:
         db.close()
@@ -49,13 +52,13 @@ def classify_track_task(self, track_id: str, analysis_data: dict = None):
     Returns:
         dict: Classification result or error
     """
-    print(f"[Feature Worker] Classifying track {track_id}...")
+    log.info("classifying_track", track_id=track_id)
 
     db = SessionLocal()
     try:
         track = db.query(Track).filter(Track.id == track_id).first()
         if not track:
-            print(f"[Feature Worker] Track {track_id} not found")
+            log.warn("track_not_found", track_id=track_id)
             return {"error": "Track not found"}
 
         service = ClassificationService(db)
@@ -63,7 +66,7 @@ def classify_track_task(self, track_id: str, analysis_data: dict = None):
 
         return {"status": "success", "track_id": track_id}
     except Exception as e:
-        print(f"[Feature Worker] Error classifying track {track_id}: {e}")
+        log.error("classification_failed", track_id=track_id, exc_info=True)
         raise
     finally:
         db.close()

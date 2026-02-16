@@ -18,6 +18,7 @@ import type {
   ResetCrawlData200
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Trigger heuristic reclassification for all tracks
@@ -32,20 +33,14 @@ export const getReclassifyAllUrl = () => {
 
 export const reclassifyAll = async ( options?: RequestInit): Promise<ReclassifyAll200> => {
   
-  const res = await fetch(getReclassifyAllUrl(),
+  return customFetch<ReclassifyAll200>(getReclassifyAllUrl(),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ReclassifyAll200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -69,20 +64,14 @@ export const getQueuePendingTracksUrl = (params?: QueuePendingTracksParams,) => 
 
 export const queuePendingTracks = async (params?: QueuePendingTracksParams, options?: RequestInit): Promise<QueuePendingTracks200> => {
   
-  const res = await fetch(getQueuePendingTracksUrl(params),
+  return customFetch<QueuePendingTracks200>(getQueuePendingTracksUrl(params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: QueuePendingTracks200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -105,20 +94,14 @@ export const getCleanupOrphanedUrl = (params?: CleanupOrphanedParams,) => {
 
 export const cleanupOrphaned = async (params?: CleanupOrphanedParams, options?: RequestInit): Promise<CleanupOrphaned200> => {
   
-  const res = await fetch(getCleanupOrphanedUrl(params),
+  return customFetch<CleanupOrphaned200>(getCleanupOrphanedUrl(params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: CleanupOrphaned200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -141,20 +124,14 @@ export const getBackfillIsrcsUrl = (params?: BackfillIsrcsParams,) => {
 
 export const backfillIsrcs = async (params?: BackfillIsrcsParams, options?: RequestInit): Promise<BackfillIsrcs200> => {
   
-  const res = await fetch(getBackfillIsrcsUrl(params),
+  return customFetch<BackfillIsrcs200>(getBackfillIsrcsUrl(params),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: BackfillIsrcs200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -170,7 +147,7 @@ export const getIngestUrl = () => {
 
 export const ingest = async (ingestRequest: IngestRequest, options?: RequestInit): Promise<Ingest200> => {
   
-  const res = await fetch(getIngestUrl(),
+  return customFetch<Ingest200>(getIngestUrl(),
   {      
     ...options,
     method: 'POST',
@@ -178,13 +155,7 @@ export const ingest = async (ingestRequest: IngestRequest, options?: RequestInit
     body: JSON.stringify(
       ingestRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: Ingest200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -200,20 +171,14 @@ export const getResetCrawlDataUrl = () => {
 
 export const resetCrawlData = async ( options?: RequestInit): Promise<ResetCrawlData200> => {
   
-  const res = await fetch(getResetCrawlDataUrl(),
+  return customFetch<ResetCrawlData200>(getResetCrawlDataUrl(),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: ResetCrawlData200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -229,19 +194,13 @@ export const getGetIsrcStatsUrl = () => {
 
 export const getIsrcStats = async ( options?: RequestInit): Promise<GetIsrcStats200> => {
   
-  const res = await fetch(getGetIsrcStatsUrl(),
+  return customFetch<GetIsrcStats200>(getGetIsrcStatsUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetIsrcStats200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 

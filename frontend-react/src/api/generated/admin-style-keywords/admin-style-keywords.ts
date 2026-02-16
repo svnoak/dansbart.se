@@ -17,6 +17,7 @@ import type {
   UpdateKeyword200
 } from '../../models';
 
+import { customFetch } from '../../custom-fetch';
 
 /**
  * @summary Get a single style keyword by ID
@@ -31,20 +32,14 @@ export const getGetKeywordUrl = (keywordId: string,) => {
 
 export const getKeyword = async (keywordId: string, options?: RequestInit): Promise<GetKeyword200> => {
   
-  const res = await fetch(getGetKeywordUrl(keywordId),
+  return customFetch<GetKeyword200>(getGetKeywordUrl(keywordId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetKeyword200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -61,7 +56,7 @@ export const getUpdateKeywordUrl = (keywordId: string,) => {
 export const updateKeyword = async (keywordId: string,
     styleKeywordUpdateRequest: StyleKeywordUpdateRequest, options?: RequestInit): Promise<UpdateKeyword200> => {
   
-  const res = await fetch(getUpdateKeywordUrl(keywordId),
+  return customFetch<UpdateKeyword200>(getUpdateKeywordUrl(keywordId),
   {      
     ...options,
     method: 'PUT',
@@ -69,13 +64,7 @@ export const updateKeyword = async (keywordId: string,
     body: JSON.stringify(
       styleKeywordUpdateRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: UpdateKeyword200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -91,20 +80,14 @@ export const getDeleteKeywordUrl = (keywordId: string,) => {
 
 export const deleteKeyword = async (keywordId: string, options?: RequestInit): Promise<DeleteKeyword200> => {
   
-  const res = await fetch(getDeleteKeywordUrl(keywordId),
+  return customFetch<DeleteKeyword200>(getDeleteKeywordUrl(keywordId),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: DeleteKeyword200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -127,20 +110,14 @@ export const getGetKeywords1Url = (params?: GetKeywords1Params,) => {
 
 export const getKeywords1 = async (params?: GetKeywords1Params, options?: RequestInit): Promise<GetKeywords1200> => {
   
-  const res = await fetch(getGetKeywords1Url(params),
+  return customFetch<GetKeywords1200>(getGetKeywords1Url(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetKeywords1200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -156,7 +133,7 @@ export const getCreateKeywordUrl = () => {
 
 export const createKeyword = async (styleKeywordRequest: StyleKeywordRequest, options?: RequestInit): Promise<CreateKeyword200> => {
   
-  const res = await fetch(getCreateKeywordUrl(),
+  return customFetch<CreateKeyword200>(getCreateKeywordUrl(),
   {      
     ...options,
     method: 'POST',
@@ -164,13 +141,7 @@ export const createKeyword = async (styleKeywordRequest: StyleKeywordRequest, op
     body: JSON.stringify(
       styleKeywordRequest,)
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: CreateKeyword200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -186,20 +157,14 @@ export const getInvalidateCacheUrl = () => {
 
 export const invalidateCache = async ( options?: RequestInit): Promise<InvalidateCache200> => {
   
-  const res = await fetch(getInvalidateCacheUrl(),
+  return customFetch<InvalidateCache200>(getInvalidateCacheUrl(),
   {      
     ...options,
     method: 'POST'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: InvalidateCache200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
 /**
@@ -215,19 +180,13 @@ export const getGetStats1Url = () => {
 
 export const getStats1 = async ( options?: RequestInit): Promise<GetStats1200> => {
   
-  const res = await fetch(getGetStats1Url(),
+  return customFetch<GetStats1200>(getGetStats1Url(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: GetStats1200 = body ? JSON.parse(body) : {}
-  return data
-}
+);}
 
 
