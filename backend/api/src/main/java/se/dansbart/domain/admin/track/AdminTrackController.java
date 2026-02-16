@@ -18,6 +18,12 @@ public class AdminTrackController {
 
     private final AdminTrackService adminTrackService;
 
+    @GetMapping("/status-counts")
+    @Operation(summary = "Get track counts grouped by processing status")
+    public ResponseEntity<Map<String, Long>> getStatusCounts() {
+        return ResponseEntity.ok(adminTrackService.getStatusCounts());
+    }
+
     @GetMapping
     @Operation(summary = "Get all tracks with filtering")
     public ResponseEntity<AdminTrackPageResponse> getTracks(

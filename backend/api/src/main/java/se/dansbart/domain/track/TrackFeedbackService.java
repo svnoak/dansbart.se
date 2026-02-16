@@ -6,6 +6,8 @@ import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.DanceMovementFeedback;
 import se.dansbart.domain.admin.DanceMovementFeedbackJooqRepository;
 
+import se.dansbart.dto.DanceStyleDto;
+
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -268,5 +270,33 @@ public class TrackFeedbackService {
         result.put("trackId", trackId);
         result.put("reset", true);
         return Optional.of(result);
+    }
+
+    /**
+     * Get unconfirmed secondary dance styles for a track.
+     * Returns non-primary styles with fewer than 3 confirmations.
+     */
+    @Transactional(readOnly = true)
+    public List<DanceStyleDto> getUnconfirmedSecondaryStyles(UUID trackId) {
+        return danceStyleRepository.findByTrackId(trackId).stream()
+            .filter(s -> !Boolean.TRUE.equals(s.getIsPrimary()))
+            .filter(s -> s.getConfirmationCount() < 3)
+            .map(this::toDanceStyleDto)
+            .toList();
+    }
+
+    private DanceStyleDto toDanceStyleDto(TrackDanceStyle s) {
+        return DanceStyleDto.builder()
+            .id(s.getId())
+            .danceStyle(s.getDanceStyle())
+            .subStyle(s.getSubStyle())
+            .isPrimary(s.getIsPrimary())
+            .confidence(s.getConfidence())
+            .tempoCategory(s.getTempoCategory())
+            .bpmMultiplier(s.getBpmMultiplier())
+            .effectiveBpm(s.getEffectiveBpm())
+            .confirmationCount(s.getConfirmationCount())
+            .isUserConfirmed(s.getIsUserConfirmed())
+            .build();
     }
 }

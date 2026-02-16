@@ -34,6 +34,7 @@ export * from './confirmSecondaryStyle200';
 export * from './createKeyword200';
 export * from './createPlaylistRequest';
 export * from './curatedPlaylistDto';
+export * from './danceStyleDto';
 export * from './deleteKeyword200';
 export * from './deleteTrack200';
 export * from './exportDataset200';

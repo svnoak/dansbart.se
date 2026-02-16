@@ -26,6 +26,11 @@ public class AdminTrackService {
         return adminTrackJooqRepository.findAllWithRelationships(search, status, flagged, limit, offset);
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, Long> getStatusCounts() {
+        return adminTrackJooqRepository.countByProcessingStatus();
+    }
+
     @Transactional
     public Map<String, Object> triggerReanalysis(UUID trackId) {
         if (!trackJooqRepository.existsById(trackId)) {

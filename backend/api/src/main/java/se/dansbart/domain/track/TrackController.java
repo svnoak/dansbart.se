@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import se.dansbart.dto.DanceStyleDto;
 import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.TrackListDto;
 
@@ -89,6 +90,12 @@ public class TrackController {
         return feedbackService.submitStyleFeedback(id, voterId, request.suggestedStyle(), request.tempoCorrection())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/secondary-styles")
+    @Operation(summary = "Get unconfirmed secondary dance styles for a track")
+    public ResponseEntity<List<DanceStyleDto>> getSecondaryStyles(@PathVariable UUID id) {
+        return ResponseEntity.ok(feedbackService.getUnconfirmedSecondaryStyles(id));
     }
 
     @PostMapping("/{id}/confirm-secondary")

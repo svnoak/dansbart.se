@@ -14,6 +14,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.jooq.impl.DSL.count;
 import static se.dansbart.jooq.Tables.*;
 
 /**
@@ -178,6 +179,13 @@ public class AdminTrackJooqRepository {
         long total = dsl.fetchCount(dsl.selectFrom(TRACKS).where(whereClause));
 
         return new PageImpl<>(tracks, PageRequest.of(offset / limit, limit), total);
+    }
+
+    public Map<String, Long> countByProcessingStatus() {
+        return dsl.select(TRACKS.PROCESSING_STATUS, count())
+            .from(TRACKS)
+            .groupBy(TRACKS.PROCESSING_STATUS)
+            .fetchMap(TRACKS.PROCESSING_STATUS, count().coerce(Long.class));
     }
 
     private record PrimaryStyleInfo(String danceStyle, String subStyle, String tempoCategory, Float confidence) {}

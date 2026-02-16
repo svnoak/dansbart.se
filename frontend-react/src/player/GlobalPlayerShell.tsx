@@ -25,6 +25,7 @@ import {
 } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { formatDurationMs } from '@/utils/formatDuration';
+import { SmartNudge } from '@/player/SmartNudge';
 
 const YT_PLAYER_CONTAINER_ID = 'global-yt-player-container';
 
@@ -624,6 +625,8 @@ export function GlobalPlayerShell() {
           </div>
         </div>
       )}
+
+      <SmartNudge track={currentTrack} isPlaying={isPlaying} />
 
       {/* Fixed bottom bar: progress on top, then 3-column row (Vue PlayerDockedView) */}
       <div

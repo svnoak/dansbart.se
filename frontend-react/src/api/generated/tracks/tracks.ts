@@ -6,6 +6,7 @@
  */
 import type {
   ConfirmSecondaryStyle200,
+  DanceStyleDto,
   FeedbackRequest,
   FlagTrack200,
   FlagTrackParams,
@@ -224,6 +225,35 @@ export const submitFeedback = async (id: string,
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
   
   const data: TrackStyleVote = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+/**
+ * @summary Get unconfirmed secondary dance styles for a track
+ */
+export const getGetSecondaryStylesUrl = (id: string,) => {
+
+
+  
+
+  return `/api/tracks/${id}/secondary-styles`
+}
+
+export const getSecondaryStyles = async (id: string, options?: RequestInit): Promise<DanceStyleDto[]> => {
+  
+  const res = await fetch(getGetSecondaryStylesUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: DanceStyleDto[] = body ? JSON.parse(body) : {}
   return data
 }
 
