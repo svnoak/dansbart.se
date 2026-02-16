@@ -248,18 +248,37 @@ public class TrackJooqRepository {
             minBpm, maxBpm, minDurationMs, maxDurationMs,
             minBounciness, maxBounciness, minArticulation, maxArticulation
         );
-        var trackIds = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var yt = PLAYBACK_LINKS.as("yt");
+        var hasYoutube = DSL.exists(
+            DSL.selectOne().from(yt).where(
+                yt.TRACK_ID.eq(TRACKS.ID)
+                    .and(yt.PLATFORM.eq("youtube"))
+                    .and(yt.IS_WORKING.eq(true))
+            )
+        );
+        var orderedIds = dsl.select(TRACKS.ID)
+            .from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(sub)
-            .fetch(TRACKS.ID);
-        if (trackIds.isEmpty()) return List.of();
-        return dsl.selectFrom(TRACKS)
-            .where(TRACKS.ID.in(trackIds))
-            .orderBy(TRACKS.CREATED_AT.desc())
+            .groupBy(TRACKS.ID)
+            .orderBy(
+                DSL.when(hasYoutube, DSL.inline(0)).otherwise(DSL.inline(1)).asc(),
+                DSL.max(TRACK_DANCE_STYLES.CONFIDENCE).desc().nullsLast()
+            )
             .limit(limit)
             .offset(offset)
-            .fetch(this::toTrack);
+            .fetch(TRACKS.ID);
+        if (orderedIds.isEmpty()) return List.of();
+        Map<UUID, Track> trackMap = new LinkedHashMap<>();
+        dsl.selectFrom(TRACKS)
+            .where(TRACKS.ID.in(orderedIds))
+            .fetch(this::toTrack)
+            .forEach(t -> trackMap.put(t.getId(), t));
+        return orderedIds.stream()
+            .map(trackMap::get)
+            .filter(t -> t != null)
+            .toList();
     }
 
     public long countPlayableTracksWithFilters(

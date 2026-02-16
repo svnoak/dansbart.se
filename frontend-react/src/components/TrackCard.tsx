@@ -13,6 +13,7 @@ import {
 } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { formatDurationMs } from '@/utils/formatDuration';
+import { FlagTrackModal } from './FlagTrackModal';
 
 interface TrackCardProps {
   track: TrackListDto;
@@ -22,6 +23,7 @@ interface TrackCardProps {
 export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [flagModalOpen, setFlagModalOpen] = useState(false);
   const isCurrent = currentTrack?.id === track.id;
 
   const hasValidStyle =
@@ -170,6 +172,7 @@ export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
           type="button"
           className="text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
           aria-label="Rapportera problem"
+          onClick={() => setFlagModalOpen(true)}
         >
           <FlagIcon className="h-4 w-4" aria-hidden />
         </button>
@@ -244,7 +247,10 @@ export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
                     type="button"
                     role="menuitem"
                     className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => {
+                      setFlagModalOpen(true);
+                      setMenuOpen(false);
+                    }}
                   >
                     Rapportera problem
                   </button>
@@ -254,6 +260,11 @@ export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
           )}
         </div>
       </div>
+      <FlagTrackModal
+        open={flagModalOpen}
+        onClose={() => setFlagModalOpen(false)}
+        track={track}
+      />
     </Card>
   );
 }

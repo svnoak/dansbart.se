@@ -85,8 +85,12 @@ public class TrackController {
     public ResponseEntity<TrackStyleVote> submitFeedback(
             @PathVariable UUID id,
             @AuthenticationPrincipal Jwt jwt,
+            @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
             @RequestBody FeedbackRequest request) {
-        String voterId = jwt.getSubject();
+        String voterId = jwt != null ? jwt.getSubject() : voterHeader;
+        if (voterId == null || voterId.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
         return feedbackService.submitStyleFeedback(id, voterId, request.suggestedStyle(), request.tempoCorrection())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
