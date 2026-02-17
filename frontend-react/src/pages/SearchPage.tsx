@@ -39,7 +39,9 @@ export function SearchPage() {
       draftFilters.minBpm != null ||
       draftFilters.maxBpm != null ||
       draftFilters.minDuration != null ||
-      draftFilters.maxDuration != null,
+      draftFilters.maxDuration != null ||
+      draftFilters.bouncinessEnabled ||
+      draftFilters.articulationEnabled,
     [draftFilters]
   );
   const applyDraft = useCallback(() => {
@@ -170,6 +172,12 @@ export function SearchPage() {
     filters.maxBpm,
     filters.minDuration,
     filters.maxDuration,
+    filters.bouncinessEnabled,
+    filters.minBounciness,
+    filters.maxBounciness,
+    filters.articulationEnabled,
+    filters.minArticulation,
+    filters.maxArticulation,
     toTracksParams,
   ]);
 

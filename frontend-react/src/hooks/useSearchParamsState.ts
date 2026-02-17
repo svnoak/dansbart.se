@@ -17,6 +17,12 @@ export interface SearchFilters {
   maxBpm: number | null;
   minDuration: number | null;
   maxDuration: number | null;
+  bouncinessEnabled: boolean;
+  minBounciness: number | null;
+  maxBounciness: number | null;
+  articulationEnabled: boolean;
+  minArticulation: number | null;
+  maxArticulation: number | null;
   limit: number;
   offset: number;
 }
@@ -34,6 +40,12 @@ export const DEFAULT_FILTERS: SearchFilters = {
   maxBpm: null,
   minDuration: null,
   maxDuration: null,
+  bouncinessEnabled: false,
+  minBounciness: null,
+  maxBounciness: null,
+  articulationEnabled: false,
+  minArticulation: null,
+  maxArticulation: null,
   limit: 20,
   offset: 0,
 };
@@ -52,6 +64,12 @@ export function filtersEqual(a: SearchFilters, b: SearchFilters): boolean {
     a.maxBpm === b.maxBpm &&
     a.minDuration === b.minDuration &&
     a.maxDuration === b.maxDuration &&
+    a.bouncinessEnabled === b.bouncinessEnabled &&
+    a.minBounciness === b.minBounciness &&
+    a.maxBounciness === b.maxBounciness &&
+    a.articulationEnabled === b.articulationEnabled &&
+    a.minArticulation === b.minArticulation &&
+    a.maxArticulation === b.maxArticulation &&
     a.limit === b.limit &&
     a.offset === b.offset
   );
@@ -85,6 +103,12 @@ export function useSearchParamsState() {
       maxBpm: parseNum(get('maxBpm')),
       minDuration: parseNum(get('minDur')),
       maxDuration: parseNum(get('maxDur')),
+      bouncinessEnabled: parseBool(get('bounce')),
+      minBounciness: parseNum(get('minBounce')),
+      maxBounciness: parseNum(get('maxBounce')),
+      articulationEnabled: parseBool(get('artic')),
+      minArticulation: parseNum(get('minArtic')),
+      maxArticulation: parseNum(get('maxArtic')),
       limit: parseNum(get('limit')) ?? DEFAULT_FILTERS.limit,
       offset: parseNum(get('offset')) ?? DEFAULT_FILTERS.offset,
     };
@@ -116,6 +140,12 @@ export function useSearchParamsState() {
         set('maxBpm', merged.maxBpm ?? undefined);
         set('minDur', merged.minDuration ?? undefined);
         set('maxDur', merged.maxDuration ?? undefined);
+        set('bounce', merged.bouncinessEnabled ? true : undefined);
+        set('minBounce', merged.minBounciness ?? undefined);
+        set('maxBounce', merged.maxBounciness ?? undefined);
+        set('artic', merged.articulationEnabled ? true : undefined);
+        set('minArtic', merged.minArticulation ?? undefined);
+        set('maxArtic', merged.maxArticulation ?? undefined);
         set('limit', merged.limit);
         set('offset', merged.offset);
 
@@ -153,6 +183,14 @@ export function useSearchParamsState() {
     }
     if (filters.minDuration != null) p.minDuration = filters.minDuration;
     if (filters.maxDuration != null) p.maxDuration = filters.maxDuration;
+    if (filters.bouncinessEnabled) {
+      if (filters.minBounciness != null) p.minBounciness = filters.minBounciness;
+      if (filters.maxBounciness != null) p.maxBounciness = filters.maxBounciness;
+    }
+    if (filters.articulationEnabled) {
+      if (filters.minArticulation != null) p.minArticulation = filters.minArticulation;
+      if (filters.maxArticulation != null) p.maxArticulation = filters.maxArticulation;
+    }
     return p;
   }, [filters]);
 
@@ -167,7 +205,9 @@ export function useSearchParamsState() {
       filters.minBpm != null ||
       filters.maxBpm != null ||
       filters.minDuration != null ||
-      filters.maxDuration != null
+      filters.maxDuration != null ||
+      filters.bouncinessEnabled ||
+      filters.articulationEnabled
     );
   }, [filters]);
 
