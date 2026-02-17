@@ -427,12 +427,12 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
   if (step === 'hidden') return null;
 
   return (
-    <div className="fixed left-0 right-0 bottom-24 md:bottom-28 z-[130] px-4 pointer-events-none">
-      <div className="max-w-xl mx-auto pointer-events-auto">
+    <div className="fixed right-0 bottom-24 md:bottom-28 z-[130] px-4 pointer-events-none">
+      <div className="max-w-2xl ml-auto pointer-events-auto">
         <div className="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans animate-in fade-in duration-200">
           {/* VERIFY: style + tempo */}
           {step === 'verify' && (
-            <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
+            <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
                 <p className="opacity-80">Stammer detta?</p>
                 <p className="font-bold text-base md:text-sm">
@@ -463,7 +463,7 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
 
           {/* VERIFY: style only (no tempo) */}
           {step === 'verify-style-only' && (
-            <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
+            <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
                 <p className="opacity-80">Ar detta en</p>
                 <p className="font-bold text-base md:text-sm">
@@ -494,7 +494,7 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
 
           {/* CONFIRM SECONDARY */}
           {step === 'confirm-secondary' && pendingSecondary && (
-            <div className="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
+            <div className="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
                 <p className="opacity-80">Kan man aven dansa</p>
                 <p className="font-bold text-base md:text-sm">
@@ -784,7 +784,7 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
 
           {/* BONUS */}
           {step === 'bonus' && (
-            <div className="bg-teal-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center rounded-xl">
+            <div className="bg-teal-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
                 <p className="font-bold opacity-90">
                   Tack! Gar det att
