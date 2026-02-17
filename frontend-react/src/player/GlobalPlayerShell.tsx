@@ -102,9 +102,9 @@ export function GlobalPlayerShell() {
     }
   }, [windowWidth, expanded]);
 
-  // Load YouTube IFrame API and create player only when consent is granted and source is YouTube
+  // Load YouTube IFrame API and create player when consent is granted
   useEffect(() => {
-    if (activeSource !== 'youtube' || !youtubeVideoId || consentStatus !== 'granted' || typeof window === 'undefined') return;
+    if (!youtubeVideoId || consentStatus !== 'granted' || typeof window === 'undefined') return;
 
     const createPlayer = () => {
       const YT = window.YT;
@@ -152,7 +152,14 @@ export function GlobalPlayerShell() {
         ytPlayerRef.current = null;
       }
     };
-  }, [youtubeVideoId, consentStatus, next, activeSource]);
+  }, [youtubeVideoId, consentStatus, next]);
+
+  // Pause YouTube when switching away from YouTube source
+  useEffect(() => {
+    if (activeSource !== 'youtube' && ytPlayerRef.current?.pauseVideo) {
+      ytPlayerRef.current.pauseVideo();
+    }
+  }, [activeSource]);
 
   // When YouTube video ID changes and player exists, load the new video then sync play state
   useEffect(() => {
@@ -298,9 +305,17 @@ export function GlobalPlayerShell() {
           }`}
           aria-hidden={isYouTubeEmbed && !isPlaying && !expanded}
         >
-          {isYouTubeEmbed ? (
-            <div id={YT_PLAYER_CONTAINER_ID} className="h-full w-full" />
-          ) : (
+          {/* Wrapper div React controls – the YT IFrame API replaces the inner div so we hide/show via the wrapper */}
+          <div
+            className="h-full w-full"
+            style={{ display: isYouTubeEmbed ? 'block' : 'none' }}
+          >
+            <div
+              id={YT_PLAYER_CONTAINER_ID}
+              className="h-full w-full"
+            />
+          </div>
+          {!isYouTubeEmbed && embedUrl && (
             <iframe
               ref={iframeRef}
               title="Uppspelning"
@@ -511,7 +526,7 @@ export function GlobalPlayerShell() {
                       ? 'Pausa'
                       : 'Spela'
                 }
-                className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 w-20 h-20 ${
+                className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 w-20 h-20 text-white ${
                   controlsDisabled
                     ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
                     : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
@@ -805,7 +820,7 @@ export function GlobalPlayerShell() {
                     ? 'Pause'
                     : 'Play'
               }
-              className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
+              className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square text-white ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
                 controlsDisabled
                   ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
                   : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
