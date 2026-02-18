@@ -259,8 +259,8 @@ export function SearchPage() {
 
       {!loading && filters.searchType === 'tracks' && (
         <ul className="space-y-3">
-          {tracks.map((track) => (
-            <li key={track.id ?? track.title ?? Math.random()}>
+          {tracks.map((track, i) => (
+            <li key={track.id ?? track.title ?? `track-${i}`}>
               <TrackCard
                 track={track}
                 onApplyStyleFilter={(style) =>
@@ -279,8 +279,8 @@ export function SearchPage() {
 
       {!loading && filters.searchType === 'artists' && (
         <ul className="space-y-3">
-          {artists.map((artist) => (
-            <li key={artist.id ?? artist.name ?? Math.random()}>
+          {artists.map((artist, i) => (
+            <li key={artist.id ?? artist.name ?? `artist-${i}`}>
               <ArtistCard artist={artist} />
             </li>
           ))}
@@ -289,8 +289,8 @@ export function SearchPage() {
 
       {!loading && filters.searchType === 'albums' && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {albums.map((album) => (
-            <li key={album.id ?? album.title ?? Math.random()} className="list-none">
+          {albums.map((album, i) => (
+            <li key={album.id ?? album.title ?? `album-${i}`} className="list-none">
               <AlbumCard album={album} />
             </li>
           ))}

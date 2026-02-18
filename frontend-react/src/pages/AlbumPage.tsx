@@ -11,18 +11,31 @@ export function AlbumPage() {
   const [album, setAlbum] = useState<AlbumDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prevId, setPrevId] = useState(id);
+
+  if (prevId !== id) {
+    setPrevId(id);
+    setLoading(true);
+    setError(null);
+  }
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
     getAlbum(id)
-      .then((data) => setAlbum(data ?? null))
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Kunde inte hämta album');
-        setAlbum(null);
+      .then((data) => {
+        if (!cancelled) setAlbum(data ?? null);
       })
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Kunde inte hämta album');
+          setAlbum(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [id]);
 
   if (loading) {

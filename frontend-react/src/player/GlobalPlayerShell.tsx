@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useConsent } from '@/consent/ConsentContext';
-import { usePlayer } from '@/player/PlayerContext';
+import { useConsent } from '@/consent/useConsent';
+import { usePlayer } from '@/player/usePlayer';
 import {
   getEmbedUrlForSource,
   getYouTubeVideoId,
@@ -64,29 +64,23 @@ export function GlobalPlayerShell() {
   const ytPlayerRef = useRef<YTPlayerInstance | null>(null);
   const isDraggingRef = useRef(false);
   const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
   const trackDurationMs = currentTrack?.durationMs ?? 0;
   const durationMs = playbackDurationMs > 0 ? playbackDurationMs : trackDurationMs;
 
-  // Reset position when track changes
-  useEffect(() => {
+  // Reset position and source when track changes
+  const [prevTrackId, setPrevTrackId] = useState(currentTrack?.id);
+  if (prevTrackId !== currentTrack?.id) {
+    setPrevTrackId(currentTrack?.id);
     setPlaybackPositionMs(0);
     setPlaybackDurationMs(0);
-  }, [currentTrack?.id]);
-
-  // Set active source when track changes: prefer YouTube if available, else Spotify (match Vue)
-  useEffect(() => {
-    if (!currentTrack) return;
-    setActiveSource((prev) => {
-      const next = hasYt ? 'youtube' : hasSpot ? 'spotify' : prev;
-      return next;
-    });
-  }, [currentTrack?.id, hasYt, hasSpot]);
-
-  // Auto-expand when playing a track that has an embed so Spotify/YouTube is visible
-  useEffect(() => {
-    if (currentTrack && embedUrl) setExpanded(true);
-  }, [currentTrack?.id, embedUrl]);
+    if (currentTrack) {
+      setActiveSource(hasYt ? 'youtube' : hasSpot ? 'spotify' : activeSource);
+      if (embedUrl) setExpanded(true);
+    }
+  }
 
   // Track window width for responsive behavior
   useEffect(() => {
@@ -96,11 +90,13 @@ export function GlobalPlayerShell() {
   }, []);
 
   // Auto-close mobile overlay when resizing to desktop
-  useEffect(() => {
+  const [prevWindowWidth, setPrevWindowWidth] = useState(windowWidth);
+  if (prevWindowWidth !== windowWidth) {
+    setPrevWindowWidth(windowWidth);
     if (windowWidth >= 768 && expanded) {
       setExpanded(false);
     }
-  }, [windowWidth, expanded]);
+  }
 
   // Load YouTube IFrame API and create player when consent is granted
   useEffect(() => {

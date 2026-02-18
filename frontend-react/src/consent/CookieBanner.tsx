@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useConsent, SHOW_CONSENT_BANNER } from '@/consent/ConsentContext';
+import { useConsent } from '@/consent/useConsent';
+import { SHOW_CONSENT_BANNER } from '@/consent/constants';
 
 /**
  * Cookie banner – same behaviour as Vue legacy: show when consent not set (after delay)

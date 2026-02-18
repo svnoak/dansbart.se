@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { IconButton } from '@/ui';
 
@@ -20,11 +20,11 @@ export function Header({
   const location = useLocation();
 
   const urlQuery = getUrlQuery(location.pathname, location.search);
-  const prevUrlQueryRef = useRef(urlQuery);
+  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
   const [globalQuery, setGlobalQuery] = useState(urlQuery);
 
-  if (prevUrlQueryRef.current !== urlQuery) {
-    prevUrlQueryRef.current = urlQuery;
+  if (prevUrlQuery !== urlQuery) {
+    setPrevUrlQuery(urlQuery);
     setGlobalQuery(urlQuery);
   }
 

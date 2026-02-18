@@ -1,8 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -13,11 +10,12 @@ import {
   clearConsent,
   type ConsentStatus,
 } from '@/consent/consentStorage';
+import { SHOW_CONSENT_BANNER } from './constants';
+import { ConsentContext } from './context';
 
 const CONSENT_CHANGED = 'consent-changed';
-const SHOW_CONSENT_BANNER = 'show-consent-banner';
 
-interface ConsentContextValue {
+export interface ConsentContextValue {
   consentStatus: ConsentStatus;
   grantConsent: () => void;
   denyConsent: () => void;
@@ -26,14 +24,8 @@ interface ConsentContextValue {
   openCookieSettings: () => void;
 }
 
-const ConsentContext = createContext<ConsentContextValue | null>(null);
-
 export function ConsentProvider({ children }: { children: ReactNode }) {
-  const [consentStatus, setConsentStatus] = useState<ConsentStatus>(null);
-
-  useEffect(() => {
-    setConsentStatus(loadConsent());
-  }, []);
+  const [consentStatus, setConsentStatus] = useState<ConsentStatus>(loadConsent);
 
   const grantConsent = useCallback(() => {
     saveConsent('granted');
@@ -86,10 +78,3 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useConsent(): ConsentContextValue {
-  const ctx = useContext(ConsentContext);
-  if (!ctx) throw new Error('useConsent must be used within ConsentProvider');
-  return ctx;
-}
-
-export { SHOW_CONSENT_BANNER };

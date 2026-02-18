@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, IconButton } from '@/ui';
-import { usePlayer } from '@/player/PlayerContext';
+import { usePlayer } from '@/player/usePlayer';
 import {
   FlagIcon,
   PauseIcon,

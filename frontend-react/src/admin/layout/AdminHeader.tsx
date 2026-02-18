@@ -1,5 +1,5 @@
-import { useAuth } from '@/auth/AuthContext';
-import { useTheme } from '@/theme/ThemeContext';
+import { useAuth } from '@/auth/useAuth';
+import { useTheme } from '@/theme/useTheme';
 import { IconButton } from '@/ui';
 
 export function AdminHeader({

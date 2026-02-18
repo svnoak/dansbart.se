@@ -1,13 +1,13 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import { useConsent, SHOW_CONSENT_BANNER } from '@/consent/ConsentContext';
+import { useConsent } from '@/consent/useConsent';
+import { SHOW_CONSENT_BANNER } from '@/consent/constants';
 import type { TrackListDto } from '@/api/models/trackListDto';
+import { PlayerContext } from './context';
 
 interface PlayerState {
   currentTrack: TrackListDto | null;
@@ -15,7 +15,7 @@ interface PlayerState {
   isPlaying: boolean;
 }
 
-interface PlayerContextValue extends PlayerState {
+export interface PlayerContextValue extends PlayerState {
   play: (track: TrackListDto) => void;
   playFromQueue: (index: number) => void;
   togglePlayPause: () => void;
@@ -25,8 +25,6 @@ interface PlayerContextValue extends PlayerState {
   next: () => void;
   prev: () => void;
 }
-
-const PlayerContext = createContext<PlayerContextValue | null>(null);
 
 const QUEUE_STORAGE_KEY = 'dansbart-queue';
 
@@ -177,9 +175,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       prev,
     }),
     [
-      state.currentTrack,
-      state.queue,
-      state.isPlaying,
+      state,
       play,
       playFromQueue,
       togglePlayPause,
@@ -196,8 +192,3 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function usePlayer() {
-  const ctx = useContext(PlayerContext);
-  if (!ctx) throw new Error('usePlayer must be used within PlayerProvider');
-  return ctx;
-}

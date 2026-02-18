@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getTrack } from '@/api/generated/tracks/tracks';
 import type { Track } from '@/api/models/track';
 import { Card } from '@/ui';
-import { usePlayer } from '@/player/PlayerContext';
+import { usePlayer } from '@/player/usePlayer';
 import { formatDurationMs } from '@/utils/formatDuration';
 
 export function TrackPage() {
@@ -11,19 +11,32 @@ export function TrackPage() {
   const [track, setTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prevId, setPrevId] = useState(id);
   const { play } = usePlayer();
+
+  if (prevId !== id) {
+    setPrevId(id);
+    setLoading(true);
+    setError(null);
+  }
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
     getTrack(id)
-      .then((data) => setTrack(data ?? null))
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Kunde inte hämta låt');
-        setTrack(null);
+      .then((data) => {
+        if (!cancelled) setTrack(data ?? null);
       })
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Kunde inte hämta låt');
+          setTrack(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [id]);
 
   if (loading) {

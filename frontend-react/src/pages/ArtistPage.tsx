@@ -13,22 +13,35 @@ export function ArtistPage() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prevId, setPrevId] = useState(id);
+
+  if (prevId !== id) {
+    setPrevId(id);
+    setLoading(true);
+    setError(null);
+  }
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
     Promise.all([getArtist(id), getArtistAlbums(id)])
       .then(([artistData, albumsData]) => {
-        setArtist(artistData ?? null);
-        setAlbums(albumsData ?? []);
+        if (!cancelled) {
+          setArtist(artistData ?? null);
+          setAlbums(albumsData ?? []);
+        }
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Kunde inte hamta artist');
-        setArtist(null);
-        setAlbums([]);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Kunde inte hamta artist');
+          setArtist(null);
+          setAlbums([]);
+        }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [id]);
 
   if (loading) {

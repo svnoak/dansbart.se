@@ -77,19 +77,24 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
     setCorrectionTempo('ok');
   }, [track.danceStyle, track.subStyle]);
 
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen) {
+    setView('menu');
+    setError(null);
+    setIsSubmitting(false);
+    setSuccessMessage('');
+    setDropdownOpen(false);
+    resetCorrection();
+  }
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+  }
+
   useEffect(() => {
-    if (open) {
-      setView('menu');
-      setError(null);
-      setIsSubmitting(false);
-      setSuccessMessage('');
-      setDropdownOpen(false);
-      resetCorrection();
-    }
     return () => {
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     };
-  }, [open, resetCorrection]);
+  }, []);
 
   useEffect(() => {
     if (!open || Object.keys(styleTree).length > 0) return;

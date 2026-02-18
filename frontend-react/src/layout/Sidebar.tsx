@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useConsent } from '@/consent/ConsentContext';
+import { useConsent } from '@/consent/useConsent';
 import { Button } from '@/ui';
 
 function NavLink({
@@ -46,9 +46,13 @@ export function Sidebar() {
   const isInfoPage = isAbout || isTerms || isPrivacy;
 
   const [omOpen, setOmOpen] = useState(isInfoPage);
-  useEffect(() => {
-    if (isInfoPage) setOmOpen(true);
-  }, [isInfoPage]);
+  const [prevIsInfoPage, setPrevIsInfoPage] = useState(isInfoPage);
+  if (isInfoPage && !prevIsInfoPage) {
+    setOmOpen(true);
+  }
+  if (prevIsInfoPage !== isInfoPage) {
+    setPrevIsInfoPage(isInfoPage);
+  }
 
   return (
     <nav className="flex flex-col gap-1" aria-label="Huvudnavigering">

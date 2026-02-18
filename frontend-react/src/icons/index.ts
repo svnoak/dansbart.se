@@ -27,3 +27,7 @@ export { SkipNextIcon } from './SkipNextIcon';
 export { JumpBackIcon } from './JumpBackIcon';
 export { JumpForwardIcon } from './JumpForwardIcon';
 export { QueueListIcon } from './QueueListIcon';
+export { ClockIcon } from './ClockIcon';
+export { AlbumListIcon } from './AlbumListIcon';
+export { MoonIcon } from './MoonIcon';
+export { SunIcon } from './SunIcon';
