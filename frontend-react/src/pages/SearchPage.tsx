@@ -79,6 +79,9 @@ export function SearchPage() {
 
   // Fetch results based on searchType and filters
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const isLoadingMore = filters.offset > 0;
     if (isLoadingMore) {
       setLoadingMore(true);
@@ -95,19 +98,24 @@ export function SearchPage() {
     const offset = filters.offset;
 
     if (filters.searchType === 'tracks') {
-      getTracks(toTracksParams)
+      getTracks(toTracksParams, { signal })
         .then((data) => {
           const items = data?.items ?? [];
           const totalCount = data?.total ?? items.length;
-          setTracks(offset === 0 ? items : (prev) => [...prev, ...items]);
+          setTracks(offset === 0 ? items : (prev) => {
+            const seen = new Set(prev.map((t) => t.id));
+            return [...prev, ...items.filter((t) => !seen.has(t.id))];
+          });
           setTotal(totalCount);
         })
         .catch((err) => {
+          if (signal.aborted) return;
           setError(err instanceof Error ? err.message : 'Kunde inte hämta låtar');
           setTracks([]);
           setTotal(0);
         })
         .finally(() => {
+          if (signal.aborted) return;
           setLoading(false);
           setLoadingMore(false);
           isLoadingMoreRef.current = false;
@@ -115,21 +123,26 @@ export function SearchPage() {
     } else if (filters.searchType === 'artists') {
       const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
       const promise = filters.q
-        ? searchArtists({ q: filters.q, limit, offset })
-        : getArtists(params);
+        ? searchArtists({ q: filters.q, limit, offset }, { signal })
+        : getArtists(params, { signal });
       promise
         .then((data) => {
           const items = data?.items ?? [];
           const totalCount = data?.total ?? items.length;
-          setArtists(offset === 0 ? items : (prev) => [...prev, ...items]);
+          setArtists(offset === 0 ? items : (prev) => {
+            const seen = new Set(prev.map((a) => a.id));
+            return [...prev, ...items.filter((a) => !seen.has(a.id))];
+          });
           setTotal(totalCount);
         })
         .catch((err) => {
+          if (signal.aborted) return;
           setError(err instanceof Error ? err.message : 'Kunde inte hämta artister');
           setArtists([]);
           setTotal(0);
         })
         .finally(() => {
+          if (signal.aborted) return;
           setLoading(false);
           setLoadingMore(false);
           isLoadingMoreRef.current = false;
@@ -137,49 +150,34 @@ export function SearchPage() {
     } else {
       const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
       const promise = filters.q
-        ? searchAlbums({ q: filters.q, limit, offset })
-        : getAlbums(params);
+        ? searchAlbums({ q: filters.q, limit, offset }, { signal })
+        : getAlbums(params, { signal });
       promise
         .then((data) => {
           const items = data?.items ?? [];
           const totalCount = data?.total ?? items.length;
-          setAlbums(offset === 0 ? items : (prev) => [...prev, ...items]);
+          setAlbums(offset === 0 ? items : (prev) => {
+            const seen = new Set(prev.map((a) => a.id));
+            return [...prev, ...items.filter((a) => !seen.has(a.id))];
+          });
           setTotal(totalCount);
         })
         .catch((err) => {
+          if (signal.aborted) return;
           setError(err instanceof Error ? err.message : 'Kunde inte hämta album');
           setAlbums([]);
           setTotal(0);
         })
         .finally(() => {
+          if (signal.aborted) return;
           setLoading(false);
           setLoadingMore(false);
           isLoadingMoreRef.current = false;
         });
     }
-  }, [
-    filters.searchType,
-    filters.q,
-    filters.offset,
-    filters.limit,
-    filters.style,
-    filters.subStyle,
-    filters.source,
-    filters.vocals,
-    filters.confirmed,
-    filters.tempoEnabled,
-    filters.minBpm,
-    filters.maxBpm,
-    filters.minDuration,
-    filters.maxDuration,
-    filters.bouncinessEnabled,
-    filters.minBounciness,
-    filters.maxBounciness,
-    filters.articulationEnabled,
-    filters.minArticulation,
-    filters.maxArticulation,
-    toTracksParams,
-  ]);
+
+    return () => controller.abort();
+  }, [filters.searchType, filters.q, filters.offset, filters.limit, toTracksParams]);
 
   const loadMore = useCallback(() => {
     setFilters({ offset: filters.offset + PAGE_SIZE });
