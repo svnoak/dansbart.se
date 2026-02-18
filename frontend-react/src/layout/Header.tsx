@@ -1,18 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { IconButton } from '@/ui';
-import { useTheme } from '@/theme/ThemeContext';
-import { getStats } from '@/api/generated/stats/stats';
-import type { StatsDto } from '@/api/models/statsDto';
 
-function formatLastAdded(iso?: string) {
-  if (!iso) return '–';
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  } catch {
-    return '–';
+function getUrlQuery(pathname: string, search: string): string {
+  if (pathname === '/search') {
+    return new URLSearchParams(search).get('q') ?? '';
   }
+  return '';
 }
 
 export function Header({
@@ -24,22 +18,15 @@ export function Header({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme, toggleTheme } = useTheme();
-  const [globalQuery, setGlobalQuery] = useState('');
-  const [stats, setStats] = useState<StatsDto | null>(null);
 
-  useEffect(() => {
-    if (location.pathname === '/search') {
-      const q = new URLSearchParams(location.search).get('q') ?? '';
-      setGlobalQuery(q);
-    }
-  }, [location.pathname, location.search]);
+  const urlQuery = getUrlQuery(location.pathname, location.search);
+  const prevUrlQueryRef = useRef(urlQuery);
+  const [globalQuery, setGlobalQuery] = useState(urlQuery);
 
-  useEffect(() => {
-    getStats()
-      .then((data) => setStats(data ?? null))
-      .catch(() => setStats(null));
-  }, []);
+  if (prevUrlQueryRef.current !== urlQuery) {
+    prevUrlQueryRef.current = urlQuery;
+    setGlobalQuery(urlQuery);
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +38,9 @@ export function Header({
     }
   };
 
-  const trackCount = stats?.totalTracks ?? 0;
-  const categorized = stats?.coveragePercent ?? 0;
-  const lastAdded = formatLastAdded(stats?.lastAdded);
-
   return (
     <header className="sticky top-0 z-20 border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-3">
         {showMenuButton && onOpenSidebar && (
           <IconButton
             aria-label="Öppna meny"
@@ -78,29 +61,9 @@ export function Header({
           </span>
           <span className="text-lg font-semibold">dansbart.se</span>
         </Link>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-              <path d="M10 3.75a2 2 0 10-4 0 2 2 0 004 0zM3.75 8a2 2 0 100-4 2 2 0 000 4zM16.25 8a2 2 0 100-4 2 2 0 000 4zM2 10a2 2 0 012-2h2a2 2 0 012 2v1a2 2 0 01-2 2H4a2 2 0 01-2-2v-1zM14 10a2 2 0 012-2h2a2 2 0 012 2v1a2 2 0 01-2 2h-2a2 2 0 01-2-2v-1zM10 12a2 2 0 012-2h.01a2 2 0 012 2v1a2 2 0 01-2 2h-.01a2 2 0 01-2-2v-1z" />
-            </svg>
-            {trackCount.toLocaleString('sv-SE')} låtar
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-green-600">
-              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-            </svg>
-            {categorized}% kategoriserade
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
-            </svg>
-            Tillagd: {lastAdded}
-          </span>
-        </div>
         <form
           onSubmit={handleSearch}
-          className="flex flex-1 min-w-0 max-w-xl"
+          className="mx-auto flex min-w-0 max-w-xl flex-1 justify-center"
         >
           <div className="relative w-full">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-muted))]">
@@ -118,29 +81,6 @@ export function Header({
             />
           </div>
         </form>
-        <div className="flex shrink-0 items-center gap-1">
-          <IconButton
-            aria-label={theme === 'dark' ? 'Växla till ljust läge' : 'Växla till mörkt läge'}
-            onClick={toggleTheme}
-          >
-            {theme === 'dark' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 01.162 1.035l-2.518 3.654a.75.75 0 01-1.2.9L4.206 4.28a.75.75 0 011.035.162l2.518-3.654a.75.75 0 011.035-.162zM12 6a6 6 0 100 12 6 6 0 000-12zM2.25 12a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zm16.5 0a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75z" clipRule="evenodd" />
-              </svg>
-            )}
-          </IconButton>
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-sm font-medium text-white hover:opacity-90"
-            aria-label="Användarprofil"
-          >
-            JD
-          </button>
-        </div>
       </div>
     </header>
   );

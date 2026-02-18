@@ -2,13 +2,30 @@ import { useEffect, useState } from 'react';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getArtists } from '@/api/generated/artists/artists';
 import { getAlbums } from '@/api/generated/albums/albums';
+import { getStats } from '@/api/generated/stats/stats';
 import type { StyleOverviewDto } from '@/api/models/styleOverviewDto';
 import type { Artist } from '@/api/models/artist';
 import type { Album } from '@/api/models/album';
+import type { StatsDto } from '@/api/models/statsDto';
 import { StyleShortcutCard } from '@/components/StyleShortcutCard';
 import { WeeklyChallengeCard } from '@/components/WeeklyChallengeCard';
 import { ArtistCard, AlbumCard } from '@/components';
 import { SectionTitle } from '@/ui';
+import { PlaylistIcon, CheckIcon, ClockIcon } from '@/icons';
+
+function formatLastAdded(iso?: string) {
+  if (!iso) return '\u2013';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  } catch {
+    return '\u2013';
+  }
+}
 
 export function HomePage() {
   const [styles, setStyles] = useState<StyleOverviewDto[]>([]);
@@ -17,6 +34,13 @@ export function HomePage() {
   const [loadingStyles, setLoadingStyles] = useState(true);
   const [loadingArtists, setLoadingArtists] = useState(true);
   const [loadingAlbums, setLoadingAlbums] = useState(true);
+  const [stats, setStats] = useState<StatsDto | null>(null);
+
+  useEffect(() => {
+    getStats()
+      .then((data) => setStats(data ?? null))
+      .catch(() => setStats(null));
+  }, []);
 
   useEffect(() => {
     getStyleOverview()
@@ -44,6 +68,23 @@ export function HomePage() {
       <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
         Upptäck
       </h1>
+
+      {stats && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
+            <PlaylistIcon className="h-4 w-4" aria-hidden />
+            {(stats.totalTracks ?? 0).toLocaleString('sv-SE')} låtar
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
+            <CheckIcon className="h-4 w-4 text-green-600" aria-hidden />
+            {stats.coveragePercent ?? 0}% kategoriserade
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
+            <ClockIcon className="h-4 w-4" aria-hidden />
+            Tillagd: {formatLastAdded(stats.lastAdded)}
+          </span>
+        </div>
+      )}
 
       {/* Style shortcuts */}
       <section aria-labelledby="style-shortcuts-heading">
