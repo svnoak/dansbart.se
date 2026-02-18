@@ -4,9 +4,10 @@ import type { Artist } from '@/api/models/artist';
 
 interface ArtistCardProps {
   artist: Artist;
+  albumCount?: number;
 }
 
-export function ArtistCard({ artist }: ArtistCardProps) {
+export function ArtistCard({ artist, albumCount }: ArtistCardProps) {
   return (
     <Link to={`/artist/${artist.id ?? ''}`}>
       <Card className="flex items-center gap-4 p-4 transition-colors hover:bg-[rgb(var(--color-border))]/20">
@@ -17,6 +18,11 @@ export function ArtistCard({ artist }: ArtistCardProps) {
           </h3>
           {artist.isVerified && (
             <p className="text-xs text-[rgb(var(--color-text-muted))]">Verifierad</p>
+          )}
+          {albumCount != null && (
+            <p className="text-xs text-[rgb(var(--color-text-muted))]">
+              {albumCount} {albumCount === 1 ? 'album' : 'album'}
+            </p>
           )}
         </div>
       </Card>

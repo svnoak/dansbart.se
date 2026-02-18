@@ -9,6 +9,7 @@ import type {
   BulkReanalyze200,
   BulkReanalyzeRequest,
   DeleteTrack200,
+  GetStatusCounts200,
   GetTracks1Params,
   ReanalyzeTrack200,
   ReclassifyTrack200,
@@ -159,6 +160,29 @@ export const getGetTracks1Url = (params?: GetTracks1Params,) => {
 export const getTracks1 = async (params?: GetTracks1Params, options?: RequestInit): Promise<AdminTrackPageResponse> => {
   
   return customFetch<AdminTrackPageResponse>(getGetTracks1Url(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+/**
+ * @summary Get track counts grouped by processing status
+ */
+export const getGetStatusCountsUrl = () => {
+
+
+  
+
+  return `/api/admin/tracks/status-counts`
+}
+
+export const getStatusCounts = async ( options?: RequestInit): Promise<GetStatusCounts200> => {
+  
+  return customFetch<GetStatusCounts200>(getGetStatusCountsUrl(),
   {      
     ...options,
     method: 'GET'

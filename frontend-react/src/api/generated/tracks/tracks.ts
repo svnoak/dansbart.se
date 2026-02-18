@@ -195,29 +195,6 @@ export const submitFeedback = async (id: string,
 
 
 /**
- * @summary Get unconfirmed secondary dance styles for a track
- */
-export const getGetSecondaryStylesUrl = (id: string,) => {
-
-
-  
-
-  return `/api/tracks/${id}/secondary-styles`
-}
-
-export const getSecondaryStyles = async (id: string, options?: RequestInit): Promise<DanceStyleDto[]> => {
-  
-  return customFetch<DanceStyleDto[]>(getGetSecondaryStylesUrl(id),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-
-
-/**
  * @summary Confirm a secondary dance style without affecting primary election
  */
 export const getConfirmSecondaryStyleUrl = (id: string,) => {
@@ -364,6 +341,29 @@ export const getSimilarTracks = async (id: string,
     params?: GetSimilarTracksParams, options?: RequestInit): Promise<Track[]> => {
   
   return customFetch<Track[]>(getGetSimilarTracksUrl(id,params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+/**
+ * @summary Get unconfirmed secondary dance styles for a track
+ */
+export const getGetSecondaryStylesUrl = (id: string,) => {
+
+
+  
+
+  return `/api/tracks/${id}/secondary-styles`
+}
+
+export const getSecondaryStyles = async (id: string, options?: RequestInit): Promise<DanceStyleDto[]> => {
+  
+  return customFetch<DanceStyleDto[]>(getGetSecondaryStylesUrl(id),
   {      
     ...options,
     method: 'GET'

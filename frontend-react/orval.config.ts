@@ -3,7 +3,7 @@ import { defineConfig } from 'orval';
 export default defineConfig({
   dansbart: {
     input: {
-      target: '../api-spec/openapi.yaml',
+      target: 'http://localhost:8000/v3/api-docs',
       filters: {
         tags: [
           'Discovery',

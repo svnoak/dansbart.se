@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getArtist, getArtistTracks } from '@/api/generated/artists/artists';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getArtist, getArtistAlbums } from '@/api/generated/artists/artists';
 import type { Artist } from '@/api/models/artist';
-import type { Track } from '@/api/models/track';
-import { AvatarPlaceholder, Card, SectionTitle } from '@/ui';
-import { formatDurationMs } from '@/utils/formatDuration';
+import type { Album } from '@/api/models/album';
+import { AvatarPlaceholder, IconButton, SectionTitle } from '@/ui';
+import { AlbumCard } from '@/components/AlbumCard';
 
 export function ArtistPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [artist, setArtist] = useState<Artist | null>(null);
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,21 +18,21 @@ export function ArtistPage() {
     if (!id) return;
     setLoading(true);
     setError(null);
-    Promise.all([getArtist(id), getArtistTracks(id)])
-      .then(([artistData, tracksData]) => {
+    Promise.all([getArtist(id), getArtistAlbums(id)])
+      .then(([artistData, albumsData]) => {
         setArtist(artistData ?? null);
-        setTracks(tracksData ?? []);
+        setAlbums(albumsData ?? []);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Kunde inte hämta artist');
+        setError(err instanceof Error ? err.message : 'Kunde inte hamta artist');
         setArtist(null);
-        setTracks([]);
+        setAlbums([]);
       })
       .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) {
-    return <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>;
+    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
   }
   if (error || !artist) {
     return (
@@ -43,11 +44,14 @@ export function ArtistPage() {
 
   return (
     <div className="space-y-6">
+      <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
+      </IconButton>
       <div className="flex items-center gap-4">
         <AvatarPlaceholder size="lg" />
         <div>
           <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-            {artist.name ?? 'Okänd artist'}
+            {artist.name ?? 'Okand artist'}
           </h1>
           {artist.isVerified && (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">Verifierad artist</p>
@@ -55,32 +59,18 @@ export function ArtistPage() {
         </div>
       </div>
 
-      <section aria-labelledby="tracks-heading">
-        <SectionTitle id="tracks-heading">Låtar</SectionTitle>
-        {tracks.length === 0 ? (
+      <section aria-labelledby="albums-heading">
+        <SectionTitle id="albums-heading">Album</SectionTitle>
+        {albums.length === 0 ? (
           <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">
-            Inga låtar hittades för denna artist.
+            Inga album hittades for denna artist.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
-            {tracks.map((track) => (
-              <li key={track.id}>
-                <Card className="p-4">
-                  <Link
-                    to={`/track/${track.id ?? ''}`}
-                    className="font-medium text-[rgb(var(--color-text))] hover:underline"
-                  >
-                    {track.title ?? 'Okänd låt'}
-                  </Link>
-                  {track.durationMs != null && (
-                    <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
-                      {formatDurationMs(track.durationMs)}
-                    </p>
-                  )}
-                </Card>
-              </li>
+          <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {albums.map((album) => (
+              <AlbumCard key={album.id} album={album} />
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>

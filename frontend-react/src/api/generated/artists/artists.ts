@@ -5,6 +5,7 @@
  * OpenAPI spec version: v0
  */
 import type {
+  AlbumSummaryDto,
   Artist,
   GetArtistsParams,
   PageResponseArtist,
@@ -81,6 +82,29 @@ export const getGetArtistTracksUrl = (id: string,) => {
 export const getArtistTracks = async (id: string, options?: RequestInit): Promise<Track[]> => {
   
   return customFetch<Track[]>(getGetArtistTracksUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+/**
+ * @summary Get all albums by artist
+ */
+export const getGetArtistAlbumsUrl = (id: string,) => {
+
+
+  
+
+  return `/api/artists/${id}/albums`
+}
+
+export const getArtistAlbums = async (id: string, options?: RequestInit): Promise<AlbumSummaryDto[]> => {
+  
+  return customFetch<AlbumSummaryDto[]>(getGetArtistAlbumsUrl(id),
   {      
     ...options,
     method: 'GET'

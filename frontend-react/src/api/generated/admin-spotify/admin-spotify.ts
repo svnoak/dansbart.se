@@ -6,7 +6,7 @@
  */
 import type {
   GetAlbumTracks1200,
-  GetArtistAlbums200,
+  GetArtistAlbums1200,
   IngestAlbum200,
   IngestAlbumRequest,
   IngestTrack200,
@@ -66,7 +66,7 @@ export const ingestAlbum = async (ingestAlbumRequest: IngestAlbumRequest, option
 /**
  * @summary Preview artist's albums from Spotify
  */
-export const getGetArtistAlbumsUrl = (spotifyId: string,) => {
+export const getGetArtistAlbums1Url = (spotifyId: string,) => {
 
 
   
@@ -74,9 +74,9 @@ export const getGetArtistAlbumsUrl = (spotifyId: string,) => {
   return `/api/admin/spotify/artist/${spotifyId}/albums`
 }
 
-export const getArtistAlbums = async (spotifyId: string, options?: RequestInit): Promise<GetArtistAlbums200> => {
+export const getArtistAlbums1 = async (spotifyId: string, options?: RequestInit): Promise<GetArtistAlbums1200> => {
   
-  return customFetch<GetArtistAlbums200>(getGetArtistAlbumsUrl(spotifyId),
+  return customFetch<GetArtistAlbums1200>(getGetArtistAlbums1Url(spotifyId),
   {      
     ...options,
     method: 'GET'

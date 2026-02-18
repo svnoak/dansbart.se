@@ -4,9 +4,10 @@ import type { Album } from '@/api/models/album';
 
 interface AlbumCardProps {
   album: Album;
+  trackCount?: number;
 }
 
-export function AlbumCard({ album }: AlbumCardProps) {
+export function AlbumCard({ album, trackCount }: AlbumCardProps) {
   return (
     <Link to={`/album/${album.id ?? ''}`} className="block">
       <Card className="overflow-hidden transition-colors hover:bg-[rgb(var(--color-border))]/20">
@@ -18,6 +19,11 @@ export function AlbumCard({ album }: AlbumCardProps) {
           <p className="text-sm text-[rgb(var(--color-text-muted))] truncate">
             {album.releaseDate ? new Date(album.releaseDate).getFullYear() : 'Album'}
           </p>
+          {trackCount != null && (
+            <p className="text-xs text-[rgb(var(--color-text-muted))]">
+              {trackCount} {trackCount === 1 ? 'lat' : 'latar'}
+            </p>
+          )}
         </div>
       </Card>
     </Link>

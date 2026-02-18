@@ -5,4 +5,4 @@
  * OpenAPI spec version: v0
  */
 
-export type GetArtistAlbums200 = {[key: string]: { [key: string]: unknown }};
+export type GetStatusCounts200 = {[key: string]: number};

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  getArtistAlbums,
+  getArtistAlbums1,
   getAlbumTracks1,
   ingestAlbum,
   ingestTrack,
@@ -75,7 +75,7 @@ export function AdminIngestPage() {
 
     try {
       if (parsed.type === 'artist') {
-        const result = await getArtistAlbums(parsed.id, adminRequestOptions());
+        const result = await getArtistAlbums1(parsed.id, adminRequestOptions());
         const albums = Array.isArray(result) ? result : [];
         setPreview(
           albums.map((a: Record<string, unknown>) => ({

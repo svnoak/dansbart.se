@@ -17,4 +17,5 @@ public class AlbumSummaryDto {
     private String title;
     private String coverImageUrl;
     private String releaseDate;
+    private Integer trackCount;
 }

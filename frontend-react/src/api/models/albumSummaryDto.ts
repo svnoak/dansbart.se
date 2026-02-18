@@ -5,9 +5,13 @@
  * OpenAPI spec version: v0
  */
 
+/**
+ * Albums linked to this artist
+ */
 export interface AlbumSummaryDto {
   id?: string;
   title?: string;
   coverImageUrl?: string;
   releaseDate?: string;
+  trackCount?: number;
 }
