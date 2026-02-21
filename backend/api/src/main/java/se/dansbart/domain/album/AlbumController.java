@@ -29,12 +29,18 @@ public class AlbumController {
     @Operation(summary = "Get all albums with pagination")
     public ResponseEntity<PageResponse<Album>> getAlbums(
             @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "title") String sort,
             @RequestParam(defaultValue = "20") Integer limit,
             @RequestParam(defaultValue = "0") Integer offset) {
         Pageable pageable = PageRequest.of(offset / limit, limit);
-        Page<Album> page = search != null && !search.isBlank()
-            ? albumService.searchByTitle(search, pageable)
-            : albumService.findAll(pageable);
+        Page<Album> page;
+        if (search != null && !search.isBlank()) {
+            page = albumService.searchByTitle(search, pageable);
+        } else if ("random".equalsIgnoreCase(sort)) {
+            page = albumService.findAllRandom(pageable);
+        } else {
+            page = albumService.findAll(pageable);
+        }
         return ResponseEntity.ok(PageResponse.from(page));
     }
 

@@ -20,6 +20,7 @@ export { CloseIcon } from './CloseIcon';
 export { CheckIcon } from './CheckIcon';
 export { MapPinIcon } from './MapPinIcon';
 export { ArrowRightIcon } from './ArrowRightIcon';
+export { BackArrowIcon } from './BackArrowIcon';
 export { ShuffleIcon } from './ShuffleIcon';
 export { RepeatIcon } from './RepeatIcon';
 export { SkipPreviousIcon } from './SkipPreviousIcon';

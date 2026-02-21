@@ -32,12 +32,18 @@ public class ArtistController {
     @Operation(summary = "Get all artists with pagination")
     public ResponseEntity<PageResponse<Artist>> getArtists(
             @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "name") String sort,
             @RequestParam(defaultValue = "20") Integer limit,
             @RequestParam(defaultValue = "0") Integer offset) {
         Pageable pageable = PageRequest.of(offset / limit, limit);
-        Page<Artist> page = search != null && !search.isBlank()
-            ? artistService.searchByName(search, pageable)
-            : artistService.findAll(pageable);
+        Page<Artist> page;
+        if (search != null && !search.isBlank()) {
+            page = artistService.searchByName(search, pageable);
+        } else if ("random".equalsIgnoreCase(sort)) {
+            page = artistService.findAllRandom(pageable);
+        } else {
+            page = artistService.findAll(pageable);
+        }
         return ResponseEntity.ok(PageResponse.from(page));
     }
 

@@ -14,6 +14,8 @@ import { PrivacyPage } from '@/pages/PrivacyPage';
 import { SearchPage } from '@/pages/SearchPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { TrackPage } from '@/pages/TrackPage';
+import { ArtistsPage } from '@/pages/ArtistsPage';
+import { AlbumsPage } from '@/pages/AlbumsPage';
 
 import { AuthProvider } from '@/auth/AuthContext';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
@@ -47,6 +49,8 @@ export function App() {
                         <Route path="/" element={<HomePage />} />
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/classify" element={<ClassifyPage />} />
+                        <Route path="/artists" element={<ArtistsPage />} />
+                        <Route path="/albums" element={<AlbumsPage />} />
                         <Route path="/artist/:id" element={<ArtistPage />} />
                         <Route path="/album/:id" element={<AlbumPage />} />
                         <Route path="/track/:id" element={<TrackPage />} />

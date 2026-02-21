@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "type-check": "tsc -b --force",
     "preview": "vite preview",
-    "api:generate": "orval"
+    "api:export": "curl -sf http://localhost:8000/v3/api-docs | npx prettier --parser json > openapi.json",
+    "api:generate": "orval",
+    "api:update": "npm run api:export && npm run api:generate"
   },
   "dependencies": {
     "react": "^19.2.0",

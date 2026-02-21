@@ -59,6 +59,10 @@ public class AlbumService {
         return albumJooqRepository.findAll(pageable);
     }
 
+    public Page<Album> findAllRandom(Pageable pageable) {
+        return albumJooqRepository.findAllRandom(pageable);
+    }
+
     public List<Album> findByArtistId(UUID artistId) {
         return albumJooqRepository.findByArtistId(artistId);
     }

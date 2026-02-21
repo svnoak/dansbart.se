@@ -7,6 +7,7 @@
 
 export type GetAlbumsParams = {
 search?: string;
+sort?: string;
 limit?: number;
 offset?: number;
 };

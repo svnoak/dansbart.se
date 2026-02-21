@@ -50,14 +50,14 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
-    getArtists({ limit: 10 })
+    getArtists({ limit: 10, sort: 'random' })
       .then((data) => setArtists(data?.items ?? []))
       .catch(() => setArtists([]))
       .finally(() => setLoadingArtists(false));
   }, []);
 
   useEffect(() => {
-    getAlbums({ limit: 8 })
+    getAlbums({ limit: 8, sort: 'random' })
       .then((data) => setAlbums(data?.items ?? []))
       .catch(() => setAlbums([]))
       .finally(() => setLoadingAlbums(false));
@@ -112,6 +112,7 @@ export function HomePage() {
         <section aria-labelledby="artists-heading">
           <SectionTitle
             id="artists-heading"
+            linkTo="/artists"
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
                 <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
@@ -140,7 +141,7 @@ export function HomePage() {
 
         {/* Recommended albums */}
         <section aria-labelledby="albums-heading">
-          <SectionTitle id="albums-heading">
+          <SectionTitle id="albums-heading" linkTo="/albums">
             Rekommenderade album
           </SectionTitle>
           {loadingAlbums ? (

@@ -68,6 +68,10 @@ public class ArtistService {
         return artistJooqRepository.findAll(pageable);
     }
 
+    public Page<Artist> findAllRandom(Pageable pageable) {
+        return artistJooqRepository.findAllRandom(pageable);
+    }
+
     public Page<Artist> searchByName(String query, Pageable pageable) {
         return artistJooqRepository.searchByName(query, pageable);
     }

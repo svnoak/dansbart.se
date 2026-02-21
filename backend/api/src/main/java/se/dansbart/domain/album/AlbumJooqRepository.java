@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import static org.jooq.impl.DSL.count;
 import static org.jooq.impl.DSL.lower;
+import static org.jooq.impl.DSL.rand;
 import static se.dansbart.jooq.Tables.ALBUMS;
 import static se.dansbart.jooq.Tables.TRACK_ALBUMS;
 import static se.dansbart.jooq.Tables.TRACKS;
@@ -30,6 +31,16 @@ public class AlbumJooqRepository {
 
     public Optional<Album> findById(UUID id) {
         return dsl.selectFrom(ALBUMS).where(ALBUMS.ID.eq(id)).fetchOptional().map(this::toAlbum);
+    }
+
+    public Page<Album> findAllRandom(Pageable pageable) {
+        List<Album> items = dsl.selectFrom(ALBUMS)
+            .orderBy(rand())
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch(this::toAlbum);
+        long total = dsl.fetchCount(dsl.selectFrom(ALBUMS));
+        return new PageImpl<>(items, pageable, total);
     }
 
     public Page<Album> findAll(Pageable pageable) {

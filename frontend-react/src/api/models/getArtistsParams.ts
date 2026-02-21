@@ -7,6 +7,7 @@
 
 export type GetArtistsParams = {
 search?: string;
+sort?: string;
 limit?: number;
 offset?: number;
 };
