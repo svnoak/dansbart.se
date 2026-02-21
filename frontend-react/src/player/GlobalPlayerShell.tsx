@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useConsent } from '@/consent/useConsent';
 import { usePlayer } from '@/player/usePlayer';
 import {
@@ -26,11 +26,12 @@ import {
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { formatDurationMs } from '@/utils/formatDuration';
 import { SmartNudge } from '@/player/SmartNudge';
+import { getStructureVersions } from '@/api/generated/tracks/tracks';
 
 const YT_PLAYER_CONTAINER_ID = 'global-yt-player-container';
 
-// Match Vue: jump amount 10 sec (structureMode 'none'); 4 bars when structure mode added later
 const JUMP_SECONDS = 10;
+const JUMP_BARS = 4;
 
 export function GlobalPlayerShell() {
   const { consentStatus } = useConsent();
@@ -55,6 +56,8 @@ export function GlobalPlayerShell() {
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 768
   );
+  const [structureMode, setStructureMode] = useState<'none' | 'bars'>('none');
+  const [bars, setBars] = useState<number[]>([]);
   const hasYt = hasYouTube(currentTrack);
   const hasSpot = hasSpotify(currentTrack);
   const embedUrl = getEmbedUrlForSource(currentTrack, activeSource);
@@ -76,11 +79,33 @@ export function GlobalPlayerShell() {
     setPrevTrackId(currentTrack?.id);
     setPlaybackPositionMs(0);
     setPlaybackDurationMs(0);
+    setBars([]);
     if (currentTrack) {
       setActiveSource(hasYt ? 'youtube' : hasSpot ? 'spotify' : activeSource);
       if (embedUrl) setExpanded(true);
     }
   }
+
+  // Fetch structure versions (bars data) when track changes
+  useEffect(() => {
+    if (!currentTrack?.id) {
+      setBars([]);
+      return;
+    }
+    let cancelled = false;
+    getStructureVersions(currentTrack.id)
+      .then((versions) => {
+        if (cancelled) return;
+        const active = versions.find((v) => v.isActive) ?? versions[0];
+        const data = active?.structureData as Record<string, unknown> | undefined;
+        const trackBars = Array.isArray(data?.bars) ? (data.bars as number[]) : [];
+        setBars(trackBars);
+      })
+      .catch(() => {
+        if (!cancelled) setBars([]);
+      });
+    return () => { cancelled = true; };
+  }, [currentTrack?.id]);
 
   // Track window width for responsive behavior
   useEffect(() => {
@@ -216,6 +241,11 @@ export function GlobalPlayerShell() {
   const progressPercent = durationMs > 0 ? Math.min(100, (playbackPositionMs / durationMs) * 100) : 0;
   const durationSec = durationMs / 1000;
 
+  const barTicks = structureMode === 'bars' && durationSec > 0
+    ? bars.map((time) => ({ left: (time / durationSec) * 100 })).filter((b) => b.left <= 100)
+    : [];
+  const structureButtonLabel = structureMode === 'bars' ? 'Dolj takter' : 'Visa takter';
+
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   const handleSeek = (clientX: number) => {
@@ -227,9 +257,26 @@ export function GlobalPlayerShell() {
     ytPlayerRef.current.seekTo(sec, true);
   };
 
-  const jumpLabel = `${JUMP_SECONDS} s`;
+  const hasBars = structureMode === 'bars' && bars.length > 0;
+  const jumpAmount = hasBars ? JUMP_BARS : JUMP_SECONDS;
+  const jumpLabel = hasBars ? `${JUMP_BARS} takter` : `${JUMP_SECONDS} s`;
+
+  const jumpByBars = useCallback((direction: 1 | -1) => {
+    if (!isYouTubeEmbed || !ytPlayerRef.current?.getCurrentTime || !ytPlayerRef.current?.seekTo) return;
+    const current = ytPlayerRef.current.getCurrentTime();
+    const nextBarIdx = bars.findIndex((b) => b > current);
+    const currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
+    let targetIdx = currentIdx + direction * JUMP_BARS;
+    if (targetIdx < 0) targetIdx = 0;
+    if (targetIdx >= bars.length) targetIdx = bars.length - 1;
+    const sec = bars[targetIdx];
+    ytPlayerRef.current.seekTo(sec, true);
+    setPlaybackPositionMs(sec * 1000);
+  }, [bars, isYouTubeEmbed]);
+
   const handleJumpBack = () => {
     if (!isYouTubeEmbed || !ytPlayerRef.current?.getCurrentTime || !ytPlayerRef.current?.seekTo) return;
+    if (hasBars) { jumpByBars(-1); return; }
     const current = ytPlayerRef.current.getCurrentTime();
     const nextSec = Math.max(0, current - JUMP_SECONDS);
     ytPlayerRef.current.seekTo(nextSec, true);
@@ -237,6 +284,7 @@ export function GlobalPlayerShell() {
   };
   const handleJumpForward = () => {
     if (!isYouTubeEmbed || !ytPlayerRef.current?.getCurrentTime || !ytPlayerRef.current?.seekTo) return;
+    if (hasBars) { jumpByBars(1); return; }
     const current = ytPlayerRef.current.getCurrentTime();
     const duration = durationSec || (ytPlayerRef.current.getDuration?.() ?? 0);
     const nextSec = Math.min(duration, current + JUMP_SECONDS);
@@ -453,10 +501,27 @@ export function GlobalPlayerShell() {
             </div>
 
             {/* Time display */}
-            <div className="flex justify-between text-xs mb-8 text-[rgb(var(--color-text-muted))] font-mono">
+            <div className="flex justify-between text-xs mb-4 text-[rgb(var(--color-text-muted))] font-mono">
               <span>{formatDurationMs(Math.round(playbackPositionMs))}</span>
               <span>{durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}</span>
             </div>
+
+            {/* Structure mode toggle (mobile) */}
+            {bars.length > 0 && (
+              <div className="flex items-center justify-center mb-4">
+                <button
+                  type="button"
+                  onClick={() => setStructureMode((m) => m === 'none' ? 'bars' : 'none')}
+                  className={`text-xs font-bold uppercase border px-3 py-1 rounded transition-colors ${
+                    structureMode !== 'none'
+                      ? 'bg-[rgb(var(--color-accent))]/10 text-[rgb(var(--color-accent))] border-[rgb(var(--color-accent))]/30'
+                      : 'bg-transparent text-[rgb(var(--color-text-muted))] border-[rgb(var(--color-border))]'
+                  }`}
+                >
+                  {structureButtonLabel}
+                </button>
+              </div>
+            )}
 
             {/* Controls - all visible */}
             <div className="flex justify-center items-center gap-6 mb-8">
@@ -493,7 +558,7 @@ export function GlobalPlayerShell() {
                   }`}
                   aria-hidden
                 >
-                  {JUMP_SECONDS}
+                  {jumpAmount}
                 </span>
               </button>
 
@@ -569,7 +634,7 @@ export function GlobalPlayerShell() {
                   }`}
                   aria-hidden
                 >
-                  {JUMP_SECONDS}
+                  {jumpAmount}
                 </span>
               </button>
 
@@ -655,7 +720,9 @@ export function GlobalPlayerShell() {
         >
           <div
             ref={progressBarRef}
-            className={`relative h-1.5 w-full rounded-full bg-[rgb(var(--color-border))] ${isYouTubeEmbed && durationMs > 0 && !controlsDisabled ? 'cursor-pointer' : ''}`}
+            className={`relative w-full transition-all duration-200 ${
+              structureMode === 'bars' ? 'h-8' : 'h-1.5 rounded-full'
+            } bg-[rgb(var(--color-border))] ${isYouTubeEmbed && durationMs > 0 && !controlsDisabled ? 'cursor-pointer' : ''}`}
             onClick={(e) => {
               if (controlsDisabled) return;
               e.stopPropagation();
@@ -686,8 +753,18 @@ export function GlobalPlayerShell() {
             aria-valuenow={Math.round(playbackPositionMs)}
             aria-valuetext={`${formatDurationMs(Math.round(playbackPositionMs))} av ${durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}`}
           >
+            {/* Bar tick marks */}
+            {barTicks.map((tick, i) => (
+              <div
+                key={i}
+                className="absolute top-0 h-full border-l border-[rgb(var(--color-text-muted))]/40 pointer-events-none"
+                style={{ left: `${tick.left}%` }}
+              />
+            ))}
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))] pointer-events-none"
+              className={`absolute inset-y-0 left-0 bg-[rgb(var(--color-accent))]/40 pointer-events-none ${
+                structureMode === 'bars' ? 'border-r-2 border-[rgb(var(--color-accent))]' : 'rounded-full'
+              }`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -730,6 +807,24 @@ export function GlobalPlayerShell() {
               {activeSource === 'youtube' && (
                 <div className="hidden md:block text-[10px] text-[rgb(var(--color-text-muted))] font-mono">
                   {formatDurationMs(Math.round(playbackPositionMs))} / {durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}
+                </div>
+              )}
+              {bars.length > 0 && (
+                <div className="hidden md:flex items-center gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStructureMode((m) => m === 'none' ? 'bars' : 'none');
+                    }}
+                    className={`text-[9px] font-bold uppercase border px-1.5 rounded transition-colors ${
+                      structureMode !== 'none'
+                        ? 'bg-[rgb(var(--color-accent))]/10 text-[rgb(var(--color-accent))] border-[rgb(var(--color-accent))]/30'
+                        : 'bg-transparent text-[rgb(var(--color-text-muted))] border-[rgb(var(--color-border))]'
+                    }`}
+                  >
+                    {structureButtonLabel}
+                  </button>
                 </div>
               )}
             </div>
@@ -779,7 +874,7 @@ export function GlobalPlayerShell() {
                 }`}
                 aria-hidden
               >
-                {JUMP_SECONDS}
+                {jumpAmount}
               </span>
             </button>
             {/* Previous */}
@@ -865,7 +960,7 @@ export function GlobalPlayerShell() {
                 }`}
                 aria-hidden
               >
-                {JUMP_SECONDS}
+                {jumpAmount}
               </span>
             </button>
             {/* Repeat */}
