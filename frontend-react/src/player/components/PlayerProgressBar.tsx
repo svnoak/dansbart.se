@@ -35,6 +35,25 @@ export function PlayerProgressBar({
   const seekable = isYouTubeEmbed && !controlsDisabled;
   const [isDragging, setIsDragging] = useState(false);
 
+  const getMagneticX = (clientX: number): number => {
+    if (structureMode !== 'bars' || barTicks.length === 0 || !progressBarRef.current) {
+      return clientX;
+    }
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const SNAP_THRESHOLD_PX = 8;
+    let closestTickX = clientX;
+    let closestDistance = Infinity;
+    for (const tick of barTicks) {
+      const tickX = rect.left + (tick.left / 100) * rect.width;
+      const distance = Math.abs(tickX - clientX);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestTickX = tickX;
+      }
+    }
+    return closestDistance <= SNAP_THRESHOLD_PX ? closestTickX : clientX;
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!seekable) return;
     e.preventDefault();
@@ -43,8 +62,8 @@ export function PlayerProgressBar({
     const target = e.currentTarget;
     const pointerId = e.pointerId;
     target.setPointerCapture(pointerId);
-    onSeek(e.clientX);
-    const onMove = (moveEvent: PointerEvent) => onSeek(moveEvent.clientX);
+    onSeek(getMagneticX(e.clientX));
+    const onMove = (moveEvent: PointerEvent) => onSeek(getMagneticX(moveEvent.clientX));
     const onUp = () => {
       isDraggingRef.current = false;
       setIsDragging(false);
@@ -61,7 +80,7 @@ export function PlayerProgressBar({
     onClick: (e: React.MouseEvent<HTMLDivElement>) => {
       if (controlsDisabled) return;
       e.stopPropagation();
-      onSeek(e.clientX);
+      onSeek(getMagneticX(e.clientX));
     },
     onPointerDown: handlePointerDown,
     role: 'slider' as const,
