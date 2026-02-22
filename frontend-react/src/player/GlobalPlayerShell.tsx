@@ -18,7 +18,6 @@ import { PlayerProgressBar } from './components/PlayerProgressBar';
 import { SourceSwitcher } from './components/SourceSwitcher';
 import { TrackInfo } from './components/TrackInfo';
 import { PlayerControls } from './components/PlayerControls';
-import { QueuePanel } from './components/QueuePanel';
 import { MobilePlayerOverlay } from './components/MobilePlayerOverlay';
 
 const JUMP_SECONDS = 10;
@@ -36,6 +35,8 @@ export function GlobalPlayerShell() {
     clearQueue,
     next,
     prev,
+    queueOpen,
+    toggleQueue,
   } = usePlayer();
 
   const [expanded, setExpanded] = useState(false);
@@ -283,19 +284,6 @@ export function GlobalPlayerShell() {
         }`}
         aria-label="Global spelare"
       >
-        {/* Queue panel - sits above the progress bar, growing the container upward */}
-        {expanded && currentTrack && queue.length > 0 && (
-          <div className="border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-3">
-            <QueuePanel
-              queue={queue}
-              currentTrack={currentTrack}
-              onPlayFromQueue={playFromQueue}
-              onRemoveFromQueue={removeFromQueue}
-              onClearQueue={clearQueue}
-            />
-          </div>
-        )}
-
         {/* Progress bar on top - desktop only */}
         <div
           className="hidden md:block w-full px-4 pt-2"
@@ -372,7 +360,8 @@ export function GlobalPlayerShell() {
             jumpAmount={jumpAmount}
             jumpLabel={jumpLabel}
             hasQueue={queue.length > 0}
-            onShowQueue={() => setExpanded(true)}
+            isQueueOpen={queueOpen}
+            onShowQueue={toggleQueue}
             variant="bar"
             fullMode={fullMode}
           />

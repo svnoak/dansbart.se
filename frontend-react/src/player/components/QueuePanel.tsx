@@ -7,6 +7,7 @@ interface QueuePanelProps {
   onPlayFromQueue: (index: number) => void;
   onRemoveFromQueue: (index: number) => void;
   onClearQueue: () => void;
+  onClose?: () => void;
 }
 
 export function QueuePanel({
@@ -15,37 +16,56 @@ export function QueuePanel({
   onPlayFromQueue,
   onRemoveFromQueue,
   onClearQueue,
+  onClose,
 }: QueuePanelProps) {
-  if (queue.length === 0) return null;
-
   return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[rgb(var(--color-border))] shrink-0">
         <h3 className="text-sm font-medium text-[rgb(var(--color-text-muted))]">
           Kö ({queue.length})
         </h3>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClearQueue();
-          }}
-          className="text-xs text-[rgb(var(--color-accent))] hover:underline"
-        >
-          Rensa kö
-        </button>
+        <div className="flex items-center gap-3">
+          {queue.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClearQueue();
+              }}
+              className="text-xs text-[rgb(var(--color-accent))] hover:underline"
+            >
+              Rensa kö
+            </button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
+              aria-label="Stäng kö"
+            >
+              <CloseIcon className="h-4 w-4" aria-hidden />
+            </button>
+          )}
+        </div>
       </div>
-      <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
-        {queue.map((t, i) => (
-          <QueueItem
-            key={t.id ?? i}
-            track={t}
-            isCurrent={currentTrack?.id === t.id}
-            onPlay={() => onPlayFromQueue(i)}
-            onRemove={() => onRemoveFromQueue(i)}
-          />
-        ))}
-      </ul>
+      {queue.length === 0 ? (
+        <p className="flex-1 flex items-center justify-center text-sm text-[rgb(var(--color-text-muted))]">
+          Kön är tom
+        </p>
+      ) : (
+        <ul className="flex-1 overflow-y-auto p-2 space-y-1">
+          {queue.map((t, i) => (
+            <QueueItem
+              key={t.id ?? i}
+              track={t}
+              isCurrent={currentTrack?.id === t.id}
+              onPlay={() => onPlayFromQueue(i)}
+              onRemove={() => onRemoveFromQueue(i)}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

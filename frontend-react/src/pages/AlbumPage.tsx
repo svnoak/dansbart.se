@@ -92,7 +92,7 @@ export function AlbumPage() {
           <ul className="mt-3 space-y-3">
             {tracks.map((track) => (
               <li key={track.id ?? track.title}>
-                <TrackCard track={track} />
+                <TrackCard track={track} contextTracks={tracks} />
               </li>
             ))}
           </ul>

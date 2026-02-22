@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -16,7 +17,7 @@ interface PlayerState {
 }
 
 export interface PlayerContextValue extends PlayerState {
-  play: (track: TrackListDto) => void;
+  play: (track: TrackListDto, contextTracks?: TrackListDto[]) => void;
   playFromQueue: (index: number) => void;
   togglePlayPause: () => void;
   addToQueue: (track: TrackListDto) => void;
@@ -24,6 +25,9 @@ export interface PlayerContextValue extends PlayerState {
   clearQueue: () => void;
   next: () => void;
   prev: () => void;
+  queueOpen: boolean;
+  toggleQueue: () => void;
+  closeQueue: () => void;
 }
 
 const QUEUE_STORAGE_KEY = 'dansbart-queue';
@@ -55,17 +59,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     isPlaying: false,
   });
 
+  const [queueOpen, setQueueOpen] = useState(false);
+  const toggleQueue = useCallback(() => setQueueOpen((v) => !v), []);
+  const closeQueue = useCallback(() => setQueueOpen(false), []);
+
+  // Auto-close queue panel when queue becomes empty
+  useEffect(() => {
+    if (state.queue.length === 0) setQueueOpen(false);
+  }, [state.queue.length]);
+
   const play = useCallback(
-    (track: TrackListDto) => {
+    (track: TrackListDto, contextTracks?: TrackListDto[]) => {
       if (consentStatus !== 'granted') {
         window.dispatchEvent(new Event(SHOW_CONSENT_BANNER));
         return;
       }
-      setState((prev) => ({
-        ...prev,
-        currentTrack: track,
-        isPlaying: true,
-      }));
+      if (contextTracks && contextTracks.length > 0) {
+        const idx = contextTracks.findIndex((t) => t.id === track.id);
+        const after = idx >= 0 ? contextTracks.slice(idx + 1, idx + 21) : [];
+        saveQueue(after);
+        setState((prev) => ({
+          ...prev,
+          currentTrack: track,
+          queue: after,
+          isPlaying: true,
+        }));
+      } else {
+        setState((prev) => ({
+          ...prev,
+          currentTrack: track,
+          isPlaying: true,
+        }));
+      }
     },
     [consentStatus]
   );
@@ -173,6 +198,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       clearQueue,
       next,
       prev,
+      queueOpen,
+      toggleQueue,
+      closeQueue,
     }),
     [
       state,
@@ -184,6 +212,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       clearQueue,
       next,
       prev,
+      queueOpen,
+      toggleQueue,
+      closeQueue,
     ]
   );
 

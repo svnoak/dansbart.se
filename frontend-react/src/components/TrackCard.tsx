@@ -17,10 +17,11 @@ import { FlagTrackModal } from './FlagTrackModal';
 
 interface TrackCardProps {
   track: TrackListDto;
+  contextTracks?: TrackListDto[];
   onApplyStyleFilter?: (style: string) => void;
 }
 
-export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
+export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCardProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
   const [menuOpen, setMenuOpen] = useState(false);
   const [flagModalOpen, setFlagModalOpen] = useState(false);
@@ -40,7 +41,7 @@ export function TrackCard({ track, onApplyStyleFilter }: TrackCardProps) {
     <Card className="flex items-center gap-4 p-4 shadow-sm">
       <button
         type="button"
-        onClick={() => play(track)}
+        onClick={() => play(track, contextTracks)}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
         aria-label={isCurrent && isPlaying ? 'Pausa' : 'Spela'}
       >

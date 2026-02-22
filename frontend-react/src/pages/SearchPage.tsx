@@ -263,6 +263,7 @@ export function SearchPage() {
             <li key={track.id ?? track.title ?? `track-${i}`}>
               <TrackCard
                 track={track}
+                contextTracks={tracks}
                 onApplyStyleFilter={(style) =>
                   setDraftFilters((prev) => ({
                     ...prev,

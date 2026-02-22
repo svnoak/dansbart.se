@@ -198,6 +198,7 @@ export function MobilePlayerOverlay({
           jumpAmount={jumpAmount}
           jumpLabel={jumpLabel}
           hasQueue={queue.length > 0}
+          isQueueOpen={false}
           onShowQueue={() => {}}
           variant="overlay"
         />

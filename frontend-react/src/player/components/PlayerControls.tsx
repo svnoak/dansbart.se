@@ -26,6 +26,7 @@ interface PlayerControlsProps {
   jumpAmount: number;
   jumpLabel: string;
   hasQueue: boolean;
+  isQueueOpen: boolean;
   onShowQueue: () => void;
   /** 'bar' = desktop bottom bar; 'overlay' = mobile full-screen overlay */
   variant?: 'bar' | 'overlay';
@@ -48,6 +49,7 @@ export function PlayerControls({
   jumpAmount,
   jumpLabel,
   hasQueue,
+  isQueueOpen,
   onShowQueue,
   variant = 'bar',
   fullMode = false,
@@ -360,9 +362,10 @@ export function PlayerControls({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onShowQueue(); }}
-          aria-label="Visa kö"
-          title="Visa kö"
-          className={`relative w-8 h-8 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${hasQueue ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
+          aria-label={isQueueOpen ? 'Stäng kö' : 'Visa kö'}
+          aria-pressed={isQueueOpen}
+          title={isQueueOpen ? 'Stäng kö' : 'Visa kö'}
+          className={`relative w-8 h-8 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${isQueueOpen || hasQueue ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
         >
           <QueueListIcon className="w-5 h-5" />
         </button>
