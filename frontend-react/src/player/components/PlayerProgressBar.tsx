@@ -1,4 +1,4 @@
-import type { MutableRefObject } from 'react';
+import { useState, type MutableRefObject } from 'react';
 import { formatDurationMs } from '@/utils/formatDuration';
 
 interface BarTick {
@@ -32,12 +32,14 @@ export function PlayerProgressBar({
   isDraggingRef,
   variant,
 }: PlayerProgressBarProps) {
-  const seekable = isYouTubeEmbed && durationMs > 0 && !controlsDisabled;
+  const seekable = isYouTubeEmbed && !controlsDisabled;
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!seekable) return;
     e.preventDefault();
     isDraggingRef.current = true;
+    setIsDragging(true);
     const target = e.currentTarget;
     const pointerId = e.pointerId;
     target.setPointerCapture(pointerId);
@@ -45,6 +47,7 @@ export function PlayerProgressBar({
     const onMove = (moveEvent: PointerEvent) => onSeek(moveEvent.clientX);
     const onUp = () => {
       isDraggingRef.current = false;
+      setIsDragging(false);
       target.releasePointerCapture(pointerId);
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
@@ -76,7 +79,7 @@ export function PlayerProgressBar({
         className={`relative h-2 w-full rounded-full bg-[rgb(var(--color-border))] ${seekable ? 'cursor-pointer' : ''}`}
       >
         <div
-          className="absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))] pointer-events-none"
+          className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -86,7 +89,7 @@ export function PlayerProgressBar({
   return (
     <div
       {...sharedProps}
-      className={`relative w-full transition-all duration-200 ${
+      className={`group relative w-full transition-all duration-200 ${
         structureMode === 'bars' ? 'h-8' : 'h-1.5 rounded-full'
       } bg-[rgb(var(--color-border))] ${seekable ? 'cursor-pointer' : ''}`}
     >
@@ -98,11 +101,17 @@ export function PlayerProgressBar({
         />
       ))}
       <div
-        className={`absolute inset-y-0 left-0 bg-[rgb(var(--color-accent))]/40 pointer-events-none ${
+        className={`absolute inset-y-0 left-0 bg-[rgb(var(--color-accent))]/40 pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''} ${
           structureMode === 'bars' ? 'border-r-2 border-[rgb(var(--color-accent))]' : 'rounded-full'
         }`}
         style={{ width: `${progressPercent}%` }}
       />
+      <div
+        className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 pointer-events-none${!isDragging ? ' transition-[left] duration-200 ease-linear' : ''}`}
+        style={{ left: `${progressPercent}%` }}
+      >
+        <div className="h-3 w-3 bg-[rgb(var(--color-accent))] rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
     </div>
   );
 }
