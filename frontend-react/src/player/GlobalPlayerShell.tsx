@@ -129,10 +129,12 @@ export function GlobalPlayerShell() {
   const structureButtonLabel = structureMode === 'bars' ? 'Dolj takter' : 'Visa takter';
 
   const handleSeek = (clientX: number) => {
-    if (!isYouTubeEmbed || durationMs <= 0 || !progressBarRef.current || !ytPlayerRef.current?.seekTo) return;
+    if (!isYouTubeEmbed || !progressBarRef.current || !ytPlayerRef.current?.seekTo) return;
+    const effectiveDurationSec = durationSec || (ytPlayerRef.current.getDuration?.() ?? 0);
+    if (effectiveDurationSec <= 0) return;
     const rect = progressBarRef.current.getBoundingClientRect();
     const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const sec = fraction * durationSec;
+    const sec = fraction * effectiveDurationSec;
     setPlaybackPositionMs(sec * 1000);
     ytPlayerRef.current.seekTo(sec, true);
   };
@@ -281,6 +283,19 @@ export function GlobalPlayerShell() {
         }`}
         aria-label="Global spelare"
       >
+        {/* Queue panel - sits above the progress bar, growing the container upward */}
+        {expanded && currentTrack && queue.length > 0 && (
+          <div className="border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-3">
+            <QueuePanel
+              queue={queue}
+              currentTrack={currentTrack}
+              onPlayFromQueue={playFromQueue}
+              onRemoveFromQueue={removeFromQueue}
+              onClearQueue={clearQueue}
+            />
+          </div>
+        )}
+
         {/* Progress bar on top - desktop only */}
         <div
           className="hidden md:block w-full px-4 pt-2"
@@ -377,18 +392,6 @@ export function GlobalPlayerShell() {
           </div>
         </div>
 
-        {/* Expanded: queue panel */}
-        {expanded && currentTrack && (
-          <div className="border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-3">
-            <QueuePanel
-              queue={queue}
-              currentTrack={currentTrack}
-              onPlayFromQueue={playFromQueue}
-              onRemoveFromQueue={removeFromQueue}
-              onClearQueue={clearQueue}
-            />
-          </div>
-        )}
       </div>
     </>
   );

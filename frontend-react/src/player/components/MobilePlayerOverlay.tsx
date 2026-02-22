@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react';
-import { ChevronDownIcon } from '@/icons';
+import { CloseIcon } from '@/icons';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { PlaybackSource } from '@/player/embedUrl';
@@ -93,7 +93,7 @@ export function MobilePlayerOverlay({
           aria-label="Stäng spelare"
           className="text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))] transition-colors"
         >
-          <ChevronDownIcon className="w-8 h-8" />
+          <CloseIcon className="w-8 h-8" />
         </button>
         <SourceSwitcher
           hasYt={hasYt}
