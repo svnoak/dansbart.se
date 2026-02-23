@@ -33,6 +33,7 @@ export function GlobalPlayerShell() {
     togglePlayPause,
     removeFromQueue,
     clearQueue,
+    reorderQueue,
     next,
     prev,
     queueOpen,
@@ -272,6 +273,7 @@ export function GlobalPlayerShell() {
           onPlayFromQueue={playFromQueue}
           onRemoveFromQueue={removeFromQueue}
           onClearQueue={clearQueue}
+          onReorderQueue={reorderQueue}
         />
       )}
 

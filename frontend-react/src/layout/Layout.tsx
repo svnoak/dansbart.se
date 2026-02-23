@@ -11,7 +11,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { queue, currentTrack, queueOpen, closeQueue, playFromQueue, removeFromQueue, clearQueue } =
+  const { queue, currentTrack, queueOpen, closeQueue, playFromQueue, removeFromQueue, clearQueue, reorderQueue } =
     usePlayer();
 
   return (
@@ -57,6 +57,7 @@ export function Layout({ children }: LayoutProps) {
               onPlayFromQueue={playFromQueue}
               onRemoveFromQueue={removeFromQueue}
               onClearQueue={clearQueue}
+              onReorderQueue={reorderQueue}
               onClose={closeQueue}
             />
           </aside>

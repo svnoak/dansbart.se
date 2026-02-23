@@ -45,6 +45,7 @@ interface MobilePlayerOverlayProps {
   onPlayFromQueue: (index: number) => void;
   onRemoveFromQueue: (index: number) => void;
   onClearQueue: () => void;
+  onReorderQueue: (fromIndex: number, toIndex: number) => void;
 }
 
 export function MobilePlayerOverlay({
@@ -83,6 +84,7 @@ export function MobilePlayerOverlay({
   onPlayFromQueue,
   onRemoveFromQueue,
   onClearQueue,
+  onReorderQueue,
 }: MobilePlayerOverlayProps) {
   return (
     <div className="fixed inset-0 bg-[rgb(var(--color-bg))] z-[100] flex flex-col overflow-y-auto transition-transform duration-300 ease-in-out">
@@ -210,6 +212,7 @@ export function MobilePlayerOverlay({
           onPlayFromQueue={onPlayFromQueue}
           onRemoveFromQueue={onRemoveFromQueue}
           onClearQueue={onClearQueue}
+          onReorderQueue={onReorderQueue}
         />
       </div>
     </div>

@@ -25,6 +25,7 @@ export interface PlayerContextValue extends PlayerState {
   clearQueue: () => void;
   next: () => void;
   prev: () => void;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
   queueOpen: boolean;
   toggleQueue: () => void;
   closeQueue: () => void;
@@ -147,6 +148,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     saveQueue([]);
   }, []);
 
+  const reorderQueue = useCallback((fromIndex: number, toIndex: number) => {
+    setState((prev) => {
+      const next = [...prev.queue];
+      const [item] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, item);
+      saveQueue(next);
+      return { ...prev, queue: next };
+    });
+  }, []);
+
   const next = useCallback(() => {
     if (consentStatus !== 'granted') {
       window.dispatchEvent(new Event(SHOW_CONSENT_BANNER));
@@ -196,6 +207,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       addToQueue,
       removeFromQueue,
       clearQueue,
+      reorderQueue,
       next,
       prev,
       queueOpen,
@@ -210,6 +222,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       addToQueue,
       removeFromQueue,
       clearQueue,
+      reorderQueue,
       next,
       prev,
       queueOpen,
