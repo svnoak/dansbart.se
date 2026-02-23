@@ -42,7 +42,7 @@ export function CookieBanner() {
 
   return (
     <div
-      className="fixed inset-0 z-100 pointer-events-none flex items-end justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[130] pointer-events-none flex items-end justify-center p-4 sm:p-6"
       role="dialog"
       aria-labelledby="cookie-banner-title"
       aria-describedby="cookie-banner-desc"
