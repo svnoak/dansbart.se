@@ -91,7 +91,7 @@ class TestClassificationServiceBasics:
         ]
 
         with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('neckenml.core.compute_derived_features') as mock_compute:
+            with patch('app.services.classification.compute_derived_features') as mock_compute:
                 mock_compute.return_value = sample_analysis_result['features']
 
                 with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):

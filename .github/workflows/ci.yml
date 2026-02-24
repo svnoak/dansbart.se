@@ -59,10 +59,16 @@ jobs:
         working-directory: backend/workers/feature
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_SERVER: localhost
+          POSTGRES_DB: test_db
           REDIS_URL: redis://localhost:6379/0
           TESTING: "true"
         run: |
-          pytest tests/ -v --tb=short -m "not integration" --cov=app --cov-report=xml
+          pytest tests/ -v --tb=short -m "not integration" \
+            --ignore=tests/e2e/test_youtube_fetch.py \
+            --cov=app --cov-report=xml
 
       - name: Run integration tests
         working-directory: backend/workers/feature

@@ -94,9 +94,11 @@ class SpotifyIngestor:
                 batch_tracks = batch_response.get('tracks', [])
 
                 # Merge full track data with original album data
+                fetched_ids = set()
                 for full_track in batch_tracks:
-                    if full_track:
+                    if full_track and full_track.get('id') in track_map:
                         track_id = full_track['id']
+                        fetched_ids.add(track_id)
                         original_track = track_map.get(track_id, {})
 
                         # Preserve album data if injected
@@ -104,6 +106,13 @@ class SpotifyIngestor:
                             full_track['album'] = original_track['album']
 
                         full_tracks.append(full_track)
+
+                # Fall back to original data for any IDs not returned by the API
+                for track_id in batch_ids:
+                    if track_id not in fetched_ids:
+                        original_track = track_map.get(track_id)
+                        if original_track:
+                            full_tracks.append(original_track)
 
             except Exception as e:
                 log.error("track_details_batch_fetch_failed", error=str(e))
