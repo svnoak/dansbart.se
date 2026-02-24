@@ -49,15 +49,14 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        working-directory: backend
+        working-directory: backend/workers/feature
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.common.txt
-          pip install -r requirements.api.txt
+          pip install -r requirements.txt
           pip install pytest pytest-cov pytest-asyncio
 
       - name: Run unit tests
-        working-directory: backend
+        working-directory: backend/workers/feature
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379/0
@@ -66,7 +65,7 @@ jobs:
           pytest tests/ -v --tb=short -m "not integration" --cov=app --cov-report=xml
 
       - name: Run integration tests
-        working-directory: backend
+        working-directory: backend/workers/feature
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379/0
@@ -133,15 +132,15 @@ jobs:
         run: pip install black flake8 isort
 
       - name: Run black
-        working-directory: backend
+        working-directory: backend/workers/feature
         run: black --check app/ tests/ || echo "Code formatting issues found"
 
       - name: Run flake8
-        working-directory: backend
+        working-directory: backend/workers/feature
         run: flake8 app/ tests/ --max-line-length=100 --ignore=E501,W503 || echo "Linting issues found"
 
       - name: Run isort
-        working-directory: backend
+        working-directory: backend/workers/feature
         run: isort --check-only app/ tests/ || echo "Import sorting issues found"
 
   test-java-api:
@@ -161,7 +160,7 @@ jobs:
 
       - name: Run Java tests
         working-directory: backend/api
-        run: mvn test -B -q
+        run: mvn test -B -q -DskipDbBuild=true
 
   docker-build:
     name: Docker Build
