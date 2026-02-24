@@ -501,7 +501,7 @@ class TestCeleryTaskIntegration:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = []
 
-        with patch('app.core.database.SessionLocal', return_value=mock_db_session):
+        with patch('app.workers.tasks_feature.SessionLocal', return_value=mock_db_session):
             with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
                 with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
                     result = classify_track_task.apply(
@@ -525,7 +525,7 @@ class TestCeleryTaskIntegration:
 
         mock_classifier = MagicMock()
 
-        with patch('app.core.database.SessionLocal', return_value=mock_db_session):
+        with patch('app.workers.tasks_feature.SessionLocal', return_value=mock_db_session):
             with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
                 with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
                     result = classify_track_task.apply(args=[track_id]).get()
@@ -565,7 +565,7 @@ class TestCeleryTaskIntegration:
             }
         ]
 
-        with patch('app.core.database.SessionLocal', return_value=mock_db_session):
+        with patch('app.workers.tasks_feature.SessionLocal', return_value=mock_db_session):
             with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
                 with patch('neckenml.core.compute_derived_features') as mock_compute:
                     mock_compute.return_value = sample_analysis_result['features']
