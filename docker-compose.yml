@@ -40,7 +40,7 @@ services:
   # React (Vite) app – use frontend-react. (Legacy Vue app is in ./frontend.)
   frontend:
     build:
-      context: ./frontend-react
+      context: frontend
       dockerfile: Dockerfile
     ports:
       - "8080:80"
