@@ -47,18 +47,18 @@ services:
     depends_on:
       - backend
 
-  # Audio Worker (AGPL-3.0) - From git submodule: ./audio-worker
-  # To add submodule: git submodule add https://github.com/svnoak/dansbart-audio-worker.git audio-worker
+  # Audio Worker (AGPL-3.0) - From git submodule: ./backend/workers/audio
+  # To add submodule: git submodule add https://github.com/svnoak/neckenml-audio-worker.git backend/workers/audio
   worker-audio:
     build:
-      context: ./audio-worker
+      context: ./backend/workers/audio
       dockerfile: Dockerfile
     platform: linux/amd64
     command: >
       sh -c "pip install -e /neckenml/packages/neckenml-core -e /neckenml/packages/neckenml-analyzer --quiet &&
              celery -A app.core.celery_app worker --loglevel=info --pool=solo -Q audio"
     volumes:
-      - ./audio-worker/app:/app/app:ro  # Mount for development hot-reload
+      - ./backend/workers/audio/app:/app/app:ro  # Mount for development hot-reload
       - audio_models:/app/models  # Persistent volume for ML models
       - style_head_data:/app/neckenml_style_head  # Production-trained custom_style_head.pkl
       - ../neckenml-analyzer:/neckenml  # Mount neckenml for local development (rw for pip install -e)
