@@ -183,8 +183,8 @@ jobs:
       - name: Build API image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile.api
+          context: ./backend/api
+          file: ./backend/api/Dockerfile
           push: false
           tags: dansbart-api:test
           cache-from: type=gha
@@ -193,8 +193,8 @@ jobs:
       - name: Build Workers image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile.workers
+          context: ./backend/workers/feature
+          file: ./backend/workers/feature/Dockerfile
           push: false
           tags: dansbart-workers:test
           cache-from: type=gha
@@ -203,7 +203,7 @@ jobs:
       - name: Build Frontend image
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
+          context: ./frontend-react
           push: false
           tags: dansbart-frontend:test
           cache-from: type=gha
