@@ -203,7 +203,7 @@ jobs:
       - name: Build Frontend image
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend-react
+          context: ./frontend
           push: false
           tags: dansbart-frontend:test
           cache-from: type=gha
