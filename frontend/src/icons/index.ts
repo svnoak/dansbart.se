@@ -33,3 +33,4 @@ export { AlbumListIcon } from './AlbumListIcon';
 export { MoonIcon } from './MoonIcon';
 export { SunIcon } from './SunIcon';
 export { GripIcon } from './GripIcon';
+export { LibraryIcon } from './LibraryIcon';

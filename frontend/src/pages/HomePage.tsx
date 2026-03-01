@@ -66,7 +66,7 @@ export function HomePage() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Upptäck
+        Bibliotek
       </h1>
 
       {stats && (

@@ -209,7 +209,7 @@ export function SearchPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Bibliotek & Sök
+        Sök
       </h1>
 
       <SearchBar

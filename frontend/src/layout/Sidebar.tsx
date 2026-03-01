@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { Button } from '@/ui';
+import { LibraryIcon } from '@/icons';
 
 function NavLink({
   to,
@@ -70,9 +71,7 @@ export function Sidebar() {
       <NavLink
         to="/"
         active={isHome}
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5"></svg>
-        }
+        icon={<LibraryIcon className="h-5 w-5" aria-hidden />}
       >
         Bibliotek
       </NavLink>
