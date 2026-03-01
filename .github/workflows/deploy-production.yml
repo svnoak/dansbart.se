@@ -1,9 +1,10 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:  # Allow manual triggers
 
 env:
@@ -13,6 +14,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -48,8 +50,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service == 'backend' && '.' || './frontend-react' }}
-          file: ${{ matrix.service == 'backend' && './backend/Dockerfile.api' || './frontend-react/Dockerfile' }}
+          context: ${{ matrix.service == 'backend' && './backend/api' || './frontend' }}
+          file: ${{ matrix.service == 'backend' && './backend/api/Dockerfile' || './frontend/Dockerfile' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -57,9 +59,10 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache,mode=max
           platforms: linux/amd64
 
-  # Light Worker only - Audio Worker is now in separate AGPL repo (dansbart-audio-worker)
+  # Light Worker only - Audio Worker is built and deployed from its own AGPL repo
   build-and-push-light-worker:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -91,8 +94,8 @@ jobs:
       - name: Build and push light-worker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./backend/Dockerfile.workers
+          context: ./backend/workers/feature
+          file: ./backend/workers/feature/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -107,7 +110,7 @@ jobs:
     steps:
       - name: Deploy notification
         run: |
-          echo "🚀 Production images built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "Production images built and pushed successfully." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Images:**" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:production\`" >> $GITHUB_STEP_SUMMARY

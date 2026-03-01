@@ -1,9 +1,10 @@
 name: Deploy to Beta
 
 on:
-  push:
-    branches:
-      - develop
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [develop]
   workflow_dispatch:  # Allow manual triggers
 
 env:
@@ -13,6 +14,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -48,8 +50,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service == 'backend' && '.' || './frontend-react' }}
-          file: ${{ matrix.service == 'backend' && './backend/Dockerfile.api' || './frontend-react/Dockerfile' }}
+          context: ${{ matrix.service == 'backend' && './backend/api' || './frontend' }}
+          file: ${{ matrix.service == 'backend' && './backend/api/Dockerfile' || './frontend/Dockerfile' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -57,19 +59,13 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache,mode=max
           platforms: linux/amd64
 
-  build-and-push-workers:
+  # Light Worker only - Audio Worker is built and deployed from its own AGPL repo
+  build-and-push-light-worker:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
-
-    strategy:
-      matrix:
-        worker:
-          - name: audio-worker
-            dockerfile: Dockerfile.audio
-          - name: light-worker
-            dockerfile: Dockerfile.workers
 
     steps:
       - name: Checkout code
@@ -89,38 +85,39 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker.name }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker
           tags: |
             type=raw,value=beta
             type=sha,prefix=beta-
             type=ref,event=branch
 
-      - name: Build and push ${{ matrix.worker.name }} image
+      - name: Build and push light-worker image
         uses: docker/build-push-action@v5
         with:
-          context: .  # Root context to include neckenml-analyzer submodule
-          file: ./backend/${{ matrix.worker.dockerfile }}
+          context: ./backend/workers/feature
+          file: ./backend/workers/feature/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker.name }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker.name }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker:buildcache,mode=max
           platforms: linux/amd64
 
   deploy:
-    needs: [build-and-push, build-and-push-workers]
+    needs: [build-and-push, build-and-push-light-worker]
     runs-on: ubuntu-latest
 
     steps:
       - name: Deploy notification
         run: |
-          echo "🧪 Beta images built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "Beta images built and pushed successfully." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Images:**" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:beta\`" >> $GITHUB_STEP_SUMMARY
           echo "- Backend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:beta\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Audio Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-audio-worker:beta\`" >> $GITHUB_STEP_SUMMARY
           echo "- Light Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker:beta\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Audio Worker is built and deployed from its own AGPL repo." >> $GITHUB_STEP_SUMMARY
 
       # Add your beta deployment steps here
       # Example: SSH into beta server and pull new images
