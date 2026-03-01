@@ -6,16 +6,27 @@ interface StyleShortcutCardProps {
   style: StyleOverviewDto;
 }
 
-const STYLE_COLORS: Record<string, string> = {
-  Polska: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-200',
-  Schottis: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
-  Vals: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200',
-  Brudmarsch: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200',
-  Mazurka: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
-};
+const COLOR_PALETTE = [
+  'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-200',
+  'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
+  'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200',
+  'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200',
+  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
+  'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+  'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200',
+  'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200',
+];
+
+function hashStyleName(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  }
+  return Math.abs(h);
+}
 
 function getStyleBg(styleName: string): string {
-  return STYLE_COLORS[styleName] ?? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]';
+  return COLOR_PALETTE[hashStyleName(styleName) % COLOR_PALETTE.length];
 }
 
 export function StyleShortcutCard({ style }: StyleShortcutCardProps) {

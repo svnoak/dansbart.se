@@ -34,3 +34,6 @@ export { MoonIcon } from './MoonIcon';
 export { SunIcon } from './SunIcon';
 export { GripIcon } from './GripIcon';
 export { LibraryIcon } from './LibraryIcon';
+export { MusicNoteIcon } from './MusicNoteIcon';
+export { CalendarIcon } from './CalendarIcon';
+export { BadgeCheckIcon } from './BadgeCheckIcon';

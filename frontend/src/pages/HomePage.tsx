@@ -11,7 +11,7 @@ import { StyleShortcutCard } from '@/components/StyleShortcutCard';
 import { WeeklyChallengeCard } from '@/components/WeeklyChallengeCard';
 import { ArtistCard, AlbumCard } from '@/components';
 import { SectionTitle } from '@/ui';
-import { PlaylistIcon, CheckIcon, ClockIcon } from '@/icons';
+import { MusicNoteIcon, BadgeCheckIcon, CalendarIcon } from '@/icons';
 
 function formatLastAdded(iso?: string) {
   if (!iso) return '\u2013';
@@ -70,18 +70,27 @@ export function HomePage() {
       </h1>
 
       {stats && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
-            <PlaylistIcon className="h-4 w-4" aria-hidden />
-            {(stats.totalTracks ?? 0).toLocaleString('sv-SE')} låtar
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-2 rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm">
+            <MusicNoteIcon className="h-4 w-4 shrink-0 text-[rgb(var(--color-accent))]" aria-hidden />
+            <span className="font-medium text-[rgb(var(--color-text))]">
+              {(stats.totalTracks ?? 0).toLocaleString('sv-SE')}
+            </span>
+            <span className="text-[rgb(var(--color-text-muted))]">låtar</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
-            <CheckIcon className="h-4 w-4 text-green-600" aria-hidden />
-            {stats.coveragePercent ?? 0}% kategoriserade
+          <span className="inline-flex items-center gap-2 rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm">
+            <BadgeCheckIcon className="h-4 w-4 shrink-0 text-green-500" aria-hidden />
+            <span className="font-medium text-[rgb(var(--color-text))]">
+              {stats.coveragePercent ?? 0}%
+            </span>
+            <span className="text-[rgb(var(--color-text-muted))]">kategoriserade</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--color-border))]/50 px-2.5 py-1 text-xs text-[rgb(var(--color-text-muted))]">
-            <ClockIcon className="h-4 w-4" aria-hidden />
-            Tillagd: {formatLastAdded(stats.lastAdded)}
+          <span className="inline-flex items-center gap-2 rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm">
+            <CalendarIcon className="h-4 w-4 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
+            <span className="text-[rgb(var(--color-text-muted))]">Senast tillagd</span>
+            <span className="font-medium text-[rgb(var(--color-text))]">
+              {formatLastAdded(stats.lastAdded)}
+            </span>
           </span>
         </div>
       )}
