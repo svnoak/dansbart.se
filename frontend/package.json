@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "api:export": "curl -sf http://localhost:8000/v3/api-docs | npx prettier --parser json > openapi.json && python3 -c \"import json; f=open('openapi.json'); d=json.load(f); f.close(); [r.get('content',{}).__setitem__('application/json',r['content'].pop('*/*')) for p in d['paths'].values() for o in p.values() for r in o.get('responses',{}).values() if '*/*' in r.get('content',{})]; open('openapi.json','w').write(json.dumps(d,indent=2))\"",
+    "api:export": "curl -sf http://localhost:8000/v3/api-docs | npx prettier --parser json > openapi.json",
     "api:generate": "orval",
     "api:update": "npm run api:export && npm run api:generate"
   },

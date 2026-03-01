@@ -17,9 +17,10 @@ import se.dansbart.dto.PageResponse;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/artists")
+@RequestMapping(value = "/api/artists", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Artists", description = "Artist discovery endpoints")
 public class ArtistController {

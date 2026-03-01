@@ -7,9 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin/tracks/duplicates")
+@RequestMapping(value = "/api/admin/tracks/duplicates", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Duplicates", description = "Track duplicate management endpoints")
 public class DuplicatesController {

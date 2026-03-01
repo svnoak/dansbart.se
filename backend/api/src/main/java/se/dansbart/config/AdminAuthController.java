@@ -8,13 +8,14 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.http.MediaType;
 
 /**
  * Controller for password-based admin authentication.
  * Only active when ENABLE_AUTH_FEATURES=false.
  */
 @RestController
-@RequestMapping("/api/admin/auth")
+@RequestMapping(value = "/api/admin/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 public class AdminAuthController {
 
     private final AuthProperties authProperties;

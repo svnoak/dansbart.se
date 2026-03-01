@@ -8,9 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin/albums")
+@RequestMapping(value = "/api/admin/albums", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Albums", description = "Admin album management endpoints")
 public class AdminAlbumController {

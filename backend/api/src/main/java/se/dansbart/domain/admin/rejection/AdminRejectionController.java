@@ -10,9 +10,10 @@ import se.dansbart.domain.admin.artist.AdminArtistService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping(value = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Rejections", description = "Rejection and blocklist management endpoints")
 public class AdminRejectionController {

@@ -8,9 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/export")
+@RequestMapping(value = "/api/export", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Data Export", description = "Public dataset export endpoints (CC BY 4.0)")
 public class ExportController {

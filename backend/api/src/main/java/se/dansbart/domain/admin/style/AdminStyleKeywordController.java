@@ -8,9 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin/style-keywords")
+@RequestMapping(value = "/api/admin/style-keywords", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Style Keywords", description = "Style keyword CRUD management")
 public class AdminStyleKeywordController {

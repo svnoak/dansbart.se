@@ -6,9 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.StatsDto;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/stats")
+@RequestMapping(value = "/api/stats", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Stats", description = "Library statistics")
 public class StatsController {

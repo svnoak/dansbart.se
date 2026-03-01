@@ -8,9 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/analytics")
+@RequestMapping(value = "/api/analytics", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Analytics", description = "Track playback and user interaction analytics")
 public class AnalyticsController {

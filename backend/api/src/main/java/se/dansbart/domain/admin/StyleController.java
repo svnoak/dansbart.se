@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/styles")
+@RequestMapping(value = "/api/styles", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Styles", description = "Dance style endpoints")
 public class StyleController {

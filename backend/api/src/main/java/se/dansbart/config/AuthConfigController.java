@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import org.springframework.http.MediaType;
 
 /**
  * Controller to expose authentication configuration to the frontend.
@@ -13,7 +14,7 @@ import java.util.Map;
  * - authEnabled=true: OIDC (Authentik) login; playlists and profile enabled.
  */
 @RestController
-@RequestMapping("/api/config")
+@RequestMapping(value = "/api/config", produces = MediaType.APPLICATION_JSON_VALUE)
 public class AuthConfigController {
 
     private final AuthProperties authProperties;

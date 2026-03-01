@@ -11,12 +11,13 @@ import se.dansbart.domain.artist.ArtistJooqRepository;
 
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 /**
  * Admin endpoints for triggering background tasks.
  */
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping(value = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin", description = "Administrative task management")
 public class AdminTaskController {

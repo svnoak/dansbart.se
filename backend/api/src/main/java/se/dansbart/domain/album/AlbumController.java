@@ -15,9 +15,10 @@ import se.dansbart.dto.TrackListDto;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/albums")
+@RequestMapping(value = "/api/albums", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Albums", description = "Album discovery endpoints")
 public class AlbumController {

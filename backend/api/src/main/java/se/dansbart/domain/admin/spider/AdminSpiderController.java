@@ -7,9 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin/spider")
+@RequestMapping(value = "/api/admin/spider", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Spider", description = "Spider crawl management endpoints")
 public class AdminSpiderController {

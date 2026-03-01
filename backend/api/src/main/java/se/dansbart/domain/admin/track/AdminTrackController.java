@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin/tracks")
+@RequestMapping(value = "/api/admin/tracks", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin - Tracks", description = "Admin track management endpoints")
 public class AdminTrackController {

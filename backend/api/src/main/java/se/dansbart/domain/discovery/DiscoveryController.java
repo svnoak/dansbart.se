@@ -12,9 +12,10 @@ import se.dansbart.dto.TrackListDto;
 
 import java.util.Collections;
 import java.util.List;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/discovery")
+@RequestMapping(value = "/api/discovery", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Discovery", description = "Track discovery endpoints for homepage and exploration")
 public class DiscoveryController {

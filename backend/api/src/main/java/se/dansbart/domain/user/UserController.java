@@ -13,9 +13,10 @@ import se.dansbart.dto.UserSummaryDto;
 import se.dansbart.mapper.UserMapper;
 
 import java.util.List;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping(value = "/api/users", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Users", description = "User profile management endpoints")
 public class UserController {

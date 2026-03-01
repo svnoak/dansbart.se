@@ -9,9 +9,10 @@ import se.dansbart.domain.admin.album.AdminAlbumService;
 
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping(value = "/api/admin", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Pending", description = "Pending artist and album approval endpoints")
 public class PendingApprovalController {

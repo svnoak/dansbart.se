@@ -15,9 +15,10 @@ import se.dansbart.dto.PlaylistDto;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/playlists")
+@RequestMapping(value = "/api/playlists", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Playlists", description = "User playlist management")
 public class PlaylistController {

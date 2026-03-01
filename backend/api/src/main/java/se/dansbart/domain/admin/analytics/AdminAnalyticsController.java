@@ -8,9 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.MediaType;
 
 @RestController
-@RequestMapping("/api/admin/analytics")
+@RequestMapping(value = "/api/admin/analytics", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Analytics", description = "Analytics dashboard and statistics endpoints")
 public class AdminAnalyticsController {
