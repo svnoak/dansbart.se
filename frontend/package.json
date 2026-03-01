@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "api:export": "curl -sf http://localhost:8000/v3/api-docs | npx prettier --parser json > openapi.json",
+    "api:export": "curl -sf http://localhost:8000/v3/api-docs | npx prettier --parser json > openapi.json && python3 -c \"import json; f=open('openapi.json'); d=json.load(f); f.close(); [r.get('content',{}).__setitem__('application/json',r['content'].pop('*/*')) for p in d['paths'].values() for o in p.values() for r in o.get('responses',{}).values() if '*/*' in r.get('content',{})]; open('openapi.json','w').write(json.dumps(d,indent=2))\"",
     "api:generate": "orval",
     "api:update": "npm run api:export && npm run api:generate"
   },
@@ -31,7 +31,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "orval": "^7.13.2",
+    "orval": "^8.5.1",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
