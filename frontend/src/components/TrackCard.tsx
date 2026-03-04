@@ -15,6 +15,18 @@ import type { TrackListDto } from '@/api/models/trackListDto';
 import { formatDurationMs } from '@/utils/formatDuration';
 import { FlagTrackModal } from './FlagTrackModal';
 
+const TEMPO_LABELS: Record<string, string> = {
+  Slow: 'Långsamt',
+  SlowMed: 'Lugnt',
+  Medium: 'Lagom',
+  Fast: 'Snabbt',
+  Turbo: 'Väldigt snabbt',
+};
+
+function tempoLabel(track: TrackListDto): string {
+  return (track.tempoCategory && (TEMPO_LABELS[track.tempoCategory] ?? track.tempoCategory)) ?? '';
+}
+
 interface TrackCardProps {
   track: TrackListDto;
   contextTracks?: TrackListDto[];
@@ -151,11 +163,19 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
         <p className="text-sm text-[rgb(var(--color-text-muted))] truncate">
           {track.artistName ?? 'Okänd artist'}
         </p>
-        {track.effectiveBpm != null && (
-          <p className="mt-0.5 text-xs text-[rgb(var(--color-text-muted))]">
-            {Math.round(track.effectiveBpm)} BPM
-            {track.durationMs != null && ` · ${formatDurationMs(track.durationMs)}`}
-          </p>
+        {(track.effectiveBpm != null || track.durationMs != null) && (
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {track.tempoCategory != null && (
+              <span className="whitespace-nowrap rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
+                {tempoLabel(track)}
+              </span>
+            )}
+            {track.durationMs != null && (
+              <span className="rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 font-mono text-xs text-gray-400">
+                {formatDurationMs(track.durationMs)}
+              </span>
+            )}
+          </div>
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2">

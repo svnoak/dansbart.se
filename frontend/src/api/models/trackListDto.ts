@@ -14,6 +14,7 @@ export interface TrackListDto {
   subStyle?: string;
   matchedStyle?: string;
   effectiveBpm?: number;
+  tempoCategory?: string;
   confidence?: number;
   hasVocals?: boolean;
   artistName?: string;

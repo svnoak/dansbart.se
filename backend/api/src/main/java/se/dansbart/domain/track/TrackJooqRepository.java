@@ -117,7 +117,7 @@ public class TrackJooqRepository {
                 .build()));
         Map<UUID, StyleInfo> styleByTrack = new LinkedHashMap<>();
         dsl.select(TRACK_DANCE_STYLES.TRACK_ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACK_DANCE_STYLES.SUB_STYLE,
-                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.CONFIDENCE)
+                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE)
             .from(TRACK_DANCE_STYLES)
             .where(TRACK_DANCE_STYLES.TRACK_ID.in(trackIds).and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true)))
             .forEach(r -> {
@@ -128,6 +128,7 @@ public class TrackJooqRepository {
                         r.get(TRACK_DANCE_STYLES.DANCE_STYLE),
                         r.get(TRACK_DANCE_STYLES.SUB_STYLE),
                         r.get(TRACK_DANCE_STYLES.EFFECTIVE_BPM),
+                        r.get(TRACK_DANCE_STYLES.TEMPO_CATEGORY),
                         c != null ? c.floatValue() : null));
                 }
             });
@@ -165,6 +166,7 @@ public class TrackJooqRepository {
                 dto.setDanceStyle(style.danceStyle);
                 dto.setSubStyle(style.subStyle);
                 dto.setEffectiveBpm(style.effectiveBpm);
+                dto.setTempoCategory(style.tempoCategory);
                 dto.setConfidence(style.confidence);
             }
             List<PlaybackLinkDto> links = playbackByTrack.get(id);
@@ -180,7 +182,7 @@ public class TrackJooqRepository {
         return ordered;
     }
 
-    private record StyleInfo(String danceStyle, String subStyle, Integer effectiveBpm, Float confidence) {}
+    private record StyleInfo(String danceStyle, String subStyle, Integer effectiveBpm, String tempoCategory, Float confidence) {}
 
     public Page<Track> searchByTitle(String query, Pageable pageable) {
         String pattern = "%" + (query == null ? "" : query).toLowerCase() + "%";

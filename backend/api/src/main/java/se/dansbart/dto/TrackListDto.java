@@ -26,6 +26,7 @@ public class TrackListDto {
     /** When listing with a style filter: the style that matched (may be secondary). Omitted when not filtering by style or when primary matched. */
     private String matchedStyle;
     private Integer effectiveBpm;
+    private String tempoCategory;
     private Float confidence;
     private Boolean hasVocals;
 
