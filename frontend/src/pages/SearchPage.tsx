@@ -289,13 +289,13 @@ export function SearchPage() {
       )}
 
       {!loading && filters.searchType === 'albums' && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        <ul className="space-y-3">
           {albums.map((album, i) => (
-            <li key={album.id ?? album.title ?? `album-${i}`} className="list-none">
+            <li key={album.id ?? album.title ?? `album-${i}`}>
               <AlbumCard album={album} />
             </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {!loading &&

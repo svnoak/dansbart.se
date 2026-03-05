@@ -69,6 +69,33 @@ public class MaintenanceController {
         return ResponseEntity.ok(maintenanceService.backfillIsrcs(limit));
     }
 
+    @PostMapping("/maintenance/pause")
+    @Operation(summary = "Pause task dispatching for a queue (or all queues)",
+        description = "Sets a pause flag and purges pending messages. Workers finish current work but receive nothing new.")
+    public ResponseEntity<Map<String, Object>> pause(
+            @RequestParam(required = false) String queue) {
+        if (queue != null && !queue.isBlank()) {
+            return ResponseEntity.ok(maintenanceService.pauseQueue(queue));
+        }
+        return ResponseEntity.ok(maintenanceService.pauseAll());
+    }
+
+    @PostMapping("/maintenance/resume")
+    @Operation(summary = "Resume task dispatching for a queue (or all queues)")
+    public ResponseEntity<Map<String, Object>> resume(
+            @RequestParam(required = false) String queue) {
+        if (queue != null && !queue.isBlank()) {
+            return ResponseEntity.ok(maintenanceService.resumeQueue(queue));
+        }
+        return ResponseEntity.ok(maintenanceService.resumeAll());
+    }
+
+    @GetMapping("/maintenance/pause-status")
+    @Operation(summary = "Get pause status for all queues")
+    public ResponseEntity<Map<String, Object>> getPauseStatus() {
+        return ResponseEntity.ok(maintenanceService.getPauseStatus());
+    }
+
     public record IngestRequest(String resourceId, String resourceType) {
         public IngestRequest {
             if (resourceType == null) resourceType = "playlist";

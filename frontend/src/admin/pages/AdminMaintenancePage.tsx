@@ -1,14 +1,46 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   queuePendingTracks,
   cleanupOrphaned,
   backfillIsrcs,
   reclassifyAll,
 } from '@/api/generated/admin-maintenance/admin-maintenance';
-import { adminRequestOptions } from '@/admin/api/client';
+import { adminFetch, adminRequestOptions } from '@/admin/api/client';
 import { Modal } from '@/admin/components/Modal';
 import { Button } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
+
+type PauseStatus = Record<string, boolean>;
+
+const QUEUE_LABELS: Record<string, string> = {
+  audio: 'Audio',
+  feature: 'Feature',
+  light: 'Light',
+};
+
+async function fetchPauseStatus(): Promise<PauseStatus> {
+  const res = await adminFetch('/api/admin/maintenance/pause-status');
+  if (!res.ok) throw new Error('Failed to fetch pause status');
+  const data = await res.json();
+  return data.queues;
+}
+
+async function togglePause(queue: string, paused: boolean): Promise<void> {
+  const endpoint = paused ? 'resume' : 'pause';
+  const res = await adminFetch(
+    `/api/admin/maintenance/${endpoint}?queue=${queue}`,
+    { method: 'POST' },
+  );
+  if (!res.ok) throw new Error(`Failed to ${endpoint} queue`);
+}
+
+async function togglePauseAll(anyActive: boolean): Promise<void> {
+  const endpoint = anyActive ? 'pause' : 'resume';
+  const res = await adminFetch(`/api/admin/maintenance/${endpoint}`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error(`Failed to ${endpoint} all queues`);
+}
 
 interface OperationResult {
   label: string;
@@ -20,6 +52,47 @@ export function AdminMaintenancePage() {
   const [running, setRunning] = useState<string | null>(null);
   const [history, setHistory] = useState<OperationResult[]>([]);
   const [confirmOp, setConfirmOp] = useState<string | null>(null);
+  const [pauseStatus, setPauseStatus] = useState<PauseStatus>({});
+  const [pauseLoading, setPauseLoading] = useState<string | null>(null);
+
+  const loadPauseStatus = useCallback(async () => {
+    try {
+      setPauseStatus(await fetchPauseStatus());
+    } catch {
+      // silent on load failure
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPauseStatus();
+  }, [loadPauseStatus]);
+
+  const handleToggleQueue = async (queue: string) => {
+    setPauseLoading(queue);
+    try {
+      await togglePause(queue, pauseStatus[queue]);
+      await loadPauseStatus();
+      toast(pauseStatus[queue] ? `${QUEUE_LABELS[queue]}: återupptagen` : `${QUEUE_LABELS[queue]}: pausad`);
+    } catch {
+      toast(`Kunde inte ändra kö-status`, 'error');
+    } finally {
+      setPauseLoading(null);
+    }
+  };
+
+  const handleToggleAll = async () => {
+    const anyActive = Object.values(pauseStatus).some((v) => !v);
+    setPauseLoading('all');
+    try {
+      await togglePauseAll(anyActive);
+      await loadPauseStatus();
+      toast(anyActive ? 'Alla köer pausade' : 'Alla köer återupptagna');
+    } catch {
+      toast('Kunde inte ändra kö-status', 'error');
+    } finally {
+      setPauseLoading(null);
+    }
+  };
 
   const addResult = (label: string, result: string) => {
     setHistory((prev) => [
@@ -84,6 +157,43 @@ export function AdminMaintenancePage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Underhåll</h1>
+
+      {/* Queue pause/resume controls */}
+      <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">Köer</h2>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={pauseLoading !== null}
+            onClick={handleToggleAll}
+          >
+            {Object.values(pauseStatus).some((v) => !v) ? 'Pausa alla' : 'Starta alla'}
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(pauseStatus).map(([queue, paused]) => (
+            <button
+              key={queue}
+              onClick={() => handleToggleQueue(queue)}
+              disabled={pauseLoading !== null}
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                paused
+                  ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                  : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+              } ${pauseLoading !== null ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+            >
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  paused ? 'bg-red-500' : 'bg-green-500'
+                }`}
+              />
+              {QUEUE_LABELS[queue] ?? queue}
+              <span className="font-normal">{paused ? 'Pausad' : 'Aktiv'}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {operations.map((op) => (

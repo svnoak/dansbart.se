@@ -27,6 +27,8 @@ public class Album {
 
     private UUID artistId;
 
+    private String artistName;
+
     @JsonIgnore
     private Artist artist;
 

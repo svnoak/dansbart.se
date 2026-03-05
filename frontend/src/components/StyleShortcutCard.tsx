@@ -40,7 +40,7 @@ export function StyleShortcutCard({ style }: StyleShortcutCardProps) {
 
   return (
     <Card
-      className={`cursor-pointer p-4 transition-transform hover:scale-[1.02] ${getStyleBg(styleName)}`}
+      className={`cursor-pointer p-3 transition-transform hover:scale-[1.02] ${getStyleBg(styleName)}`}
     >
       <button
         type="button"

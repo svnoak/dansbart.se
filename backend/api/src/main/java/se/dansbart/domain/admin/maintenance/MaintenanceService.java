@@ -192,6 +192,54 @@ public class MaintenanceService {
         return result;
     }
 
+    public Map<String, Object> pauseQueue(String queue) {
+        taskDispatcher.setPaused(queue, true);
+        taskDispatcher.purgeQueue(queue);
+        return Map.of(
+            "status", "paused",
+            "queue", queue,
+            "message", "Queue '" + queue + "' paused and purged"
+        );
+    }
+
+    public Map<String, Object> resumeQueue(String queue) {
+        taskDispatcher.setPaused(queue, false);
+        return Map.of(
+            "status", "resumed",
+            "queue", queue,
+            "message", "Queue '" + queue + "' resumed"
+        );
+    }
+
+    public Map<String, Object> pauseAll() {
+        for (String queue : taskDispatcher.getAllQueues()) {
+            taskDispatcher.setPaused(queue, true);
+            taskDispatcher.purgeQueue(queue);
+        }
+        return Map.of(
+            "status", "paused",
+            "queues", taskDispatcher.getAllQueues(),
+            "message", "All queues paused and purged"
+        );
+    }
+
+    public Map<String, Object> resumeAll() {
+        for (String queue : taskDispatcher.getAllQueues()) {
+            taskDispatcher.setPaused(queue, false);
+        }
+        return Map.of(
+            "status", "resumed",
+            "queues", taskDispatcher.getAllQueues(),
+            "message", "All queues resumed"
+        );
+    }
+
+    public Map<String, Object> getPauseStatus() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("queues", taskDispatcher.getPauseStatus());
+        return result;
+    }
+
     /**
      * Backfill ISRCs from Spotify for tracks missing them.
      */

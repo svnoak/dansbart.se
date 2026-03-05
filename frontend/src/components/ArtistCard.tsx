@@ -16,9 +16,6 @@ export function ArtistCard({ artist, albumCount }: ArtistCardProps) {
           <h3 className="font-medium text-[rgb(var(--color-text))] truncate">
             {artist.name ?? 'Okänd artist'}
           </h3>
-          {artist.isVerified && (
-            <p className="text-xs text-[rgb(var(--color-text-muted))]">Verifierad</p>
-          )}
           {albumCount != null && (
             <p className="text-xs text-[rgb(var(--color-text-muted))]">
               {albumCount} {albumCount === 1 ? 'album' : 'album'}

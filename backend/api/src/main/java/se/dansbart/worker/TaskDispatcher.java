@@ -11,6 +11,7 @@ import org.slf4j.MDC;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +33,9 @@ public class TaskDispatcher {
     private static final String AUDIO_QUEUE = "audio";
     private static final String FEATURE_QUEUE = "feature";
     private static final String LIGHT_QUEUE = "light";
+
+    private static final List<String> ALL_QUEUES = List.of(AUDIO_QUEUE, FEATURE_QUEUE, LIGHT_QUEUE);
+    private static final String PAUSE_KEY_PREFIX = "dansbart:paused:";
 
     /**
      * Dispatch audio analysis task to the AGPL audio worker.
@@ -144,6 +148,37 @@ public class TaskDispatcher {
         log.info("Dispatched Spotify ingest {} for {}", resourceType, spotifyId);
     }
 
+    public boolean isPaused(String queue) {
+        return Boolean.TRUE.toString().equals(
+            redisTemplate.opsForValue().get(PAUSE_KEY_PREFIX + queue));
+    }
+
+    public void setPaused(String queue, boolean paused) {
+        String key = PAUSE_KEY_PREFIX + queue;
+        if (paused) {
+            redisTemplate.opsForValue().set(key, "true");
+        } else {
+            redisTemplate.delete(key);
+        }
+    }
+
+    public void purgeQueue(String queue) {
+        Long removed = redisTemplate.delete(queue) ? 1L : 0L;
+        log.info("Purged queue '{}' (key deleted: {})", queue, removed == 1L);
+    }
+
+    public Map<String, Boolean> getPauseStatus() {
+        Map<String, Boolean> status = new LinkedHashMap<>();
+        for (String queue : ALL_QUEUES) {
+            status.put(queue, isPaused(queue));
+        }
+        return status;
+    }
+
+    public List<String> getAllQueues() {
+        return ALL_QUEUES;
+    }
+
     private String buildCeleryMessage(String taskName, List<Object> args, Map<String, Object> kwargs) {
         // Celery Redis transport message format (mirrors Python producer):
         // {
@@ -243,6 +278,10 @@ public class TaskDispatcher {
     }
 
     private void pushToQueue(String queue, String message) {
+        if (isPaused(queue)) {
+            log.warn("Queue '{}' is paused, skipping dispatch", queue);
+            return;
+        }
         redisTemplate.opsForList().leftPush(queue, message);
     }
 }

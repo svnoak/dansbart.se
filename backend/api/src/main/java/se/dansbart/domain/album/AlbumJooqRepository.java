@@ -17,6 +17,7 @@ import static org.jooq.impl.DSL.count;
 import static org.jooq.impl.DSL.lower;
 import static org.jooq.impl.DSL.rand;
 import static se.dansbart.jooq.Tables.ALBUMS;
+import static se.dansbart.jooq.Tables.ARTISTS;
 import static se.dansbart.jooq.Tables.TRACK_ALBUMS;
 import static se.dansbart.jooq.Tables.TRACKS;
 
@@ -30,11 +31,18 @@ public class AlbumJooqRepository {
     }
 
     public Optional<Album> findById(UUID id) {
-        return dsl.selectFrom(ALBUMS).where(ALBUMS.ID.eq(id)).fetchOptional().map(this::toAlbum);
+        return dsl.select(ALBUMS.asterisk(), ARTISTS.NAME)
+            .from(ALBUMS)
+            .leftJoin(ARTISTS).on(ARTISTS.ID.eq(ALBUMS.ARTIST_ID))
+            .where(ALBUMS.ID.eq(id))
+            .fetchOptional()
+            .map(this::toAlbum);
     }
 
     public Page<Album> findAllRandom(Pageable pageable) {
-        List<Album> items = dsl.selectFrom(ALBUMS)
+        List<Album> items = dsl.select(ALBUMS.asterisk(), ARTISTS.NAME)
+            .from(ALBUMS)
+            .leftJoin(ARTISTS).on(ARTISTS.ID.eq(ALBUMS.ARTIST_ID))
             .orderBy(rand())
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
@@ -50,7 +58,9 @@ public class AlbumJooqRepository {
                 ? (s.isAscending() ? ALBUMS.TITLE.asc() : ALBUMS.TITLE.desc())
                 : ALBUMS.TITLE.asc())
             .orElse(ALBUMS.TITLE.asc());
-        List<Album> items = dsl.selectFrom(ALBUMS)
+        List<Album> items = dsl.select(ALBUMS.asterisk(), ARTISTS.NAME)
+            .from(ALBUMS)
+            .leftJoin(ARTISTS).on(ARTISTS.ID.eq(ALBUMS.ARTIST_ID))
             .orderBy(orderBy)
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
@@ -60,7 +70,9 @@ public class AlbumJooqRepository {
     }
 
     public List<Album> findByArtistId(UUID artistId) {
-        return dsl.selectFrom(ALBUMS)
+        return dsl.select(ALBUMS.asterisk(), ARTISTS.NAME)
+            .from(ALBUMS)
+            .leftJoin(ARTISTS).on(ARTISTS.ID.eq(ALBUMS.ARTIST_ID))
             .where(ALBUMS.ARTIST_ID.eq(artistId))
             .orderBy(ALBUMS.RELEASE_DATE.desc().nullsLast())
             .fetch(this::toAlbum);
@@ -68,7 +80,9 @@ public class AlbumJooqRepository {
 
     public Page<Album> searchByTitle(String query, Pageable pageable) {
         String pattern = "%" + (query == null ? "" : query).toLowerCase() + "%";
-        List<Album> items = dsl.selectFrom(ALBUMS)
+        List<Album> items = dsl.select(ALBUMS.asterisk(), ARTISTS.NAME)
+            .from(ALBUMS)
+            .leftJoin(ARTISTS).on(ARTISTS.ID.eq(ALBUMS.ARTIST_ID))
             .where(lower(ALBUMS.TITLE).like(pattern))
             .orderBy(ALBUMS.TITLE.asc())
             .offset(pageable.getOffset())
@@ -134,6 +148,7 @@ public class AlbumJooqRepository {
             .releaseDate(r.get(ALBUMS.RELEASE_DATE))
             .spotifyId(r.get(ALBUMS.SPOTIFY_ID))
             .artistId(r.get(ALBUMS.ARTIST_ID))
+            .artistName(r.indexOf(ARTISTS.NAME) >= 0 ? r.get(ARTISTS.NAME) : null)
             .build();
     }
 }

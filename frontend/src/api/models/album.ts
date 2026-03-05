@@ -12,4 +12,5 @@ export interface Album {
   releaseDate?: string;
   spotifyId?: string;
   artistId?: string;
+  artistName?: string;
 }

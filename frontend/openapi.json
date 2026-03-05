@@ -1612,11 +1612,39 @@
         }
       }
     },
+    "/api/admin/maintenance/resume": {
+      "post": {
+        "tags": ["Admin Maintenance"],
+        "summary": "Resume task dispatching for a queue (or all queues)",
+        "operationId": "resume",
+        "parameters": [
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/maintenance/queue-pending-tracks": {
       "post": {
         "tags": ["Admin Maintenance"],
-        "summary": "Queue PENDING tracks for audio analysis",
-        "description": "Dispatches up to 'limit' tracks with status PENDING to the audio worker. Use when pending tracks were not picked up (e.g. after ingest or manual changes).",
+        "summary": "Queue tracks for audio analysis by status",
+        "description": "Dispatches up to 'limit' tracks with the given status to the audio worker. Supports PENDING (default) and FAILED. FAILED tracks are reset to PENDING before dispatch.",
         "operationId": "queuePendingTracks",
         "parameters": [
           {
@@ -1624,6 +1652,41 @@
             "in": "query",
             "required": false,
             "schema": { "type": "integer", "format": "int32", "default": 500 }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "PENDING" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/maintenance/pause": {
+      "post": {
+        "tags": ["Admin Maintenance"],
+        "summary": "Pause task dispatching for a queue (or all queues)",
+        "description": "Sets a pause flag and purges pending messages. Workers finish current work but receive nothing new.",
+        "operationId": "pause",
+        "parameters": [
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -3510,6 +3573,26 @@
         }
       }
     },
+    "/api/admin/maintenance/pause-status": {
+      "get": {
+        "tags": ["Admin Maintenance"],
+        "summary": "Get pause status for all queues",
+        "operationId": "getPauseStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/maintenance/isrc-stats": {
       "get": {
         "tags": ["Admin Maintenance"],
@@ -4702,7 +4785,8 @@
           "coverImageUrl": { "type": "string" },
           "releaseDate": { "type": "string" },
           "spotifyId": { "type": "string" },
-          "artistId": { "type": "string", "format": "uuid" }
+          "artistId": { "type": "string", "format": "uuid" },
+          "artistName": { "type": "string" }
         }
       },
       "PageResponseAlbum": {

@@ -20,23 +20,19 @@ export function Layout({ children }: LayoutProps) {
         onOpenSidebar={() => setSidebarOpen(true)}
         showMenuButton
       />
-      <div className="relative flex flex-1">
+      <div className="relative flex flex-1 overflow-hidden">
         {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-              aria-hidden
-              onClick={() => setSidebarOpen(false)}
-            />
-            <aside
-              className="fixed left-0 top-0 z-40 h-full w-72 border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-4 shadow-lg lg:hidden"
-              aria-label="Mobilmeny"
-            >
-              <Sidebar />
-            </aside>
-          </>
-        )}
+        <div
+          className={`fixed inset-0 z-30 bg-black/40 transition-opacity duration-200 lg:hidden ${sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          aria-hidden
+          onClick={() => setSidebarOpen(false)}
+        />
+        <aside
+          className={`fixed left-0 top-0 z-40 h-full w-72 border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-4 shadow-lg transition-transform duration-200 ease-out lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          aria-label="Mobilmeny"
+        >
+          <Sidebar />
+        </aside>
         {/* Desktop left sidebar - sticky so nav stays visible when scrolling */}
         <aside className="sticky top-14 hidden h-fit w-64 shrink-0 self-start border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-4 lg:block">
           <Sidebar />

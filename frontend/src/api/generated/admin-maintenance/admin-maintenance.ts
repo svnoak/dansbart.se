@@ -10,12 +10,17 @@ import type {
   CleanupOrphaned200,
   CleanupOrphanedParams,
   GetIsrcStats200,
+  GetPauseStatus200,
   Ingest200,
   IngestRequest,
+  Pause200,
+  PauseParams,
   QueuePendingTracks200,
   QueuePendingTracksParams,
   ReclassifyAll200,
-  ResetCrawlData200
+  ResetCrawlData200,
+  Resume200,
+  ResumeParams
 } from '../../models';
 
 import { customFetch } from '../../custom-fetch';
@@ -44,8 +49,38 @@ export const reclassifyAll = async ( options?: RequestInit): Promise<ReclassifyA
   
 
 /**
- * Dispatches up to 'limit' tracks with status PENDING to the audio worker. Use when pending tracks were not picked up (e.g. after ingest or manual changes).
- * @summary Queue PENDING tracks for audio analysis
+ * @summary Resume task dispatching for a queue (or all queues)
+ */
+export const getResumeUrl = (params?: ResumeParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/maintenance/resume?${stringifiedParams}` : `/api/admin/maintenance/resume`
+}
+
+export const resume = async (params?: ResumeParams, options?: RequestInit): Promise<Resume200> => {
+  
+  return customFetch<Resume200>(getResumeUrl(params),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * Dispatches up to 'limit' tracks with the given status to the audio worker. Supports PENDING (default) and FAILED. FAILED tracks are reset to PENDING before dispatch.
+ * @summary Queue tracks for audio analysis by status
  */
 export const getQueuePendingTracksUrl = (params?: QueuePendingTracksParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -65,6 +100,37 @@ export const getQueuePendingTracksUrl = (params?: QueuePendingTracksParams,) => 
 export const queuePendingTracks = async (params?: QueuePendingTracksParams, options?: RequestInit): Promise<QueuePendingTracks200> => {
   
   return customFetch<QueuePendingTracks200>(getQueuePendingTracksUrl(params),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * Sets a pause flag and purges pending messages. Workers finish current work but receive nothing new.
+ * @summary Pause task dispatching for a queue (or all queues)
+ */
+export const getPauseUrl = (params?: PauseParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/maintenance/pause?${stringifiedParams}` : `/api/admin/maintenance/pause`
+}
+
+export const pause = async (params?: PauseParams, options?: RequestInit): Promise<Pause200> => {
+  
+  return customFetch<Pause200>(getPauseUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -175,6 +241,29 @@ export const resetCrawlData = async ( options?: RequestInit): Promise<ResetCrawl
   {      
     ...options,
     method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get pause status for all queues
+ */
+export const getGetPauseStatusUrl = () => {
+
+
+  
+
+  return `/api/admin/maintenance/pause-status`
+}
+
+export const getPauseStatus = async ( options?: RequestInit): Promise<GetPauseStatus200> => {
+  
+  return customFetch<GetPauseStatus200>(getGetPauseStatusUrl(),
+  {      
+    ...options,
+    method: 'GET'
     
     
   }

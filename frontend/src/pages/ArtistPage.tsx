@@ -80,11 +80,13 @@ export function ArtistPage() {
             Inga album hittades for denna artist.
           </p>
         ) : (
-          <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <ul className="mt-3 space-y-2">
             {albums.map((album) => (
-              <AlbumCard key={album.id} album={album} />
+              <li key={album.id}>
+                <AlbumCard album={album} />
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </section>
     </div>

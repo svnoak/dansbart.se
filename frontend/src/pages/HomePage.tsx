@@ -8,7 +8,6 @@ import type { Artist } from '@/api/models/artist';
 import type { Album } from '@/api/models/album';
 import type { StatsDto } from '@/api/models/statsDto';
 import { StyleShortcutCard } from '@/components/StyleShortcutCard';
-import { WeeklyChallengeCard } from '@/components/WeeklyChallengeCard';
 import { ArtistCard, AlbumCard } from '@/components';
 import { SectionTitle } from '@/ui';
 import { MusicNoteIcon, BadgeCheckIcon, CalendarIcon } from '@/icons';
@@ -103,11 +102,11 @@ export function HomePage() {
         {loadingStyles ? (
           <p className="text-[rgb(var(--color-text-muted))]">Laddar stilar…</p>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin lg:flex-wrap lg:overflow-visible">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:flex lg:gap-3">
             {styles.slice(0, 8).map((s) => (
               <div
                 key={s.style ?? ''}
-                className="min-w-[140px] shrink-0 lg:min-w-0 lg:flex-1"
+                className="lg:flex-1"
               >
                 <StyleShortcutCard style={s} />
               </div>
@@ -156,27 +155,22 @@ export function HomePage() {
           {loadingAlbums ? (
             <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>
           ) : (
-            <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <ul className="mt-3 space-y-2">
               {albums.map((album) => (
-                <AlbumCard key={album.id ?? album.title} album={album} />
+                <li key={album.id ?? album.title}>
+                  <AlbumCard album={album} />
+                </li>
               ))}
               {!loadingAlbums && albums.length === 0 && (
-                <p className="col-span-full text-sm text-[rgb(var(--color-text-muted))]">
+                <li className="text-sm text-[rgb(var(--color-text-muted))]">
                   Inga album att visa just nu.
-                </p>
+                </li>
               )}
-            </div>
+            </ul>
           )}
         </section>
       </div>
 
-      {/* Sidebar-style block: Weekly challenge - visible on desktop in sidebar, so we show it here on discovery as well for mobile */}
-      <section className="lg:hidden" aria-labelledby="weekly-challenge-heading">
-        <h2 id="weekly-challenge-heading" className="sr-only">
-          Veckans utmaning
-        </h2>
-        <WeeklyChallengeCard />
-      </section>
     </div>
   );
 }

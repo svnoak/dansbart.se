@@ -140,11 +140,13 @@ export function AlbumsPage() {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+      <ul className="space-y-3">
         {albums.map((album, i) => (
-          <AlbumCard key={album.id ?? album.title ?? `album-${i}`} album={album} />
+          <li key={album.id ?? album.title ?? `album-${i}`}>
+            <AlbumCard album={album} />
+          </li>
         ))}
-      </div>
+      </ul>
 
       {hasMore && (
         <div ref={sentinelRef} className="flex justify-center py-4">
