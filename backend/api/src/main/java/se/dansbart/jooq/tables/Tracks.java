@@ -216,6 +216,16 @@ public class Tracks extends TableImpl<Record> {
      */
     public final TableField<Record, String> UPLOADER_ID = createField(DSL.name("uploader_id"), SQLDataType.VARCHAR(255), this, "");
 
+    /**
+     * The column <code>public.tracks.tempo_bpm</code>.
+     */
+    public final TableField<Record, Double> TEMPO_BPM = createField(DSL.name("tempo_bpm"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.is_instrumental</code>.
+     */
+    public final TableField<Record, Boolean> IS_INSTRUMENTAL = createField(DSL.name("is_instrumental"), SQLDataType.BOOLEAN, this, "");
+
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

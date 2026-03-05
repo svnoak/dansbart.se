@@ -72,20 +72,31 @@ public class MaintenanceService {
     }
 
     /**
-     * Queue tracks with status PENDING for audio analysis.
-     * Use this when pending tracks were never dispatched (e.g. after ingest issues or manual DB updates).
+     * Queue tracks for audio analysis by processing status.
+     * Supports PENDING (default) and FAILED. FAILED tracks are reset to PENDING before dispatch.
      */
-    @Transactional(readOnly = true)
-    public Map<String, Object> queuePendingTracksForAnalysis(int limit) {
-        List<UUID> pendingIds = trackJooqRepository.findIdsByProcessingStatusOrderByCreatedAtAsc("PENDING", limit);
-        for (UUID id : pendingIds) {
+    @Transactional
+    public Map<String, Object> queuePendingTracksForAnalysis(int limit, String status) {
+        String normalizedStatus = status.toUpperCase();
+        if (!Set.of("PENDING", "FAILED").contains(normalizedStatus)) {
+            throw new IllegalArgumentException("Unsupported status: " + status + ". Must be PENDING or FAILED.");
+        }
+
+        List<UUID> ids = trackJooqRepository.findIdsByProcessingStatusOrderByCreatedAtAsc(normalizedStatus, limit);
+
+        if (!ids.isEmpty() && "FAILED".equals(normalizedStatus)) {
+            trackJooqRepository.setProcessingStatusBatch(ids, "PENDING");
+        }
+
+        for (UUID id : ids) {
             taskDispatcher.dispatchAudioAnalysis(id);
         }
+
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
-        result.put("queued", pendingIds.size());
-        result.put("totalPending", pendingIds.size());
-        result.put("message", "Queued " + pendingIds.size() + " PENDING tracks for audio analysis");
+        result.put("queued", ids.size());
+        result.put("sourceStatus", normalizedStatus);
+        result.put("message", "Queued " + ids.size() + " " + normalizedStatus + " tracks for audio analysis");
         return result;
     }
 

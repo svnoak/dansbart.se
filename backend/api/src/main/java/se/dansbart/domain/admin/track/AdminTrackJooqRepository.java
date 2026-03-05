@@ -156,7 +156,7 @@ public class AdminTrackJooqRepository {
                     r.get(TRACKS.TITLE),
                     r.get(TRACKS.ISRC),
                     r.get(TRACKS.DURATION_MS),
-                    null,
+                    r.get(TRACKS.TEMPO_BPM) != null ? r.get(TRACKS.TEMPO_BPM).floatValue() : null,
                     r.get(TRACKS.CREATED_AT),
                     r.get(TRACKS.PROCESSING_STATUS),
                     r.get(TRACKS.IS_FLAGGED),
@@ -185,7 +185,11 @@ public class AdminTrackJooqRepository {
         return dsl.select(TRACKS.PROCESSING_STATUS, count())
             .from(TRACKS)
             .groupBy(TRACKS.PROCESSING_STATUS)
-            .fetchMap(TRACKS.PROCESSING_STATUS, count().coerce(Long.class));
+            .fetchStream()
+            .collect(Collectors.toMap(
+                r -> r.get(TRACKS.PROCESSING_STATUS),
+                r -> ((Number) r.get(count())).longValue()
+            ));
     }
 
     private record PrimaryStyleInfo(String danceStyle, String subStyle, String tempoCategory, Float confidence) {}

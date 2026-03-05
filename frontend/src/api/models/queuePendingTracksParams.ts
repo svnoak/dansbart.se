@@ -7,4 +7,5 @@
 
 export type QueuePendingTracksParams = {
 limit?: number;
+status?: string;
 };

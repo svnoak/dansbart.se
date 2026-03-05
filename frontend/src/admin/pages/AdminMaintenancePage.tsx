@@ -55,6 +55,12 @@ export function AdminMaintenancePage() {
       action: () => run('Köa väntande', () => queuePendingTracks({ limit: 500 }, adminRequestOptions())),
     },
     {
+      id: 'queue-failed',
+      label: 'Köa om misslyckade spår',
+      description: 'Återställ FAILED-spår till PENDING och skicka till analysarbetaren (max 500)',
+      action: () => run('Köa om misslyckade', () => queuePendingTracks({ limit: 500, status: 'FAILED' }, adminRequestOptions())),
+    },
+    {
       id: 'cleanup-orphaned',
       label: 'Rensa fastsittande spår',
       description: 'Återställ spår som fastnat i PROCESSING-status (30 min gräns)',

@@ -34,10 +34,13 @@ public class MaintenanceController {
     }
 
     @PostMapping("/maintenance/queue-pending-tracks")
-    @Operation(summary = "Queue PENDING tracks for audio analysis", description = "Dispatches up to 'limit' tracks with status PENDING to the audio worker. Use when pending tracks were not picked up (e.g. after ingest or manual changes).")
+    @Operation(summary = "Queue tracks for audio analysis by status",
+        description = "Dispatches up to 'limit' tracks with the given status to the audio worker. "
+            + "Supports PENDING (default) and FAILED. FAILED tracks are reset to PENDING before dispatch.")
     public ResponseEntity<Map<String, Object>> queuePendingTracks(
-            @RequestParam(defaultValue = "500") int limit) {
-        return ResponseEntity.ok(maintenanceService.queuePendingTracksForAnalysis(limit));
+            @RequestParam(defaultValue = "500") int limit,
+            @RequestParam(defaultValue = "PENDING") String status) {
+        return ResponseEntity.ok(maintenanceService.queuePendingTracksForAnalysis(limit, status));
     }
 
     @PostMapping("/maintenance/cleanup-orphaned")

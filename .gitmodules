@@ -1,3 +1,0 @@
-[submodule "backend/workers/audio"]
-	path = backend/workers/audio
-	url = https://github.com/svnoak/neckenml-audio-worker.git

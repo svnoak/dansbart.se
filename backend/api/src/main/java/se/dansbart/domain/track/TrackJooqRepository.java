@@ -679,7 +679,7 @@ public class TrackJooqRepository {
             .title(r.get(TRACKS.TITLE))
             .isrc(r.get(TRACKS.ISRC))
             .durationMs(r.get(TRACKS.DURATION_MS))
-            .tempoBpm(null)
+            .tempoBpm(r.get(TRACKS.TEMPO_BPM) != null ? r.get(TRACKS.TEMPO_BPM).floatValue() : null)
             .createdAt(r.get(TRACKS.CREATED_AT))
             .hasVocals(r.get(TRACKS.HAS_VOCALS))
             .swingRatio(r.get(TRACKS.SWING_RATIO) != null ? r.get(TRACKS.SWING_RATIO).floatValue() : null)
