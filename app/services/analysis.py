@@ -216,7 +216,9 @@ class AnalysisService:
 
             # Update track with analysis results
             track.tempo_bpm = data.get('tempo_bpm')
-            track.duration_ms = result.get('actual_duration_ms', 0)
+            duration_s = artifacts.get('audio_stats', {}).get('duration_seconds', 0)
+            if duration_s > 0:
+                track.duration_ms = int(duration_s * 1000)
             track.loudness = data.get('loudness_lufs')
             track.is_instrumental = data.get('is_likely_instrumental', False)
 
