@@ -24,7 +24,7 @@ export function TrackInfo({
   structureButtonLabel,
 }: TrackInfoProps) {
   return (
-    <div className="flex min-w-0 w-2/3 md:w-1/3 items-center gap-3">
+    <div className="flex min-w-0 w-1/2 md:w-1/3 items-center gap-3">
       <div className="w-12 h-12 shrink-0 rounded bg-[rgb(var(--color-border))]/50 flex items-center justify-center text-xl">
         🎵
       </div>

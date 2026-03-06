@@ -58,7 +58,7 @@ export function PlayerControls({
 
   if (isOverlay) {
     return (
-      <div className="flex justify-center items-center gap-6 mb-8">
+      <div className="flex justify-center items-center gap-8 mb-8">
         <IconButton
           aria-label={isShuffled ? 'Shuffle påslaget' : 'Shuffle avslaget'}
           aria-pressed={isShuffled}
@@ -71,30 +71,6 @@ export function PlayerControls({
         >
           <ShuffleIcon className="w-6 h-6" />
         </IconButton>
-
-        <button
-          type="button"
-          onClick={onJumpBack}
-          disabled={controlsDisabled}
-          aria-label={`Spola tillbaka ${jumpLabel}`}
-          className={`group relative w-12 h-12 flex items-center justify-center transition-colors ${
-            controlsDisabled
-              ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
-          }`}
-        >
-          <JumpBackIcon className="w-8 h-8" />
-          <span
-            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[10px] font-bold select-none pointer-events-none ${
-              controlsDisabled
-                ? 'text-[rgb(var(--color-border))]'
-                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
-            }`}
-            aria-hidden
-          >
-            {jumpAmount}
-          </span>
-        </button>
 
         <button
           type="button"
@@ -121,16 +97,16 @@ export function PlayerControls({
                 ? 'Pausa'
                 : 'Spela'
           }
-          className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 w-20 h-20 text-white ${
+          className={`rounded-full shrink-0 flex items-center justify-center shadow-lg transition-all active:scale-95 w-16 h-16 text-white ${
             controlsDisabled
               ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
               : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
           }`}
         >
           {isPlaying ? (
-            <PauseIcon className="w-10 h-10" aria-hidden />
+            <PauseIcon className="w-8 h-8" aria-hidden />
           ) : (
-            <PlayIcon className="w-10 h-10 ml-0.5" aria-hidden />
+            <PlayIcon className="w-8 h-8 ml-0.5" aria-hidden />
           )}
         </button>
 
@@ -146,30 +122,6 @@ export function PlayerControls({
           }`}
         >
           <SkipNextIcon className="w-8 h-8" />
-        </button>
-
-        <button
-          type="button"
-          onClick={onJumpForward}
-          disabled={controlsDisabled}
-          aria-label={`Spola framåt ${jumpLabel}`}
-          className={`group relative w-12 h-12 flex items-center justify-center transition-colors ${
-            controlsDisabled
-              ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
-          }`}
-        >
-          <JumpForwardIcon className="w-8 h-8" />
-          <span
-            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[10px] font-bold select-none pointer-events-none ${
-              controlsDisabled
-                ? 'text-[rgb(var(--color-border))]'
-                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
-            }`}
-            aria-hidden
-          >
-            {jumpAmount}
-          </span>
         </button>
 
         <button
@@ -206,7 +158,7 @@ export function PlayerControls({
   // variant === 'bar'
   return (
     <div
-      className="flex flex-col items-center justify-end md:justify-center w-1/3 md:w-1/3 gap-1"
+      className="flex flex-col items-center justify-end md:justify-center w-1/2 md:w-1/3 gap-1"
       onClick={(e) => e.stopPropagation()}
       role="group"
       aria-label="Spelarkontroller"
@@ -217,14 +169,15 @@ export function PlayerControls({
         </p>
       )}
       <div className="flex items-center gap-2 md:gap-4">
-        <IconButton
+        <button
+          type="button"
           aria-label={isShuffled ? 'Shuffle påslaget, klicka för att stänga av' : 'Shuffle avslaget, klicka för att slå på'}
           aria-pressed={isShuffled}
           onClick={() => onToggleShuffle()}
-          className={`relative w-8 h-8 items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${isShuffled ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
+          className={`relative w-8 h-8 items-center justify-center transition-colors hidden md:flex ${isShuffled ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
         >
           <ShuffleIcon className="w-5 h-5" />
-        </IconButton>
+        </button>
 
         <button
           type="button"

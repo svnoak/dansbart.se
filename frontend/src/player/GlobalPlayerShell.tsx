@@ -277,7 +277,7 @@ export function GlobalPlayerShell() {
         />
       )}
 
-      <SmartNudge track={currentTrack} isPlaying={isPlaying} />
+      {!(expanded && isMobile) && <SmartNudge track={currentTrack} isPlaying={isPlaying} />}
 
       {/* Fixed bottom bar: progress on top, then 3-column row */}
       <div

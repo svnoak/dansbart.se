@@ -55,6 +55,7 @@ export function PlayerProgressBar({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     if (!seekable) return;
     e.preventDefault();
     isDraggingRef.current = true;
@@ -78,9 +79,8 @@ export function PlayerProgressBar({
   const sharedProps = {
     ref: progressBarRef,
     onClick: (e: React.MouseEvent<HTMLDivElement>) => {
-      if (controlsDisabled) return;
       e.stopPropagation();
-      onSeek(getMagneticX(e.clientX));
+      if (!controlsDisabled) onSeek(getMagneticX(e.clientX));
     },
     onPointerDown: handlePointerDown,
     role: 'slider' as const,
@@ -95,10 +95,23 @@ export function PlayerProgressBar({
     return (
       <div
         {...sharedProps}
-        className={`relative h-2 w-full rounded-full bg-[rgb(var(--color-border))] ${seekable ? 'cursor-pointer' : ''}`}
+        className={`relative w-full transition-all duration-200 ${
+          structureMode === 'bars' ? 'h-8' : 'h-2 rounded-full'
+        } bg-[rgb(var(--color-border))] ${seekable ? 'cursor-pointer' : ''}`}
       >
+        {barTicks.map((tick, i) => (
+          <div
+            key={i}
+            className="absolute top-0 h-full border-l border-[rgb(var(--color-text-muted))]/40 pointer-events-none"
+            style={{ left: `${tick.left}%` }}
+          />
+        ))}
         <div
-          className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
+          className={`absolute inset-y-0 left-0 pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''} ${
+            structureMode === 'bars'
+              ? 'bg-[rgb(var(--color-accent))]/40 border-r-2 border-[rgb(var(--color-accent))]'
+              : 'rounded-full bg-[rgb(var(--color-accent))]'
+          }`}
           style={{ width: `${progressPercent}%` }}
         />
       </div>

@@ -1,5 +1,5 @@
-import type { MutableRefObject } from 'react';
-import { CloseIcon } from '@/icons';
+import { useState, type MutableRefObject } from 'react';
+import { CloseIcon, QueueListIcon } from '@/icons';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { PlaybackSource } from '@/player/embedUrl';
@@ -68,6 +68,7 @@ export function MobilePlayerOverlay({
   progressBarRef,
   onSeek,
   isDraggingRef,
+  barTicks,
   isShuffled,
   onToggleShuffle,
   repeatMode,
@@ -86,8 +87,10 @@ export function MobilePlayerOverlay({
   onClearQueue,
   onReorderQueue,
 }: MobilePlayerOverlayProps) {
+  const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
+
   return (
-    <div className="fixed inset-0 bg-[rgb(var(--color-bg))] z-[100] flex flex-col overflow-y-auto transition-transform duration-300 ease-in-out">
+    <div className="fixed inset-0 bg-[rgb(var(--color-bg))] z-[100] flex flex-col overflow-hidden transition-transform duration-300 ease-in-out">
       {/* Header bar */}
       <div className="flex items-center justify-between px-6 pt-12 pb-4 shrink-0">
         <button
@@ -107,7 +110,7 @@ export function MobilePlayerOverlay({
       </div>
 
       {/* Content area - scrollable */}
-      <div className="flex-1 flex flex-col px-6 pb-10 min-h-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col px-6 pb-6 min-h-0">
         {/* Video/Spotify embed placeholder (actual embed positioned fixed over this) */}
         {embedUrl && (
           <div
@@ -153,7 +156,7 @@ export function MobilePlayerOverlay({
             isYouTubeEmbed={isYouTubeEmbed}
             controlsDisabled={controlsDisabled}
             structureMode={structureMode}
-            barTicks={[]}
+            barTicks={barTicks}
             progressBarRef={progressBarRef}
             onSeek={onSeek}
             isDraggingRef={isDraggingRef}
@@ -200,20 +203,45 @@ export function MobilePlayerOverlay({
           jumpAmount={jumpAmount}
           jumpLabel={jumpLabel}
           hasQueue={queue.length > 0}
-          isQueueOpen={false}
-          onShowQueue={() => {}}
+          isQueueOpen={mobileQueueOpen}
+          onShowQueue={() => setMobileQueueOpen((v) => !v)}
           variant="overlay"
         />
 
-        {/* Queue */}
-        <QueuePanel
-          queue={queue}
-          currentTrack={currentTrack}
-          onPlayFromQueue={onPlayFromQueue}
-          onRemoveFromQueue={onRemoveFromQueue}
-          onClearQueue={onClearQueue}
-          onReorderQueue={onReorderQueue}
-        />
+        {/* Queue toggle pill */}
+        <div className="flex justify-center mb-4">
+          <button
+            type="button"
+            onClick={() => setMobileQueueOpen((v) => !v)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+              mobileQueueOpen || queue.length > 0
+                ? 'bg-[rgb(var(--color-accent))]/10 text-[rgb(var(--color-accent))] border border-[rgb(var(--color-accent))]/30'
+                : 'bg-[rgb(var(--color-border))]/30 text-[rgb(var(--color-text-muted))] border border-[rgb(var(--color-border))]'
+            }`}
+          >
+            <QueueListIcon className="w-5 h-5" />
+            Ko ({queue.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Queue slide-over panel */}
+      <div
+        className={`absolute inset-0 bg-[rgb(var(--color-bg))] z-10 flex flex-col transition-transform duration-300 ease-in-out ${
+          mobileQueueOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="px-6 pt-12 pb-4 shrink-0">
+          <QueuePanel
+            queue={queue}
+            currentTrack={currentTrack}
+            onPlayFromQueue={onPlayFromQueue}
+            onRemoveFromQueue={onRemoveFromQueue}
+            onClearQueue={onClearQueue}
+            onReorderQueue={onReorderQueue}
+            onClose={() => setMobileQueueOpen(false)}
+          />
+        </div>
       </div>
     </div>
   );
