@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState, type MutableRefObject } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 
 const BAR_SEGMENT_WIDTH = 48;
 
@@ -8,7 +8,6 @@ interface MobileScrollableBarProgressProps {
   playbackPositionMs: number;
   durationMs: number;
   onSeekToTime: (seconds: number) => void;
-  isDraggingRef: MutableRefObject<boolean>;
 }
 
 export function MobileScrollableBarProgress({
@@ -17,13 +16,12 @@ export function MobileScrollableBarProgress({
   playbackPositionMs,
   durationMs,
   onSeekToTime,
-  isDraggingRef,
 }: MobileScrollableBarProgressProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrollingRef = useRef(false);
   const userScrollTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const isInitialRef = useRef(true);
-  const [isDragging, setIsDragging] = useState(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const totalWidth = bars.length * BAR_SEGMENT_WIDTH;
   const positionSec = playbackPositionMs / 1000;
@@ -53,7 +51,7 @@ export function MobileScrollableBarProgress({
 
   // Auto-scroll to keep current bar visible
   useEffect(() => {
-    if (userScrollingRef.current || isDragging || !scrollRef.current || currentBarIndex < 0) return;
+    if (userScrollingRef.current || !scrollRef.current || currentBarIndex < 0) return;
     const container = scrollRef.current;
     const targetLeft =
       currentBarIndex * BAR_SEGMENT_WIDTH - container.clientWidth / 2 + BAR_SEGMENT_WIDTH / 2;
@@ -62,7 +60,7 @@ export function MobileScrollableBarProgress({
       behavior: isInitialRef.current ? 'instant' : 'smooth',
     });
     isInitialRef.current = false;
-  }, [currentBarIndex, isDragging]);
+  }, [currentBarIndex]);
 
   // Reset on track change
   useEffect(() => {
@@ -71,13 +69,12 @@ export function MobileScrollableBarProgress({
 
   // Track user scrolling
   const handleScroll = useCallback(() => {
-    if (isDragging) return;
     userScrollingRef.current = true;
     clearTimeout(userScrollTimerRef.current);
     userScrollTimerRef.current = setTimeout(() => {
       userScrollingRef.current = false;
     }, 2000);
-  }, [isDragging]);
+  }, []);
 
   // Seek from pointer position
   const getSecondsFromPointer = useCallback(
@@ -97,35 +94,21 @@ export function MobileScrollableBarProgress({
     [bars, getBarEnd]
   );
 
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      e.preventDefault();
-      isDraggingRef.current = true;
-      setIsDragging(true);
-      const target = e.currentTarget;
-      const pointerId = e.pointerId;
-      target.setPointerCapture(pointerId);
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
 
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+    if (!start) return;
+    const dx = Math.abs(e.clientX - start.x);
+    const dy = Math.abs(e.clientY - start.y);
+    if (dx < 8 && dy < 8) {
       const sec = getSecondsFromPointer(e.clientX);
       if (sec !== null) onSeekToTime(sec);
-
-      const onMove = (moveEvent: PointerEvent) => {
-        const s = getSecondsFromPointer(moveEvent.clientX);
-        if (s !== null) onSeekToTime(s);
-      };
-      const onUp = () => {
-        isDraggingRef.current = false;
-        setIsDragging(false);
-        target.releasePointerCapture(pointerId);
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onUp);
-      };
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
-    },
-    [getSecondsFromPointer, onSeekToTime, isDraggingRef]
-  );
+    }
+  }, [getSecondsFromPointer, onSeekToTime]);
 
   if (bars.length === 0) return null;
 
@@ -145,6 +128,7 @@ export function MobileScrollableBarProgress({
           className="relative h-10 flex"
           style={{ width: `${totalWidth}px` }}
           onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
           role="slider"
           aria-label="Spola i låten"
           aria-valuemin={0}
@@ -167,7 +151,7 @@ export function MobileScrollableBarProgress({
                 {/* Partial fill for current bar */}
                 {isCurrent && (
                   <div
-                    className={`absolute inset-y-0 left-0 bg-[rgb(var(--color-accent))]/30 border-r-2 border-[rgb(var(--color-accent))]${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
+                    className="absolute inset-y-0 left-0 bg-[rgb(var(--color-accent))]/30 border-r-2 border-[rgb(var(--color-accent))] transition-[width] duration-200 ease-linear"
                     style={{ width: `${currentBarFraction * 100}%` }}
                   />
                 )}

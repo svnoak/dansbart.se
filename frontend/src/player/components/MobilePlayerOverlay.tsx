@@ -162,7 +162,6 @@ export function MobilePlayerOverlay({
               playbackPositionMs={playbackPositionMs}
               durationMs={durationMs}
               onSeekToTime={onSeekToTime}
-              isDraggingRef={isDraggingRef}
             />
           ) : (
             <PlayerProgressBar
