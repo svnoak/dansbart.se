@@ -5,6 +5,10 @@
 
 FROM python:3.10-slim
 
+LABEL org.opencontainers.image.source="https://github.com/svnoak/dansbart.se-audio-worker"
+LABEL org.opencontainers.image.description="Dansbart Audio Worker - AGPL-3.0"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
+
 # 1. Install System Dependencies for Audio Processing & ML
 RUN apt-get update && apt-get install -y \
     build-essential \

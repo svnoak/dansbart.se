@@ -180,6 +180,7 @@ jobs:
           context: .
           push: false
           tags: dansbart-audio-worker:test
+          platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
