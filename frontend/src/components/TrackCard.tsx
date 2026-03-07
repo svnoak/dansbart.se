@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Card, IconButton } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import {
-  FlagIcon,
   PauseIcon,
   PlayIcon,
   MoreVerticalIcon,
@@ -50,7 +49,8 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
   const isMlLow = hasValidStyle && !isHumanVerified && !isMlHigh;
 
   return (
-    <Card className="flex items-center gap-4 p-4 shadow-sm">
+    <Card className="flex items-center gap-3 p-4 shadow-sm">
+      {/* Left: Play button */}
       <button
         type="button"
         onClick={() => play(track, contextTracks)}
@@ -63,28 +63,30 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
           <PlayIcon className="h-5 w-5 ml-0.5" aria-hidden />
         )}
       </button>
+
+      {/* Center: Content rows */}
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
+        {/* Row 1: Dance style + tempo */}
+        <div className="flex items-center gap-1.5 overflow-hidden">
           {hasValidStyle ? (
             <span className="flex items-center gap-1">
-              {/* Human verified: blue, no sparkles */}
               {isHumanVerified && (
                 <>
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                    className="rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                     title="Filtrera på huvudstil"
                   >
                     {track.danceStyle}
                   </button>
                   {hasSubStyle && (
                     <>
-                      <span className="text-[10px] font-bold text-gray-300">›</span>
+                      <span className="text-[10px] font-bold text-[rgb(var(--color-text-muted))]">›</span>
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                        className="rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                         title="Filtrera på understil"
                       >
                         {track.subStyle}
@@ -93,25 +95,24 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   )}
                 </>
               )}
-              {/* ML high confidence: blue + sparkles on main */}
               {isMlHigh && (
                 <>
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                    className="inline-flex items-center gap-1 rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                     title="Filtrera på huvudstil (AI-gissning)"
                   >
                     {track.danceStyle}
-                    <SparklesIcon className="h-3 w-3 text-blue-400" aria-hidden />
+                    <SparklesIcon className="h-3 w-3 text-blue-400 dark:text-blue-300" aria-hidden />
                   </button>
                   {hasSubStyle && (
                     <>
-                      <span className="text-[10px] font-bold text-gray-300">›</span>
+                      <span className="text-[10px] font-bold text-[rgb(var(--color-text-muted))]">›</span>
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 transition-colors hover:border-blue-300 hover:bg-blue-100"
+                        className="rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                         title="Filtrera på understil (AI-gissning)"
                       >
                         {track.subStyle}
@@ -120,25 +121,24 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   )}
                 </>
               )}
-              {/* ML low confidence: amber + sparkles on main */}
               {isMlLow && (
                 <>
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 transition-colors hover:border-amber-300 hover:bg-amber-100"
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200 transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
                     title="Filtrera på huvudstil (Osäker)"
                   >
                     {track.danceStyle}
-                    <SparklesIcon className="h-3 w-3 text-amber-400" aria-hidden />
+                    <SparklesIcon className="h-3 w-3 text-amber-400 dark:text-amber-300" aria-hidden />
                   </button>
                   {hasSubStyle && (
                     <>
-                      <span className="text-[10px] font-bold text-gray-300">›</span>
+                      <span className="text-[10px] font-bold text-[rgb(var(--color-text-muted))]">›</span>
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 transition-colors hover:border-amber-300 hover:bg-amber-100"
+                        className="rounded-full border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200 transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
                         title="Filtrera på understil (Osäker)"
                       >
                         {track.subStyle}
@@ -150,53 +150,47 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
             </span>
           ) : (
             <span
-              className="inline-flex cursor-help items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600"
+              className="inline-flex cursor-help items-center gap-1 rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text-muted))]"
               title="Kunde inte avgöra stil"
             >
-              ❓ Okänd stil
+              Okänd stil
+            </span>
+          )}
+          {track.tempoCategory != null && (
+            <span className="whitespace-nowrap rounded-full border border-[rgb(var(--color-border))]/50 bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-muted))]">
+              {tempoLabel(track)}
             </span>
           )}
         </div>
-        <h3 className="mt-1 font-semibold text-[rgb(var(--color-text))] truncate">
-          {track.title ?? 'Okänd låt'}
-        </h3>
-        <p className="text-sm text-[rgb(var(--color-text-muted))] truncate">
-          {track.artistName ?? 'Okänd artist'}
+
+        {/* Row 2: Title – Artist */}
+        <p className="mt-1 truncate text-sm text-[rgb(var(--color-text))]">
+          <span className="font-semibold">{track.title ?? 'Okänd låt'}</span>
+          <span className="text-[rgb(var(--color-text-muted))]"> – {track.artistName ?? 'Okänd artist'}</span>
         </p>
-        {(track.effectiveBpm != null || track.durationMs != null) && (
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {track.tempoCategory != null && (
-              <span className="whitespace-nowrap rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
-                {tempoLabel(track)}
-              </span>
-            )}
-            {track.durationMs != null && (
-              <span className="rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 font-mono text-xs text-gray-400">
-                {formatDurationMs(track.durationMs)}
-              </span>
-            )}
-          </div>
-        )}
+
+        {/* Row 3: Duration + source availability icons */}
+        <div className="mt-1 flex items-center gap-2">
+          {track.durationMs != null && (
+            <span className="rounded-full border border-[rgb(var(--color-border))]/50 bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 font-mono text-xs text-[rgb(var(--color-text-muted))]">
+              {formatDurationMs(track.durationMs)}
+            </span>
+          )}
+          {track.playbackLinks?.some((l) => l.platform?.toUpperCase() === 'SPOTIFY') && (
+            <span className="text-[rgb(var(--color-text-muted))]" title="Spotify">
+              <SpotifyIcon className="h-4 w-4" aria-hidden />
+            </span>
+          )}
+          {track.playbackLinks?.some((l) => l.platform?.toUpperCase() === 'YOUTUBE') && (
+            <span className="text-[rgb(var(--color-text-muted))]" title="YouTube">
+              <YouTubeIcon className="h-4 w-4" aria-hidden />
+            </span>
+          )}
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {track.playbackLinks?.some((l) => l.platform?.toUpperCase() === 'SPOTIFY') && (
-          <span className="text-[rgb(var(--color-text-muted))]" title="Spotify">
-            <SpotifyIcon className="h-4 w-4" aria-hidden />
-          </span>
-        )}
-        {track.playbackLinks?.some((l) => l.platform?.toUpperCase() === 'YOUTUBE') && (
-          <span className="text-[rgb(var(--color-text-muted))]" title="YouTube">
-            <YouTubeIcon className="h-4 w-4" aria-hidden />
-          </span>
-        )}
-        <button
-          type="button"
-          className="text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
-          aria-label="Rapportera problem"
-          onClick={() => setFlagModalOpen(true)}
-        >
-          <FlagIcon className="h-4 w-4" aria-hidden />
-        </button>
+
+      {/* Right: Menu (vertically centered) */}
+      <div className="shrink-0">
         <div className="relative">
           <IconButton
             aria-label="Mer"

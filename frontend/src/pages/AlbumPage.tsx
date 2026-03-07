@@ -4,7 +4,7 @@ import { getAlbum } from '@/api/generated/albums/albums';
 import type { AlbumDto } from '@/api/models/albumDto';
 import { ArtworkPlaceholder, IconButton, SectionTitle } from '@/ui';
 import { BackArrowIcon } from '@/icons';
-import { TrackCard } from '@/components';
+import { TrackRow } from '@/components';
 
 export function AlbumPage() {
   const { id } = useParams<{ id: string }>();
@@ -89,10 +89,10 @@ export function AlbumPage() {
             Inga låtar i detta album.
           </p>
         ) : (
-          <ul className="mt-3 space-y-3">
+          <ul className="mt-3 space-y-0">
             {tracks.map((track) => (
               <li key={track.id ?? track.title}>
-                <TrackCard track={track} contextTracks={tracks} />
+                <TrackRow track={track} contextTracks={tracks} />
               </li>
             ))}
           </ul>

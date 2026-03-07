@@ -15,7 +15,7 @@ import {
 } from '@/hooks/useSearchParamsState';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterBar } from '@/components/FilterBar';
-import { TrackCard, ArtistCard, AlbumCard } from '@/components';
+import { TrackRow, ArtistCard, AlbumCard } from '@/components';
 
 const PAGE_SIZE = 20;
 
@@ -258,10 +258,10 @@ export function SearchPage() {
       )}
 
       {!loading && filters.searchType === 'tracks' && (
-        <ul className="space-y-3">
+        <ul className="space-y-0">
           {tracks.map((track, i) => (
             <li key={track.id ?? track.title ?? `track-${i}`}>
-              <TrackCard
+              <TrackRow
                 track={track}
                 contextTracks={tracks}
                 onApplyStyleFilter={(style) =>
