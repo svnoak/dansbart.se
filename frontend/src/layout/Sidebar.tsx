@@ -8,16 +8,19 @@ function NavLink({
   to,
   active,
   icon,
+  onClick,
   children,
 }: {
   to: string;
   active: boolean;
   icon?: React.ReactNode | null;
+  onClick?: () => void;
   children: string;
 }) {
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm font-medium transition-colors ${
         icon != null ? '' : 'pl-2'
       } ${
@@ -36,7 +39,7 @@ function NavLink({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { consentStatus, openCookieSettings } = useConsent();
   const isSearch = location.pathname === '/search';
@@ -60,6 +63,7 @@ export function Sidebar() {
       <NavLink
         to="/search"
         active={isSearch}
+        onClick={onNavigate}
         icon={
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
             <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
@@ -71,6 +75,7 @@ export function Sidebar() {
       <NavLink
         to="/"
         active={isHome}
+        onClick={onNavigate}
         icon={<LibraryIcon className="h-5 w-5" aria-hidden />}
       >
         Bibliotek
@@ -109,13 +114,13 @@ export function Sidebar() {
         >
           <div className="min-h-0 overflow-hidden">
             <div className="flex flex-col gap-1 border-l-2 border-[rgb(var(--color-border))] ml-5 pl-2 py-1">
-            <NavLink to="/about" active={isAbout}>
+            <NavLink to="/about" active={isAbout} onClick={onNavigate}>
               Om oss
             </NavLink>
-            <NavLink to="/privacy" active={isPrivacy}>
+            <NavLink to="/privacy" active={isPrivacy} onClick={onNavigate}>
               Integritetspolicy
             </NavLink>
-            <NavLink to="/terms" active={isTerms}>
+            <NavLink to="/terms" active={isTerms} onClick={onNavigate}>
               Användarvillkor
             </NavLink>
             </div>
@@ -141,7 +146,7 @@ export function Sidebar() {
           <p className="mt-1 text-xs text-[rgb(var(--color-text-muted))]">
             Hjälp till att förbättra klassificeringen av dansstilar.
           </p>
-          <Link to="/classify" className="mt-3 block">
+          <Link to="/classify" className="mt-3 block" onClick={onNavigate}>
             <Button variant="primary" size="sm" className="w-full">
               Starta quiz
             </Button>

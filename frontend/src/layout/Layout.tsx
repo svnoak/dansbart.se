@@ -31,7 +31,7 @@ export function Layout({ children }: LayoutProps) {
           className={`fixed left-0 top-0 z-40 h-full w-72 border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-4 shadow-lg transition-transform duration-200 ease-out lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
           aria-label="Mobilmeny"
         >
-          <Sidebar />
+          <Sidebar onNavigate={() => setSidebarOpen(false)} />
         </aside>
         {/* Desktop left sidebar - sticky so nav stays visible when scrolling */}
         <aside className="sticky top-14 hidden h-fit w-64 shrink-0 self-start border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-4 lg:block">

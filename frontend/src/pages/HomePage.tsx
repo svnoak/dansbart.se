@@ -63,7 +63,7 @@ export function HomePage() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
         Bibliotek
       </h1>
@@ -117,7 +117,7 @@ export function HomePage() {
 
       <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
         {/* Trending / featured artists */}
-        <section aria-labelledby="artists-heading">
+        <section aria-labelledby="artists-heading" className="min-w-0">
           <SectionTitle
             id="artists-heading"
             linkTo="/artists"
@@ -148,7 +148,7 @@ export function HomePage() {
         </section>
 
         {/* Recommended albums */}
-        <section aria-labelledby="albums-heading">
+        <section aria-labelledby="albums-heading" className="min-w-0">
           <SectionTitle id="albums-heading" linkTo="/albums">
             Rekommenderade album
           </SectionTitle>
