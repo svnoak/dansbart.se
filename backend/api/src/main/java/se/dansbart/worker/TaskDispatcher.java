@@ -121,6 +121,19 @@ public class TaskDispatcher {
     }
 
     /**
+     * Dispatch duration backfill task to the light worker.
+     */
+    public void dispatchBackfillDuration(int batchSize) {
+        String taskMessage = buildCeleryMessage(
+            "app.workers.tasks_light.backfill_duration_task",
+            List.of(),
+            Map.of("batch_size", batchSize)
+        );
+        pushToQueue(LIGHT_QUEUE, taskMessage);
+        log.info("Dispatched duration backfill with batch_size {}", batchSize);
+    }
+
+    /**
      * Dispatch Spotify preview task to the light worker.
      * Used to fetch metadata from Spotify without ingesting tracks.
      */

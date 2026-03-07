@@ -338,6 +338,81 @@ def ingest_album_task(self, album_id: str):
 
 
 @celery_app.task(bind=True, acks_late=True, queue='light')
+def backfill_duration_task(self, batch_size: int = 200):
+    """
+    Backfill duration_ms for tracks where it is 0 or NULL.
+
+    Fetches duration from Spotify API using existing playback links.
+
+    Args:
+        batch_size: Max number of tracks to process per run
+
+    Returns:
+        dict: Backfill statistics
+    """
+    log.info("starting_duration_backfill", batch_size=batch_size)
+
+    db = SessionLocal()
+    try:
+        from app.core.models import Track, PlaybackLink
+        from app.workers.ingestion.spotify import SpotifyIngestor
+        from sqlalchemy import or_
+
+        ingestor = SpotifyIngestor(db)
+
+        # Find tracks with missing duration that have a Spotify link
+        rows = (
+            db.query(Track.id, PlaybackLink.deep_link)
+            .join(PlaybackLink, PlaybackLink.track_id == Track.id)
+            .filter(PlaybackLink.platform == "spotify")
+            .filter(or_(Track.duration_ms == None, Track.duration_ms == 0))
+            .limit(batch_size)
+            .all()
+        )
+
+        if not rows:
+            return {"status": "success", "message": "No tracks need duration backfill.", "updated": 0}
+
+        # Batch fetch from Spotify (up to 50 at a time)
+        updated = 0
+        spotify_ids = [r.deep_link for r in rows]
+        track_id_by_spotify = {r.deep_link: r.id for r in rows}
+
+        for i in range(0, len(spotify_ids), 50):
+            batch = spotify_ids[i:i + 50]
+            try:
+                response = ingestor.sp.tracks(batch)
+                for sp_track in (response.get('tracks') or []):
+                    if not sp_track:
+                        continue
+                    sp_id = sp_track['id']
+                    duration_ms = sp_track.get('duration_ms')
+                    if duration_ms and sp_id in track_id_by_spotify:
+                        track = db.query(Track).get(track_id_by_spotify[sp_id])
+                        if track:
+                            track.duration_ms = duration_ms
+                            updated += 1
+            except Exception as e:
+                log.error("duration_batch_fetch_failed", error=str(e))
+
+        db.commit()
+        log.info("duration_backfill_complete", updated=updated, total=len(rows))
+
+        return {
+            "status": "success",
+            "message": f"Updated duration for {updated}/{len(rows)} tracks.",
+            "updated": updated,
+            "total_candidates": len(rows)
+        }
+    except Exception as e:
+        log.error("duration_backfill_failed", exc_info=True)
+        db.rollback()
+        return {"status": "failed", "message": str(e)}
+    finally:
+        db.close()
+
+
+@celery_app.task(bind=True, acks_late=True, queue='light')
 def cleanup_orphans_task(self):
     """
     Clean up orphaned tracks and broken links.

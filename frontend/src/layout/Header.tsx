@@ -1,13 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { IconButton } from '@/ui';
-
-function getUrlQuery(pathname: string, search: string): string {
-  if (pathname === '/search') {
-    return new URLSearchParams(search).get('q') ?? '';
-  }
-  return '';
-}
 
 export function Header({
   onOpenSidebar,
@@ -16,28 +8,6 @@ export function Header({
   onOpenSidebar?: () => void;
   showMenuButton?: boolean;
 }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const urlQuery = getUrlQuery(location.pathname, location.search);
-  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
-  const [globalQuery, setGlobalQuery] = useState(urlQuery);
-
-  if (prevUrlQuery !== urlQuery) {
-    setPrevUrlQuery(urlQuery);
-    setGlobalQuery(urlQuery);
-  }
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = globalQuery.trim();
-    if (q) {
-      navigate(`/search?q=${encodeURIComponent(q)}`);
-    } else {
-      navigate('/search');
-    }
-  };
-
   return (
     <header className="sticky top-0 z-20 border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
       <div className="flex items-center gap-3 px-4 py-3">

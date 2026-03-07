@@ -17,6 +17,8 @@ export * from './approveArtist200';
 export * from './approvePendingArtist200';
 export * from './artist';
 export * from './artistSummaryDto';
+export * from './backfillDuration200';
+export * from './backfillDurationParams';
 export * from './backfillIsrcs200';
 export * from './backfillIsrcsParams';
 export * from './blockSpotifyRequest';

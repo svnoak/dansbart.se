@@ -5,6 +5,8 @@
  * OpenAPI spec version: v0
  */
 import type {
+  BackfillDuration200,
+  BackfillDurationParams,
   BackfillIsrcs200,
   BackfillIsrcsParams,
   CleanupOrphaned200,
@@ -191,6 +193,36 @@ export const getBackfillIsrcsUrl = (params?: BackfillIsrcsParams,) => {
 export const backfillIsrcs = async (params?: BackfillIsrcsParams, options?: RequestInit): Promise<BackfillIsrcs200> => {
   
   return customFetch<BackfillIsrcs200>(getBackfillIsrcsUrl(params),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Backfill missing duration from Spotify
+ */
+export const getBackfillDurationUrl = (params?: BackfillDurationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/maintenance/backfill-duration?${stringifiedParams}` : `/api/admin/maintenance/backfill-duration`
+}
+
+export const backfillDuration = async (params?: BackfillDurationParams, options?: RequestInit): Promise<BackfillDuration200> => {
+  
+  return customFetch<BackfillDuration200>(getBackfillDurationUrl(params),
   {      
     ...options,
     method: 'POST'

@@ -1760,6 +1760,34 @@
         }
       }
     },
+    "/api/admin/maintenance/backfill-duration": {
+      "post": {
+        "tags": ["Admin Maintenance"],
+        "summary": "Backfill missing duration from Spotify",
+        "operationId": "backfillDuration",
+        "parameters": [
+          {
+            "name": "batchSize",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 200 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/ingest": {
       "post": {
         "tags": ["Admin Maintenance"],

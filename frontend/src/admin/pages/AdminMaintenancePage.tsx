@@ -146,6 +146,16 @@ export function AdminMaintenancePage() {
       action: () => run('Komplettera ISRC', () => backfillIsrcs({ limit: 100 }, adminRequestOptions())),
     },
     {
+      id: 'backfill-duration',
+      label: 'Komplettera spellängd',
+      description: 'Hämta saknad spellängd från Spotify (max 200)',
+      action: () => run('Komplettera spellängd', async () => {
+        const res = await adminFetch('/api/admin/maintenance/backfill-duration?batchSize=200', { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to backfill duration');
+        return res.json();
+      }),
+    },
+    {
       id: 'reclassify-all',
       label: 'Omklassificera alla',
       description: 'Kör om dansstilsklassificering för hela biblioteket',

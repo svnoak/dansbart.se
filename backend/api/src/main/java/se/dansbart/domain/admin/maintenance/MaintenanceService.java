@@ -241,6 +241,19 @@ public class MaintenanceService {
     }
 
     /**
+     * Backfill duration_ms from Spotify for tracks where it is 0 or NULL.
+     */
+    public Map<String, Object> backfillDuration(int batchSize) {
+        taskDispatcher.dispatchBackfillDuration(batchSize);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "queued");
+        result.put("batchSize", batchSize);
+        result.put("message", "Duration backfill task queued for up to " + batchSize + " tracks");
+        return result;
+    }
+
+    /**
      * Backfill ISRCs from Spotify for tracks missing them.
      */
     public Map<String, Object> backfillIsrcs(int limit) {

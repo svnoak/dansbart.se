@@ -19,7 +19,7 @@ export function MobileScrollableBarProgress({
 }: MobileScrollableBarProgressProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrollingRef = useRef(false);
-  const userScrollTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const userScrollTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const isInitialRef = useRef(true);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 

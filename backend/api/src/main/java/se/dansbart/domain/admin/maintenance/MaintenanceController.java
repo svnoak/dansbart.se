@@ -62,6 +62,13 @@ public class MaintenanceController {
         return ResponseEntity.ok(maintenanceService.reclassifyAll());
     }
 
+    @PostMapping("/maintenance/backfill-duration")
+    @Operation(summary = "Backfill missing duration from Spotify")
+    public ResponseEntity<Map<String, Object>> backfillDuration(
+            @RequestParam(defaultValue = "200") int batchSize) {
+        return ResponseEntity.ok(maintenanceService.backfillDuration(batchSize));
+    }
+
     @PostMapping("/maintenance/backfill-isrcs")
     @Operation(summary = "Backfill ISRCs from Spotify")
     public ResponseEntity<Map<String, Object>> backfillIsrcs(
