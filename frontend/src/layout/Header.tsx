@@ -61,7 +61,7 @@ export function Header({
           </span>
           <span className="text-lg font-semibold">dansbart.se</span>
         </Link>
-        <form
+        {/* <form
           onSubmit={handleSearch}
           className="mx-auto flex min-w-0 max-w-xl flex-1 justify-center"
         >
@@ -80,7 +80,7 @@ export function Header({
               aria-label="Global sökning"
             />
           </div>
-        </form>
+        </form> */}
       </div>
     </header>
   );
