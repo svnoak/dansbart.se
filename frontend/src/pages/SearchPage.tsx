@@ -90,9 +90,10 @@ export function SearchPage() {
       setLoading(true);
     }
     setError(null);
-    if (filters.searchType !== 'tracks') setTracks([]);
-    if (filters.searchType !== 'artists') setArtists([]);
-    if (filters.searchType !== 'albums') setAlbums([]);
+    if (filters.searchType !== 'tracks' || filters.offset === 0) setTracks([]);
+    if (filters.searchType !== 'artists' || filters.offset === 0) setArtists([]);
+    if (filters.searchType !== 'albums' || filters.offset === 0) setAlbums([]);
+    if (filters.offset === 0) setTotal(0);
 
     const limit = filters.limit;
     const offset = filters.offset;
