@@ -107,10 +107,14 @@ def analyze_track_task(self, track_id: str):
         try:
             track = db.query(Track).filter(Track.id == track_id).first()
             if track:
-                track.processing_status = "FAILED"
+                # REANALYZING tracks revert to DONE (old data is still valid)
+                if track.processing_status == "REANALYZING":
+                    track.processing_status = "DONE"
+                else:
+                    track.processing_status = "FAILED"
                 db.commit()
         except Exception as status_err:
-            log.error("failed_to_update_status", track_id=track_id, target_status="FAILED", error=str(status_err))
+            log.error("failed_to_update_status", track_id=track_id, error=str(status_err))
         raise
 
     except Exception as e:
@@ -122,17 +126,27 @@ def analyze_track_task(self, track_id: str):
             try:
                 track = db.query(Track).filter(Track.id == track_id).first()
                 if track:
-                    track.processing_status = "FAILED"
+                    # REANALYZING tracks revert to DONE (old data is still valid)
+                    if track.processing_status == "REANALYZING":
+                        track.processing_status = "DONE"
+                    else:
+                        track.processing_status = "FAILED"
                     db.commit()
             except Exception as status_err:
-                log.error("failed_to_update_status", track_id=track_id, target_status="FAILED", error=str(status_err))
+                log.error("failed_to_update_status", track_id=track_id, error=str(status_err))
         else:
             try:
                 track = db.query(Track).filter(Track.id == track_id).first()
-                if track and track.processing_status == "PROCESSING":
-                    track.processing_status = "PENDING"
-                    db.commit()
-                    log.info("status_reset_to_pending", track_id=track_id)
+                if track:
+                    # REANALYZING stays REANALYZING on retry; PROCESSING resets to PENDING
+                    if track.processing_status == "PROCESSING":
+                        track.processing_status = "PENDING"
+                        db.commit()
+                        log.info("status_reset_to_pending", track_id=track_id)
+                    elif track.processing_status != "REANALYZING":
+                        track.processing_status = "PENDING"
+                        db.commit()
+                        log.info("status_reset_to_pending", track_id=track_id)
             except Exception as status_err:
                 log.error("failed_to_update_status", track_id=track_id, target_status="PENDING", error=str(status_err))
         raise

@@ -92,10 +92,16 @@ class AnalysisService:
         if not track:
             return
 
-        # Update state: PROCESSING
-        log.info("status_update", title=track.title, status="PROCESSING")
-        track.processing_status = "PROCESSING"
-        self.db.commit()
+        # Capture original status before any changes
+        original_status = track.processing_status
+
+        # Update state: only set PROCESSING if not REANALYZING (REANALYZING keeps track visible in search)
+        if original_status != "REANALYZING":
+            log.info("status_update", title=track.title, status="PROCESSING")
+            track.processing_status = "PROCESSING"
+            self.db.commit()
+        else:
+            log.info("status_update", title=track.title, status="REANALYZING", message="Keeping REANALYZING status")
 
         try:
             success = self._process_single_track(track)
@@ -104,8 +110,13 @@ class AnalysisService:
                 track.processing_status = "DONE"
                 log.info("status_update", title=track.title, status="DONE")
             else:
-                track.processing_status = "FAILED"
-                log.warn("status_update", title=track.title, status="FAILED")
+                # If was REANALYZING, revert to DONE (old data is still valid)
+                if original_status == "REANALYZING":
+                    track.processing_status = "DONE"
+                    log.warn("status_update", title=track.title, status="DONE", message="Reverted from REANALYZING")
+                else:
+                    track.processing_status = "FAILED"
+                    log.warn("status_update", title=track.title, status="FAILED")
 
             self.db.commit()
 
@@ -113,7 +124,12 @@ class AnalysisService:
             self.db.rollback()
             log.error("critical_failure", title=track.title, error=str(e))
             try:
-                track.processing_status = "FAILED"
+                # If was REANALYZING, revert to DONE instead of FAILED
+                if original_status == "REANALYZING":
+                    track.processing_status = "DONE"
+                    log.warn("status_revert", title=track.title, status="DONE", message="Reverted from REANALYZING after error")
+                else:
+                    track.processing_status = "FAILED"
                 self.db.commit()
             except:
                 pass
@@ -217,7 +233,7 @@ class AnalysisService:
             # Update track with analysis results
             track.tempo_bpm = data.get('tempo_bpm')
             duration_s = artifacts.get('audio_stats', {}).get('duration_seconds', 0)
-            if duration_s > 0:
+            if duration_s > 0 and not track.duration_ms:
                 track.duration_ms = int(duration_s * 1000)
             track.loudness = data.get('loudness_lufs')
             track.is_instrumental = data.get('is_likely_instrumental', False)
