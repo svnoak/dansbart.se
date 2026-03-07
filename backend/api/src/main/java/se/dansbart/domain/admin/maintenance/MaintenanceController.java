@@ -43,6 +43,15 @@ public class MaintenanceController {
         return ResponseEntity.ok(maintenanceService.queuePendingTracksForAnalysis(limit, status));
     }
 
+    @PostMapping("/maintenance/reanalyze")
+    @Operation(summary = "Queue DONE tracks for re-analysis",
+        description = "Sets DONE tracks to REANALYZING and dispatches audio analysis. "
+            + "Tracks remain visible in search results while being re-analyzed.")
+    public ResponseEntity<Map<String, Object>> reanalyze(
+            @RequestParam(defaultValue = "100") int limit) {
+        return ResponseEntity.ok(maintenanceService.reanalyzeTracksForAnalysis(limit));
+    }
+
     @PostMapping("/maintenance/cleanup-orphaned")
     @Operation(summary = "Cleanup tracks stuck in PROCESSING status")
     public ResponseEntity<Map<String, Object>> cleanupOrphaned(

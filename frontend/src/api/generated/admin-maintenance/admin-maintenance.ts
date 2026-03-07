@@ -19,6 +19,8 @@ import type {
   PauseParams,
   QueuePendingTracks200,
   QueuePendingTracksParams,
+  Reanalyze200,
+  ReanalyzeParams,
   ReclassifyAll200,
   ResetCrawlData200,
   Resume200,
@@ -71,6 +73,37 @@ export const getResumeUrl = (params?: ResumeParams,) => {
 export const resume = async (params?: ResumeParams, options?: RequestInit): Promise<Resume200> => {
   
   return customFetch<Resume200>(getResumeUrl(params),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * Sets DONE tracks to REANALYZING and dispatches audio analysis. Tracks remain visible in search results while being re-analyzed.
+ * @summary Queue DONE tracks for re-analysis
+ */
+export const getReanalyzeUrl = (params?: ReanalyzeParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/maintenance/reanalyze?${stringifiedParams}` : `/api/admin/maintenance/reanalyze`
+}
+
+export const reanalyze = async (params?: ReanalyzeParams, options?: RequestInit): Promise<Reanalyze200> => {
+  
+  return customFetch<Reanalyze200>(getReanalyzeUrl(params),
   {      
     ...options,
     method: 'POST'

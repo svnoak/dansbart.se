@@ -134,6 +134,8 @@ export * from './playlistTrack';
 export * from './playlistTrackDto';
 export * from './queuePendingTracks200';
 export * from './queuePendingTracksParams';
+export * from './reanalyze200';
+export * from './reanalyzeParams';
 export * from './reanalyzeTrack200';
 export * from './reclassifyAll200';
 export * from './reclassifyTrack200';

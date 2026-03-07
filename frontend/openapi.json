@@ -1640,6 +1640,35 @@
         }
       }
     },
+    "/api/admin/maintenance/reanalyze": {
+      "post": {
+        "tags": ["Admin Maintenance"],
+        "summary": "Queue DONE tracks for re-analysis",
+        "description": "Sets DONE tracks to REANALYZING and dispatches audio analysis. Tracks remain visible in search results while being re-analyzed.",
+        "operationId": "reanalyze",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/maintenance/queue-pending-tracks": {
       "post": {
         "tags": ["Admin Maintenance"],

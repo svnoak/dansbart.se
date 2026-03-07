@@ -123,11 +123,42 @@ public class MaintenanceService {
             }
         }
 
+        // Find tracks stuck in REANALYZING for too long -- reset to DONE (old data is valid)
+        List<UUID> stuckReanalyzingIds = trackJooqRepository.findIdsByProcessingStatusAndCreatedAtBefore("REANALYZING", threshold);
+        int reanalyzingResetCount = 0;
+        if (!stuckReanalyzingIds.isEmpty()) {
+            trackJooqRepository.setProcessingStatusBatch(stuckReanalyzingIds, "DONE");
+            reanalyzingResetCount = stuckReanalyzingIds.size();
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("status", "success");
         result.put("resetCount", resetCount);
+        result.put("reanalyzingResetCount", reanalyzingResetCount);
         result.put("thresholdMinutes", stuckThresholdMinutes);
         result.put("resetTracks", resetTracks);
+        return result;
+    }
+
+    /**
+     * Queue DONE tracks for re-analysis using the REANALYZING status.
+     * Tracks remain visible in search results while being re-analyzed.
+     */
+    @Transactional
+    public Map<String, Object> reanalyzeTracksForAnalysis(int limit) {
+        List<UUID> ids = trackJooqRepository.findIdsByProcessingStatusOrderByCreatedAtAsc("DONE", limit);
+
+        if (!ids.isEmpty()) {
+            trackJooqRepository.setProcessingStatusBatch(ids, "REANALYZING");
+            for (UUID id : ids) {
+                taskDispatcher.dispatchAudioAnalysis(id);
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "success");
+        result.put("queued", ids.size());
+        result.put("message", "Queued " + ids.size() + " tracks for re-analysis (REANALYZING)");
         return result;
     }
 

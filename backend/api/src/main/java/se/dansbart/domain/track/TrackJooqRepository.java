@@ -220,7 +220,7 @@ public class TrackJooqRepository {
         return dsl.selectFrom(TRACKS)
             .where(TRACKS.ID.ne(trackId))
             .and(TRACKS.EMBEDDING.isNotNull())
-            .and(TRACKS.PROCESSING_STATUS.eq("DONE"))
+            .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
             .orderBy(DSL.field(orderBySql))
             .limit(limit)
             .fetch(this::toTrack);
@@ -330,7 +330,7 @@ public class TrackJooqRepository {
         Float maxArticulation
     ) {
         Condition c = PLAYBACK_LINKS.IS_WORKING.eq(true)
-            .and(TRACKS.PROCESSING_STATUS.eq("DONE"))
+            .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
             .and(TRACKS.IS_FLAGGED.eq(false));
         if (mainStyle != null && !mainStyle.isBlank()) c = c.and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(mainStyle));
         if (subStyle != null && !subStyle.isBlank()) c = c.and(TRACK_DANCE_STYLES.SUB_STYLE.eq(subStyle));

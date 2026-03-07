@@ -20,7 +20,7 @@ public class StatsService {
     private final DSLContext dsl;
 
     public StatsDto getLibraryStats() {
-        var statusCondition = TRACKS.PROCESSING_STATUS.in("DONE", "FAILED");
+        var statusCondition = TRACKS.PROCESSING_STATUS.in("DONE", "FAILED", "REANALYZING");
 
         // Total tracks with processing status DONE or FAILED
         Long totalTracks = dsl.selectCount()

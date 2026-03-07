@@ -28,7 +28,7 @@ import { formatDurationMs } from '@/utils/formatDuration';
 
 type StatusCounts = Record<string, number>;
 
-const STATUS_ORDER = ['PENDING', 'PROCESSING', 'DONE', 'FAILED'] as const;
+const STATUS_ORDER = ['PENDING', 'PROCESSING', 'REANALYZING', 'DONE', 'FAILED'] as const;
 
 async function fetchStatusCounts(): Promise<StatusCounts> {
   const res = await adminFetch('/api/admin/tracks/status-counts');
@@ -395,6 +395,7 @@ export function AdminLibraryPage() {
           <option value="">Alla statusar</option>
           <option value="PENDING">PENDING</option>
           <option value="PROCESSING">PROCESSING</option>
+          <option value="REANALYZING">REANALYZING</option>
           <option value="DONE">DONE</option>
           <option value="FAILED">FAILED</option>
         </Select>
@@ -594,6 +595,8 @@ function statusStyle(s: string): string {
       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300';
     case 'PROCESSING':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
+    case 'REANALYZING':
+      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300';
     case 'DONE':
       return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
     case 'FAILED':
