@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { usePlayer } from '@/player/usePlayer';
 import {
@@ -24,6 +25,7 @@ const JUMP_SECONDS = 10;
 const JUMP_BARS = 4;
 
 export function GlobalPlayerShell() {
+  const location = useLocation();
   const { consentStatus } = useConsent();
   const {
     currentTrack,
@@ -214,7 +216,7 @@ export function GlobalPlayerShell() {
     } else if (!isMobile) {
       return {
         position: 'fixed',
-        bottom: '112px',
+        bottom: '144px',
         left: '16px',
         width: isYouTubeEmbed ? '400px' : '320px',
         height: isYouTubeEmbed ? '225px' : '82px',
@@ -234,7 +236,7 @@ export function GlobalPlayerShell() {
 
   return (
     <>
-      {embedUrl && (isYouTubeEmbed || !isMobile || expanded) && (
+      {embedUrl && (isYouTubeEmbed || !isMobile || expanded) && (isMobile || isPlaying) && (
         <EmbedContainer
           embedUrl={embedUrl}
           isYouTubeEmbed={isYouTubeEmbed}
@@ -288,7 +290,9 @@ export function GlobalPlayerShell() {
         />
       )}
 
-      {!(expanded && isMobile) && <SmartNudge track={currentTrack} isPlaying={isPlaying} />}
+      {!(expanded && isMobile) && location.pathname !== '/classify' && (
+        <SmartNudge track={currentTrack} isPlaying={isPlaying} />
+      )}
 
       {/* Fixed bottom bar: progress on top, then 3-column row */}
       <div

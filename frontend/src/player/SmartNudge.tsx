@@ -427,7 +427,7 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
   if (step === 'hidden') return null;
 
   return (
-    <div className="fixed right-0 bottom-24 md:bottom-28 z-[130] px-4 pointer-events-none">
+    <div className="fixed right-0 bottom-24 md:bottom-36 z-[130] px-4 pointer-events-none">
       <div className="max-w-2xl ml-auto pointer-events-auto">
         <div className="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans animate-in fade-in duration-200">
           {/* VERIFY: style + tempo */}
