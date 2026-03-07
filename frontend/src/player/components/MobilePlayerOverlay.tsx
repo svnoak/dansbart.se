@@ -3,8 +3,10 @@ import { CloseIcon, QueueListIcon } from '@/icons';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { PlaybackSource } from '@/player/embedUrl';
+import { useCurrentBarIndex } from '@/player/hooks/useCurrentBarIndex';
 import { SourceSwitcher } from './SourceSwitcher';
 import { PlayerProgressBar } from './PlayerProgressBar';
+import { MobileScrollableBarProgress } from './MobileScrollableBarProgress';
 import { PlayerControls } from './PlayerControls';
 import { QueuePanel } from './QueuePanel';
 
@@ -27,6 +29,7 @@ interface MobilePlayerOverlayProps {
   structureButtonLabel: string;
   progressBarRef: MutableRefObject<HTMLDivElement | null>;
   onSeek: (clientX: number) => void;
+  onSeekToTime: (seconds: number) => void;
   isDraggingRef: MutableRefObject<boolean>;
   barTicks: { left: number }[];
   isShuffled: boolean;
@@ -67,6 +70,7 @@ export function MobilePlayerOverlay({
   structureButtonLabel,
   progressBarRef,
   onSeek,
+  onSeekToTime,
   isDraggingRef,
   barTicks,
   isShuffled,
@@ -88,6 +92,8 @@ export function MobilePlayerOverlay({
   onReorderQueue,
 }: MobilePlayerOverlayProps) {
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
+  const currentBarIndex = useCurrentBarIndex(bars, playbackPositionMs);
+  const showMobileBars = structureMode === 'bars' && bars.length > 0;
 
   return (
     <div className="fixed inset-0 bg-[rgb(var(--color-bg))] z-[100] flex flex-col overflow-hidden transition-transform duration-300 ease-in-out">
@@ -109,18 +115,18 @@ export function MobilePlayerOverlay({
         />
       </div>
 
-      {/* Content area - scrollable */}
-      <div className="flex-1 flex flex-col px-6 pb-6 min-h-0">
+      {/* Scrollable top section: embed + track info */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6">
         {/* Video/Spotify embed placeholder (actual embed positioned fixed over this) */}
         {embedUrl && (
           <div
-            className="w-full mb-6 rounded-lg bg-[rgb(var(--color-border))]/20"
+            className="w-full mb-6 rounded-lg bg-[rgb(var(--color-border))]/20 shrink-0"
             style={{ aspectRatio: isYouTubeEmbed ? '16/9' : '300/82' }}
           />
         )}
 
         {/* Track info */}
-        <div className="mb-6">
+        <div className="mb-6 shrink-0">
           <h2 className="text-2xl font-extrabold text-[rgb(var(--color-text))] mb-2">
             {currentTrack.title}
           </h2>
@@ -134,10 +140,10 @@ export function MobilePlayerOverlay({
             </p>
           )}
         </div>
+      </div>
 
-        {/* Spacer */}
-        <div className="flex-1 min-h-[20px]" />
-
+      {/* Fixed bottom controls section */}
+      <div className="shrink-0 px-6 pb-6">
         {/* Spotify controls message */}
         {controlsDisabled && (
           <div className="mb-4 px-4 py-2 rounded-lg bg-[rgb(var(--color-border))]/30 text-center">
@@ -147,25 +153,36 @@ export function MobilePlayerOverlay({
           </div>
         )}
 
-        {/* Progress bar */}
-        <div className="mb-2 shrink-0">
-          <PlayerProgressBar
-            progressPercent={progressPercent}
-            durationMs={durationMs}
-            playbackPositionMs={playbackPositionMs}
-            isYouTubeEmbed={isYouTubeEmbed}
-            controlsDisabled={controlsDisabled}
-            structureMode={structureMode}
-            barTicks={barTicks}
-            progressBarRef={progressBarRef}
-            onSeek={onSeek}
-            isDraggingRef={isDraggingRef}
-            variant="mobile"
-          />
+        {/* Progress bar — swaps between thin bar and scrollable bar segments */}
+        <div className="mb-2">
+          {showMobileBars ? (
+            <MobileScrollableBarProgress
+              bars={bars}
+              currentBarIndex={currentBarIndex}
+              playbackPositionMs={playbackPositionMs}
+              durationMs={durationMs}
+              onSeekToTime={onSeekToTime}
+              isDraggingRef={isDraggingRef}
+            />
+          ) : (
+            <PlayerProgressBar
+              progressPercent={progressPercent}
+              durationMs={durationMs}
+              playbackPositionMs={playbackPositionMs}
+              isYouTubeEmbed={isYouTubeEmbed}
+              controlsDisabled={controlsDisabled}
+              structureMode={structureMode}
+              barTicks={barTicks}
+              progressBarRef={progressBarRef}
+              onSeek={onSeek}
+              isDraggingRef={isDraggingRef}
+              variant="mobile"
+            />
+          )}
         </div>
 
         {/* Time display */}
-        <div className="flex justify-between text-xs mb-4 text-[rgb(var(--color-text-muted))] font-mono">
+        <div className="flex justify-between text-xs mb-2 text-[rgb(var(--color-text-muted))] font-mono">
           <span>{formatDurationMs(Math.round(playbackPositionMs))}</span>
           <span>{durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}</span>
         </div>

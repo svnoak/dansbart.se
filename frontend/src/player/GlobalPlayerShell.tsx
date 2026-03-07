@@ -130,6 +130,16 @@ export function GlobalPlayerShell() {
       : [];
   const structureButtonLabel = structureMode === 'bars' ? 'Dolj takter' : 'Visa takter';
 
+  const seekToTime = useCallback(
+    (seconds: number) => {
+      if (!isYouTubeEmbed || !ytPlayerRef.current?.seekTo) return;
+      const sec = Math.max(0, seconds);
+      ytPlayerRef.current.seekTo(sec, true);
+      setPlaybackPositionMs(sec * 1000);
+    },
+    [isYouTubeEmbed, ytPlayerRef, setPlaybackPositionMs]
+  );
+
   const handleSeek = (clientX: number) => {
     if (!isYouTubeEmbed || !progressBarRef.current || !ytPlayerRef.current?.seekTo) return;
     const effectiveDurationSec = durationSec || (ytPlayerRef.current.getDuration?.() ?? 0);
@@ -255,6 +265,7 @@ export function GlobalPlayerShell() {
           structureButtonLabel={structureButtonLabel}
           progressBarRef={progressBarRef}
           onSeek={handleSeek}
+          onSeekToTime={seekToTime}
           isDraggingRef={isDraggingRef}
           barTicks={barTicks}
           isShuffled={isShuffled}
@@ -286,9 +297,9 @@ export function GlobalPlayerShell() {
         }`}
         aria-label="Global spelare"
       >
-        {/* Progress bar on top - desktop only */}
+        {/* Progress bar on top - desktop only. Fixed height so bars toggle doesn't shift layout. */}
         <div
-          className="hidden md:block w-full px-4 pt-2"
+          className="hidden md:flex items-end w-full px-4 pt-2 h-12"
           onClick={(e) => e.stopPropagation()}
           role="group"
           aria-label="Uppspelningsposition"
