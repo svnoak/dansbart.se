@@ -372,7 +372,7 @@ export function ClassifyPage() {
             {step === 'style' ? (
               <div className="flex-1 flex flex-col">
                 <h4 className="text-center text-xs font-bold text-[rgb(var(--color-text-muted))] mb-3 uppercase tracking-widest">
-                  Valj Dansstil
+                  Välj Dansstil
                 </h4>
                 <div className="grid grid-cols-3 gap-2">
                   {allStyles.map((style) => (
@@ -558,7 +558,7 @@ export function ClassifyPage() {
                 onClick={skip}
                 className="flex-1 flex items-center justify-center py-3 rounded-lg border-2 border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] font-bold text-xs uppercase tracking-wider hover:bg-[rgb(var(--color-border))]/30 hover:text-[rgb(var(--color-text))] transition-all active:scale-95"
               >
-                Hoppa over
+                Hoppa över
               </button>
             </div>
           </div>
@@ -570,10 +570,10 @@ export function ClassifyPage() {
         <div className="text-center py-12 px-4">
           <div className="bg-[rgb(var(--color-bg-elevated))] rounded-2xl shadow-sm p-8">
             <h3 className="text-lg font-bold text-[rgb(var(--color-text))] mb-2">
-              Kon ar tom!
+              Kön är tom!
             </h3>
             <p className="text-sm text-[rgb(var(--color-text-muted))] mb-6">
-              Du har gatt igenom alla tillgangliga latar.
+              Du har gått igenom alla tillgängliga låtar.
             </p>
             <button
               onClick={triggerSummary}

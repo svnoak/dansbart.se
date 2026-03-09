@@ -44,7 +44,7 @@ export function Layout({ children }: LayoutProps) {
         {/* Desktop right queue sidebar */}
         {queueOpen && (
           <aside
-            className="hidden w-80 shrink-0 border-l border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] lg:flex lg:flex-col"
+            className="hidden w-80 shrink-0 border-l border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] pb-28 lg:flex lg:flex-col"
             aria-label="Uppspelningskö"
           >
             <QueuePanel

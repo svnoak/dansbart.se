@@ -544,7 +544,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                 Vad kan man dansa?
               </p>
               {renderDropdown(
-                correction.main || 'Valj kategori...',
+                correction.main || 'Välj kategori...',
                 mainCategories.map((c) => ({ label: c, value: c })),
                 'bg-purple-700 hover:bg-purple-800',
                 'border-purple-500',
@@ -578,14 +578,14 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                   }}
                   className="text-xs md:text-[10px] text-purple-300 hover:text-white"
                 >
-                  &larr; Andra
+                  &larr; Ändra
                 </button>
               </div>
               {renderDropdown(
-                'Valj variant...',
+                'Välj variant...',
                 [
                   {
-                    label: `Vet ej / Allman ${correction.main}`,
+                    label: `Vet ej / Allmän ${correction.main}`,
                     value: correction.main,
                     bold: true,
                   },
@@ -620,11 +620,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                 </button>
               </div>
               <div className="grid grid-cols-5 gap-2 md:gap-1">
-                {(['Langsamt', 'Lugnt', 'Lagom', 'Snabbt', 'V. snabbt'] as const).map(
+                {(['Långsamt', 'Lugnt', 'Lagom', 'Snabbt', 'V. snabbt'] as const).map(
                   (label) => (
                     <button
                       key={label}
-                      onClick={() => submitTempoSelection(label === 'V. snabbt' ? 'Valdigt snabbt' : label)}
+                      onClick={() => submitTempoSelection(label === 'V. snabbt' ? 'Väldigt snabbt' : label)}
                       className="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded"
                     >
                       {label}
@@ -650,7 +650,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                 {mode === 'addition' ? 'Lagg till stil' : 'Korrekt dansstil'}
               </p>
               {renderDropdown(
-                correction.main || 'Valj kategori...',
+                correction.main || 'Välj kategori...',
                 mainCategories.map((c) => ({ label: c, value: c })),
                 `${colorClasses.btn}`,
                 'border-white/20',
@@ -674,10 +674,10 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                 Vilken typ av {correction.main}?
               </p>
               {renderDropdown(
-                'Valj variant...',
+                'Välj variant...',
                 [
                   {
-                    label: `Vet ej / Allman ${correction.main}`,
+                    label: `Vet ej / Allmän ${correction.main}`,
                     value: correction.main,
                     bold: true,
                   },
@@ -713,22 +713,22 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                   onClick={() => submitFix('half')}
                   className={`${colorClasses.btn} border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors`}
                 >
-                  Den ar <br />
-                  langsammare
+                  Den är <br />
+                  långsammare
                 </button>
                 <button
                   onClick={() => submitFix('ok')}
                   className={`bg-white hover:bg-gray-50 font-bold text-sm md:text-[10px] py-3 md:py-2 rounded ${colorClasses.text}`}
                 >
-                  Ja, det ar
+                  Ja, det är
                   <br />
-                  ratt
+                  rätt
                 </button>
                 <button
                   onClick={() => submitFix('double')}
                   className={`${colorClasses.btn} border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors`}
                 >
-                  Den ar
+                  Den är
                   <br />
                   snabbare
                 </button>
@@ -745,7 +745,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                   onClick={() => setStep('hidden')}
                   className="text-gray-400 hover:text-white text-sm md:text-xs"
                 >
-                  Stang
+                  Stäng
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-3 md:gap-2">
@@ -753,9 +753,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                   onClick={startCorrection}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm md:text-xs font-bold py-3 md:py-2 rounded flex flex-col items-center"
                 >
-                  <span>Ratta Huvudstil</span>
+                  <span>Rätta Huvudstil</span>
                   <span className="text-xs md:text-[9px] opacity-75 font-normal">
-                    Detta ar fel
+                    Detta är fel
                   </span>
                 </button>
                 <button
@@ -764,7 +764,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                 >
                   <span>Lagg till Alt.</span>
                   <span className="text-xs md:text-[9px] opacity-75 font-normal">
-                    Detta ar ocksa...
+                    Detta är också...
                   </span>
                 </button>
               </div>
@@ -788,7 +788,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Tack for hjalpen!
+                Tack för hjälpen!
               </div>
             </div>
           )}
@@ -798,9 +798,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
             <div className="bg-teal-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
                 <p className="font-bold opacity-90">
-                  Tack! Gar det att
+                  Tack! Går det att
                   <br />
-                  dansa nagot annat?
+                  dansa något annat?
                 </p>
               </div>
               <div className="flex gap-3 md:gap-2">
@@ -814,7 +814,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
                   onClick={startAddition}
                   className="bg-white text-teal-700 hover:bg-teal-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
                 >
-                  + Lagg till
+                  + Lägg till
                 </button>
               </div>
             </div>
