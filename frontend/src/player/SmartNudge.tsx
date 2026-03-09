@@ -183,6 +183,16 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
     };
   }, [isPlaying, track, clearTimers]);
 
+  // Dismiss verify nudge after a few seconds when paused
+  useEffect(() => {
+    if (!isPlaying && (step === 'verify' || step === 'verify-style-only')) {
+      const timer = setTimeout(() => {
+        setStep('hidden');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isPlaying, step]);
+
   // Cleanup on unmount
   useEffect(() => clearTimers, [clearTimers]);
 

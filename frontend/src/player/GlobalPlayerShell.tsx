@@ -67,7 +67,6 @@ export function GlobalPlayerShell() {
     setPrevTrackId(currentTrack?.id);
     if (currentTrack) {
       setActiveSource(hasYt ? 'youtube' : hasSpot ? 'spotify' : activeSource);
-      if (embedUrl) setExpanded(true);
     }
   }
 
