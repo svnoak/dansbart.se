@@ -35,7 +35,10 @@ public interface TrackMapper {
     @Mapping(target = "subStyle", source = "track", qualifiedByName = "primarySubStyle")
     @Mapping(target = "effectiveBpm", source = "track", qualifiedByName = "primaryEffectiveBpm")
     @Mapping(target = "confidence", source = "track", qualifiedByName = "primaryConfidence")
+    @Mapping(target = "artistId", source = "track", qualifiedByName = "primaryArtistId")
     @Mapping(target = "artistName", source = "track", qualifiedByName = "primaryArtistName")
+    @Mapping(target = "albumId", source = "track", qualifiedByName = "primaryAlbumId")
+    @Mapping(target = "albumTitle", source = "track", qualifiedByName = "primaryAlbumTitle")
     TrackListDto toListDto(Track track);
 
     List<TrackDto> toDtoList(List<Track> tracks);
@@ -107,6 +110,16 @@ public interface TrackMapper {
                 .orElse(null);
     }
 
+    @Named("primaryArtistId")
+    default java.util.UUID getPrimaryArtistId(Track track) {
+        return track.getArtistLinks().stream()
+                .filter(al -> "primary".equals(al.getRole()))
+                .findFirst()
+                .map(al -> al.getArtist().getId())
+                .orElse(track.getArtistLinks().isEmpty() ? null :
+                        track.getArtistLinks().get(0).getArtist().getId());
+    }
+
     @Named("primaryArtistName")
     default String getPrimaryArtistName(Track track) {
         return track.getArtistLinks().stream()
@@ -115,6 +128,22 @@ public interface TrackMapper {
                 .map(al -> al.getArtist().getName())
                 .orElse(track.getArtistLinks().isEmpty() ? null :
                         track.getArtistLinks().get(0).getArtist().getName());
+    }
+
+    @Named("primaryAlbumId")
+    default java.util.UUID getPrimaryAlbumId(Track track) {
+        if (track.getAlbumLinks().isEmpty()) {
+            return null;
+        }
+        return track.getAlbumLinks().get(0).getAlbum().getId();
+    }
+
+    @Named("primaryAlbumTitle")
+    default String getPrimaryAlbumTitle(Track track) {
+        if (track.getAlbumLinks().isEmpty()) {
+            return null;
+        }
+        return track.getAlbumLinks().get(0).getAlbum().getTitle();
     }
 
     @Named("primaryAlbum")

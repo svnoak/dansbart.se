@@ -30,8 +30,13 @@ public class TrackListDto {
     private Float confidence;
     private Boolean hasVocals;
 
-    // Primary artist name (flattened)
+    // Primary artist (flattened)
+    private UUID artistId;
     private String artistName;
+
+    // Primary album (flattened)
+    private UUID albumId;
+    private String albumTitle;
 
     // All working playback links (Spotify, YouTube, etc.) so UI can show both
     private List<PlaybackLinkDto> playbackLinks;

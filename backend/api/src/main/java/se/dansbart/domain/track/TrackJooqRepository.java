@@ -146,8 +146,9 @@ public class TrackJooqRepository {
                         .deepLink(r.get(PLAYBACK_LINKS.DEEP_LINK))
                         .build());
             });
+        Map<UUID, UUID> artistIdByTrack = new LinkedHashMap<>();
         Map<UUID, String> artistNameByTrack = new LinkedHashMap<>();
-        dsl.select(TRACK_ARTISTS.TRACK_ID, ARTISTS.NAME)
+        dsl.select(TRACK_ARTISTS.TRACK_ID, ARTISTS.ID, ARTISTS.NAME)
             .from(TRACK_ARTISTS)
             .join(ARTISTS).on(TRACK_ARTISTS.ARTIST_ID.eq(ARTISTS.ID))
             .where(TRACK_ARTISTS.TRACK_ID.in(trackIds))
@@ -155,7 +156,21 @@ public class TrackJooqRepository {
             .forEach(r -> {
                 UUID tid = r.get(TRACK_ARTISTS.TRACK_ID);
                 if (!artistNameByTrack.containsKey(tid)) {
+                    artistIdByTrack.put(tid, r.get(ARTISTS.ID));
                     artistNameByTrack.put(tid, r.get(ARTISTS.NAME));
+                }
+            });
+        Map<UUID, UUID> albumIdByTrack = new LinkedHashMap<>();
+        Map<UUID, String> albumTitleByTrack = new LinkedHashMap<>();
+        dsl.select(TRACK_ALBUMS.TRACK_ID, ALBUMS.ID, ALBUMS.TITLE)
+            .from(TRACK_ALBUMS)
+            .join(ALBUMS).on(TRACK_ALBUMS.ALBUM_ID.eq(ALBUMS.ID))
+            .where(TRACK_ALBUMS.TRACK_ID.in(trackIds))
+            .forEach(r -> {
+                UUID tid = r.get(TRACK_ALBUMS.TRACK_ID);
+                if (!albumIdByTrack.containsKey(tid)) {
+                    albumIdByTrack.put(tid, r.get(ALBUMS.ID));
+                    albumTitleByTrack.put(tid, r.get(ALBUMS.TITLE));
                 }
             });
         for (UUID id : trackIds) {
@@ -173,7 +188,10 @@ public class TrackJooqRepository {
             if (links != null && !links.isEmpty()) {
                 dto.setPlaybackLinks(links);
             }
+            dto.setArtistId(artistIdByTrack.get(id));
             dto.setArtistName(artistNameByTrack.get(id));
+            dto.setAlbumId(albumIdByTrack.get(id));
+            dto.setAlbumTitle(albumTitleByTrack.get(id));
         }
         List<TrackListDto> ordered = new ArrayList<>();
         for (UUID id : trackIds) {

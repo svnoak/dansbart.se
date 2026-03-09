@@ -17,6 +17,9 @@ export interface TrackListDto {
   tempoCategory?: string;
   confidence?: number;
   hasVocals?: boolean;
+  artistId?: string;
   artistName?: string;
+  albumId?: string;
+  albumTitle?: string;
   playbackLinks?: PlaybackLinkDto[];
 }

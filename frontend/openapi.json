@@ -4642,7 +4642,10 @@
           "tempoCategory": { "type": "string" },
           "confidence": { "type": "number", "format": "float" },
           "hasVocals": { "type": "boolean" },
+          "artistId": { "type": "string", "format": "uuid" },
           "artistName": { "type": "string" },
+          "albumId": { "type": "string", "format": "uuid" },
+          "albumTitle": { "type": "string" },
           "playbackLinks": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }

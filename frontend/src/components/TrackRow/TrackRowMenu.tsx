@@ -72,15 +72,27 @@ export function TrackRowMenu({
                 Dela
               </button>
             </li>
-            {track.id && (
+            {track.artistId && (
               <li role="none">
                 <Link
-                  to={`/track/${track.id}`}
+                  to={`/artist/${track.artistId}`}
                   role="menuitem"
                   className="block w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
                   onClick={onClose}
                 >
-                  Gå till låt
+                  Gå till artist
+                </Link>
+              </li>
+            )}
+            {track.albumId && (
+              <li role="none">
+                <Link
+                  to={`/album/${track.albumId}`}
+                  role="menuitem"
+                  className="block w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
+                  onClick={onClose}
+                >
+                  Gå till album
                 </Link>
               </li>
             )}
