@@ -57,6 +57,30 @@ export function PlayerProgressBar({
     return closestDistance <= SNAP_THRESHOLD_PX ? closestTickX : clientX;
   };
 
+  const getHoveredBarIndex = (clientX: number): number | null => {
+    if (!progressBarRef.current || barTicks.length === 0) return null;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const pct = ((clientX - rect.left) / rect.width) * 100;
+    let closestIdx = 0;
+    let closestDist = Infinity;
+    for (let i = 0; i < barTicks.length; i++) {
+      const dist = Math.abs(barTicks[i].left - pct);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIdx = i;
+      }
+    }
+    return closestIdx;
+  };
+
+  const updateBarTooltip = (clientX: number) => {
+    if (structureMode !== 'bars' || barTicks.length === 0 || !progressBarRef.current) return;
+    const idx = getHoveredBarIndex(clientX);
+    setHoveredBar(idx);
+    const rect = progressBarRef.current.getBoundingClientRect();
+    setHoverX(clientX - rect.left);
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     if (!seekable) return;
@@ -67,7 +91,11 @@ export function PlayerProgressBar({
     const pointerId = e.pointerId;
     target.setPointerCapture(pointerId);
     onSeek(getMagneticX(e.clientX));
-    const onMove = (moveEvent: PointerEvent) => onSeek(getMagneticX(moveEvent.clientX));
+    updateBarTooltip(e.clientX);
+    const onMove = (moveEvent: PointerEvent) => {
+      onSeek(getMagneticX(moveEvent.clientX));
+      updateBarTooltip(moveEvent.clientX);
+    };
     const onUp = () => {
       isDraggingRef.current = false;
       setIsDragging(false);
@@ -94,30 +122,8 @@ export function PlayerProgressBar({
     'aria-valuetext': `${formatDurationMs(Math.round(playbackPositionMs))} av ${durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}`,
   };
 
-  const getHoveredBarIndex = (clientX: number): number | null => {
-    if (!progressBarRef.current || barTicks.length === 0) return null;
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const pct = ((clientX - rect.left) / rect.width) * 100;
-    // Find the bar whose tick is closest
-    let closestIdx = 0;
-    let closestDist = Infinity;
-    for (let i = 0; i < barTicks.length; i++) {
-      const dist = Math.abs(barTicks[i].left - pct);
-      if (dist < closestDist) {
-        closestDist = dist;
-        closestIdx = i;
-      }
-    }
-    return closestIdx;
-  };
-
   const handleBarMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const idx = getHoveredBarIndex(e.clientX);
-    setHoveredBar(idx);
-    if (progressBarRef.current) {
-      const rect = progressBarRef.current.getBoundingClientRect();
-      setHoverX(e.clientX - rect.left);
-    }
+    updateBarTooltip(e.clientX);
   };
 
   const handleBarMouseLeave = () => {
@@ -126,8 +132,7 @@ export function PlayerProgressBar({
 
   // Desktop bars mode: continuous bar with tick overlays + numbered labels + hover tooltip
   if (structureMode === 'bars' && barTicks.length > 0 && variant === 'desktop') {
-    const shouldShowLabel = (i: number) => {
-      const barNum = i + 1;
+    const shouldShowLabel = (barNum: number) => {
       return barNum === 1 || barNum % 4 === 0;
     };
 
@@ -135,17 +140,25 @@ export function PlayerProgressBar({
       <div className="relative w-full h-8 flex flex-col justify-end">
         {/* Bar number labels */}
         <div className="absolute top-0 left-0 right-0 h-4 pointer-events-none select-none">
-          {barTicks.map((tick, i) =>
-            shouldShowLabel(i) ? (
+          {/* Bar 1 is always at the very start */}
+          <span
+            className="absolute text-[10px] font-mono text-[rgb(var(--color-text-muted))]/60"
+            style={{ left: '0%' }}
+          >
+            1
+          </span>
+          {barTicks.map((tick, i) => {
+            const barNum = i + 2;
+            return shouldShowLabel(barNum) ? (
               <span
                 key={i}
                 className="absolute text-[10px] font-mono text-[rgb(var(--color-text-muted))]/60 -translate-x-1/2"
                 style={{ left: `${tick.left}%` }}
               >
-                {i + 1}
+                {barNum}
               </span>
-            ) : null,
-          )}
+            ) : null;
+          })}
         </div>
 
         {/* Progress bar area */}
@@ -157,7 +170,7 @@ export function PlayerProgressBar({
         >
           {/* Filled progress */}
           <div
-            className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))]/40 pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
+            className={`absolute inset-y-0 left-0 rounded-l-full bg-[rgb(var(--color-accent))]/40 pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
             style={{ width: `${progressPercent}%` }}
           />
 
@@ -170,21 +183,19 @@ export function PlayerProgressBar({
             />
           ))}
 
-          {/* Playhead dot */}
+          {/* Playhead line */}
           <div
-            className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 pointer-events-none${!isDragging ? ' transition-[left] duration-200 ease-linear' : ''}`}
+            className={`absolute top-0 bottom-0 w-0.5 -translate-x-1/2 z-10 pointer-events-none bg-[rgb(var(--color-accent))] shadow${!isDragging ? ' transition-[left] duration-200 ease-linear' : ''}`}
             style={{ left: `${progressPercent}%` }}
-          >
-            <div className="h-3.5 w-3.5 bg-[rgb(var(--color-accent))] rounded-full shadow" />
-          </div>
+          />
 
           {/* Hover tooltip */}
           {hoveredBar !== null && (
             <div
-              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-secondary))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text-primary))] shadow whitespace-nowrap"
+              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text-primary))] shadow whitespace-nowrap"
               style={{ left: `${hoverX}px` }}
             >
-              Takt {hoveredBar + 1}
+              Takt {hoveredBar + 2}
             </div>
           )}
         </div>
@@ -260,7 +271,7 @@ export function PlayerProgressBar({
       </div>
       {hoverTime !== null && (
         <div
-          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-secondary))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text-primary))] shadow whitespace-nowrap"
+          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text-primary))] shadow whitespace-nowrap"
           style={{ left: `${hoverX}px` }}
         >
           {formatDurationMs(hoverTime)}
