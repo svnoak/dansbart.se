@@ -120,7 +120,7 @@ export function MobilePlayerOverlay({
         {/* Video/Spotify embed placeholder (actual embed positioned fixed over this) */}
         {embedUrl && (
           <div
-            className="w-full mb-6 rounded-lg bg-[rgb(var(--color-border))]/20 shrink-0"
+            className="w-full mb-2 rounded-lg bg-[rgb(var(--color-border))]/20 shrink-0"
             style={{ aspectRatio: isYouTubeEmbed ? '16/9' : '300/82' }}
           />
         )}

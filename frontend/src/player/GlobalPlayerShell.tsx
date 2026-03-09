@@ -203,7 +203,7 @@ export function GlobalPlayerShell() {
   const hasBarsDesktop = structureMode === 'bars' && barTicks.length > 0;
   const desktopBarHeight = (hasBarsDesktop ? 48 : 24) + 80 + 1;
   const mobileBarHeight = 4 + 80 + 1;
-  const OVERLAY_GAP = 16;
+  const OVERLAY_GAP = 18;
   const desktopBottomOffset = desktopBarHeight + OVERLAY_GAP;
   const mobileBottomOffset = mobileBarHeight + OVERLAY_GAP;
 
@@ -214,7 +214,7 @@ export function GlobalPlayerShell() {
     if (isMobile && expanded) {
       return {
         position: 'fixed',
-        top: '120px',
+        top: '108px',
         left: '1.5rem',
         right: '1.5rem',
         width: 'auto',
