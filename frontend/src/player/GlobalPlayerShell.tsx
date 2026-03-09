@@ -235,7 +235,7 @@ export function GlobalPlayerShell() {
 
   return (
     <>
-      {embedUrl && (isYouTubeEmbed || !isMobile || expanded) && (isMobile || isPlaying) && (
+      {embedUrl && (isYouTubeEmbed || !isMobile || expanded) && (isYouTubeEmbed || isMobile || isPlaying) && (
         <EmbedContainer
           embedUrl={embedUrl}
           isYouTubeEmbed={isYouTubeEmbed}
