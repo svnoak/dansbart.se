@@ -3,7 +3,9 @@ import {
   PlayIcon,
   PauseIcon,
   ShuffleIcon,
+  ShuffleOffIcon,
   RepeatIcon,
+  StopAfterIcon,
   SkipPreviousIcon,
   SkipNextIcon,
   JumpBackIcon,
@@ -14,7 +16,7 @@ import {
 interface PlayerControlsProps {
   isShuffled: boolean;
   onToggleShuffle: () => void;
-  repeatMode: 'none' | 'one' | 'all';
+  repeatMode: 'none' | 'one' | 'all' | 'stop';
   onCycleRepeat: () => void;
   isPlaying: boolean;
   onTogglePlayPause: () => void;
@@ -69,7 +71,11 @@ export function PlayerControls({
               : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
           }`}
         >
-          <ShuffleIcon className="w-6 h-6" />
+          {isShuffled ? (
+            <ShuffleIcon className="w-6 h-6" />
+          ) : (
+            <ShuffleOffIcon className="w-6 h-6" />
+          )}
         </IconButton>
 
         <button
@@ -131,7 +137,9 @@ export function PlayerControls({
               ? 'Repetera en låt'
               : repeatMode === 'all'
                 ? 'Repetera alla'
-                : 'Repetera av'
+                : repeatMode === 'stop'
+                  ? 'Stoppa efter spåret'
+                  : 'Repetera av'
           }
           aria-pressed={repeatMode !== 'none'}
           onClick={() => onCycleRepeat()}
@@ -141,7 +149,11 @@ export function PlayerControls({
               : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
           }`}
         >
-          <RepeatIcon className="w-6 h-6" />
+          {repeatMode === 'stop' ? (
+            <StopAfterIcon className="w-6 h-6" />
+          ) : (
+            <RepeatIcon className="w-6 h-6" />
+          )}
           {repeatMode === 'one' && (
             <span
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-[rgb(var(--color-accent))]"
@@ -176,7 +188,11 @@ export function PlayerControls({
           onClick={() => onToggleShuffle()}
           className={`relative w-8 h-8 items-center justify-center transition-colors hidden md:flex ${isShuffled ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
         >
-          <ShuffleIcon className="w-5 h-5" />
+          {isShuffled ? (
+            <ShuffleIcon className="w-5 h-5" />
+          ) : (
+            <ShuffleOffIcon className="w-5 h-5" />
+          )}
         </button>
 
         <button
@@ -297,14 +313,20 @@ export function PlayerControls({
               ? 'Repetera en låt, klicka för att stoppa efter spår'
               : repeatMode === 'all'
                 ? 'Repetera alla, klicka för att repetera en'
-                : 'Repetera av, klicka för att repetera alla'
+                : repeatMode === 'stop'
+                  ? 'Stoppa efter spåret, klicka för att stänga av'
+                  : 'Repetera av, klicka för att repetera alla'
           }
           aria-pressed={repeatMode !== 'none'}
           onClick={() => onCycleRepeat()}
           title="Repeat"
           className={`relative w-8 h-8 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${repeatMode !== 'none' ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
         >
-          <RepeatIcon className="w-5 h-5" />
+          {repeatMode === 'stop' ? (
+            <StopAfterIcon className="w-5 h-5" />
+          ) : (
+            <RepeatIcon className="w-5 h-5" />
+          )}
           {repeatMode === 'one' && (
             <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-[rgb(var(--color-accent))]" aria-hidden>
               1

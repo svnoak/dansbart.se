@@ -401,7 +401,7 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
       </button>
       {dropdownOpen && (
         <div
-          className={`absolute z-[200] w-full mt-1 bg-white rounded-lg shadow-xl border ${dropdownBorder} max-h-48 overflow-y-auto`}
+          className={`absolute z-[200] w-full bottom-full mb-1 bg-white rounded-lg shadow-xl border ${dropdownBorder} max-h-60 overflow-y-auto`}
         >
           {items.map((item) => (
             <button
@@ -428,7 +428,7 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
 
   return (
     <div className="fixed right-0 bottom-24 md:bottom-36 z-[130] px-4 pointer-events-none">
-      <div className="max-w-2xl ml-auto pointer-events-auto">
+      <div className="max-w-2xl min-w-[320px] md:min-w-[360px] ml-auto pointer-events-auto">
         <div className="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans animate-in fade-in duration-200">
           {/* VERIFY: style + tempo */}
           {step === 'verify' && (

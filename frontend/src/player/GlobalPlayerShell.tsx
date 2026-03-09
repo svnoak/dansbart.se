@@ -44,7 +44,7 @@ export function GlobalPlayerShell() {
 
   const [expanded, setExpanded] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all'>('none');
+  const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all' | 'stop'>('none');
   const [activeSource, setActiveSource] = useState<PlaybackSource>('youtube');
   const [structureMode, setStructureMode] = useState<'none' | 'bars'>('none');
 
@@ -273,7 +273,7 @@ export function GlobalPlayerShell() {
           isShuffled={isShuffled}
           onToggleShuffle={() => setIsShuffled((s) => !s)}
           repeatMode={repeatMode}
-          onCycleRepeat={() => setRepeatMode((m) => (m === 'none' ? 'all' : m === 'all' ? 'one' : 'none'))}
+          onCycleRepeat={() => setRepeatMode((m) => (m === 'none' ? 'all' : m === 'all' ? 'one' : m === 'one' ? 'stop' : 'none'))}
           isPlaying={isPlaying}
           onTogglePlayPause={togglePlayPause}
           onPrev={prev}
@@ -366,7 +366,7 @@ export function GlobalPlayerShell() {
             isShuffled={isShuffled}
             onToggleShuffle={() => setIsShuffled((s) => !s)}
             repeatMode={repeatMode}
-            onCycleRepeat={() => setRepeatMode((m) => (m === 'none' ? 'all' : m === 'all' ? 'one' : 'none'))}
+            onCycleRepeat={() => setRepeatMode((m) => (m === 'none' ? 'all' : m === 'all' ? 'one' : m === 'one' ? 'stop' : 'none'))}
             isPlaying={isPlaying}
             onTogglePlayPause={togglePlayPause}
             controlsDisabled={controlsDisabled}

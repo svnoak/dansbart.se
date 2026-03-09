@@ -34,7 +34,7 @@ interface MobilePlayerOverlayProps {
   barTicks: { left: number }[];
   isShuffled: boolean;
   onToggleShuffle: () => void;
-  repeatMode: 'none' | 'one' | 'all';
+  repeatMode: 'none' | 'one' | 'all' | 'stop';
   onCycleRepeat: () => void;
   isPlaying: boolean;
   onTogglePlayPause: () => void;
