@@ -239,13 +239,19 @@ export function MobilePlayerOverlay({
         </div>
       </div>
 
-      {/* Queue slide-over panel */}
+      {/* Queue slide-up panel */}
       <div
-        className={`absolute inset-0 bg-[rgb(var(--color-bg))] z-10 flex flex-col transition-transform duration-300 ease-in-out ${
-          mobileQueueOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`absolute inset-x-0 bottom-0 bg-[rgb(var(--color-bg))] z-10 flex flex-col transition-transform duration-300 ease-in-out ${
+          mobileQueueOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
+        style={{
+          top:
+            isYouTubeEmbed && embedUrl
+              ? 'calc(108px + (100vw - 3rem) * 9 / 16 + 0.5rem)'
+              : 0,
+        }}
       >
-        <div className="px-6 pt-12 pb-4 shrink-0">
+        <div className="px-6 pt-4 pb-4 flex-1 min-h-0">
           <QueuePanel
             queue={queue}
             currentTrack={currentTrack}
