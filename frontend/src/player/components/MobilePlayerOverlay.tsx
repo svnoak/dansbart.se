@@ -4,6 +4,7 @@ import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { PlaybackSource } from '@/player/embedUrl';
 import { useCurrentBarIndex } from '@/player/hooks/useCurrentBarIndex';
+import { SmartNudge } from '@/player/SmartNudge';
 import { SourceSwitcher } from './SourceSwitcher';
 import { PlayerProgressBar } from './PlayerProgressBar';
 import { MobileScrollableBarProgress } from './MobileScrollableBarProgress';
@@ -140,6 +141,9 @@ export function MobilePlayerOverlay({
             </p>
           )}
         </div>
+
+        {/* Inline SmartNudge */}
+        <SmartNudge track={currentTrack} isPlaying={isPlaying} inline />
       </div>
 
       {/* Fixed bottom controls section */}

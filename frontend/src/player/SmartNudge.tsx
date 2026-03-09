@@ -35,6 +35,7 @@ interface SmartNudgeProps {
   track: TrackListDto | null;
   isPlaying: boolean;
   bottomOffset?: number;
+  inline?: boolean;
 }
 
 function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<string, unknown>) {
@@ -45,7 +46,7 @@ function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<
   }).catch(() => {});
 }
 
-export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) {
+export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudgeProps) {
   const [step, setStep] = useState<Step>('hidden');
   const [mode, setMode] = useState<Mode>('correction');
   const [correction, setCorrection] = useState({ main: '', style: '', tempo: 'ok' });
@@ -438,8 +439,8 @@ export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) 
   if (step === 'hidden') return null;
 
   return (
-    <div className="fixed right-0 z-[130] px-4 pointer-events-none" style={{ bottom: `${bottomOffset ?? 96}px` }}>
-      <div className="max-w-2xl min-w-[320px] md:min-w-[360px] ml-auto pointer-events-auto">
+    <div className={inline ? 'w-full' : 'fixed right-0 z-[130] px-4 pointer-events-none'} style={inline ? undefined : { bottom: `${bottomOffset ?? 96}px` }}>
+      <div className={inline ? 'w-full' : 'max-w-2xl min-w-[320px] md:min-w-[360px] ml-auto pointer-events-auto'}>
         <div className="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans animate-in fade-in duration-200">
           {/* VERIFY: style + tempo */}
           {step === 'verify' && (
