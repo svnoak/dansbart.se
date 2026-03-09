@@ -34,6 +34,7 @@ type StyleTree = Record<string, string[]>;
 interface SmartNudgeProps {
   track: TrackListDto | null;
   isPlaying: boolean;
+  bottomOffset?: number;
 }
 
 function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<string, unknown>) {
@@ -44,7 +45,7 @@ function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<
   }).catch(() => {});
 }
 
-export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
+export function SmartNudge({ track, isPlaying, bottomOffset }: SmartNudgeProps) {
   const [step, setStep] = useState<Step>('hidden');
   const [mode, setMode] = useState<Mode>('correction');
   const [correction, setCorrection] = useState({ main: '', style: '', tempo: 'ok' });
@@ -437,7 +438,7 @@ export function SmartNudge({ track, isPlaying }: SmartNudgeProps) {
   if (step === 'hidden') return null;
 
   return (
-    <div className="fixed right-0 bottom-24 md:bottom-36 z-[130] px-4 pointer-events-none">
+    <div className="fixed right-0 z-[130] px-4 pointer-events-none" style={{ bottom: `${bottomOffset ?? 96}px` }}>
       <div className="max-w-2xl min-w-[320px] md:min-w-[360px] ml-auto pointer-events-auto">
         <div className="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans animate-in fade-in duration-200">
           {/* VERIFY: style + tempo */}

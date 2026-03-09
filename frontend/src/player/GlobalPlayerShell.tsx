@@ -197,6 +197,16 @@ export function GlobalPlayerShell() {
 
   const toggleStructureMode = () => setStructureMode((m) => (m === 'none' ? 'bars' : 'none'));
 
+  // Compute player bar height so overlays can position relative to it.
+  // Desktop: progress area (h-12=48px with bars, h-6=24px without) + main row (h-20=80px) + border 1px
+  // Mobile (collapsed): thin strip (h-1=4px) + main row (h-20=80px) + border 1px
+  const hasBarsDesktop = structureMode === 'bars' && barTicks.length > 0;
+  const desktopBarHeight = (hasBarsDesktop ? 48 : 24) + 80 + 1;
+  const mobileBarHeight = 4 + 80 + 1;
+  const OVERLAY_GAP = 16;
+  const desktopBottomOffset = desktopBarHeight + OVERLAY_GAP;
+  const mobileBottomOffset = mobileBarHeight + OVERLAY_GAP;
+
   // Match Vue: only render player when there is a current track
   if (!currentTrack) return null;
 
@@ -215,7 +225,7 @@ export function GlobalPlayerShell() {
     } else if (!isMobile) {
       return {
         position: 'fixed',
-        bottom: '144px',
+        bottom: `${desktopBottomOffset}px`,
         left: '16px',
         width: isYouTubeEmbed ? '400px' : '320px',
         height: isYouTubeEmbed ? '225px' : '82px',
@@ -224,7 +234,7 @@ export function GlobalPlayerShell() {
     } else {
       return {
         position: 'fixed',
-        bottom: '96px',
+        bottom: `${mobileBottomOffset}px`,
         right: '16px',
         width: isYouTubeEmbed ? '160px' : '300px',
         height: isYouTubeEmbed ? '90px' : '82px',
@@ -290,7 +300,7 @@ export function GlobalPlayerShell() {
       )}
 
       {!(expanded && isMobile) && location.pathname !== '/classify' && (
-        <SmartNudge track={currentTrack} isPlaying={isPlaying} />
+        <SmartNudge track={currentTrack} isPlaying={isPlaying} bottomOffset={isMobile ? mobileBottomOffset : desktopBottomOffset} />
       )}
 
       {/* Fixed bottom bar: progress on top, then 3-column row */}
@@ -302,7 +312,7 @@ export function GlobalPlayerShell() {
       >
         {/* Progress bar on top - desktop only. Fixed height so bars toggle doesn't shift layout. */}
         <div
-          className="hidden md:flex items-end w-full px-4 pt-2 h-12"
+          className={`hidden md:flex items-end w-full px-4 pt-2 ${structureMode === 'bars' && barTicks.length > 0 ? 'h-12' : 'h-6'}`}
           onClick={(e) => e.stopPropagation()}
           role="group"
           aria-label="Uppspelningsposition"
