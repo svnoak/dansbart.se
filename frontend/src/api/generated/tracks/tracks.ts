@@ -23,6 +23,7 @@ import type {
   SubmitStructureProposal200,
   SubmitStructureProposalParams,
   Track,
+  TrackListDto,
   TrackStructureVersion,
   TrackStyleVote,
   UnflagTrack200
@@ -283,9 +284,9 @@ export const getGetTrackUrl = (id: string,) => {
   return `/api/tracks/${id}`
 }
 
-export const getTrack = async (id: string, options?: RequestInit): Promise<Track> => {
+export const getTrack = async (id: string, options?: RequestInit): Promise<TrackListDto> => {
   
-  return customFetch<Track>(getGetTrackUrl(id),
+  return customFetch<TrackListDto>(getGetTrackUrl(id),
   {      
     ...options,
     method: 'GET'

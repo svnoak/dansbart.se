@@ -26,6 +26,12 @@ public class TrackService {
         return trackJooqRepository.findById(id);
     }
 
+    /** Find a single track as TrackListDto (includes danceStyle, subStyle, playback, artist). */
+    public Optional<TrackListDto> findByIdAsListDto(UUID id) {
+        List<TrackListDto> results = trackJooqRepository.findTrackListDtosByIds(List.of(id));
+        return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+    }
+
     public Page<Track> findPlayableTracks(
             String mainStyle,
             String subStyle,

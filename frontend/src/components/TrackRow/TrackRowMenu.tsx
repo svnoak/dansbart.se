@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { IconButton } from '@/ui';
+import { IconButton, toast } from '@/ui';
 import { MoreVerticalIcon } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
 
@@ -54,17 +54,13 @@ export function TrackRowMenu({
                 type="button"
                 role="menuitem"
                 className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                onClick={() => {
-                  if (navigator.share && track.title) {
-                    navigator.share({
-                      title: track.title,
-                      text: `${track.title} – ${track.artistName ?? ''}`,
-                      url: window.location.origin + `/track/${track.id ?? ''}`,
-                    });
-                  } else {
-                    navigator.clipboard?.writeText(
-                      window.location.origin + `/track/${track.id ?? ''}`,
-                    );
+                onClick={async () => {
+                  const url = `${window.location.origin}?track=${track.id ?? ''}`;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    toast('Länk kopierad');
+                  } catch {
+                    toast('Kunde inte kopiera länk', 'error');
                   }
                   onClose();
                 }}

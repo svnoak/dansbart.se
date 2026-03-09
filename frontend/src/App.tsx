@@ -13,7 +13,6 @@ import { HomePage } from '@/pages/HomePage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 import { SearchPage } from '@/pages/SearchPage';
 import { TermsPage } from '@/pages/TermsPage';
-import { TrackPage } from '@/pages/TrackPage';
 import { ArtistsPage } from '@/pages/ArtistsPage';
 import { AlbumsPage } from '@/pages/AlbumsPage';
 
@@ -53,7 +52,6 @@ export function App() {
                         <Route path="/albums" element={<AlbumsPage />} />
                         <Route path="/artist/:id" element={<ArtistPage />} />
                         <Route path="/album/:id" element={<AlbumPage />} />
-                        <Route path="/track/:id" element={<TrackPage />} />
                         <Route path="/about" element={<AboutPage />} />
                         <Route path="/terms" element={<TermsPage />} />
                         <Route path="/privacy" element={<PrivacyPage />} />

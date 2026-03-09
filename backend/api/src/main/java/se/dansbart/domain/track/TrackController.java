@@ -59,8 +59,8 @@ public class TrackController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get track by ID")
-    public ResponseEntity<Track> getTrack(@PathVariable UUID id) {
-        return trackService.findById(id)
+    public ResponseEntity<TrackListDto> getTrack(@PathVariable UUID id) {
+        return trackService.findByIdAsListDto(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }

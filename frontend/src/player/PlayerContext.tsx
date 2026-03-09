@@ -18,6 +18,7 @@ interface PlayerState {
 
 export interface PlayerContextValue extends PlayerState {
   play: (track: TrackListDto, contextTracks?: TrackListDto[]) => void;
+  loadTrack: (track: TrackListDto) => void;
   playFromQueue: (index: number) => void;
   togglePlayPause: () => void;
   addToQueue: (track: TrackListDto) => void;
@@ -94,6 +95,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     },
     [consentStatus]
+  );
+
+  const loadTrack = useCallback(
+    (track: TrackListDto) => {
+      setState((prev) => ({
+        ...prev,
+        currentTrack: track,
+        isPlaying: false,
+      }));
+    },
+    []
   );
 
   const playFromQueue = useCallback(
@@ -202,6 +214,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       play,
+      loadTrack,
       playFromQueue,
       togglePlayPause,
       addToQueue,
@@ -217,6 +230,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [
       state,
       play,
+      loadTrack,
       playFromQueue,
       togglePlayPause,
       addToQueue,

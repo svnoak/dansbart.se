@@ -4,6 +4,8 @@ import { Sidebar } from '@/layout/Sidebar';
 import { GlobalPlayerShell } from '@/player/GlobalPlayerShell';
 import { QueuePanel } from '@/player/components/QueuePanel';
 import { usePlayer } from '@/player/usePlayer';
+import { useTrackFromUrl } from '@/player/useTrackFromUrl';
+import { ToastContainer } from '@/ui';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +15,7 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { queue, currentTrack, queueOpen, closeQueue, playFromQueue, removeFromQueue, clearQueue, reorderQueue } =
     usePlayer();
+  useTrackFromUrl();
 
   return (
     <div className="flex h-screen flex-col bg-[rgb(var(--color-bg))]">
@@ -60,6 +63,7 @@ export function Layout({ children }: LayoutProps) {
         )}
       </div>
       <GlobalPlayerShell />
+      <ToastContainer />
     </div>
   );
 }

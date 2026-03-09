@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, IconButton } from '@/ui';
+import { Card, IconButton, toast } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import {
   PauseIcon,
@@ -227,17 +227,13 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                     type="button"
                     role="menuitem"
                     className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                    onClick={() => {
-                      if (navigator.share && track.title) {
-                        navigator.share({
-                          title: track.title,
-                          text: `${track.title} – ${track.artistName ?? ''}`,
-                          url: window.location.origin + `/track/${track.id ?? ''}`,
-                        });
-                      } else {
-                        navigator.clipboard?.writeText(
-                          window.location.origin + `/track/${track.id ?? ''}`
-                        );
+                    onClick={async () => {
+                      const url = `${window.location.origin}?track=${track.id ?? ''}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast('Länk kopierad');
+                      } catch {
+                        toast('Kunde inte kopiera länk', 'error');
                       }
                       setMenuOpen(false);
                     }}

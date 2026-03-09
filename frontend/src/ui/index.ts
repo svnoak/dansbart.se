@@ -6,3 +6,5 @@ export { IconButton } from './IconButton';
 export { Pill } from './Pill';
 export { SectionTitle } from './SectionTitle';
 export { AvatarPlaceholder } from './AvatarPlaceholder';
+export { ToastContainer } from './ToastContainer';
+export { toast } from './toastEmitter';
