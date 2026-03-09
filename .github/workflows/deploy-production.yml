@@ -21,7 +21,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [frontend, backend]
+        service: [frontend, api]
 
     steps:
       - name: Checkout code
@@ -54,8 +54,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service == 'backend' && './backend/api' || './frontend' }}
-          file: ${{ matrix.service == 'backend' && './backend/api/Dockerfile' || './frontend/Dockerfile' }}
+          context: ${{ matrix.service == 'api' && './backend/api' || './frontend' }}
+          file: ${{ matrix.service == 'api' && './backend/api/Dockerfile' || './frontend/Dockerfile' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -63,8 +63,8 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache,mode=max
           platforms: linux/amd64
 
-  # Light Worker only - Audio Worker is built and deployed from its own AGPL repo
-  build-and-push-light-worker:
+  # Feature Worker only - Audio Worker is built and deployed from its own AGPL repo
+  build-and-push-feature-worker:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     permissions:
@@ -93,13 +93,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker
           tags: |
             type=raw,value=production
             type=raw,value=latest
             type=raw,value=${{ steps.version.outputs.tag }}
 
-      - name: Build and push light-worker image
+      - name: Build and push feature-worker image
         uses: docker/build-push-action@v5
         with:
           context: ./backend/workers/feature
@@ -107,12 +107,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:buildcache,mode=max
           platforms: linux/amd64
 
   deploy:
-    needs: [build-and-push, build-and-push-light-worker]
+    needs: [build-and-push, build-and-push-feature-worker]
     runs-on: ubuntu-latest
 
     steps:
@@ -122,8 +122,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Images:**" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:production\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:production\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Light Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-light-worker:production\`" >> $GITHUB_STEP_SUMMARY
+          echo "- API: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api:production\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Feature Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:production\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Note:** Audio Worker is built separately from [dansbart-audio-worker](https://github.com/${{ github.repository_owner }}/dansbart-audio-worker) (AGPL-3.0)" >> $GITHUB_STEP_SUMMARY
 
