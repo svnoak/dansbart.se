@@ -129,7 +129,7 @@ export function GlobalPlayerShell() {
     structureMode === 'bars' && durationSec > 0
       ? bars.map((time) => ({ left: (time / durationSec) * 100 })).filter((b) => b.left <= 100)
       : [];
-  const structureButtonLabel = structureMode === 'bars' ? 'Dolj takter' : 'Visa takter';
+  const structureButtonLabel = structureMode === 'bars' ? 'Dölj takter' : 'Visa takter';
 
   const seekToTime = useCallback(
     (seconds: number) => {

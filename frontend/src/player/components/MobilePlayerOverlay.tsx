@@ -186,23 +186,6 @@ export function MobilePlayerOverlay({
           <span>{durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}</span>
         </div>
 
-        {/* Structure mode toggle */}
-        {bars.length > 0 && (
-          <div className="flex items-center justify-center mb-4">
-            <button
-              type="button"
-              onClick={() => onToggleStructureMode()}
-              className={`text-xs font-bold uppercase border px-3 py-1 rounded transition-colors ${
-                structureMode !== 'none'
-                  ? 'bg-[rgb(var(--color-accent))]/10 text-[rgb(var(--color-accent))] border-[rgb(var(--color-accent))]/30'
-                  : 'bg-transparent text-[rgb(var(--color-text-muted))] border-[rgb(var(--color-border))]'
-              }`}
-            >
-              {structureButtonLabel}
-            </button>
-          </div>
-        )}
-
         {/* Controls */}
         <PlayerControls
           isShuffled={isShuffled}
@@ -224,19 +207,34 @@ export function MobilePlayerOverlay({
           variant="overlay"
         />
 
-        {/* Queue toggle pill */}
-        <div className="flex justify-center mb-4">
+        {/* Structure + Queue toggle buttons */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            {bars.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onToggleStructureMode()}
+                className={`text-xs font-bold uppercase px-3 py-1 transition-colors ${
+                  structureMode !== 'none'
+                    ? 'text-[rgb(var(--color-accent))]'
+                    : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+                }`}
+              >
+                {structureButtonLabel}
+              </button>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => setMobileQueueOpen((v) => !v)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+            aria-label={mobileQueueOpen ? 'Stäng kö' : 'Visa kö'}
+            className={`w-8 h-8 flex items-center justify-center transition-colors ${
               mobileQueueOpen || queue.length > 0
-                ? 'bg-[rgb(var(--color-accent))]/10 text-[rgb(var(--color-accent))] border border-[rgb(var(--color-accent))]/30'
-                : 'bg-[rgb(var(--color-border))]/30 text-[rgb(var(--color-text-muted))] border border-[rgb(var(--color-border))]'
+                ? 'text-[rgb(var(--color-accent))]'
+                : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
             }`}
           >
             <QueueListIcon className="w-5 h-5" />
-            Ko ({queue.length})
           </button>
         </div>
       </div>
