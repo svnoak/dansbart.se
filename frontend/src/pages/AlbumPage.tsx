@@ -54,7 +54,7 @@ export function AlbumPage() {
 
   return (
     <div className="space-y-6">
-      <IconButton aria-label="Tillbaka" onClick={() => navigate(album.artist?.id ? `/artist/${album.artist.id}` : '/')}>
+      <IconButton aria-label="Tillbaka" onClick={() => navigate(-1)}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
       <div className="flex gap-6">

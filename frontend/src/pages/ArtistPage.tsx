@@ -58,7 +58,7 @@ export function ArtistPage() {
 
   return (
     <div className="space-y-6">
-      <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
+      <IconButton aria-label="Tillbaka" onClick={() => navigate(-1)}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
       <div className="flex items-center gap-4">
