@@ -17,7 +17,7 @@ python-dotenv>=1.0.0
 # neckenml Core - MIT licensed (no AGPL audio dependencies)
 # For local development, installed via pip install -e
 # For production:
-neckenml-core>=0.3.0
+neckenml-core>=0.3.1
 
 # Music Theory (MIT compatible)
 music21>=9.0.0
