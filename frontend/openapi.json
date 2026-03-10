@@ -38,6 +38,10 @@
       "description": "Track playback and user interaction analytics"
     },
     {
+      "name": "Admin Style Config",
+      "description": "Dance style configuration management (beats_per_bar, etc.)"
+    },
+    {
       "name": "Tracks",
       "description": "Track discovery and playback endpoints"
     },
@@ -382,6 +386,96 @@
         "parameters": [
           {
             "name": "keywordId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/style-config/{configId}": {
+      "get": {
+        "tags": ["Admin Style Config"],
+        "summary": "Get a single style config by ID",
+        "operationId": "getConfig",
+        "parameters": [
+          {
+            "name": "configId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Admin Style Config"],
+        "summary": "Update an existing style config",
+        "operationId": "updateConfig",
+        "parameters": [
+          {
+            "name": "configId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StyleConfigUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Admin Style Config"],
+        "summary": "Delete a style config",
+        "operationId": "deleteConfig",
+        "parameters": [
+          {
+            "name": "configId",
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
@@ -1390,6 +1484,72 @@
         "tags": ["Admin Style Keywords"],
         "summary": "Manually invalidate the style keywords cache",
         "operationId": "invalidateCache",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/style-config": {
+      "get": {
+        "tags": ["Admin Style Config"],
+        "summary": "Get paginated list of style configs",
+        "operationId": "getConfigs",
+        "parameters": [
+          {
+            "name": "mainStyle",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Admin Style Config"],
+        "summary": "Create a new dance style config",
+        "operationId": "createConfig",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StyleConfigRequest" }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -3338,6 +3498,29 @@
         }
       }
     },
+    "/api/admin/style-config/active": {
+      "get": {
+        "tags": ["Admin Style Config"],
+        "summary": "Get all active style configs",
+        "operationId": "getActiveConfigs",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/spotify/artist/{spotifyId}/albums": {
       "get": {
         "tags": ["Admin Spotify"],
@@ -4358,6 +4541,15 @@
           "isActive": { "type": "boolean" }
         }
       },
+      "StyleConfigUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "mainStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "beatsPerBar": { "type": "integer", "format": "int32" },
+          "isActive": { "type": "boolean" }
+        }
+      },
       "StructureRequest": {
         "type": "object",
         "properties": {
@@ -4534,6 +4726,14 @@
           "subStyle": { "type": "string" }
         }
       },
+      "StyleConfigRequest": {
+        "type": "object",
+        "properties": {
+          "mainStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "beatsPerBar": { "type": "integer", "format": "int32" }
+        }
+      },
       "IngestTrackRequest": {
         "type": "object",
         "properties": { "spotifyTrackId": { "type": "string" } }
@@ -4698,7 +4898,8 @@
         "type": "object",
         "properties": {
           "name": { "type": "string" },
-          "subStyles": { "type": "array", "items": { "type": "string" } }
+          "subStyles": { "type": "array", "items": { "type": "string" } },
+          "beatsPerBar": { "type": "integer", "format": "int32" }
         }
       },
       "StyleKeyword": {

@@ -165,6 +165,8 @@ export * from './secondaryStyleRequest';
 export * from './sessionRequest';
 export * from './statsDto';
 export * from './structureRequest';
+export * from './styleConfigRequest';
+export * from './styleConfigUpdateRequest';
 export * from './styleKeyword';
 export * from './styleKeywordRequest';
 export * from './styleKeywordUpdateRequest';

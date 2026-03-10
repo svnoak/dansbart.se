@@ -16,6 +16,7 @@ import se.dansbart.jooq.tables.AnalysisSources;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
+import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -74,6 +75,11 @@ public class Public extends SchemaImpl {
      * The table <code>public.dance_movement_feedback</code>.
      */
     public final DanceMovementFeedback DANCE_MOVEMENT_FEEDBACK = DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK;
+
+    /**
+     * The table <code>public.dance_style_config</code>.
+     */
+    public final DanceStyleConfig DANCE_STYLE_CONFIG = DanceStyleConfig.DANCE_STYLE_CONFIG;
 
     /**
      * The table <code>public.genre_profiles</code>.
@@ -191,6 +197,7 @@ public class Public extends SchemaImpl {
             ArtistCrawlLogs.ARTIST_CRAWL_LOGS,
             Artists.ARTISTS,
             DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK,
+            DanceStyleConfig.DANCE_STYLE_CONFIG,
             GenreProfiles.GENRE_PROFILES,
             PendingArtistApprovals.PENDING_ARTIST_APPROVALS,
             PlaybackLinks.PLAYBACK_LINKS,

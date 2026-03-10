@@ -13,6 +13,7 @@ import se.dansbart.jooq.tables.Albums;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
+import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -40,6 +41,7 @@ public class Indexes {
     // INDEX definitions
     // -------------------------------------------------------------------------
 
+    public static final Index IDX_DANCE_STYLE_CONFIG_MAIN_STYLE = Internal.createIndex(DSL.name("idx_dance_style_config_main_style"), DanceStyleConfig.DANCE_STYLE_CONFIG, new OrderField[] { DanceStyleConfig.DANCE_STYLE_CONFIG.MAIN_STYLE }, false);
     public static final Index IDX_PLAYLIST_COLLABORATORS_PLAYLIST = Internal.createIndex(DSL.name("idx_playlist_collaborators_playlist"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.PLAYLIST_ID }, false);
     public static final Index IDX_PLAYLIST_COLLABORATORS_STATUS = Internal.createIndex(DSL.name("idx_playlist_collaborators_status"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.STATUS }, false);
     public static final Index IDX_PLAYLIST_COLLABORATORS_USER = Internal.createIndex(DSL.name("idx_playlist_collaborators_user"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.USER_ID }, false);

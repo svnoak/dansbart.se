@@ -16,6 +16,7 @@ import se.dansbart.jooq.tables.AnalysisSources;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
+import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -56,6 +57,7 @@ public class Keys {
     public static final UniqueKey<Record> ARTISTS_SPOTIFY_ID_KEY = Internal.createUniqueKey(Artists.ARTISTS, DSL.name("artists_spotify_id_key"), new TableField[] { Artists.ARTISTS.SPOTIFY_ID }, true);
     public static final UniqueKey<Record> _DANCE_MOVE_UC = Internal.createUniqueKey(DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK, DSL.name("_dance_move_uc"), new TableField[] { DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK.DANCE_STYLE, DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK.MOVEMENT_TAG }, true);
     public static final UniqueKey<Record> DANCE_MOVEMENT_FEEDBACK_PKEY = Internal.createUniqueKey(DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK, DSL.name("dance_movement_feedback_pkey"), new TableField[] { DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK.ID }, true);
+    public static final UniqueKey<Record> DANCE_STYLE_CONFIG_PKEY = Internal.createUniqueKey(DanceStyleConfig.DANCE_STYLE_CONFIG, DSL.name("dance_style_config_pkey"), new TableField[] { DanceStyleConfig.DANCE_STYLE_CONFIG.ID }, true);
     public static final UniqueKey<Record> GENRE_PROFILES_PKEY = Internal.createUniqueKey(GenreProfiles.GENRE_PROFILES, DSL.name("genre_profiles_pkey"), new TableField[] { GenreProfiles.GENRE_PROFILES.ID }, true);
     public static final UniqueKey<Record> PENDING_ARTIST_APPROVALS_PKEY = Internal.createUniqueKey(PendingArtistApprovals.PENDING_ARTIST_APPROVALS, DSL.name("pending_artist_approvals_pkey"), new TableField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.ID }, true);
     public static final UniqueKey<Record> UNIQUE_PENDING_ARTIST = Internal.createUniqueKey(PendingArtistApprovals.PENDING_ARTIST_APPROVALS, DSL.name("unique_pending_artist"), new TableField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.SPOTIFY_ID }, true);

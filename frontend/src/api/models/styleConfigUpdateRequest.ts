@@ -5,8 +5,9 @@
  * OpenAPI spec version: v0
  */
 
-export interface StyleNode {
-  name?: string;
-  subStyles?: string[];
+export interface StyleConfigUpdateRequest {
+  mainStyle?: string;
+  subStyle?: string;
   beatsPerBar?: number;
+  isActive?: boolean;
 }

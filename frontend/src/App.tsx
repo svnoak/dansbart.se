@@ -29,6 +29,7 @@ import { AdminIngestPage } from '@/admin/pages/AdminIngestPage';
 import { AdminPendingPage } from '@/admin/pages/AdminPendingPage';
 import { AdminDuplicatesPage } from '@/admin/pages/AdminDuplicatesPage';
 import { AdminMaintenancePage } from '@/admin/pages/AdminMaintenancePage';
+import { AdminStyleConfigPage } from '@/admin/pages/AdminStyleConfigPage';
 
 export function App() {
   return (
@@ -76,6 +77,7 @@ export function App() {
                       <Route path="albums" element={<AdminAlbumsPage />} />
                       <Route path="stats" element={<AdminStatsPage />} />
                       <Route path="keywords" element={<AdminKeywordsPage />} />
+                      <Route path="style-config" element={<AdminStyleConfigPage />} />
                       <Route path="ingest" element={<AdminIngestPage />} />
                       <Route path="pending" element={<AdminPendingPage />} />
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />

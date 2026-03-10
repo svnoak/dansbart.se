@@ -53,6 +53,15 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    to: '/admin/style-config',
+    label: 'Stilkonfiguration',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <path d="M17 4.517v9.301a2.5 2.5 0 11-1.5-2.29V6.018L8 7.683v7.135a2.5 2.5 0 11-1.5-2.29V5.25a.75.75 0 01.544-.721l9.5-2.75a.75.75 0 01.956.738z" />
+      </svg>
+    ),
+  },
+  {
     to: '/admin/ingest',
     label: 'Importera',
     icon: (

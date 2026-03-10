@@ -97,6 +97,17 @@ class StyleKeyword(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
 
 
+class DanceStyleConfig(Base):
+    """Configuration for dance styles, including beats_per_bar for bar correction."""
+    __tablename__ = "dance_style_config"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    main_style: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
+    beats_per_bar: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+
+
 # =============================================================================
 # Artist & Album Models (for spider/ingestion)
 # =============================================================================
