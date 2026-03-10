@@ -261,3 +261,19 @@ class StyleKeyword(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class DanceStyleConfig(Base):
+    """
+    Configuration for dance styles, including beats_per_bar for bar correction.
+    Used after classification to re-derive bar positions from beat timestamps.
+    """
+    __tablename__ = "dance_style_config"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    main_style: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
+    beats_per_bar: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

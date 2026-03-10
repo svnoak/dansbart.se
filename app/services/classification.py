@@ -110,6 +110,15 @@ class ClassificationService:
             predictions = self.classifier.classify(track, features)
             self._save_predictions(track, predictions)
 
+            # Correct bars based on classified style
+            if predictions and source.raw_data:
+                from app.services.bar_correction import correct_track_bars
+                primary = predictions[0]
+                correct_track_bars(
+                    self.db, track, source.raw_data,
+                    primary['style'], primary.get('sub_style')
+                )
+
             updated_count += 1
 
         log.info("reclassify_library_complete", updated=updated_count, skipped=skipped_count)
@@ -156,5 +165,15 @@ class ClassificationService:
         if predictions:
             primary = predictions[0]
             log.info("track_classified", style=primary['style'], dance_tempo=primary['dance_tempo'])
+
+            # Correct bars based on classified style
+            source = next((s for s in track.analysis_sources
+                          if s.source_type in ['neckenml_analyzer', 'hybrid_ml_v2']), None)
+            if source and source.raw_data:
+                from app.services.bar_correction import correct_track_bars
+                correct_track_bars(
+                    self.db, track, source.raw_data,
+                    primary['style'], primary.get('sub_style')
+                )
         else:
             log.warn("classification_empty", title=track.title)

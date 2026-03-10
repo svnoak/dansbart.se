@@ -273,6 +273,17 @@ class AnalysisService:
             log.info("auto_classifying")
             self.classifier_service.classify_track_immediately(track, analysis_data=data)
 
+            # Correct bars based on classified style's beats_per_bar
+            from app.services.bar_correction import correct_track_bars
+            primary_style = next(
+                (ds for ds in track.dance_styles if ds.is_primary), None
+            )
+            if primary_style:
+                correct_track_bars(
+                    self.db, track, artifacts,
+                    primary_style.dance_style, primary_style.sub_style
+                )
+
             # Cleanup
             del result
             del data

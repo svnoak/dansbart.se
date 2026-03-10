@@ -22,7 +22,6 @@ TEMPO_RANGES = {
     "Gånglåt":      (70,    80,     100,    110),
 }
 
-
 def get_tempo_description(style: str, bpm: int) -> dict:
     """
     Returns tempo info relative to what's typical for the dance style.
