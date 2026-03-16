@@ -223,6 +223,23 @@ public class MaintenanceService {
         return result;
     }
 
+    /**
+     * Trigger model retraining from user-confirmed and high-confidence tracks.
+     * Bypasses the debounce cooldown (admin-only operation).
+     */
+    public Map<String, Object> retrainModel(boolean reclassifyAfter) {
+        String taskId = UUID.randomUUID().toString();
+
+        taskDispatcher.dispatchRetrainModel(reclassifyAfter);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "queued");
+        result.put("taskId", taskId);
+        result.put("reclassifyAfter", reclassifyAfter);
+        result.put("message", "Model retrain task queued");
+        return result;
+    }
+
     public Map<String, Object> pauseQueue(String queue) {
         taskDispatcher.setPaused(queue, true);
         taskDispatcher.purgeQueue(queue);

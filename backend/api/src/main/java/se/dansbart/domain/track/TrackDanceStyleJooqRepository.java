@@ -41,6 +41,14 @@ public class TrackDanceStyleJooqRepository {
             .fetchOptional(this::toDanceStyle);
     }
 
+    public void setUserConfirmed(UUID trackId, String danceStyle, boolean confirmed) {
+        dsl.update(TRACK_DANCE_STYLES)
+            .set(TRACK_DANCE_STYLES.IS_USER_CONFIRMED, confirmed)
+            .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
+                .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danceStyle)))
+            .execute();
+    }
+
     public List<String> findAllDistinctDanceStyles() {
         return dsl.selectDistinct(TRACK_DANCE_STYLES.DANCE_STYLE)
             .from(TRACK_DANCE_STYLES)

@@ -157,6 +157,8 @@ export * from './resetStructure200';
 export * from './respondToInvitationRequest';
 export * from './resume200';
 export * from './resumeParams';
+export * from './retrainModel200';
+export * from './retrainModelParams';
 export * from './searchAlbumsParams';
 export * from './searchArtistsParams';
 export * from './searchTracksParams';

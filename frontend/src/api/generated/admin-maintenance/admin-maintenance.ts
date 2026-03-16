@@ -24,7 +24,9 @@ import type {
   ReclassifyAll200,
   ResetCrawlData200,
   Resume200,
-  ResumeParams
+  ResumeParams,
+  RetrainModel200,
+  RetrainModelParams
 } from '../../models';
 
 import { customFetch } from '../../custom-fetch';
@@ -43,6 +45,37 @@ export const getReclassifyAllUrl = () => {
 export const reclassifyAll = async ( options?: RequestInit): Promise<ReclassifyAll200> => {
   
   return customFetch<ReclassifyAll200>(getReclassifyAllUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * Retrains the dance style classification model using user-confirmed and high-confidence tracks. Optionally reclassifies all tracks afterward.
+ * @summary Trigger model retraining from confirmed tracks
+ */
+export const getRetrainModelUrl = (params?: RetrainModelParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/maintenance/retrain-model?${stringifiedParams}` : `/api/admin/maintenance/retrain-model`
+}
+
+export const retrainModel = async (params?: RetrainModelParams, options?: RequestInit): Promise<RetrainModel200> => {
+  
+  return customFetch<RetrainModel200>(getRetrainModelUrl(params),
   {      
     ...options,
     method: 'POST'

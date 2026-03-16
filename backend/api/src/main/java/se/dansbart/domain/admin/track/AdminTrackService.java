@@ -171,4 +171,25 @@ public class AdminTrackService {
     public Optional<Map<String, Object>> unflagTrack(UUID trackId) {
         return feedbackService.unflagTrack(trackId);
     }
+
+    /**
+     * Directly set the primary dance style for a track (admin override).
+     * Sets is_user_confirmed = true since this is an explicit admin correction.
+     */
+    @Transactional
+    public Map<String, Object> updateDanceStyle(UUID trackId, String danceStyle, String subStyle, String tempoCategory) {
+        if (!trackJooqRepository.existsById(trackId)) {
+            throw new IllegalArgumentException("Track not found");
+        }
+
+        adminTrackJooqRepository.updatePrimaryDanceStyle(trackId, danceStyle, subStyle, tempoCategory);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "success");
+        result.put("trackId", trackId.toString());
+        result.put("danceStyle", danceStyle);
+        result.put("subStyle", subStyle);
+        result.put("tempoCategory", tempoCategory);
+        return result;
+    }
 }

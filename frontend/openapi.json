@@ -1772,6 +1772,35 @@
         }
       }
     },
+    "/api/admin/maintenance/retrain-model": {
+      "post": {
+        "tags": ["Admin Maintenance"],
+        "summary": "Trigger model retraining from confirmed tracks",
+        "description": "Retrains the dance style classification model using user-confirmed and high-confidence tracks. Optionally reclassifies all tracks afterward.",
+        "operationId": "retrainModel",
+        "parameters": [
+          {
+            "name": "reclassify",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/maintenance/resume": {
       "post": {
         "tags": ["Admin Maintenance"],

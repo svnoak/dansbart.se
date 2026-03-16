@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import org.slf4j.MDC;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -36,6 +37,8 @@ public class TaskDispatcher {
 
     private static final List<String> ALL_QUEUES = List.of(AUDIO_QUEUE, FEATURE_QUEUE, LIGHT_QUEUE);
     private static final String PAUSE_KEY_PREFIX = "dansbart:paused:";
+    private static final String RETRAIN_COOLDOWN_KEY = "dansbart:retrain:cooldown";
+    private static final Duration RETRAIN_COOLDOWN = Duration.ofHours(1);
 
     /**
      * Dispatch audio analysis task to the AGPL audio worker.
@@ -159,6 +162,32 @@ public class TaskDispatcher {
         );
         pushToQueue(LIGHT_QUEUE, taskMessage);
         log.info("Dispatched Spotify ingest {} for {}", resourceType, spotifyId);
+    }
+
+    /**
+     * Dispatch model retrain task to the light worker (bypasses cooldown).
+     */
+    public void dispatchRetrainModel(boolean reclassifyAfter) {
+        String taskMessage = buildCeleryMessage(
+            "retrain_model_task",
+            List.of(),
+            Map.of("reclassify_after", reclassifyAfter)
+        );
+        pushToQueue(LIGHT_QUEUE, taskMessage);
+        log.info("Dispatched model retrain (reclassify={})", reclassifyAfter);
+    }
+
+    /**
+     * Dispatch model retrain with 1-hour debounce via Redis cooldown key.
+     */
+    public void dispatchRetrainModelDebounced(boolean reclassifyAfter) {
+        Boolean wasAbsent = redisTemplate.opsForValue()
+            .setIfAbsent(RETRAIN_COOLDOWN_KEY, "1", RETRAIN_COOLDOWN);
+        if (Boolean.TRUE.equals(wasAbsent)) {
+            dispatchRetrainModel(reclassifyAfter);
+        } else {
+            log.debug("Retrain cooldown active, skipping dispatch");
+        }
     }
 
     public boolean isPaused(String queue) {

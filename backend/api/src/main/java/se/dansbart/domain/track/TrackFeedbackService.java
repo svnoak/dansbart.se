@@ -1,10 +1,12 @@
 package se.dansbart.domain.track;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.DanceMovementFeedback;
 import se.dansbart.domain.admin.DanceMovementFeedbackJooqRepository;
+import se.dansbart.worker.TaskDispatcher;
 
 import se.dansbart.dto.DanceStyleDto;
 
@@ -17,13 +19,17 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TrackFeedbackService {
+
+    private static final int CONFIRMATION_THRESHOLD = 2;
 
     private final TrackStyleVoteJooqRepository voteRepository;
     private final TrackJooqRepository trackJooqRepository;
     private final TrackDanceStyleJooqRepository danceStyleRepository;
     private final TrackStructureVersionJooqRepository structureVersionRepository;
     private final DanceMovementFeedbackJooqRepository movementFeedbackRepository;
+    private final TaskDispatcher taskDispatcher;
 
     @Transactional
     public Optional<TrackStyleVote> submitStyleFeedback(
@@ -49,7 +55,48 @@ public class TrackFeedbackService {
                 .tempoCorrection(tempoCorrection)
                 .build());
 
-        return Optional.of(voteRepository.save(vote));
+        TrackStyleVote saved = voteRepository.save(vote);
+
+        // Tally votes: if 2+ distinct users voted the same style, confirm it
+        if (suggestedStyle != null) {
+            tallyVotesForStyle(trackId, suggestedStyle);
+        }
+
+        return Optional.of(saved);
+    }
+
+    private void tallyVotesForStyle(UUID trackId, String style) {
+        long distinctVoters = voteRepository.countByTrackIdAndSuggestedStyle(trackId, style);
+        if (distinctVoters < CONFIRMATION_THRESHOLD) {
+            return;
+        }
+
+        // Check if already confirmed
+        Optional<TrackDanceStyle> existing = danceStyleRepository.findByTrackIdAndDanceStyle(trackId, style);
+        if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getIsUserConfirmed())) {
+            return;
+        }
+
+        if (existing.isPresent()) {
+            danceStyleRepository.setUserConfirmed(trackId, style, true);
+        } else {
+            // Create a new TrackDanceStyle row for the voted style
+            TrackDanceStyle newStyle = new TrackDanceStyle();
+            newStyle.setTrackId(trackId);
+            newStyle.setDanceStyle(style);
+            newStyle.setIsPrimary(false);
+            newStyle.setConfidence(0.5f);
+            newStyle.setBpmMultiplier(1.0f);
+            newStyle.setEffectiveBpm(0);
+            newStyle.setConfirmationCount(0);
+            newStyle.setIsUserConfirmed(true);
+            danceStyleRepository.save(newStyle);
+        }
+
+        log.info("Style confirmed via vote tally: track={}, style={}, voters={}", trackId, style, distinctVoters);
+
+        // Dispatch debounced retrain
+        taskDispatcher.dispatchRetrainModelDebounced(false);
     }
 
     @Transactional(readOnly = true)

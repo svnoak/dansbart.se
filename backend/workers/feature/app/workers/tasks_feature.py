@@ -10,6 +10,7 @@ from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
 from app.core.models import Track
 from app.services.classification import ClassificationService
+from app.services.training import ModelTrainingService
 
 log = structlog.get_logger()
 
@@ -35,6 +36,40 @@ def reclassify_library_task(self):
         return result
     except Exception as e:
         log.error("reclassification_failed", exc_info=True)
+        raise
+    finally:
+        db.close()
+
+
+@celery_app.task(name="retrain_model_task", bind=True, acks_late=True, queue='light')
+def retrain_model_task(self, reclassify_after=False):
+    """
+    Retrain the dance style classification model from confirmed tracks.
+
+    Gathers training data from user-confirmed and high-confidence tracks,
+    then calls ClassificationHead.train() to update the model weights.
+
+    Args:
+        reclassify_after: If True, dispatch reclassify_library_task after training
+
+    Returns:
+        dict: Training statistics
+    """
+    log.info("starting_model_retrain", reclassify_after=reclassify_after)
+
+    db = SessionLocal()
+    try:
+        service = ModelTrainingService(db)
+        result = service.train_from_confirmed_tracks()
+        log.info("model_retrain_complete", result=result)
+
+        if reclassify_after and result.get("status") == "trained":
+            log.info("dispatching_reclassification_after_retrain")
+            reclassify_library_task.delay()
+
+        return result
+    except Exception as e:
+        log.error("model_retrain_failed", exc_info=True)
         raise
     finally:
         db.close()

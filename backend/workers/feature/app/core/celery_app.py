@@ -36,6 +36,7 @@ celery_app.conf.update(
 celery_app.conf.task_routes = {
     "app.workers.tasks_feature.*": {"queue": "feature"},
     "app.workers.tasks_light.*": {"queue": "light"},
+    "retrain_model_task": {"queue": "light"},
 }
 
 

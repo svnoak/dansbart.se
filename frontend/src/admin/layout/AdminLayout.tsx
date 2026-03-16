@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AdminHeader } from './AdminHeader';
 import { AdminSidebar } from './AdminSidebar';
 import { ToastContainer } from '@/admin/components/Toast';
+import { GlobalPlayerShell } from '@/player/GlobalPlayerShell';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -39,6 +40,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>
       </div>
+      <GlobalPlayerShell />
       <ToastContainer />
     </div>
   );

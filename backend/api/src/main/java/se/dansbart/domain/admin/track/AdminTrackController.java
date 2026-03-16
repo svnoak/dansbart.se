@@ -113,6 +113,20 @@ public class AdminTrackController {
             .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{trackId}/dance-style")
+    @Operation(summary = "Directly set the primary dance style for a track (admin override)")
+    public ResponseEntity<Map<String, Object>> updateDanceStyle(
+            @PathVariable UUID trackId,
+            @RequestBody UpdateDanceStyleRequest request) {
+        try {
+            return ResponseEntity.ok(adminTrackService.updateDanceStyle(
+                trackId, request.danceStyle(), request.subStyle(), request.tempoCategory()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     public record BulkReanalyzeRequest(String statusFilter, Integer limit) {}
     public record RejectRequest(String reason, Boolean dryRun, Boolean deleteContent) {}
+    public record UpdateDanceStyleRequest(String danceStyle, String subStyle, String tempoCategory) {}
 }

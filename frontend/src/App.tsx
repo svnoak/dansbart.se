@@ -69,9 +69,11 @@ export function App() {
             <Route
               path="/admin/*"
               element={
-                <ProtectedRoute>
-                  <AdminLayout>
-                    <Routes>
+                <ConsentProvider>
+                  <PlayerProvider>
+                    <ProtectedRoute>
+                      <AdminLayout>
+                        <Routes>
                       <Route path="library" element={<AdminLibraryPage />} />
                       <Route path="artists" element={<AdminArtistsPage />} />
                       <Route path="albums" element={<AdminAlbumsPage />} />
@@ -83,9 +85,11 @@ export function App() {
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />
                       <Route path="maintenance" element={<AdminMaintenancePage />} />
                       <Route path="*" element={<Navigate to="/admin/library" replace />} />
-                    </Routes>
-                  </AdminLayout>
-                </ProtectedRoute>
+                        </Routes>
+                      </AdminLayout>
+                    </ProtectedRoute>
+                  </PlayerProvider>
+                </ConsentProvider>
               }
             />
           </Routes>

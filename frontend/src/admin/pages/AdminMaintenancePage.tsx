@@ -54,6 +54,7 @@ export function AdminMaintenancePage() {
   const [confirmOp, setConfirmOp] = useState<string | null>(null);
   const [pauseStatus, setPauseStatus] = useState<PauseStatus>({});
   const [pauseLoading, setPauseLoading] = useState<string | null>(null);
+  const [retrainReclassify, setRetrainReclassify] = useState(false);
 
   const loadPauseStatus = useCallback(async () => {
     try {
@@ -120,7 +121,14 @@ export function AdminMaintenancePage() {
     }
   };
 
-  const operations = [
+  const operations: {
+    id: string;
+    label: string;
+    description: string;
+    action: () => void;
+    needsConfirm?: boolean;
+    extraContent?: React.ReactNode;
+  }[] = [
     {
       id: 'queue-pending',
       label: 'Köa väntande spår',
@@ -154,6 +162,30 @@ export function AdminMaintenancePage() {
         if (!res.ok) throw new Error('Failed to backfill duration');
         return res.json();
       }),
+    },
+    {
+      id: 'retrain-model',
+      label: 'Omträna modell',
+      description: 'Träna om klassificeringsmodellen baserat på bekräftade spår',
+      action: () => run('Omträna modell', async () => {
+        const res = await adminFetch(
+          `/api/admin/maintenance/retrain-model?reclassify=${retrainReclassify}`,
+          { method: 'POST' },
+        );
+        if (!res.ok) throw new Error('Failed to retrain model');
+        return res.json();
+      }),
+      extraContent: (
+        <label className="mt-2 flex items-center gap-2 text-xs text-[rgb(var(--color-text-muted))]">
+          <input
+            type="checkbox"
+            checked={retrainReclassify}
+            onChange={(e) => setRetrainReclassify(e.target.checked)}
+            className="rounded border-[rgb(var(--color-border))]"
+          />
+          Omklassificera alla spår efteråt
+        </label>
+      ),
     },
     {
       id: 'reclassify-all',
@@ -213,6 +245,7 @@ export function AdminMaintenancePage() {
           >
             <h3 className="text-sm font-medium text-[rgb(var(--color-text))]">{op.label}</h3>
             <p className="mt-1 text-xs text-[rgb(var(--color-text-muted))]">{op.description}</p>
+            {op.extraContent}
             <div className="mt-3">
               <Button
                 variant="secondary"

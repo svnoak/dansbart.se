@@ -192,5 +192,59 @@ public class AdminTrackJooqRepository {
             ));
     }
 
+    /**
+     * Update the primary dance style for a track (admin override).
+     * If a primary style row exists, updates it. Otherwise creates one.
+     * Always sets is_user_confirmed = true.
+     */
+    public void updatePrimaryDanceStyle(UUID trackId, String danceStyle, String subStyle, String tempoCategory) {
+        // Check if primary style row exists
+        var existing = dsl.select(TRACK_DANCE_STYLES.ID)
+            .from(TRACK_DANCE_STYLES)
+            .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
+                .and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true)))
+            .fetchOne();
+
+        if (existing != null) {
+            dsl.update(TRACK_DANCE_STYLES)
+                .set(TRACK_DANCE_STYLES.DANCE_STYLE, danceStyle)
+                .set(TRACK_DANCE_STYLES.SUB_STYLE, subStyle)
+                .set(TRACK_DANCE_STYLES.TEMPO_CATEGORY, tempoCategory)
+                .set(TRACK_DANCE_STYLES.IS_USER_CONFIRMED, true)
+                .set(TRACK_DANCE_STYLES.CONFIDENCE, 1.0)
+                .where(TRACK_DANCE_STYLES.ID.eq(existing.get(TRACK_DANCE_STYLES.ID)))
+                .execute();
+        } else {
+            dsl.insertInto(TRACK_DANCE_STYLES)
+                .columns(
+                    TRACK_DANCE_STYLES.ID,
+                    TRACK_DANCE_STYLES.TRACK_ID,
+                    TRACK_DANCE_STYLES.DANCE_STYLE,
+                    TRACK_DANCE_STYLES.SUB_STYLE,
+                    TRACK_DANCE_STYLES.IS_PRIMARY,
+                    TRACK_DANCE_STYLES.CONFIDENCE,
+                    TRACK_DANCE_STYLES.TEMPO_CATEGORY,
+                    TRACK_DANCE_STYLES.BPM_MULTIPLIER,
+                    TRACK_DANCE_STYLES.EFFECTIVE_BPM,
+                    TRACK_DANCE_STYLES.CONFIRMATION_COUNT,
+                    TRACK_DANCE_STYLES.IS_USER_CONFIRMED
+                )
+                .values(
+                    UUID.randomUUID(),
+                    trackId,
+                    danceStyle,
+                    subStyle,
+                    true,
+                    1.0,
+                    tempoCategory,
+                    1.0,
+                    0,
+                    0,
+                    true
+                )
+                .execute();
+        }
+    }
+
     private record PrimaryStyleInfo(String danceStyle, String subStyle, String tempoCategory, Float confidence) {}
 }

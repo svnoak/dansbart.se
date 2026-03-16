@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { AdminTrackDto } from '@/api/models/adminTrackDto';
 import type { AdminTrackPageResponse } from '@/api/models/adminTrackPageResponse';
+import type { StyleNode } from '@/api/models/styleNode';
+import type { TrackListDto } from '@/api/models/trackListDto';
 import {
   getTracks1,
   reanalyzeTrack,
@@ -10,6 +12,7 @@ import {
   rejectTrack,
   unflagTrack1,
 } from '@/api/generated/admin-tracks/admin-tracks';
+import { getStyleTree } from '@/api/generated/styles/styles';
 import { adminFetch, adminRequestOptions } from '@/admin/api/client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
@@ -25,6 +28,8 @@ import { Select } from '@/admin/components/forms/Select';
 import { Button } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 import { formatDurationMs } from '@/utils/formatDuration';
+import { usePlayer } from '@/player/usePlayer';
+import { PlayIcon, PauseIcon } from '@/icons';
 
 type StatusCounts = Record<string, number>;
 
@@ -63,6 +68,16 @@ export function AdminLibraryPage() {
   const [bulkRejectReason, setBulkRejectReason] = useState('');
   const [bulkDeleteModal, setBulkDeleteModal] = useState(false);
 
+  // Style edit state
+  const [styleEditTrack, setStyleEditTrack] = useState<AdminTrackDto | null>(null);
+  const [styleEditMain, setStyleEditMain] = useState('');
+  const [styleEditSub, setStyleEditSub] = useState('');
+  const [styleEditTempo, setStyleEditTempo] = useState('');
+  const [styleTree, setStyleTree] = useState<Record<string, string[]>>({});
+
+  // Player
+  const player = usePlayer();
+
   const loadStatusCounts = useCallback(async () => {
     try {
       setStatusCounts(await fetchStatusCounts());
@@ -99,6 +114,66 @@ export function AdminLibraryPage() {
   useEffect(() => {
     loadStatusCounts();
   }, [loadStatusCounts]);
+
+  // Load style tree for the edit modal
+  useEffect(() => {
+    getStyleTree().then((nodes: StyleNode[]) => {
+      const tree: Record<string, string[]> = {};
+      for (const node of nodes) {
+        if (node.name) tree[node.name] = node.subStyles ?? [];
+      }
+      setStyleTree(tree);
+    }).catch(() => {});
+  }, []);
+
+  // --- Play track ---
+  const handlePlay = (track: AdminTrackDto) => {
+    const asTrackList: TrackListDto = {
+      id: track.id,
+      title: track.title,
+      durationMs: track.durationMs,
+      danceStyle: track.danceStyle,
+      subStyle: track.subStyle,
+      tempoCategory: track.tempoCategory,
+      confidence: track.confidence,
+      hasVocals: track.hasVocals,
+      artistName: track.artists?.[0]?.name,
+      playbackLinks: track.playbackLinks,
+    };
+    if (player.currentTrack?.id === track.id && player.isPlaying) {
+      player.togglePlayPause();
+    } else {
+      player.play(asTrackList);
+    }
+  };
+
+  // --- Style edit ---
+  const openStyleEdit = (track: AdminTrackDto) => {
+    setStyleEditTrack(track);
+    setStyleEditMain(track.danceStyle ?? '');
+    setStyleEditSub(track.subStyle ?? '');
+    setStyleEditTempo(track.tempoCategory ?? '');
+  };
+
+  const handleStyleEditSave = async () => {
+    if (!styleEditTrack?.id || !styleEditMain) return;
+    try {
+      await adminFetch(`/api/admin/tracks/${styleEditTrack.id}/dance-style`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          danceStyle: styleEditMain,
+          subStyle: styleEditSub || null,
+          tempoCategory: styleEditTempo || null,
+        }),
+      });
+      toast('Dansstil uppdaterad');
+      setStyleEditTrack(null);
+      fetchData();
+    } catch {
+      toast('Kunde inte uppdatera dansstil', 'error');
+    }
+  };
 
   const updateParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -248,6 +323,29 @@ export function AdminLibraryPage() {
 
   const columns: Column<AdminTrackDto>[] = [
     {
+      key: 'play',
+      header: '',
+      render: (t) => {
+        const isCurrent = player.currentTrack?.id === t.id;
+        const isPlaying = isCurrent && player.isPlaying;
+        return (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handlePlay(t); }}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
+            aria-label={isPlaying ? 'Pausa' : 'Spela'}
+          >
+            {isPlaying ? (
+              <PauseIcon className="h-4 w-4" />
+            ) : (
+              <PlayIcon className="h-4 w-4 ml-0.5" />
+            )}
+          </button>
+        );
+      },
+      className: 'w-10',
+    },
+    {
       key: 'title',
       header: 'Titel',
       render: (t) => (
@@ -293,8 +391,13 @@ export function AdminLibraryPage() {
       key: 'style',
       header: 'Dansstil',
       render: (t) => (
-        <div>
-          <span className="text-xs text-[rgb(var(--color-text))]">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); openStyleEdit(t); }}
+          className="text-left group cursor-pointer"
+          title="Klicka for att redigera"
+        >
+          <span className="text-xs text-[rgb(var(--color-text))] group-hover:underline">
             {t.danceStyle ?? '-'}
           </span>
           {t.subStyle && (
@@ -302,7 +405,12 @@ export function AdminLibraryPage() {
               {' '}/ {t.subStyle}
             </span>
           )}
-        </div>
+          {t.tempoCategory && (
+            <span className="text-xs text-[rgb(var(--color-text-muted))] block">
+              {t.tempoCategory}
+            </span>
+          )}
+        </button>
       ),
     },
     {
@@ -582,6 +690,85 @@ export function AdminLibraryPage() {
             onClick={handleBulkDelete}
           >
             Radera {selectedIds.size} spår
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Style edit modal */}
+      <Modal
+        open={!!styleEditTrack}
+        onClose={() => setStyleEditTrack(null)}
+        title="Redigera dansstil"
+      >
+        <p className="text-sm text-[rgb(var(--color-text))] mb-4">
+          <strong>{styleEditTrack?.title}</strong>
+          {styleEditTrack?.artists?.[0]?.name && (
+            <span className="text-[rgb(var(--color-text-muted))]">
+              {' '}- {styleEditTrack.artists[0].name}
+            </span>
+          )}
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1">
+              Huvudstil
+            </label>
+            <Select
+              value={styleEditMain}
+              onChange={(e) => {
+                setStyleEditMain(e.target.value);
+                setStyleEditSub('');
+              }}
+            >
+              <option value="">Välj stil...</option>
+              {Object.keys(styleTree).sort().map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
+          </div>
+          {styleEditMain && (styleTree[styleEditMain]?.length ?? 0) > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1">
+                Understil
+              </label>
+              <Select
+                value={styleEditSub}
+                onChange={(e) => setStyleEditSub(e.target.value)}
+              >
+                <option value="">Ingen / Allman {styleEditMain}</option>
+                {styleTree[styleEditMain]?.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </Select>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1">
+              Tempo
+            </label>
+            <Select
+              value={styleEditTempo}
+              onChange={(e) => setStyleEditTempo(e.target.value)}
+            >
+              <option value="">Inget valt</option>
+              <option value="Slow">Långsamt</option>
+              <option value="SlowMed">Lugnt</option>
+              <option value="Medium">Lagom</option>
+              <option value="Fast">Snabbt</option>
+              <option value="Turbo">Väldigt snabbt</option>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setStyleEditTrack(null)}>
+            Avbryt
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleStyleEditSave}
+            disabled={!styleEditMain}
+          >
+            Spara
           </Button>
         </div>
       </Modal>

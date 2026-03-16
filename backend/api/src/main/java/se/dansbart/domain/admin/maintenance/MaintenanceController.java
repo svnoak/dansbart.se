@@ -71,6 +71,15 @@ public class MaintenanceController {
         return ResponseEntity.ok(maintenanceService.reclassifyAll());
     }
 
+    @PostMapping("/maintenance/retrain-model")
+    @Operation(summary = "Trigger model retraining from confirmed tracks",
+        description = "Retrains the dance style classification model using user-confirmed "
+            + "and high-confidence tracks. Optionally reclassifies all tracks afterward.")
+    public ResponseEntity<Map<String, Object>> retrainModel(
+            @RequestParam(defaultValue = "false") boolean reclassify) {
+        return ResponseEntity.ok(maintenanceService.retrainModel(reclassify));
+    }
+
     @PostMapping("/maintenance/backfill-duration")
     @Operation(summary = "Backfill missing duration from Spotify")
     public ResponseEntity<Map<String, Object>> backfillDuration(
