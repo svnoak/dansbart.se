@@ -70,7 +70,7 @@ public class TrackService {
             mainStyle, subStyle, search, source, hasVocals, minConfidence, musicGenre,
             minBpm, maxBpm, minDurationMs, maxDurationMs,
             minBounciness, maxBounciness, minArticulation, maxArticulation,
-            limit, offset
+            limit, offset, null, null
         );
 
         long total = trackJooqRepository.countPlayableTracksWithFilters(
@@ -101,7 +101,9 @@ public class TrackService {
             Float minArticulation,
             Float maxArticulation,
             Integer limit,
-            Integer offset) {
+            Integer offset,
+            String sortBy,
+            String sortDirection) {
 
         Boolean hasVocals = null;
         if ("instrumental".equals(vocals)) hasVocals = false;
@@ -114,7 +116,7 @@ public class TrackService {
             mainStyle, subStyle, search, source, hasVocals, minConfidence, musicGenre,
             minBpm, maxBpm, minDurationMs, maxDurationMs,
             minBounciness, maxBounciness, minArticulation, maxArticulation,
-            limit, offset
+            limit, offset, sortBy, sortDirection
         );
         long total = trackJooqRepository.countPlayableTracksWithFilters(
             mainStyle, subStyle, search, source, hasVocals, minConfidence, musicGenre,

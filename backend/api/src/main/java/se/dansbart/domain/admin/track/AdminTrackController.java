@@ -32,8 +32,10 @@ public class AdminTrackController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean flagged,
             @RequestParam(defaultValue = "50") int limit,
-            @RequestParam(defaultValue = "0") int offset) {
-        Page<AdminTrackDto> page = adminTrackService.getTracks(search, status, flagged, limit, offset);
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDirection) {
+        Page<AdminTrackDto> page = adminTrackService.getTracks(search, status, flagged, limit, offset, sortBy, sortDirection);
         return ResponseEntity.ok(AdminTrackPageResponse.from(page));
     }
 

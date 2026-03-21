@@ -23,6 +23,8 @@ export interface SearchFilters {
   articulationEnabled: boolean;
   minArticulation: number | null;
   maxArticulation: number | null;
+  sortBy: string;
+  sortDirection: string;
   limit: number;
   offset: number;
 }
@@ -46,6 +48,8 @@ export const DEFAULT_FILTERS: SearchFilters = {
   articulationEnabled: false,
   minArticulation: null,
   maxArticulation: null,
+  sortBy: '',
+  sortDirection: '',
   limit: 20,
   offset: 0,
 };
@@ -70,6 +74,8 @@ export function filtersEqual(a: SearchFilters, b: SearchFilters): boolean {
     a.articulationEnabled === b.articulationEnabled &&
     a.minArticulation === b.minArticulation &&
     a.maxArticulation === b.maxArticulation &&
+    a.sortBy === b.sortBy &&
+    a.sortDirection === b.sortDirection &&
     a.limit === b.limit &&
     a.offset === b.offset
   );
@@ -109,6 +115,8 @@ export function useSearchParamsState() {
       articulationEnabled: parseBool(get('artic')),
       minArticulation: parseNum(get('minArtic')),
       maxArticulation: parseNum(get('maxArtic')),
+      sortBy: get('sortBy') ?? DEFAULT_FILTERS.sortBy,
+      sortDirection: get('sortDir') ?? DEFAULT_FILTERS.sortDirection,
       limit: parseNum(get('limit')) ?? DEFAULT_FILTERS.limit,
       offset: parseNum(get('offset')) ?? DEFAULT_FILTERS.offset,
     };
@@ -146,6 +154,8 @@ export function useSearchParamsState() {
         set('artic', merged.articulationEnabled ? true : undefined);
         set('minArtic', merged.minArticulation ?? undefined);
         set('maxArtic', merged.maxArticulation ?? undefined);
+        set('sortBy', merged.sortBy || undefined);
+        set('sortDir', merged.sortDirection || undefined);
         set('limit', merged.limit);
         set('offset', merged.offset);
 
@@ -167,13 +177,15 @@ export function useSearchParamsState() {
   );
 
   const toTracksParams = useMemo((): GetTracksParams => {
-    const p: GetTracksParams = {
+    const p: GetTracksParams & { sortBy?: string; sortDirection?: string } = {
       search: filters.q || undefined,
       mainStyle: filters.style || undefined,
       subStyle: filters.subStyle || undefined,
       source: filters.source || undefined,
       vocals: filters.vocals || undefined,
       styleConfirmed: filters.confirmed ? true : undefined,
+      sortBy: filters.sortBy || undefined,
+      sortDirection: filters.sortDirection || undefined,
       limit: filters.limit,
       offset: filters.offset,
     };

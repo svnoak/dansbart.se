@@ -246,6 +246,27 @@ export function SearchPage() {
         <h2 className="text-sm font-medium uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
           Resultat ({total.toLocaleString('sv-SE')})
         </h2>
+        {filters.searchType === 'tracks' && (
+          <select
+            value={filters.sortBy ? `${filters.sortBy}:${filters.sortDirection || 'asc'}` : ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val) {
+                setFilters({ sortBy: '', sortDirection: '', offset: 0 });
+              } else {
+                const [field, dir] = val.split(':');
+                setFilters({ sortBy: field, sortDirection: dir, offset: 0 });
+              }
+            }}
+            className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1.5 text-xs text-[rgb(var(--color-text))]"
+          >
+            <option value="">Sortering: Standard</option>
+            <option value="tempoBpm:asc">Tempo (lägst först)</option>
+            <option value="tempoBpm:desc">Tempo (högst först)</option>
+            <option value="durationMs:asc">Längd (kortast först)</option>
+            <option value="durationMs:desc">Längd (längst först)</option>
+          </select>
+        )}
       </div>
 
       {error && (

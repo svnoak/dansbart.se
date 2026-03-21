@@ -194,6 +194,8 @@ export * from './triggerSpiderParams';
 export * from './unflagTrack1200';
 export * from './unflagTrack200';
 export * from './updateCollaboratorRequest';
+export * from './updateDanceStyle200';
+export * from './updateDanceStyleRequest';
 export * from './updateKeyword200';
 export * from './updatePlaylistRequest';
 export * from './updateProfileRequest';

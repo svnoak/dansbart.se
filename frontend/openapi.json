@@ -316,6 +316,44 @@
         }
       }
     },
+    "/api/admin/tracks/{trackId}/dance-style": {
+      "put": {
+        "tags": ["Admin - Tracks"],
+        "summary": "Directly set the primary dance style for a track (admin override)",
+        "operationId": "updateDanceStyle",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDanceStyleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/style-keywords/{keywordId}": {
       "get": {
         "tags": ["Admin Style Keywords"],
@@ -2529,6 +2567,18 @@
             "in": "query",
             "required": false,
             "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -3378,6 +3428,18 @@
             "in": "query",
             "required": false,
             "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -4560,6 +4622,14 @@
       "RespondToInvitationRequest": {
         "type": "object",
         "properties": { "accept": { "type": "boolean" } }
+      },
+      "UpdateDanceStyleRequest": {
+        "type": "object",
+        "properties": {
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "tempoCategory": { "type": "string" }
+        }
       },
       "StyleKeywordUpdateRequest": {
         "type": "object",

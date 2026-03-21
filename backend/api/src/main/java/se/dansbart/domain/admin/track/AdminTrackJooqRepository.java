@@ -1,7 +1,9 @@
 package se.dansbart.domain.admin.track;
 
 import org.jooq.DSLContext;
+import org.jooq.OrderField;
 import org.jooq.Record;
+import org.jooq.TableField;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -29,7 +31,20 @@ public class AdminTrackJooqRepository {
         this.dsl = dsl;
     }
 
-    public Page<AdminTrackDto> findAllWithRelationships(String search, String status, Boolean flagged, int limit, int offset) {
+    private static final Map<String, TableField<?, ?>> SORTABLE_FIELDS = Map.of(
+        "title", TRACKS.TITLE,
+        "createdAt", TRACKS.CREATED_AT,
+        "tempoBpm", TRACKS.TEMPO_BPM,
+        "status", TRACKS.PROCESSING_STATUS,
+        "durationMs", TRACKS.DURATION_MS
+    );
+
+    private OrderField<?> resolveOrderField(String sortBy, String sortDirection) {
+        var field = sortBy != null ? SORTABLE_FIELDS.getOrDefault(sortBy, TRACKS.CREATED_AT) : TRACKS.CREATED_AT;
+        return "asc".equalsIgnoreCase(sortDirection) ? field.asc() : field.desc();
+    }
+
+    public Page<AdminTrackDto> findAllWithRelationships(String search, String status, Boolean flagged, int limit, int offset, String sortBy, String sortDirection) {
         // Build base conditions
         var conditions = new ArrayList<org.jooq.Condition>();
 
@@ -47,11 +62,17 @@ public class AdminTrackJooqRepository {
             ? org.jooq.impl.DSL.trueCondition()
             : org.jooq.impl.DSL.and(conditions);
 
+        // Resolve sort
+        boolean sortByConfidence = "confidence".equalsIgnoreCase(sortBy);
+        var orderField = sortByConfidence
+            ? resolveOrderField("createdAt", "desc")
+            : resolveOrderField(sortBy, sortDirection);
+
         // Get track IDs with pagination
         List<UUID> trackIds = dsl.select(TRACKS.ID)
             .from(TRACKS)
             .where(whereClause)
-            .orderBy(TRACKS.CREATED_AT.desc())
+            .orderBy(orderField)
             .limit(limit)
             .offset(offset)
             .fetch(TRACKS.ID);
@@ -64,7 +85,7 @@ public class AdminTrackJooqRepository {
         Map<UUID, Record> trackRecords = new LinkedHashMap<>();
         dsl.selectFrom(TRACKS)
             .where(TRACKS.ID.in(trackIds))
-            .orderBy(TRACKS.CREATED_AT.desc())
+            .orderBy(orderField)
             .forEach(r -> trackRecords.put(r.get(TRACKS.ID), r));
 
         // Fetch artists for all tracks
@@ -174,6 +195,19 @@ public class AdminTrackJooqRepository {
                 );
             })
             .collect(Collectors.toList());
+
+        // Sort by confidence in-memory (comes from join table, not main tracks table)
+        if (sortByConfidence) {
+            boolean asc = "asc".equalsIgnoreCase(sortDirection);
+            tracks.sort((a, b) -> {
+                Float ca = a.confidence();
+                Float cb = b.confidence();
+                if (ca == null && cb == null) return 0;
+                if (ca == null) return 1;
+                if (cb == null) return -1;
+                return asc ? Float.compare(ca, cb) : Float.compare(cb, ca);
+            });
+        }
 
         // Get total count
         long total = dsl.fetchCount(dsl.selectFrom(TRACKS).where(whereClause));

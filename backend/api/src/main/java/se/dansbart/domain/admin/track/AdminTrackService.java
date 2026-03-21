@@ -22,8 +22,8 @@ public class AdminTrackService {
     private final AdminTrackJooqRepository adminTrackJooqRepository;
 
     @Transactional(readOnly = true)
-    public Page<AdminTrackDto> getTracks(String search, String status, Boolean flagged, int limit, int offset) {
-        return adminTrackJooqRepository.findAllWithRelationships(search, status, flagged, limit, offset);
+    public Page<AdminTrackDto> getTracks(String search, String status, Boolean flagged, int limit, int offset, String sortBy, String sortDirection) {
+        return adminTrackJooqRepository.findAllWithRelationships(search, status, flagged, limit, offset, sortBy, sortDirection);
     }
 
     @Transactional(readOnly = true)

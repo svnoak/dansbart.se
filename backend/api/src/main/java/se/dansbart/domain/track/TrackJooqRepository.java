@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
+import org.jooq.OrderField;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.data.domain.Page;
@@ -261,7 +262,9 @@ public class TrackJooqRepository {
         Float minArticulation,
         Float maxArticulation,
         int limit,
-        int offset
+        int offset,
+        String sortBy,
+        String sortDirection
     ) {
         var sub = buildPlayableTracksCondition(
             mainStyle, subStyle, search, source, hasVocals, minConfidence, musicGenre,
@@ -276,16 +279,30 @@ public class TrackJooqRepository {
                     .and(yt.IS_WORKING.eq(true))
             )
         );
+
+        // Build order clause
+        List<OrderField<?>> orderFields = new ArrayList<>();
+        if (sortBy != null && !sortBy.isBlank()) {
+            boolean asc = "asc".equalsIgnoreCase(sortDirection);
+            switch (sortBy) {
+                case "tempoBpm" -> orderFields.add(asc ? TRACKS.TEMPO_BPM.asc().nullsLast() : TRACKS.TEMPO_BPM.desc().nullsLast());
+                case "durationMs" -> orderFields.add(asc ? TRACKS.DURATION_MS.asc().nullsLast() : TRACKS.DURATION_MS.desc().nullsLast());
+                default -> {} // fall through to default ordering
+            }
+        }
+        // Default ordering as fallback (or when no explicit sort)
+        if (orderFields.isEmpty()) {
+            orderFields.add(DSL.when(hasYoutube, DSL.inline(0)).otherwise(DSL.inline(1)).asc());
+            orderFields.add(DSL.max(TRACK_DANCE_STYLES.CONFIDENCE).desc().nullsLast());
+        }
+
         var orderedIds = dsl.select(TRACKS.ID)
             .from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(sub)
             .groupBy(TRACKS.ID)
-            .orderBy(
-                DSL.when(hasYoutube, DSL.inline(0)).otherwise(DSL.inline(1)).asc(),
-                DSL.max(TRACK_DANCE_STYLES.CONFIDENCE).desc().nullsLast()
-            )
+            .orderBy(orderFields)
             .limit(limit)
             .offset(offset)
             .fetch(TRACKS.ID);

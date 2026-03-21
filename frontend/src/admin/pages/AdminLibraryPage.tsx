@@ -15,7 +15,7 @@ import {
 import { getStyleTree } from '@/api/generated/styles/styles';
 import { adminFetch, adminRequestOptions } from '@/admin/api/client';
 import { DataTable } from '@/admin/components/DataTable';
-import type { Column } from '@/admin/components/DataTable';
+import type { Column, SortState } from '@/admin/components/DataTable';
 import { StatusBadge } from '@/admin/components/StatusBadge';
 import { ConfidenceBadge } from '@/admin/components/ConfidenceBadge';
 import { ActionMenu } from '@/admin/components/ActionMenu';
@@ -75,6 +75,26 @@ export function AdminLibraryPage() {
   const [styleEditTempo, setStyleEditTempo] = useState('');
   const [styleTree, setStyleTree] = useState<Record<string, string[]>>({});
 
+  // Sorting (persisted in URL params)
+  const sortBy = params.get('sortBy') ?? '';
+  const sortDirection = params.get('sortDirection') ?? '';
+  const sort: SortState | null = sortBy
+    ? { key: sortBy, direction: (sortDirection || 'asc') as 'asc' | 'desc' }
+    : null;
+
+  const handleSortChange = (next: SortState | null) => {
+    const p = new URLSearchParams(params);
+    if (next) {
+      p.set('sortBy', next.key);
+      p.set('sortDirection', next.direction);
+    } else {
+      p.delete('sortBy');
+      p.delete('sortDirection');
+    }
+    p.set('offset', '0');
+    setParams(p, { replace: true });
+  };
+
   // Player
   const player = usePlayer();
 
@@ -96,7 +116,9 @@ export function AdminLibraryPage() {
           flagged: flagged === 'true' ? true : flagged === 'false' ? false : undefined,
           limit,
           offset,
-        },
+          sortBy: sortBy || undefined,
+          sortDirection: sortDirection || undefined,
+        } as Record<string, unknown>,
         adminRequestOptions(),
       );
       setData(result);
@@ -105,7 +127,7 @@ export function AdminLibraryPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, status, flagged, limit, offset]);
+  }, [search, status, flagged, limit, offset, sortBy, sortDirection]);
 
   useEffect(() => {
     fetchData();
@@ -348,6 +370,7 @@ export function AdminLibraryPage() {
     {
       key: 'title',
       header: 'Titel',
+      sortKey: 'title',
       render: (t) => (
         <div className="min-w-[180px]">
           <p className="font-medium text-[rgb(var(--color-text))] truncate max-w-[260px]">
@@ -371,6 +394,7 @@ export function AdminLibraryPage() {
     {
       key: 'status',
       header: 'Status',
+      sortKey: 'status',
       render: (t) => (
         <div className="flex items-center gap-1.5">
           <StatusBadge status={t.processingStatus} />
@@ -416,11 +440,13 @@ export function AdminLibraryPage() {
     {
       key: 'confidence',
       header: 'Konf.',
+      sortKey: 'confidence',
       render: (t) => <ConfidenceBadge value={t.confidence} />,
     },
     {
       key: 'bpm',
       header: 'BPM',
+      sortKey: 'tempoBpm',
       render: (t) => (
         <span className="text-xs text-[rgb(var(--color-text-muted))]">
           {t.tempoBpm ? Math.round(t.tempoBpm) : '-'}
@@ -430,6 +456,7 @@ export function AdminLibraryPage() {
     {
       key: 'duration',
       header: 'Längd',
+      sortKey: 'durationMs',
       render: (t) => (
         <span className="text-xs text-[rgb(var(--color-text-muted))]">
           {t.durationMs ? formatDurationMs(t.durationMs) : '-'}
@@ -576,6 +603,8 @@ export function AdminLibraryPage() {
         selectable
         selectedKeys={selectedIds}
         onSelectionChange={setSelectedIds}
+        sort={sort}
+        onSortChange={handleSortChange}
       />
 
       {total > 0 && (

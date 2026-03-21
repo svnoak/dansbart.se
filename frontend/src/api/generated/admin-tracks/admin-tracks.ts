@@ -16,10 +16,37 @@ import type {
   RejectRequest,
   RejectTrack200,
   ResetStructure200,
-  UnflagTrack1200
+  UnflagTrack1200,
+  UpdateDanceStyle200,
+  UpdateDanceStyleRequest
 } from '../../models';
 
 import { customFetch } from '../../custom-fetch';
+
+/**
+ * @summary Directly set the primary dance style for a track (admin override)
+ */
+export const getUpdateDanceStyleUrl = (trackId: string,) => {
+
+
+  
+
+  return `/api/admin/tracks/${trackId}/dance-style`
+}
+
+export const updateDanceStyle = async (trackId: string,
+    updateDanceStyleRequest: UpdateDanceStyleRequest, options?: RequestInit): Promise<UpdateDanceStyle200> => {
+  
+  return customFetch<UpdateDanceStyle200>(getUpdateDanceStyleUrl(trackId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateDanceStyleRequest,)
+  }
+);}
+  
 
 /**
  * @summary Reset track structure to AI defaults

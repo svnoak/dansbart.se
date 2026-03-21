@@ -47,12 +47,14 @@ public class TrackController {
             @RequestParam(name = "minArticulation", required = false) Float minArticulation,
             @RequestParam(name = "maxArticulation", required = false) Float maxArticulation,
             @RequestParam(defaultValue = "20") Integer limit,
-            @RequestParam(defaultValue = "0") Integer offset) {
+            @RequestParam(defaultValue = "0") Integer offset,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDirection) {
         var page = trackService.findPlayableTracksAsListDtos(
             mainStyle, subStyle, search, source, vocals, styleConfirmed, musicGenre,
             minBpm, maxBpm, minDuration, maxDuration,
             minBounciness, maxBounciness, minArticulation, maxArticulation,
-            limit, offset
+            limit, offset, sortBy, sortDirection
         );
         return ResponseEntity.ok(PageResponse.from(page));
     }
