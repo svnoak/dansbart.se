@@ -7,6 +7,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -59,6 +60,16 @@ public class StyleKeywordJooqRepository {
             dsl.selectOne()
                 .from(STYLE_KEYWORDS)
                 .where(STYLE_KEYWORDS.KEYWORD.equalIgnoreCase(keyword))
+        );
+    }
+
+    public boolean existsByMainStyleOrSubStyle(String style) {
+        return dsl.fetchExists(
+            dsl.selectOne()
+                .from(STYLE_KEYWORDS)
+                .where(STYLE_KEYWORDS.IS_ACTIVE.eq(true)
+                    .and(STYLE_KEYWORDS.MAIN_STYLE.equalIgnoreCase(style)
+                        .or(STYLE_KEYWORDS.SUB_STYLE.equalIgnoreCase(style))))
         );
     }
 
@@ -150,7 +161,7 @@ public class StyleKeywordJooqRepository {
                     keyword.getMainStyle(),
                     keyword.getSubStyle(),
                     keyword.getIsActive(),
-                    keyword.getUpdatedAt()
+                    OffsetDateTime.now()
                 )
                 .execute();
             keyword.setId(id);
@@ -160,7 +171,7 @@ public class StyleKeywordJooqRepository {
                 .set(STYLE_KEYWORDS.MAIN_STYLE, keyword.getMainStyle())
                 .set(STYLE_KEYWORDS.SUB_STYLE, keyword.getSubStyle())
                 .set(STYLE_KEYWORDS.IS_ACTIVE, keyword.getIsActive())
-                .set(STYLE_KEYWORDS.UPDATED_AT, keyword.getUpdatedAt())
+                .set(STYLE_KEYWORDS.UPDATED_AT, OffsetDateTime.now())
                 .where(STYLE_KEYWORDS.ID.eq(keyword.getId()))
                 .execute();
         }

@@ -10,6 +10,7 @@ import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
+import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -22,6 +23,7 @@ import se.dansbart.jooq.tables.TrackAlbums;
 import se.dansbart.jooq.tables.TrackArtists;
 import se.dansbart.jooq.tables.TrackDanceStyles;
 import se.dansbart.jooq.tables.TrackFeelVotes;
+import se.dansbart.jooq.tables.TrackFolkwikiMatches;
 import se.dansbart.jooq.tables.TrackPlaybacks;
 import se.dansbart.jooq.tables.TrackStructureVersions;
 import se.dansbart.jooq.tables.TrackStyleVotes;
@@ -66,6 +68,11 @@ public class Tables {
      * The table <code>public.dance_style_config</code>.
      */
     public static final DanceStyleConfig DANCE_STYLE_CONFIG = DanceStyleConfig.DANCE_STYLE_CONFIG;
+
+    /**
+     * The table <code>public.folkwiki_tunes</code>.
+     */
+    public static final FolkwikiTunes FOLKWIKI_TUNES = FolkwikiTunes.FOLKWIKI_TUNES;
 
     /**
      * The table <code>public.genre_profiles</code>.
@@ -126,6 +133,11 @@ public class Tables {
      * The table <code>public.track_feel_votes</code>.
      */
     public static final TrackFeelVotes TRACK_FEEL_VOTES = TrackFeelVotes.TRACK_FEEL_VOTES;
+
+    /**
+     * The table <code>public.track_folkwiki_matches</code>.
+     */
+    public static final TrackFolkwikiMatches TRACK_FOLKWIKI_MATCHES = TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES;
 
     /**
      * The table <code>public.track_playbacks</code>.

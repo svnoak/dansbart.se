@@ -30,6 +30,7 @@ import { AdminPendingPage } from '@/admin/pages/AdminPendingPage';
 import { AdminDuplicatesPage } from '@/admin/pages/AdminDuplicatesPage';
 import { AdminMaintenancePage } from '@/admin/pages/AdminMaintenancePage';
 import { AdminStyleConfigPage } from '@/admin/pages/AdminStyleConfigPage';
+import { AdminFolkwikiPage } from '@/admin/pages/AdminFolkwikiPage';
 
 export function App() {
   return (
@@ -83,6 +84,7 @@ export function App() {
                       <Route path="ingest" element={<AdminIngestPage />} />
                       <Route path="pending" element={<AdminPendingPage />} />
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />
+                      <Route path="folkwiki" element={<AdminFolkwikiPage />} />
                       <Route path="maintenance" element={<AdminMaintenancePage />} />
                       <Route path="*" element={<Navigate to="/admin/library" replace />} />
                         </Routes>

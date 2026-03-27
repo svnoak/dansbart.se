@@ -14,6 +14,7 @@ import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
+import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -24,6 +25,7 @@ import se.dansbart.jooq.tables.RejectionLogs;
 import se.dansbart.jooq.tables.StyleKeywords;
 import se.dansbart.jooq.tables.TrackDanceStyles;
 import se.dansbart.jooq.tables.TrackFeelVotes;
+import se.dansbart.jooq.tables.TrackFolkwikiMatches;
 import se.dansbart.jooq.tables.TrackPlaybacks;
 import se.dansbart.jooq.tables.TrackStyleVotes;
 import se.dansbart.jooq.tables.Tracks;
@@ -42,9 +44,13 @@ public class Indexes {
     // -------------------------------------------------------------------------
 
     public static final Index IDX_DANCE_STYLE_CONFIG_MAIN_STYLE = Internal.createIndex(DSL.name("idx_dance_style_config_main_style"), DanceStyleConfig.DANCE_STYLE_CONFIG, new OrderField[] { DanceStyleConfig.DANCE_STYLE_CONFIG.MAIN_STYLE }, false);
+    public static final Index IDX_FOLKWIKI_TUNES_NORMALIZED_TITLE = Internal.createIndex(DSL.name("idx_folkwiki_tunes_normalized_title"), FolkwikiTunes.FOLKWIKI_TUNES, new OrderField[] { FolkwikiTunes.FOLKWIKI_TUNES.NORMALIZED_TITLE }, false);
+    public static final Index IDX_FOLKWIKI_TUNES_STYLE = Internal.createIndex(DSL.name("idx_folkwiki_tunes_style"), FolkwikiTunes.FOLKWIKI_TUNES, new OrderField[] { FolkwikiTunes.FOLKWIKI_TUNES.STYLE }, false);
     public static final Index IDX_PLAYLIST_COLLABORATORS_PLAYLIST = Internal.createIndex(DSL.name("idx_playlist_collaborators_playlist"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.PLAYLIST_ID }, false);
     public static final Index IDX_PLAYLIST_COLLABORATORS_STATUS = Internal.createIndex(DSL.name("idx_playlist_collaborators_status"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.STATUS }, false);
     public static final Index IDX_PLAYLIST_COLLABORATORS_USER = Internal.createIndex(DSL.name("idx_playlist_collaborators_user"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.USER_ID }, false);
+    public static final Index IDX_TRACK_FOLKWIKI_MATCHES_FOLKWIKI_TUNE_ID = Internal.createIndex(DSL.name("idx_track_folkwiki_matches_folkwiki_tune_id"), TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES, new OrderField[] { TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES.FOLKWIKI_TUNE_ID }, false);
+    public static final Index IDX_TRACK_FOLKWIKI_MATCHES_STATUS = Internal.createIndex(DSL.name("idx_track_folkwiki_matches_status"), TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES, new OrderField[] { TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES.MATCH_STATUS }, false);
     public static final Index IDX_TRACKS_ISRC_NON_UNIQUE = Internal.createIndex(DSL.name("idx_tracks_isrc_non_unique"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.ISRC }, false);
     public static final Index IDX_TRACKS_PROCESSING_STATUS = Internal.createIndex(DSL.name("idx_tracks_processing_status"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.PROCESSING_STATUS }, false);
     public static final Index IX_ALBUMS_SPOTIFY_ID = Internal.createIndex(DSL.name("ix_albums_spotify_id"), Albums.ALBUMS, new OrderField[] { Albums.ALBUMS.SPOTIFY_ID }, true);

@@ -7,7 +7,7 @@ import {
   updateKeyword,
   deleteKeyword,
 } from '@/api/generated/admin-style-keywords/admin-style-keywords';
-import { adminRequestOptions } from '@/admin/api/client';
+import { adminRequestOptions, adminFetch } from '@/admin/api/client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { FilterBar } from '@/admin/components/FilterBar';
@@ -19,6 +19,14 @@ import { FormField } from '@/admin/components/forms/FormField';
 import { FormActions } from '@/admin/components/forms/FormActions';
 import { Button } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
+
+interface StyleConfig {
+  id: string;
+  mainStyle: string;
+  subStyle: string | null;
+  beatsPerBar: number;
+  isActive: boolean;
+}
 
 interface KeywordPageData {
   items: StyleKeyword[];
@@ -38,11 +46,19 @@ export function AdminKeywordsPage() {
   const [editModal, setEditModal] = useState<StyleKeyword | null>(null);
   const [createModal, setCreateModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState<StyleKeyword | null>(null);
+  const [styleConfigs, setStyleConfigs] = useState<StyleConfig[]>([]);
 
   const [formKeyword, setFormKeyword] = useState('');
   const [formMainStyle, setFormMainStyle] = useState('');
   const [formSubStyle, setFormSubStyle] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
+
+  useEffect(() => {
+    adminFetch('/api/admin/style-config/active')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((configs: StyleConfig[]) => setStyleConfigs(configs))
+      .catch(() => {});
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -235,6 +251,12 @@ export function AdminKeywordsPage() {
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
+  const mainStyles = [...new Set(styleConfigs.map((c) => c.mainStyle))].sort();
+  const subStylesForMain = styleConfigs
+    .filter((c) => c.mainStyle === formMainStyle && c.subStyle)
+    .map((c) => c.subStyle!)
+    .sort();
+
   const keywordForm = (
     <div className="space-y-3">
       <FormField label="Nyckelord" htmlFor="kw-keyword">
@@ -246,20 +268,33 @@ export function AdminKeywordsPage() {
         />
       </FormField>
       <FormField label="Huvudstil" htmlFor="kw-main">
-        <TextInput
+        <Select
           id="kw-main"
           value={formMainStyle}
-          onChange={(e) => setFormMainStyle(e.target.value)}
+          onChange={(e) => {
+            setFormMainStyle(e.target.value);
+            setFormSubStyle('');
+          }}
           required
-        />
+        >
+          <option value="">Välj huvudstil...</option>
+          {mainStyles.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </Select>
       </FormField>
       <FormField label="Understil" htmlFor="kw-sub">
-        <TextInput
+        <Select
           id="kw-sub"
           value={formSubStyle}
           onChange={(e) => setFormSubStyle(e.target.value)}
-          placeholder="Valfritt"
-        />
+          disabled={subStylesForMain.length === 0}
+        >
+          <option value="">Ingen understil</option>
+          {subStylesForMain.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </Select>
       </FormField>
       {editModal && (
         <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text))]">
