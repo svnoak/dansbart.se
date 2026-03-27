@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.admin.DanceStyleConfigJooqRepository;
 import se.dansbart.domain.admin.StyleKeyword;
 import se.dansbart.domain.admin.StyleKeywordJooqRepository;
 
@@ -16,6 +17,7 @@ import java.util.*;
 public class AdminStyleKeywordService {
 
     private final StyleKeywordJooqRepository keywordRepository;
+    private final DanceStyleConfigJooqRepository styleConfigRepository;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getKeywordsPaginated(String search, String mainStyle, Boolean isActive, int limit, int offset) {
@@ -83,11 +85,27 @@ public class AdminStyleKeywordService {
         return mapKeyword(keyword);
     }
 
+    private void validateStyleExists(String mainStyle, String subStyle) {
+        if (subStyle != null && !subStyle.isBlank()) {
+            if (!styleConfigRepository.existsByMainStyleAndSubStyle(mainStyle, subStyle)) {
+                throw new IllegalArgumentException(
+                    "No style config found for main style '%s' with sub style '%s'".formatted(mainStyle, subStyle));
+            }
+        } else {
+            if (!styleConfigRepository.existsByMainStyleAndSubStyle(mainStyle, null)) {
+                throw new IllegalArgumentException(
+                    "No style config found for main style '%s'".formatted(mainStyle));
+            }
+        }
+    }
+
     @Transactional
     public Map<String, Object> createKeyword(String keyword, String mainStyle, String subStyle) {
         if (keywordRepository.existsByKeywordIgnoreCase(keyword)) {
             throw new IllegalArgumentException("Keyword already exists");
         }
+
+        validateStyleExists(mainStyle, subStyle);
 
         StyleKeyword newKeyword = StyleKeyword.builder()
             .keyword(keyword)
@@ -113,6 +131,9 @@ public class AdminStyleKeywordService {
 
         if (mainStyle != null) existing.setMainStyle(mainStyle);
         if (subStyle != null) existing.setSubStyle(subStyle);
+        if (mainStyle != null || subStyle != null) {
+            validateStyleExists(existing.getMainStyle(), existing.getSubStyle());
+        }
         if (isActive != null) existing.setIsActive(isActive);
         existing.setUpdatedAt(OffsetDateTime.now());
 

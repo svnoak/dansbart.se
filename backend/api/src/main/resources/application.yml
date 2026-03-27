@@ -33,6 +33,11 @@ spring:
           issuer-uri: ${OIDC_ISSUER_URI:https://auth.dansbart.se/application/o/dansbart/}
           jwk-set-uri: ${OIDC_JWK_SET_URI:https://auth.dansbart.se/application/o/dansbart/jwks/}
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 server:
   port: 8000
 

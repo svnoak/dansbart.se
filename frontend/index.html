@@ -16,6 +16,21 @@
         } catch (e) {}
       })();
     </script>
+    <script>
+      // Clear any leftover service workers and caches from previous site versions
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          registrations.forEach(function(reg) {
+            reg.unregister();
+          });
+        });
+        caches.keys().then(function(names) {
+          names.forEach(function(name) {
+            caches.delete(name);
+          });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

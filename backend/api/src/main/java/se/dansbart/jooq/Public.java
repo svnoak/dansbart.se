@@ -17,6 +17,7 @@ import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
+import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -29,6 +30,7 @@ import se.dansbart.jooq.tables.TrackAlbums;
 import se.dansbart.jooq.tables.TrackArtists;
 import se.dansbart.jooq.tables.TrackDanceStyles;
 import se.dansbart.jooq.tables.TrackFeelVotes;
+import se.dansbart.jooq.tables.TrackFolkwikiMatches;
 import se.dansbart.jooq.tables.TrackPlaybacks;
 import se.dansbart.jooq.tables.TrackStructureVersions;
 import se.dansbart.jooq.tables.TrackStyleVotes;
@@ -80,6 +82,11 @@ public class Public extends SchemaImpl {
      * The table <code>public.dance_style_config</code>.
      */
     public final DanceStyleConfig DANCE_STYLE_CONFIG = DanceStyleConfig.DANCE_STYLE_CONFIG;
+
+    /**
+     * The table <code>public.folkwiki_tunes</code>.
+     */
+    public final FolkwikiTunes FOLKWIKI_TUNES = FolkwikiTunes.FOLKWIKI_TUNES;
 
     /**
      * The table <code>public.genre_profiles</code>.
@@ -142,6 +149,11 @@ public class Public extends SchemaImpl {
     public final TrackFeelVotes TRACK_FEEL_VOTES = TrackFeelVotes.TRACK_FEEL_VOTES;
 
     /**
+     * The table <code>public.track_folkwiki_matches</code>.
+     */
+    public final TrackFolkwikiMatches TRACK_FOLKWIKI_MATCHES = TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES;
+
+    /**
      * The table <code>public.track_playbacks</code>.
      */
     public final TrackPlaybacks TRACK_PLAYBACKS = TrackPlaybacks.TRACK_PLAYBACKS;
@@ -198,6 +210,7 @@ public class Public extends SchemaImpl {
             Artists.ARTISTS,
             DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK,
             DanceStyleConfig.DANCE_STYLE_CONFIG,
+            FolkwikiTunes.FOLKWIKI_TUNES,
             GenreProfiles.GENRE_PROFILES,
             PendingArtistApprovals.PENDING_ARTIST_APPROVALS,
             PlaybackLinks.PLAYBACK_LINKS,
@@ -210,6 +223,7 @@ public class Public extends SchemaImpl {
             TrackArtists.TRACK_ARTISTS,
             TrackDanceStyles.TRACK_DANCE_STYLES,
             TrackFeelVotes.TRACK_FEEL_VOTES,
+            TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES,
             TrackPlaybacks.TRACK_PLAYBACKS,
             TrackStructureVersions.TRACK_STRUCTURE_VERSIONS,
             TrackStyleVotes.TRACK_STYLE_VOTES,

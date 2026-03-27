@@ -6,11 +6,6 @@
   ],
   "tags": [
     {
-      "name": "Discovery",
-      "description": "Track discovery endpoints for homepage and exploration"
-    },
-    { "name": "Playlists", "description": "User playlist management" },
-    {
       "name": "Admin Rejections",
       "description": "Rejection and blocklist management endpoints"
     },
@@ -18,6 +13,41 @@
       "name": "Admin Maintenance",
       "description": "System maintenance and data management endpoints"
     },
+    {
+      "name": "Analytics",
+      "description": "Track playback and user interaction analytics"
+    },
+    {
+      "name": "Admin Spider",
+      "description": "Spider crawl management endpoints"
+    },
+    { "name": "Albums", "description": "Album discovery endpoints" },
+    {
+      "name": "Admin Duplicates",
+      "description": "Track duplicate management endpoints"
+    },
+    {
+      "name": "Structure Versions",
+      "description": "Track structure version voting and reporting"
+    },
+    { "name": "Users", "description": "User profile management endpoints" },
+    {
+      "name": "Data Export",
+      "description": "Public dataset export endpoints (CC BY 4.0)"
+    },
+    {
+      "name": "Admin Analytics",
+      "description": "Analytics dashboard and statistics endpoints"
+    },
+    {
+      "name": "Admin Folkwiki",
+      "description": "Folkwiki tune matching review and confirmation"
+    },
+    {
+      "name": "Discovery",
+      "description": "Track discovery endpoints for homepage and exploration"
+    },
+    { "name": "Playlists", "description": "User playlist management" },
     { "name": "Artists", "description": "Artist discovery endpoints" },
     {
       "name": "Admin - Tracks",
@@ -34,10 +64,6 @@
       "description": "Spotify preview and ingest endpoints"
     },
     {
-      "name": "Analytics",
-      "description": "Track playback and user interaction analytics"
-    },
-    {
       "name": "Admin Style Config",
       "description": "Dance style configuration management (beats_per_bar, etc.)"
     },
@@ -46,36 +72,14 @@
       "description": "Track discovery and playback endpoints"
     },
     {
-      "name": "Admin Spider",
-      "description": "Spider crawl management endpoints"
-    },
-    {
       "name": "Admin Artists",
       "description": "Admin artist management endpoints"
-    },
-    { "name": "Albums", "description": "Album discovery endpoints" },
-    {
-      "name": "Admin Duplicates",
-      "description": "Track duplicate management endpoints"
     },
     {
       "name": "Admin Albums",
       "description": "Admin album management endpoints"
     },
-    {
-      "name": "Structure Versions",
-      "description": "Track structure version voting and reporting"
-    },
-    { "name": "Users", "description": "User profile management endpoints" },
     { "name": "Admin", "description": "Administrative task management" },
-    {
-      "name": "Data Export",
-      "description": "Public dataset export endpoints (CC BY 4.0)"
-    },
-    {
-      "name": "Admin Analytics",
-      "description": "Analytics dashboard and statistics endpoints"
-    },
     {
       "name": "Admin Pending",
       "description": "Pending artist and album approval endpoints"
@@ -517,6 +521,74 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/folkwiki/matches/{trackId}/{folkwikiTuneId}/reject": {
+      "put": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Reject a match (no style change)",
+        "operationId": "rejectMatch",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "folkwikiTuneId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/folkwiki/matches/{trackId}/{folkwikiTuneId}/confirm": {
+      "put": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Confirm a match and apply folkwiki style to track",
+        "operationId": "confirmMatch",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "folkwikiTuneId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
           }
         ],
         "responses": {
@@ -2056,6 +2128,39 @@
             }
           },
           "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/folkwiki/import": {
+      "post": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Upload folkwiki_tunes.json, import tunes and run matching",
+        "operationId": "importTunes",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": ["file"],
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
         },
         "responses": {
           "200": {
@@ -3937,6 +4042,69 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/folkwiki/matches": {
+      "get": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Get folkwiki matches with optional status filter",
+        "operationId": "getMatches",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/folkwiki/matches/counts": {
+      "get": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Get match counts by status",
+        "operationId": "getStatusCounts_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
                 }
               }
             }

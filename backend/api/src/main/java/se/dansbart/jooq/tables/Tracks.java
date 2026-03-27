@@ -40,6 +40,7 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Albums.AlbumsPath;
 import se.dansbart.jooq.tables.AnalysisSources.AnalysisSourcesPath;
 import se.dansbart.jooq.tables.Artists.ArtistsPath;
+import se.dansbart.jooq.tables.FolkwikiTunes.FolkwikiTunesPath;
 import se.dansbart.jooq.tables.PlaybackLinks.PlaybackLinksPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
@@ -47,6 +48,7 @@ import se.dansbart.jooq.tables.TrackAlbums.TrackAlbumsPath;
 import se.dansbart.jooq.tables.TrackArtists.TrackArtistsPath;
 import se.dansbart.jooq.tables.TrackDanceStyles.TrackDanceStylesPath;
 import se.dansbart.jooq.tables.TrackFeelVotes.TrackFeelVotesPath;
+import se.dansbart.jooq.tables.TrackFolkwikiMatches.TrackFolkwikiMatchesPath;
 import se.dansbart.jooq.tables.TrackPlaybacks.TrackPlaybacksPath;
 import se.dansbart.jooq.tables.TrackStructureVersions.TrackStructureVersionsPath;
 import se.dansbart.jooq.tables.TrackStyleVotes.TrackStyleVotesPath;
@@ -411,6 +413,19 @@ public class Tracks extends TableImpl<Record> {
         return _trackFeelVotes;
     }
 
+    private transient TrackFolkwikiMatchesPath _trackFolkwikiMatches;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.track_folkwiki_matches</code> table
+     */
+    public TrackFolkwikiMatchesPath trackFolkwikiMatches() {
+        if (_trackFolkwikiMatches == null)
+            _trackFolkwikiMatches = new TrackFolkwikiMatchesPath(this, null, Keys.TRACK_FOLKWIKI_MATCHES__TRACK_FOLKWIKI_MATCHES_TRACK_ID_FKEY.getInverseKey());
+
+        return _trackFolkwikiMatches;
+    }
+
     private transient TrackPlaybacksPath _trackPlaybacks;
 
     /**
@@ -485,6 +500,14 @@ public class Tracks extends TableImpl<Record> {
      */
     public ArtistsPath artists() {
         return trackArtists().artists();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the
+     * <code>public.folkwiki_tunes</code> table
+     */
+    public FolkwikiTunesPath folkwikiTunes() {
+        return trackFolkwikiMatches().folkwikiTunes();
     }
 
     @Override

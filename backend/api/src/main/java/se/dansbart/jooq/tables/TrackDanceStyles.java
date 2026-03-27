@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.jooq.Check;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
@@ -28,6 +29,7 @@ import org.jooq.TableField;
 import org.jooq.TableOptions;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
+import org.jooq.impl.Internal;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
@@ -112,6 +114,11 @@ public class TrackDanceStyles extends TableImpl<Record> {
      * The column <code>public.track_dance_styles.sub_style</code>.
      */
     public final TableField<Record, String> SUB_STYLE = createField(DSL.name("sub_style"), SQLDataType.VARCHAR, this, "");
+
+    /**
+     * The column <code>public.track_dance_styles.classification_source</code>.
+     */
+    public final TableField<Record, String> CLASSIFICATION_SOURCE = createField(DSL.name("classification_source"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'ml'::text"), SQLDataType.CLOB)), this, "");
 
     private TrackDanceStyles(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -205,6 +212,13 @@ public class TrackDanceStyles extends TableImpl<Record> {
             _tracks = new TracksPath(this, Keys.TRACK_DANCE_STYLES__TRACK_DANCE_STYLES_TRACK_ID_FKEY, null);
 
         return _tracks;
+    }
+
+    @Override
+    public List<Check<Record>> getChecks() {
+        return Arrays.asList(
+            Internal.createCheck(this, DSL.name("track_dance_styles_classification_source_check"), "((classification_source = ANY (ARRAY['ml'::text, 'folkwiki'::text, 'manual'::text])))", true)
+        );
     }
 
     @Override
