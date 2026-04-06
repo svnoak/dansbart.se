@@ -133,8 +133,6 @@ pytest
 
 ## Deployment
 
-See [README.docker.md](README.docker.md) for Docker-based deployment instructions.
-
 Production images are built and pushed to GitHub Container Registry via CI on every merge to `main`:
 - `ghcr.io/svnoak/dansbart-frontend:production`
 - `ghcr.io/svnoak/dansbart-api:production`
