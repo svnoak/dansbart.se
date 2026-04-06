@@ -157,7 +157,7 @@ The core analysis engine, [NeckenML Analyzer](https://github.com/svnoak/neckenml
 
 ## Contributing
 
-Issues and pull requests are welcome. Please open an issue before starting significant work.
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines — all PRs must be linked to an issue.
 
 ---
 
