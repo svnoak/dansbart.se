@@ -33,7 +33,7 @@ docker compose up -d db redis api frontend worker-feature worker-audio
 cd dansbart.se/e2e && npm install && npx playwright install --with-deps && npm run e2e
 ```
 
-**Note:** The root `docker-compose.yml` builds **worker-audio** from `./dansbart-audio-worker`. Ensure that directory exists (clone or submodule). If you run from `dansbart.se/` using `dansbart.se/docker-compose.yml`, use **worker-light** and **worker-audio** (both are defined there).
+**Note:** If you run from `dansbart.se/` using `dansbart.se/docker-compose.yml`, use **worker-feature** and **worker-audio** (both are defined there).
 
 ## What is tested
 

@@ -68,8 +68,8 @@ services:
     restart: unless-stopped
 
 
-  worker-light:
-    image: ghcr.io/svnoak/dansbart-light-worker:production
+  worker-feature:
+    image: ghcr.io/svnoak/dansbart-feature-worker:production
     platform: linux/amd64
     command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 -Q light
     env_file:

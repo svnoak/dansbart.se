@@ -2,17 +2,14 @@
 # Run E2E tests against the full stack.
 # Usage: from repo root: ./dansbart.se/e2e/run-e2e.sh
 # Or:     cd dansbart.se/e2e && ./run-e2e.sh  (compose must be run from repo root separately)
-#
-# Uses docker-compose.e2e.yml so worker-audio is built from dansbart.se/audio-worker (single clone).
 
 set -e
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-COMPOSE_FILES="-f docker-compose.yml -f dansbart.se/docker-compose.e2e.yml"
+COMPOSE_FILES="-f docker-compose.yml"
 
 echo "Starting stack (db, redis, api, frontend, worker-feature, worker-audio)..."
-echo "worker-audio is built from dansbart.se/audio-worker (E2E override)."
 docker compose $COMPOSE_FILES up -d db redis api frontend worker-feature worker-audio
 
 echo "Clearing any stale Celery messages from Redis queues..."

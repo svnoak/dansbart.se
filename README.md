@@ -193,7 +193,7 @@ docker-compose up backend db redis
 docker-compose up worker-audio db redis
 
 # All workers
-docker-compose up worker-audio worker-light
+docker-compose up worker-audio worker-feature
 ```
 
 ### Database Migrations

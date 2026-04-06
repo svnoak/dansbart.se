@@ -47,8 +47,7 @@ services:
     depends_on:
       - backend
 
-  # Audio Worker (AGPL-3.0) - From git submodule: ./backend/workers/audio
-  # To add submodule: git submodule add https://github.com/svnoak/neckenml-audio-worker.git backend/workers/audio
+  # Audio Worker (AGPL-3.0)
   worker-audio:
     build:
       context: ./backend/workers/audio
@@ -76,7 +75,7 @@ services:
     mem_limit: '4g'
 
   # Light Worker (Discovery, Ingestion, No ML)
-  worker-light:
+  worker-feature:
     build:
       context: .
       dockerfile: backend/Dockerfile.workers

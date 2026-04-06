@@ -63,13 +63,16 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache,mode=max
           platforms: linux/amd64
 
-  # Feature Worker only - Audio Worker is built and deployed from its own AGPL repo
-  build-and-push-feature-worker:
+  build-and-push-workers:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      matrix:
+        worker: [feature, audio]
 
     steps:
       - name: Checkout code
@@ -93,26 +96,26 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker }}-worker
           tags: |
             type=raw,value=production
             type=raw,value=latest
             type=raw,value=${{ steps.version.outputs.tag }}
 
-      - name: Build and push feature-worker image
+      - name: Build and push ${{ matrix.worker }}-worker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend/workers/feature
-          file: ./backend/workers/feature/Dockerfile
+          context: ./backend/workers/${{ matrix.worker }}
+          file: ./backend/workers/${{ matrix.worker }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker }}-worker:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker }}-worker:buildcache,mode=max
           platforms: linux/amd64
 
   deploy:
-    needs: [build-and-push, build-and-push-feature-worker]
+    needs: [build-and-push, build-and-push-workers]
     runs-on: ubuntu-latest
 
     steps:
@@ -124,8 +127,7 @@ jobs:
           echo "- Frontend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:production\`" >> $GITHUB_STEP_SUMMARY
           echo "- API: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api:production\`" >> $GITHUB_STEP_SUMMARY
           echo "- Feature Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:production\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** Audio Worker is built separately from [dansbart-audio-worker](https://github.com/${{ github.repository_owner }}/dansbart-audio-worker) (AGPL-3.0)" >> $GITHUB_STEP_SUMMARY
+          echo "- Audio Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-audio-worker:production\`" >> $GITHUB_STEP_SUMMARY
 
       # Add your deployment steps here
       # Example: SSH into server and pull new images
