@@ -27,10 +27,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Generate version tag
-        id: version
-        run: echo "tag=$(date -u '+%Y%m%d-%H%M%S')-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -47,9 +43,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
           tags: |
-            type=raw,value=production
             type=raw,value=latest
-            type=raw,value=${{ steps.version.outputs.tag }}
+            type=sha,prefix=
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -78,10 +73,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Generate version tag
-        id: version
-        run: echo "tag=$(date -u '+%Y%m%d-%H%M%S')-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -98,9 +89,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.worker }}-worker
           tags: |
-            type=raw,value=production
             type=raw,value=latest
-            type=raw,value=${{ steps.version.outputs.tag }}
+            type=sha,prefix=
 
       - name: Build and push ${{ matrix.worker }}-worker image
         uses: docker/build-push-action@v5
@@ -124,10 +114,10 @@ jobs:
           echo "Production images built and pushed successfully." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Images:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Frontend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:production\`" >> $GITHUB_STEP_SUMMARY
-          echo "- API: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api:production\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Feature Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:production\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Audio Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-audio-worker:production\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend\`" >> $GITHUB_STEP_SUMMARY
+          echo "- API: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Feature Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Audio Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-audio-worker\`" >> $GITHUB_STEP_SUMMARY
 
       # Add your deployment steps here
       # Example: SSH into server and pull new images
