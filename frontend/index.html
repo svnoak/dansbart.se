@@ -5,32 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend-react</title>
-    <script>
-      (function() {
-        try {
-          var t = localStorage.getItem('dansbart-theme');
-          if (t === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            document.documentElement.classList.add('dark');
-          }
-        } catch (e) {}
-      })();
-    </script>
-    <script>
-      // Clear any leftover service workers and caches from previous site versions
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          registrations.forEach(function(reg) {
-            reg.unregister();
-          });
-        });
-        caches.keys().then(function(names) {
-          names.forEach(function(name) {
-            caches.delete(name);
-          });
-        });
-      }
-    </script>
+    <script src="/init-theme.js"></script>
+    <script src="/clear-sw.js" defer></script>
   </head>
   <body>
     <div id="root"></div>
