@@ -18,7 +18,7 @@ import java.util.HexFormat;
 import java.util.Map;
 
 @Service
-@Profile("!local")
+@Profile("!local & !test")
 public class DiscourseConnectService {
 
     private static final String NONCE_SESSION_KEY = "discourse_sso_nonce";

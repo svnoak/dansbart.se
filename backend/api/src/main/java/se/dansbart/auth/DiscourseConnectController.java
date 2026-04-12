@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-@Profile("!local")
+@Profile("!local & !test")
 @RequestMapping("/sso")
 public class DiscourseConnectController {
 
