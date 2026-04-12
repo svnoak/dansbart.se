@@ -26,7 +26,7 @@ import se.dansbart.e2e.fixture.TestDataFactory;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TestDataFactory.class, JwtTestHelper.class})
+@Import({TestDataFactory.class, JwtTestHelper.class, TestSecurityConfig.class})
 @Transactional
 public abstract class AbstractE2ETest {
 

@@ -24,7 +24,7 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
  */
 @Configuration
 @EnableWebSecurity
-@Profile("!local")
+@Profile("!local & !test")
 public class SecurityConfig {
 
     @Bean
