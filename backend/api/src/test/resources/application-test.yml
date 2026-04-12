@@ -10,13 +10,6 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: false
 
-  # OAuth2 disabled for tests - using mock JWT decoder
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:9999/test-issuer
-
 server:
   port: 0  # Random port for tests
 

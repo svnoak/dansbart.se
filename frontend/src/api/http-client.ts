@@ -2,7 +2,7 @@
  * Unified HTTP client used by all Orval-generated API calls.
  *
  * Authentication is handled via the BFF pattern:
- *   - The Spring backend manages the OIDC session and issues an httpOnly SESSION cookie
+ *   - The Spring backend manages the DiscourseConnect session and issues an httpOnly SESSION cookie
  *   - `credentials: 'include'` ensures the cookie is sent on every request automatically
  *   - No tokens are ever stored or read in JavaScript
  *

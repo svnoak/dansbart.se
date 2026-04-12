@@ -68,22 +68,11 @@
             <version>${pgvector.version}</version>
         </dependency>
 
-        <!-- Security + OAuth2 -->
+        <!-- Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-        <!-- OAuth2 Client — BFF login flow (PKCE + session management) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-client</artifactId>
-        </dependency>
-        <!-- OAuth2 Resource Server — kept for password-fallback mode JWT validation -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
-
         <!-- Redis (Celery task dispatch + session storage) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

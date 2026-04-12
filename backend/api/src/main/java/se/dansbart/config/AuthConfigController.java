@@ -14,8 +14,8 @@ public class AuthConfigController {
     @GetMapping("/auth")
     public Map<String, Object> getAuthConfig() {
         return Map.of(
-            "authMethod", "oidc",
-            "loginUrl", "/oauth2/authorization/authentik"
+            "authMethod", "discourse",
+            "loginUrl", "/sso/initiate"
         );
     }
 }
