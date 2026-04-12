@@ -1,10 +1,13 @@
-export interface AuthState {
-  token: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: string;
 }
 
-export interface AuthContextValue extends AuthState {
-  login: (password: string) => Promise<void>;
+export interface AuthContextValue {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: AuthUser | null;
+  login: () => void;
   logout: () => Promise<void>;
 }

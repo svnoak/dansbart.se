@@ -13,7 +13,7 @@ import type {
   IngestTrackRequest
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Ingest track from Spotify
@@ -28,7 +28,7 @@ export const getIngestTrackUrl = () => {
 
 export const ingestTrack = async (ingestTrackRequest: IngestTrackRequest, options?: RequestInit): Promise<IngestTrack200> => {
   
-  return customFetch<IngestTrack200>(getIngestTrackUrl(),
+  return httpClient<IngestTrack200>(getIngestTrackUrl(),
   {      
     ...options,
     method: 'POST',
@@ -52,7 +52,7 @@ export const getIngestAlbumUrl = () => {
 
 export const ingestAlbum = async (ingestAlbumRequest: IngestAlbumRequest, options?: RequestInit): Promise<IngestAlbum200> => {
   
-  return customFetch<IngestAlbum200>(getIngestAlbumUrl(),
+  return httpClient<IngestAlbum200>(getIngestAlbumUrl(),
   {      
     ...options,
     method: 'POST',
@@ -76,7 +76,7 @@ export const getGetArtistAlbums1Url = (spotifyId: string,) => {
 
 export const getArtistAlbums1 = async (spotifyId: string, options?: RequestInit): Promise<GetArtistAlbums1200> => {
   
-  return customFetch<GetArtistAlbums1200>(getGetArtistAlbums1Url(spotifyId),
+  return httpClient<GetArtistAlbums1200>(getGetArtistAlbums1Url(spotifyId),
   {      
     ...options,
     method: 'GET'
@@ -99,7 +99,7 @@ export const getGetAlbumTracks1Url = (spotifyId: string,) => {
 
 export const getAlbumTracks1 = async (spotifyId: string, options?: RequestInit): Promise<GetAlbumTracks1200> => {
   
-  return customFetch<GetAlbumTracks1200>(getGetAlbumTracks1Url(spotifyId),
+  return httpClient<GetAlbumTracks1200>(getGetAlbumTracks1Url(spotifyId),
   {      
     ...options,
     method: 'GET'

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { adminFetch } from '@/admin/api/client';
+import { apiFetch } from '@/api/http-client';
 import { Pagination } from '@/admin/components/Pagination';
 import { ConfidenceBadge } from '@/admin/components/ConfidenceBadge';
 import { Modal } from '@/admin/components/Modal';
@@ -103,7 +103,7 @@ export function AdminFolkwikiPage() {
     try {
       const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
       if (status) query.set('status', status);
-      const res = await adminFetch(`/api/admin/folkwiki/matches?${query}`);
+      const res = await apiFetch(`/api/admin/folkwiki/matches?${query}`);
       if (!res.ok) throw new Error('Kunde inte hamta matchningar');
       const data = await res.json();
       setMatches(data.items);
@@ -118,7 +118,7 @@ export function AdminFolkwikiPage() {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/admin/folkwiki/matches/counts');
+      const res = await apiFetch('/api/admin/folkwiki/matches/counts');
       if (res.ok) setCounts(await res.json());
     } catch { /* ignore */ }
   }, []);
@@ -131,13 +131,8 @@ export function AdminFolkwikiPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const token = localStorage.getItem('dansbart-admin-token');
-      const res = await fetch('/api/admin/folkwiki/import', {
+      const res = await apiFetch('/api/admin/folkwiki/import', {
         method: 'POST',
-        headers: {
-          'X-Trace-Id': crypto.randomUUID(),
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
         body: formData,
       });
       if (!res.ok) {
@@ -185,7 +180,7 @@ export function AdminFolkwikiPage() {
   ) => {
     try {
       const query = force ? '?force=true' : '';
-      const res = await adminFetch(
+      const res = await apiFetch(
         `/api/admin/folkwiki/matches/${match.trackId}/${match.folkwikiTuneId}/${action}${query}`,
         { method: 'PUT' },
       );
@@ -222,7 +217,7 @@ export function AdminFolkwikiPage() {
     setAddingKeyword(true);
     try {
       // Create the keyword
-      const kwRes = await adminFetch('/api/admin/style-keywords', {
+      const kwRes = await apiFetch('/api/admin/style-keywords', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -267,7 +262,7 @@ export function AdminFolkwikiPage() {
     setRejecting(true);
     try {
       const query = `?overrideStyle=${encodeURIComponent(overrideStyle)}`;
-      const res = await adminFetch(
+      const res = await apiFetch(
         `/api/admin/folkwiki/matches/${rejectModal.match.trackId}/${rejectModal.match.folkwikiTuneId}/reject${query}`,
         { method: 'PUT' },
       );

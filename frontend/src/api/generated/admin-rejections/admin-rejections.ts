@@ -14,7 +14,7 @@ import type {
   RemoveFromBlocklist200
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Reject a network of artists and albums together
@@ -29,7 +29,7 @@ export const getRejectNetworkUrl = () => {
 
 export const rejectNetwork = async (rejectNetworkRequest: RejectNetworkRequest, options?: RequestInit): Promise<RejectNetwork200> => {
   
-  return customFetch<RejectNetwork200>(getRejectNetworkUrl(),
+  return httpClient<RejectNetwork200>(getRejectNetworkUrl(),
   {      
     ...options,
     method: 'POST',
@@ -53,7 +53,7 @@ export const getAddToBlocklistUrl = () => {
 
 export const addToBlocklist = async (blockSpotifyRequest: BlockSpotifyRequest, options?: RequestInit): Promise<AddToBlocklist200> => {
   
-  return customFetch<AddToBlocklist200>(getAddToBlocklistUrl(),
+  return httpClient<AddToBlocklist200>(getAddToBlocklistUrl(),
   {      
     ...options,
     method: 'POST',
@@ -84,7 +84,7 @@ export const getGetRejectionsUrl = (params?: GetRejectionsParams,) => {
 
 export const getRejections = async (params?: GetRejectionsParams, options?: RequestInit): Promise<GetRejections200> => {
   
-  return customFetch<GetRejections200>(getGetRejectionsUrl(params),
+  return httpClient<GetRejections200>(getGetRejectionsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -107,7 +107,7 @@ export const getRemoveFromBlocklistUrl = (rejectionId: string,) => {
 
 export const removeFromBlocklist = async (rejectionId: string, options?: RequestInit): Promise<RemoveFromBlocklist200> => {
   
-  return customFetch<RemoveFromBlocklist200>(getRemoveFromBlocklistUrl(rejectionId),
+  return httpClient<RemoveFromBlocklist200>(getRemoveFromBlocklistUrl(rejectionId),
   {      
     ...options,
     method: 'DELETE'

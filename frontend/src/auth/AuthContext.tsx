@@ -1,83 +1,52 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AuthContextValue } from './types';
+import type { AuthContextValue, AuthUser } from './types';
 import { AuthContext } from './context';
 
-const TOKEN_KEY = 'dansbart-admin-token';
+function getCsrfToken(): string | null {
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('XSRF-TOKEN='));
+  return match ? decodeURIComponent(match.split('=')[1]) : null;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY),
-  );
-  const storedToken = localStorage.getItem(TOKEN_KEY);
-  const [isLoading, setIsLoading] = useState(!!storedToken);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const clearToken = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
+  useEffect(() => {
+    fetch('/api/users/me', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setUser({ id: data.id, username: data.username, role: data.role ?? 'USER' });
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
-  // Verify stored token on mount
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    fetch('/api/admin/auth/verify', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (!cancelled && !res.ok) clearToken();
-      })
-      .catch(() => {
-        if (!cancelled) clearToken();
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const login = useCallback(async (password: string) => {
-    const res = await fetch('/api/admin/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(text || 'Inloggning misslyckades');
-    }
-    const data = await res.json();
-    const newToken = data.token as string;
-    localStorage.setItem(TOKEN_KEY, newToken);
-    setToken(newToken);
+  const login = useCallback(() => {
+    window.location.href = '/sso/initiate';
   }, []);
 
   const logout = useCallback(async () => {
-    if (token) {
-      await fetch('/api/admin/auth/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {});
-    }
-    clearToken();
-  }, [token, clearToken]);
+    const csrfToken = getCsrfToken();
+    await fetch('/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {},
+    }).catch(() => {});
+    window.location.href = '/';
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      token,
-      isAuthenticated: !!token,
+      isAuthenticated: !!user,
       isLoading,
+      user,
       login,
       logout,
     }),
-    [token, isLoading, login, logout],
+    [user, isLoading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-

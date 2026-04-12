@@ -5,7 +5,7 @@ import {
   backfillIsrcs,
   reclassifyAll,
 } from '@/api/generated/admin-maintenance/admin-maintenance';
-import { adminFetch, adminRequestOptions } from '@/admin/api/client';
+import { apiFetch } from '@/api/http-client';
 import { Modal } from '@/admin/components/Modal';
 import { Button } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
@@ -19,7 +19,7 @@ const QUEUE_LABELS: Record<string, string> = {
 };
 
 async function fetchPauseStatus(): Promise<PauseStatus> {
-  const res = await adminFetch('/api/admin/maintenance/pause-status');
+  const res = await apiFetch('/api/admin/maintenance/pause-status');
   if (!res.ok) throw new Error('Failed to fetch pause status');
   const data = await res.json();
   return data.queues;
@@ -27,7 +27,7 @@ async function fetchPauseStatus(): Promise<PauseStatus> {
 
 async function togglePause(queue: string, paused: boolean): Promise<void> {
   const endpoint = paused ? 'resume' : 'pause';
-  const res = await adminFetch(
+  const res = await apiFetch(
     `/api/admin/maintenance/${endpoint}?queue=${queue}`,
     { method: 'POST' },
   );
@@ -36,7 +36,7 @@ async function togglePause(queue: string, paused: boolean): Promise<void> {
 
 async function togglePauseAll(anyActive: boolean): Promise<void> {
   const endpoint = anyActive ? 'pause' : 'resume';
-  const res = await adminFetch(`/api/admin/maintenance/${endpoint}`, {
+  const res = await apiFetch(`/api/admin/maintenance/${endpoint}`, {
     method: 'POST',
   });
   if (!res.ok) throw new Error(`Failed to ${endpoint} all queues`);
@@ -133,32 +133,32 @@ export function AdminMaintenancePage() {
       id: 'queue-pending',
       label: 'Köa väntande spår',
       description: 'Skicka PENDING-spår till analysarbetaren (max 500)',
-      action: () => run('Köa väntande', () => queuePendingTracks({ limit: 500 }, adminRequestOptions())),
+      action: () => run('Köa väntande', () => queuePendingTracks({ limit: 500 })),
     },
     {
       id: 'queue-failed',
       label: 'Köa om misslyckade spår',
       description: 'Återställ FAILED-spår till PENDING och skicka till analysarbetaren (max 500)',
-      action: () => run('Köa om misslyckade', () => queuePendingTracks({ limit: 500, status: 'FAILED' }, adminRequestOptions())),
+      action: () => run('Köa om misslyckade', () => queuePendingTracks({ limit: 500, status: 'FAILED' })),
     },
     {
       id: 'cleanup-orphaned',
       label: 'Rensa fastsittande spår',
       description: 'Återställ spår som fastnat i PROCESSING-status (30 min gräns)',
-      action: () => run('Rensa fastsittande', () => cleanupOrphaned({ stuckThresholdMinutes: 30 }, adminRequestOptions())),
+      action: () => run('Rensa fastsittande', () => cleanupOrphaned({ stuckThresholdMinutes: 30 })),
     },
     {
       id: 'backfill-isrcs',
       label: 'Komplettera ISRC',
       description: 'Hämta saknade ISRC-koder från Spotify (max 100)',
-      action: () => run('Komplettera ISRC', () => backfillIsrcs({ limit: 100 }, adminRequestOptions())),
+      action: () => run('Komplettera ISRC', () => backfillIsrcs({ limit: 100 })),
     },
     {
       id: 'backfill-duration',
       label: 'Komplettera spellängd',
       description: 'Hämta saknad spellängd från Spotify (max 200)',
       action: () => run('Komplettera spellängd', async () => {
-        const res = await adminFetch('/api/admin/maintenance/backfill-duration?batchSize=200', { method: 'POST' });
+        const res = await apiFetch('/api/admin/maintenance/backfill-duration?batchSize=200', { method: 'POST' });
         if (!res.ok) throw new Error('Failed to backfill duration');
         return res.json();
       }),
@@ -168,7 +168,7 @@ export function AdminMaintenancePage() {
       label: 'Omträna modell',
       description: 'Träna om klassificeringsmodellen baserat på bekräftade spår',
       action: () => run('Omträna modell', async () => {
-        const res = await adminFetch(
+        const res = await apiFetch(
           `/api/admin/maintenance/retrain-model?reclassify=${retrainReclassify}`,
           { method: 'POST' },
         );
@@ -192,7 +192,7 @@ export function AdminMaintenancePage() {
       label: 'Omklassificera alla',
       description: 'Kör om dansstilsklassificering för hela biblioteket',
       needsConfirm: true,
-      action: () => run('Omklassificera', () => reclassifyAll(adminRequestOptions())),
+      action: () => run('Omklassificera', () => reclassifyAll()),
     },
   ];
 

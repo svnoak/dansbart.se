@@ -4,7 +4,6 @@ import {
   getAlbums1,
   rejectAlbum,
 } from '@/api/generated/admin-albums/admin-albums';
-import { adminRequestOptions } from '@/admin/api/client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { FilterBar } from '@/admin/components/FilterBar';
@@ -49,7 +48,6 @@ export function AdminAlbumsPage() {
           limit,
           offset,
         },
-        adminRequestOptions(),
       );
       const r = result as unknown as AlbumPageData;
       setData({
@@ -81,7 +79,6 @@ export function AdminAlbumsPage() {
       await rejectAlbum(
         rejectModal.id,
         { reason: rejectReason || undefined },
-        adminRequestOptions(),
       );
       toast(`Album avvisat`);
       setRejectModal(null);

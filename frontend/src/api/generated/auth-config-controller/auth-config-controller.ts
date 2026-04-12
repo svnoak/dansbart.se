@@ -8,7 +8,7 @@ import type {
   GetAuthConfig200
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 export const getGetAuthConfigUrl = () => {
 
@@ -20,7 +20,7 @@ export const getGetAuthConfigUrl = () => {
 
 export const getAuthConfig = async ( options?: RequestInit): Promise<GetAuthConfig200> => {
   
-  return customFetch<GetAuthConfig200>(getGetAuthConfigUrl(),
+  return httpClient<GetAuthConfig200>(getGetAuthConfigUrl(),
   {      
     ...options,
     method: 'GET'

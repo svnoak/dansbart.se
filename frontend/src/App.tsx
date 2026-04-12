@@ -6,6 +6,7 @@ import { Layout } from '@/layout/Layout';
 import { PlayerProvider } from '@/player/PlayerContext';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { AboutPage } from '@/pages/AboutPage';
+import { FeedbackPage } from '@/pages/FeedbackPage';
 import { AlbumPage } from '@/pages/AlbumPage';
 import { ArtistPage } from '@/pages/ArtistPage';
 import { ClassifyPage } from '@/pages/ClassifyPage';
@@ -15,11 +16,12 @@ import { SearchPage } from '@/pages/SearchPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { ArtistsPage } from '@/pages/ArtistsPage';
 import { AlbumsPage } from '@/pages/AlbumsPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 
 import { AuthProvider } from '@/auth/AuthContext';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { AdminLayout } from '@/admin/layout/AdminLayout';
-import { AdminLoginPage } from '@/admin/pages/AdminLoginPage';
+import { LoginPage } from '@/pages/LoginPage';
 import { AdminLibraryPage } from '@/admin/pages/AdminLibraryPage';
 import { AdminArtistsPage } from '@/admin/pages/AdminArtistsPage';
 import { AdminAlbumsPage } from '@/admin/pages/AdminAlbumsPage';
@@ -31,6 +33,7 @@ import { AdminDuplicatesPage } from '@/admin/pages/AdminDuplicatesPage';
 import { AdminMaintenancePage } from '@/admin/pages/AdminMaintenancePage';
 import { AdminStyleConfigPage } from '@/admin/pages/AdminStyleConfigPage';
 import { AdminFolkwikiPage } from '@/admin/pages/AdminFolkwikiPage';
+import { AdminUsersPage } from '@/admin/pages/AdminUsersPage';
 
 export function App() {
   return (
@@ -55,8 +58,10 @@ export function App() {
                         <Route path="/artist/:id" element={<ArtistPage />} />
                         <Route path="/album/:id" element={<AlbumPage />} />
                         <Route path="/about" element={<AboutPage />} />
+                        <Route path="/feedback" element={<FeedbackPage />} />
                         <Route path="/terms" element={<TermsPage />} />
                         <Route path="/privacy" element={<PrivacyPage />} />
+                        <Route path="*" element={<NotFoundPage />} />
                       </Routes>
                     </Layout>
                   </PlayerProvider>
@@ -65,14 +70,14 @@ export function App() {
             />
 
             {/* Admin routes */}
-            <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/admin" element={<Navigate to="/admin/library" replace />} />
             <Route
               path="/admin/*"
               element={
                 <ConsentProvider>
                   <PlayerProvider>
-                    <ProtectedRoute>
+                    <ProtectedRoute requiredRole="ADMIN">
                       <AdminLayout>
                         <Routes>
                       <Route path="library" element={<AdminLibraryPage />} />
@@ -85,6 +90,7 @@ export function App() {
                       <Route path="pending" element={<AdminPendingPage />} />
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />
                       <Route path="folkwiki" element={<AdminFolkwikiPage />} />
+                      <Route path="users" element={<AdminUsersPage />} />
                       <Route path="maintenance" element={<AdminMaintenancePage />} />
                       <Route path="*" element={<Navigate to="/admin/library" replace />} />
                         </Routes>

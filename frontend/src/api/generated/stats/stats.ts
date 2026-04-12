@@ -8,7 +8,7 @@ import type {
   StatsDto
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get library statistics
@@ -23,7 +23,7 @@ export const getGetStatsUrl = () => {
 
 export const getStats = async ( options?: RequestInit): Promise<StatsDto> => {
   
-  return customFetch<StatsDto>(getGetStatsUrl(),
+  return httpClient<StatsDto>(getGetStatsUrl(),
   {      
     ...options,
     method: 'GET'

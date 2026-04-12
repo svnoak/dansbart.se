@@ -5,7 +5,6 @@ import {
   approveArtist,
   rejectArtist,
 } from '@/api/generated/admin-artists/admin-artists';
-import { adminRequestOptions } from '@/admin/api/client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { FilterBar } from '@/admin/components/FilterBar';
@@ -47,7 +46,6 @@ export function AdminArtistsPage() {
     try {
       const result = await getArtists1(
         { search: search || undefined, limit, offset },
-        adminRequestOptions(),
       );
       const r = result as unknown as ArtistPageData;
       setData({
@@ -75,7 +73,7 @@ export function AdminArtistsPage() {
 
   const handleApprove = async (artist: ArtistRow) => {
     try {
-      await approveArtist(artist.id, adminRequestOptions());
+      await approveArtist(artist.id);
       toast(`${artist.name} godkänd`);
       fetchData();
     } catch {
@@ -89,7 +87,6 @@ export function AdminArtistsPage() {
       await rejectArtist(
         rejectModal.id,
         { reason: rejectReason || undefined },
-        adminRequestOptions(),
       );
       toast(`${rejectModal.name} avvisad`);
       setRejectModal(null);

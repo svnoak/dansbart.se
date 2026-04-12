@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.dto.CollaboratorDto;
@@ -27,15 +26,13 @@ public class PlaylistController {
 
     @GetMapping
     @Operation(summary = "Get current user's playlists")
-    public ResponseEntity<List<Playlist>> getMyPlaylists(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+    public ResponseEntity<List<Playlist>> getMyPlaylists(@AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(playlistService.findByUserId(userId));
     }
 
     @GetMapping("/shared")
     @Operation(summary = "Get playlists shared with current user")
-    public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+    public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(playlistService.findSharedWithUser(userId));
     }
 
@@ -50,9 +47,8 @@ public class PlaylistController {
     @PostMapping
     @Operation(summary = "Create a new playlist")
     public ResponseEntity<Playlist> createPlaylist(
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody CreatePlaylistRequest request) {
-        String userId = jwt.getSubject();
         Playlist playlist = playlistService.create(userId, request.name(), request.description());
         return ResponseEntity.created(URI.create("/api/playlists/" + playlist.getId())).body(playlist);
     }
@@ -61,9 +57,8 @@ public class PlaylistController {
     @Operation(summary = "Update a playlist")
     public ResponseEntity<Playlist> updatePlaylist(
             @PathVariable UUID id,
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody UpdatePlaylistRequest request) {
-        String userId = jwt.getSubject();
         return playlistService.update(id, userId, request.name(), request.description(), request.isPublic())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -73,8 +68,7 @@ public class PlaylistController {
     @Operation(summary = "Delete a playlist")
     public ResponseEntity<Void> deletePlaylist(
             @PathVariable UUID id,
-            @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+            @AuthenticationPrincipal String userId) {
         if (playlistService.delete(id, userId)) {
             return ResponseEntity.noContent().build();
         }
@@ -85,9 +79,8 @@ public class PlaylistController {
     @Operation(summary = "Add a track to playlist")
     public ResponseEntity<PlaylistTrack> addTrack(
             @PathVariable UUID id,
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody AddTrackRequest request) {
-        String userId = jwt.getSubject();
         return playlistService.addTrack(id, userId, request.trackId())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -98,8 +91,7 @@ public class PlaylistController {
     public ResponseEntity<Void> removeTrack(
             @PathVariable UUID id,
             @PathVariable UUID trackId,
-            @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+            @AuthenticationPrincipal String userId) {
         if (playlistService.removeTrack(id, userId, trackId)) {
             return ResponseEntity.noContent().build();
         }
@@ -118,8 +110,7 @@ public class PlaylistController {
 
     @GetMapping("/invitations")
     @Operation(summary = "Get pending playlist invitations for current user")
-    public ResponseEntity<List<InvitationDto>> getInvitations(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+    public ResponseEntity<List<InvitationDto>> getInvitations(@AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(playlistService.getPendingInvitations(userId));
     }
 
@@ -127,9 +118,8 @@ public class PlaylistController {
     @Operation(summary = "Accept or reject a playlist invitation")
     public ResponseEntity<PlaylistCollaborator> respondToInvitation(
             @PathVariable UUID invitationId,
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody RespondToInvitationRequest request) {
-        String userId = jwt.getSubject();
         return playlistService.respondToInvitation(invitationId, userId, request.accept())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -139,9 +129,8 @@ public class PlaylistController {
     @Operation(summary = "Reorder tracks in playlist")
     public ResponseEntity<Void> reorderTracks(
             @PathVariable UUID id,
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody ReorderTracksRequest request) {
-        String userId = jwt.getSubject();
         if (playlistService.reorderTracks(id, userId, request.trackIds())) {
             return ResponseEntity.ok().build();
         }
@@ -152,9 +141,8 @@ public class PlaylistController {
     @Operation(summary = "Invite a collaborator to playlist")
     public ResponseEntity<PlaylistCollaborator> inviteCollaborator(
             @PathVariable UUID id,
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody InviteCollaboratorRequest request) {
-        String userId = jwt.getSubject();
         return playlistService.inviteCollaborator(id, userId, request.userId(), request.permission())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.badRequest().build());
@@ -171,9 +159,8 @@ public class PlaylistController {
     public ResponseEntity<PlaylistCollaborator> updateCollaborator(
             @PathVariable UUID id,
             @PathVariable UUID collaboratorId,
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody UpdateCollaboratorRequest request) {
-        String userId = jwt.getSubject();
         return playlistService.updateCollaborator(id, userId, collaboratorId, request.permission())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -184,8 +171,7 @@ public class PlaylistController {
     public ResponseEntity<Void> removeCollaborator(
             @PathVariable UUID id,
             @PathVariable UUID collaboratorId,
-            @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+            @AuthenticationPrincipal String userId) {
         if (playlistService.removeCollaborator(id, userId, collaboratorId)) {
             return ResponseEntity.noContent().build();
         }
@@ -196,8 +182,7 @@ public class PlaylistController {
     @Operation(summary = "Generate a share token for playlist")
     public ResponseEntity<Playlist> generateShareToken(
             @PathVariable UUID id,
-            @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+            @AuthenticationPrincipal String userId) {
         return playlistService.generateShareToken(id, userId)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());

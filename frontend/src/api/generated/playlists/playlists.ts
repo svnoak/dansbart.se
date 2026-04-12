@@ -20,7 +20,7 @@ import type {
   UpdatePlaylistRequest
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get playlist by ID
@@ -35,7 +35,7 @@ export const getGetPlaylistUrl = (id: string,) => {
 
 export const getPlaylist = async (id: string, options?: RequestInit): Promise<PlaylistDto> => {
   
-  return customFetch<PlaylistDto>(getGetPlaylistUrl(id),
+  return httpClient<PlaylistDto>(getGetPlaylistUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -59,7 +59,7 @@ export const getUpdatePlaylistUrl = (id: string,) => {
 export const updatePlaylist = async (id: string,
     updatePlaylistRequest: UpdatePlaylistRequest, options?: RequestInit): Promise<Playlist> => {
   
-  return customFetch<Playlist>(getUpdatePlaylistUrl(id),
+  return httpClient<Playlist>(getUpdatePlaylistUrl(id),
   {      
     ...options,
     method: 'PUT',
@@ -83,7 +83,7 @@ export const getDeletePlaylistUrl = (id: string,) => {
 
 export const deletePlaylist = async (id: string, options?: RequestInit): Promise<void> => {
   
-  return customFetch<void>(getDeletePlaylistUrl(id),
+  return httpClient<void>(getDeletePlaylistUrl(id),
   {      
     ...options,
     method: 'DELETE'
@@ -107,7 +107,7 @@ export const getReorderTracksUrl = (id: string,) => {
 export const reorderTracks = async (id: string,
     reorderTracksRequest: ReorderTracksRequest, options?: RequestInit): Promise<void> => {
   
-  return customFetch<void>(getReorderTracksUrl(id),
+  return httpClient<void>(getReorderTracksUrl(id),
   {      
     ...options,
     method: 'PUT',
@@ -134,7 +134,7 @@ export const updateCollaborator = async (id: string,
     collaboratorId: string,
     updateCollaboratorRequest: UpdateCollaboratorRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
   
-  return customFetch<PlaylistCollaborator>(getUpdateCollaboratorUrl(id,collaboratorId),
+  return httpClient<PlaylistCollaborator>(getUpdateCollaboratorUrl(id,collaboratorId),
   {      
     ...options,
     method: 'PUT',
@@ -160,7 +160,7 @@ export const getRemoveCollaboratorUrl = (id: string,
 export const removeCollaborator = async (id: string,
     collaboratorId: string, options?: RequestInit): Promise<void> => {
   
-  return customFetch<void>(getRemoveCollaboratorUrl(id,collaboratorId),
+  return httpClient<void>(getRemoveCollaboratorUrl(id,collaboratorId),
   {      
     ...options,
     method: 'DELETE'
@@ -184,7 +184,7 @@ export const getRespondToInvitationUrl = (invitationId: string,) => {
 export const respondToInvitation = async (invitationId: string,
     respondToInvitationRequest: RespondToInvitationRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
   
-  return customFetch<PlaylistCollaborator>(getRespondToInvitationUrl(invitationId),
+  return httpClient<PlaylistCollaborator>(getRespondToInvitationUrl(invitationId),
   {      
     ...options,
     method: 'PUT',
@@ -208,7 +208,7 @@ export const getGetMyPlaylists1Url = () => {
 
 export const getMyPlaylists1 = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  return customFetch<Playlist[]>(getGetMyPlaylists1Url(),
+  return httpClient<Playlist[]>(getGetMyPlaylists1Url(),
   {      
     ...options,
     method: 'GET'
@@ -231,7 +231,7 @@ export const getCreatePlaylistUrl = () => {
 
 export const createPlaylist = async (createPlaylistRequest: CreatePlaylistRequest, options?: RequestInit): Promise<Playlist> => {
   
-  return customFetch<Playlist>(getCreatePlaylistUrl(),
+  return httpClient<Playlist>(getCreatePlaylistUrl(),
   {      
     ...options,
     method: 'POST',
@@ -256,7 +256,7 @@ export const getAddTrackUrl = (id: string,) => {
 export const addTrack = async (id: string,
     addTrackRequest: AddTrackRequest, options?: RequestInit): Promise<PlaylistTrack> => {
   
-  return customFetch<PlaylistTrack>(getAddTrackUrl(id),
+  return httpClient<PlaylistTrack>(getAddTrackUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -280,7 +280,7 @@ export const getGenerateShareTokenUrl = (id: string,) => {
 
 export const generateShareToken = async (id: string, options?: RequestInit): Promise<Playlist> => {
   
-  return customFetch<Playlist>(getGenerateShareTokenUrl(id),
+  return httpClient<Playlist>(getGenerateShareTokenUrl(id),
   {      
     ...options,
     method: 'POST'
@@ -303,7 +303,7 @@ export const getGetCollaboratorsUrl = (id: string,) => {
 
 export const getCollaborators = async (id: string, options?: RequestInit): Promise<CollaboratorDto[]> => {
   
-  return customFetch<CollaboratorDto[]>(getGetCollaboratorsUrl(id),
+  return httpClient<CollaboratorDto[]>(getGetCollaboratorsUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -327,7 +327,7 @@ export const getInviteCollaboratorUrl = (id: string,) => {
 export const inviteCollaborator = async (id: string,
     inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
   
-  return customFetch<PlaylistCollaborator>(getInviteCollaboratorUrl(id),
+  return httpClient<PlaylistCollaborator>(getInviteCollaboratorUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -351,7 +351,7 @@ export const getGetSharedPlaylists1Url = () => {
 
 export const getSharedPlaylists1 = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  return customFetch<Playlist[]>(getGetSharedPlaylists1Url(),
+  return httpClient<Playlist[]>(getGetSharedPlaylists1Url(),
   {      
     ...options,
     method: 'GET'
@@ -374,7 +374,7 @@ export const getGetPlaylistByShareTokenUrl = (shareToken: string,) => {
 
 export const getPlaylistByShareToken = async (shareToken: string, options?: RequestInit): Promise<PlaylistDto> => {
   
-  return customFetch<PlaylistDto>(getGetPlaylistByShareTokenUrl(shareToken),
+  return httpClient<PlaylistDto>(getGetPlaylistByShareTokenUrl(shareToken),
   {      
     ...options,
     method: 'GET'
@@ -397,7 +397,7 @@ export const getGetInvitationsUrl = () => {
 
 export const getInvitations = async ( options?: RequestInit): Promise<InvitationDto[]> => {
   
-  return customFetch<InvitationDto[]>(getGetInvitationsUrl(),
+  return httpClient<InvitationDto[]>(getGetInvitationsUrl(),
   {      
     ...options,
     method: 'GET'
@@ -422,7 +422,7 @@ export const getRemoveTrackUrl = (id: string,
 export const removeTrack = async (id: string,
     trackId: string, options?: RequestInit): Promise<void> => {
   
-  return customFetch<void>(getRemoveTrackUrl(id,trackId),
+  return httpClient<void>(getRemoveTrackUrl(id,trackId),
   {      
     ...options,
     method: 'DELETE'

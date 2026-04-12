@@ -18,7 +18,7 @@ import type {
   RejectRequest
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Reject an artist and delete pending tracks
@@ -34,7 +34,7 @@ export const getRejectArtistUrl = (artistId: string,) => {
 export const rejectArtist = async (artistId: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectArtist200> => {
   
-  return customFetch<RejectArtist200>(getRejectArtistUrl(artistId),
+  return httpClient<RejectArtist200>(getRejectArtistUrl(artistId),
   {      
     ...options,
     method: 'POST',
@@ -58,7 +58,7 @@ export const getApproveArtistUrl = (artistId: string,) => {
 
 export const approveArtist = async (artistId: string, options?: RequestInit): Promise<ApproveArtist200> => {
   
-  return customFetch<ApproveArtist200>(getApproveArtistUrl(artistId),
+  return httpClient<ApproveArtist200>(getApproveArtistUrl(artistId),
   {      
     ...options,
     method: 'POST'
@@ -81,7 +81,7 @@ export const getBulkRejectArtistsUrl = () => {
 
 export const bulkRejectArtists = async (bulkRejectRequest: BulkRejectRequest, options?: RequestInit): Promise<BulkRejectArtists200> => {
   
-  return customFetch<BulkRejectArtists200>(getBulkRejectArtistsUrl(),
+  return httpClient<BulkRejectArtists200>(getBulkRejectArtistsUrl(),
   {      
     ...options,
     method: 'POST',
@@ -105,7 +105,7 @@ export const getBulkApproveArtistsUrl = () => {
 
 export const bulkApproveArtists = async (bulkApproveRequest: BulkApproveRequest, options?: RequestInit): Promise<BulkApproveArtists200> => {
   
-  return customFetch<BulkApproveArtists200>(getBulkApproveArtistsUrl(),
+  return httpClient<BulkApproveArtists200>(getBulkApproveArtistsUrl(),
   {      
     ...options,
     method: 'POST',
@@ -136,7 +136,7 @@ export const getGetArtists1Url = (params?: GetArtists1Params,) => {
 
 export const getArtists1 = async (params?: GetArtists1Params, options?: RequestInit): Promise<GetArtists1200> => {
   
-  return customFetch<GetArtists1200>(getGetArtists1Url(params),
+  return httpClient<GetArtists1200>(getGetArtists1Url(params),
   {      
     ...options,
     method: 'GET'
@@ -159,7 +159,7 @@ export const getGetIsolationStatusUrl = (artistId: string,) => {
 
 export const getIsolationStatus = async (artistId: string, options?: RequestInit): Promise<GetIsolationStatus200> => {
   
-  return customFetch<GetIsolationStatus200>(getGetIsolationStatusUrl(artistId),
+  return httpClient<GetIsolationStatus200>(getGetIsolationStatusUrl(artistId),
   {      
     ...options,
     method: 'GET'
@@ -182,7 +182,7 @@ export const getGetCollaborationNetworkUrl = (artistId: string,) => {
 
 export const getCollaborationNetwork = async (artistId: string, options?: RequestInit): Promise<GetCollaborationNetwork200> => {
   
-  return customFetch<GetCollaborationNetwork200>(getGetCollaborationNetworkUrl(artistId),
+  return httpClient<GetCollaborationNetwork200>(getGetCollaborationNetworkUrl(artistId),
   {      
     ...options,
     method: 'GET'

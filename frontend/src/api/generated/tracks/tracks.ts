@@ -29,7 +29,7 @@ import type {
   UnflagTrack200
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Submit a structure proposal (creates candidate version)
@@ -54,7 +54,7 @@ export const submitStructureProposal = async (id: string,
     structureRequest: StructureRequest,
     params?: SubmitStructureProposalParams, options?: RequestInit): Promise<SubmitStructureProposal200> => {
   
-  return customFetch<SubmitStructureProposal200>(getSubmitStructureProposalUrl(id,params),
+  return httpClient<SubmitStructureProposal200>(getSubmitStructureProposalUrl(id,params),
   {      
     ...options,
     method: 'POST',
@@ -79,7 +79,7 @@ export const getSubmitMovementVoteUrl = (id: string,) => {
 export const submitMovementVote = async (id: string,
     movementVoteRequest: MovementVoteRequest, options?: RequestInit): Promise<SubmitMovementVote200> => {
   
-  return customFetch<SubmitMovementVote200>(getSubmitMovementVoteUrl(id),
+  return httpClient<SubmitMovementVote200>(getSubmitMovementVoteUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -104,7 +104,7 @@ export const getSubmitLinkUrl = (id: string,) => {
 export const submitLink = async (id: string,
     submitLinkRequest: SubmitLinkRequest, options?: RequestInit): Promise<PlaybackLink> => {
   
-  return customFetch<PlaybackLink>(getSubmitLinkUrl(id),
+  return httpClient<PlaybackLink>(getSubmitLinkUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -137,7 +137,7 @@ export const getFlagTrackUrl = (id: string,
 export const flagTrack = async (id: string,
     params?: FlagTrackParams, options?: RequestInit): Promise<FlagTrack200> => {
   
-  return customFetch<FlagTrack200>(getFlagTrackUrl(id,params),
+  return httpClient<FlagTrack200>(getFlagTrackUrl(id,params),
   {      
     ...options,
     method: 'POST'
@@ -160,7 +160,7 @@ export const getUnflagTrackUrl = (id: string,) => {
 
 export const unflagTrack = async (id: string, options?: RequestInit): Promise<UnflagTrack200> => {
   
-  return customFetch<UnflagTrack200>(getUnflagTrackUrl(id),
+  return httpClient<UnflagTrack200>(getUnflagTrackUrl(id),
   {      
     ...options,
     method: 'DELETE'
@@ -184,7 +184,7 @@ export const getSubmitFeedbackUrl = (id: string,) => {
 export const submitFeedback = async (id: string,
     feedbackRequest: FeedbackRequest, options?: RequestInit): Promise<TrackStyleVote> => {
   
-  return customFetch<TrackStyleVote>(getSubmitFeedbackUrl(id),
+  return httpClient<TrackStyleVote>(getSubmitFeedbackUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -209,7 +209,7 @@ export const getConfirmSecondaryStyleUrl = (id: string,) => {
 export const confirmSecondaryStyle = async (id: string,
     secondaryStyleRequest: SecondaryStyleRequest, options?: RequestInit): Promise<ConfirmSecondaryStyle200> => {
   
-  return customFetch<ConfirmSecondaryStyle200>(getConfirmSecondaryStyleUrl(id),
+  return httpClient<ConfirmSecondaryStyle200>(getConfirmSecondaryStyleUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -233,7 +233,7 @@ export const getReportBrokenLinkUrl = (linkId: string,) => {
 
 export const reportBrokenLink = async (linkId: string, options?: RequestInit): Promise<void> => {
   
-  return customFetch<void>(getReportBrokenLinkUrl(linkId),
+  return httpClient<void>(getReportBrokenLinkUrl(linkId),
   {      
     ...options,
     method: 'PATCH'
@@ -263,7 +263,7 @@ export const getGetTracksUrl = (params?: GetTracksParams,) => {
 
 export const getTracks = async (params?: GetTracksParams, options?: RequestInit): Promise<PageResponseTrackListDto> => {
   
-  return customFetch<PageResponseTrackListDto>(getGetTracksUrl(params),
+  return httpClient<PageResponseTrackListDto>(getGetTracksUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -286,7 +286,7 @@ export const getGetTrackUrl = (id: string,) => {
 
 export const getTrack = async (id: string, options?: RequestInit): Promise<TrackListDto> => {
   
-  return customFetch<TrackListDto>(getGetTrackUrl(id),
+  return httpClient<TrackListDto>(getGetTrackUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -309,7 +309,7 @@ export const getGetStructureVersionsUrl = (id: string,) => {
 
 export const getStructureVersions = async (id: string, options?: RequestInit): Promise<TrackStructureVersion[]> => {
   
-  return customFetch<TrackStructureVersion[]>(getGetStructureVersionsUrl(id),
+  return httpClient<TrackStructureVersion[]>(getGetStructureVersionsUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -341,7 +341,7 @@ export const getGetSimilarTracksUrl = (id: string,
 export const getSimilarTracks = async (id: string,
     params?: GetSimilarTracksParams, options?: RequestInit): Promise<Track[]> => {
   
-  return customFetch<Track[]>(getGetSimilarTracksUrl(id,params),
+  return httpClient<Track[]>(getGetSimilarTracksUrl(id,params),
   {      
     ...options,
     method: 'GET'
@@ -364,7 +364,7 @@ export const getGetSecondaryStylesUrl = (id: string,) => {
 
 export const getSecondaryStyles = async (id: string, options?: RequestInit): Promise<DanceStyleDto[]> => {
   
-  return customFetch<DanceStyleDto[]>(getGetSecondaryStylesUrl(id),
+  return httpClient<DanceStyleDto[]>(getGetSecondaryStylesUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -394,7 +394,7 @@ export const getSearchTracksUrl = (params: SearchTracksParams,) => {
 
 export const searchTracks = async (params: SearchTracksParams, options?: RequestInit): Promise<PageResponseTrackListDto> => {
   
-  return customFetch<PageResponseTrackListDto>(getSearchTracksUrl(params),
+  return httpClient<PageResponseTrackListDto>(getSearchTracksUrl(params),
   {      
     ...options,
     method: 'GET'

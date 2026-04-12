@@ -44,8 +44,11 @@ export function AboutPage() {
       <section className="mb-8">
         <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Kontakt</h2>
         <p className="text-[rgb(var(--color-text))]">
-          Har du frågor eller förslag? Vi tar gärna emot feedback via bidragsfunktionerna på
-          webbplatsen eller genom att rapportera fel och förbättringsförslag där det passar.
+          Har du frågor, hittat ett fel eller vill föreslå en förbättring? Se vår{' '}
+          <Link to="/feedback" className="font-medium text-[rgb(var(--color-accent))] hover:underline">
+            feedbacksida
+          </Link>{' '}
+          för hur du når oss.
         </p>
       </section>
     </StaticPageLayout>

@@ -33,10 +33,12 @@ public class UserService {
                 return userJooqRepository.update(user);
             })
             .orElseGet(() -> {
+                String role = userJooqRepository.countAll() == 0 ? "ADMIN" : "USER";
                 User newUser = User.builder()
                     .id(id)
                     .username(username)
                     .displayName(displayName)
+                    .role(role)
                     .lastLoginAt(OffsetDateTime.now())
                     .build();
                 return userJooqRepository.insert(newUser);
@@ -68,5 +70,15 @@ public class UserService {
             return userJooqRepository.countByUsernameCaseInsensitiveExcluding(username, excludeUserId) == 0;
         }
         return userJooqRepository.countByUsernameCaseInsensitive(username) == 0;
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> findAllUsers() {
+        return userJooqRepository.findAll();
+    }
+
+    @Transactional
+    public void setRole(String userId, String role) {
+        userJooqRepository.updateRole(userId, role);
     }
 }

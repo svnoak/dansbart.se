@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.domain.playlist.Playlist;
 import se.dansbart.domain.playlist.PlaylistService;
@@ -27,21 +26,17 @@ public class UserController {
 
     @GetMapping("/me")
     @Operation(summary = "Get current user profile")
-    public ResponseEntity<User> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
-        String username = jwt.getClaimAsString("preferred_username");
-        String displayName = jwt.getClaimAsString("name");
-
-        User user = userService.findOrCreate(userId, username, displayName);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<User> getCurrentUser(@AuthenticationPrincipal String userId) {
+        return userService.findById(userId)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/me")
     @Operation(summary = "Update current user profile")
     public ResponseEntity<User> updateProfile(
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestBody UpdateProfileRequest request) {
-        String userId = jwt.getSubject();
         return userService.updateProfile(userId, request.displayName(), request.avatarUrl())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -49,15 +44,13 @@ public class UserController {
 
     @GetMapping("/me/playlists")
     @Operation(summary = "Get current user's playlists")
-    public ResponseEntity<List<Playlist>> getMyPlaylists(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+    public ResponseEntity<List<Playlist>> getMyPlaylists(@AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(playlistService.findByUserId(userId));
     }
 
     @GetMapping("/me/shared-playlists")
     @Operation(summary = "Get playlists shared with current user")
-    public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
+    public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(playlistService.findSharedWithUser(userId));
     }
 
@@ -83,15 +76,11 @@ public class UserController {
     @Operation(summary = "Check if a username is available (case-insensitive)")
     public ResponseEntity<UsernameAvailability> checkUsernameAvailability(
             @RequestParam String username,
-            @AuthenticationPrincipal Jwt jwt) {
-        String currentUserId = jwt.getSubject();
-
-        // Validate username length
+            @AuthenticationPrincipal String userId) {
         if (username.length() < 3 || username.length() > 50) {
             return ResponseEntity.ok(new UsernameAvailability(false, username));
         }
-
-        boolean available = userService.isUsernameAvailable(username, currentUserId);
+        boolean available = userService.isUsernameAvailable(username, userId);
         return ResponseEntity.ok(new UsernameAvailability(available, username));
     }
 

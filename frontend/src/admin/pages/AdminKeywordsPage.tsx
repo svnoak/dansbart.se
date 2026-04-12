@@ -7,7 +7,7 @@ import {
   updateKeyword,
   deleteKeyword,
 } from '@/api/generated/admin-style-keywords/admin-style-keywords';
-import { adminRequestOptions, adminFetch } from '@/admin/api/client';
+import { apiFetch } from '@/api/http-client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { FilterBar } from '@/admin/components/FilterBar';
@@ -54,7 +54,7 @@ export function AdminKeywordsPage() {
   const [formIsActive, setFormIsActive] = useState(true);
 
   useEffect(() => {
-    adminFetch('/api/admin/style-config/active')
+    apiFetch('/api/admin/style-config/active')
       .then((res) => (res.ok ? res.json() : []))
       .then((configs: StyleConfig[]) => setStyleConfigs(configs))
       .catch(() => {});
@@ -71,7 +71,6 @@ export function AdminKeywordsPage() {
           limit,
           offset,
         },
-        adminRequestOptions(),
       );
       // Response is loosely typed; parse as page response
       const r = result as unknown as KeywordPageData;
@@ -121,7 +120,6 @@ export function AdminKeywordsPage() {
     try {
       await createKeyword(
         { keyword: formKeyword, mainStyle: formMainStyle, subStyle: formSubStyle || undefined },
-        adminRequestOptions(),
       );
       toast('Nyckelord skapat');
       setCreateModal(false);
@@ -142,7 +140,6 @@ export function AdminKeywordsPage() {
           subStyle: formSubStyle || undefined,
           isActive: formIsActive,
         },
-        adminRequestOptions(),
       );
       toast('Nyckelord uppdaterat');
       setEditModal(null);
@@ -155,7 +152,7 @@ export function AdminKeywordsPage() {
   const handleDelete = async () => {
     if (!deleteModal) return;
     try {
-      await deleteKeyword(deleteModal.id!, adminRequestOptions());
+      await deleteKeyword(deleteModal.id!);
       toast('Nyckelord raderat');
       setDeleteModal(null);
       fetchData();
@@ -174,7 +171,6 @@ export function AdminKeywordsPage() {
           subStyle: kw.subStyle,
           isActive: !kw.isActive,
         },
-        adminRequestOptions(),
       );
       toast(kw.isActive ? 'Nyckelord inaktiverat' : 'Nyckelord aktiverat');
       fetchData();

@@ -12,7 +12,7 @@ import type {
   TrackListDto
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get all albums with pagination
@@ -34,7 +34,7 @@ export const getGetAlbumsUrl = (params?: GetAlbumsParams,) => {
 
 export const getAlbums = async (params?: GetAlbumsParams, options?: RequestInit): Promise<PageResponseAlbum> => {
   
-  return customFetch<PageResponseAlbum>(getGetAlbumsUrl(params),
+  return httpClient<PageResponseAlbum>(getGetAlbumsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -57,7 +57,7 @@ export const getGetAlbumUrl = (id: string,) => {
 
 export const getAlbum = async (id: string, options?: RequestInit): Promise<AlbumDto> => {
   
-  return customFetch<AlbumDto>(getGetAlbumUrl(id),
+  return httpClient<AlbumDto>(getGetAlbumUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -80,7 +80,7 @@ export const getGetAlbumTracksUrl = (id: string,) => {
 
 export const getAlbumTracks = async (id: string, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  return customFetch<TrackListDto[]>(getGetAlbumTracksUrl(id),
+  return httpClient<TrackListDto[]>(getGetAlbumTracksUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -110,7 +110,7 @@ export const getSearchAlbumsUrl = (params: SearchAlbumsParams,) => {
 
 export const searchAlbums = async (params: SearchAlbumsParams, options?: RequestInit): Promise<PageResponseAlbum> => {
   
-  return customFetch<PageResponseAlbum>(getSearchAlbumsUrl(params),
+  return httpClient<PageResponseAlbum>(getSearchAlbumsUrl(params),
   {      
     ...options,
     method: 'GET'

@@ -10,7 +10,7 @@ import type {
   VoteRequest
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Upvote/downvote a specific structure version
@@ -26,7 +26,7 @@ export const getVoteOnVersionUrl = (versionId: string,) => {
 export const voteOnVersion = async (versionId: string,
     voteRequest: VoteRequest, options?: RequestInit): Promise<VoteOnVersion200> => {
   
-  return customFetch<VoteOnVersion200>(getVoteOnVersionUrl(versionId),
+  return httpClient<VoteOnVersion200>(getVoteOnVersionUrl(versionId),
   {      
     ...options,
     method: 'POST',
@@ -50,7 +50,7 @@ export const getReportVersionUrl = (versionId: string,) => {
 
 export const reportVersion = async (versionId: string, options?: RequestInit): Promise<ReportVersion200> => {
   
-  return customFetch<ReportVersion200>(getReportVersionUrl(versionId),
+  return httpClient<ReportVersion200>(getReportVersionUrl(versionId),
   {      
     ...options,
     method: 'POST'

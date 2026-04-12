@@ -541,7 +541,7 @@
     "/api/admin/folkwiki/matches/{trackId}/{folkwikiTuneId}/reject": {
       "put": {
         "tags": ["Admin Folkwiki"],
-        "summary": "Reject a match (no style change)",
+        "summary": "Reject a match, optionally overriding the track style",
         "operationId": "rejectMatch",
         "parameters": [
           {
@@ -555,6 +555,12 @@
             "in": "path",
             "required": true,
             "schema": { "type": "integer", "format": "int32" }
+          },
+          {
+            "name": "overrideStyle",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -589,6 +595,12 @@
             "in": "path",
             "required": true,
             "schema": { "type": "integer", "format": "int32" }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
           }
         ],
         "responses": {

@@ -1,5 +1,72 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IconButton } from '@/ui';
+import { useAuth } from '@/auth/useAuth';
+
+const DISCOURSE_URL = import.meta.env.VITE_DISCOURSE_URL ?? 'https://folkhub.se';
+
+function UserMenu() {
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const initial = (user?.username ?? '?')[0].toUpperCase();
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Användarmeny"
+        aria-expanded={open}
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+      >
+        {initial}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-48 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg z-50">
+          {user?.role === 'ADMIN' && (
+            <Link
+              to="/admin/library"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center px-4 py-2 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50 transition-colors"
+            >
+              Admin
+            </Link>
+          )}
+          <a
+            href={DISCOURSE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center px-4 py-2 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50 transition-colors"
+          >
+            Gå till forum
+          </a>
+          <hr className="my-1 border-[rgb(var(--color-border))]" />
+          <button
+            type="button"
+            onClick={() => { setOpen(false); logout(); }}
+            className="flex w-full items-center px-4 py-2 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50 transition-colors"
+          >
+            Logga ut
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Header({
   onOpenSidebar,
@@ -8,6 +75,8 @@ export function Header({
   onOpenSidebar?: () => void;
   showMenuButton?: boolean;
 }) {
+  const { isAuthenticated, isLoading, login } = useAuth();
+
   return (
     <header className="sticky top-0 z-20 border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
       <div className="flex items-center gap-3 px-4 py-3">
@@ -31,26 +100,22 @@ export function Header({
           </span>
           <span className="text-lg font-semibold">dansbart.se</span>
         </Link>
-        {/* <form
-          onSubmit={handleSearch}
-          className="mx-auto flex min-w-0 max-w-xl flex-1 justify-center"
-        >
-          <div className="relative w-full">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-muted))]">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-              </svg>
-            </span>
-            <input
-              type="search"
-              value={globalQuery}
-              onChange={(e) => setGlobalQuery(e.target.value)}
-              placeholder="Sök låtnamn, artist…"
-              className="w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-2 pl-10 pr-4 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))] focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-accent))]"
-              aria-label="Global sökning"
-            />
-          </div>
-        </form> */}
+
+        <div className="ml-auto">
+          {!isLoading && (
+            isAuthenticated
+              ? <UserMenu />
+              : (
+                <button
+                  type="button"
+                  onClick={login}
+                  className="rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                >
+                  Logga in
+                </button>
+              )
+          )}
+        </div>
       </div>
     </header>
   );

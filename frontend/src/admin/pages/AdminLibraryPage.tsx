@@ -13,7 +13,7 @@ import {
   unflagTrack1,
 } from '@/api/generated/admin-tracks/admin-tracks';
 import { getStyleTree } from '@/api/generated/styles/styles';
-import { adminFetch, adminRequestOptions } from '@/admin/api/client';
+import { apiFetch } from '@/api/http-client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column, SortState } from '@/admin/components/DataTable';
 import { StatusBadge } from '@/admin/components/StatusBadge';
@@ -36,7 +36,7 @@ type StatusCounts = Record<string, number>;
 const STATUS_ORDER = ['PENDING', 'PROCESSING', 'REANALYZING', 'DONE', 'FAILED'] as const;
 
 async function fetchStatusCounts(): Promise<StatusCounts> {
-  const res = await adminFetch('/api/admin/tracks/status-counts');
+  const res = await apiFetch('/api/admin/tracks/status-counts');
   if (!res.ok) throw new Error('Failed to fetch status counts');
   return res.json();
 }
@@ -119,7 +119,6 @@ export function AdminLibraryPage() {
           sortBy: sortBy || undefined,
           sortDirection: sortDirection || undefined,
         } as Record<string, unknown>,
-        adminRequestOptions(),
       );
       setData(result);
     } catch {
@@ -180,7 +179,7 @@ export function AdminLibraryPage() {
   const handleStyleEditSave = async () => {
     if (!styleEditTrack?.id || !styleEditMain) return;
     try {
-      await adminFetch(`/api/admin/tracks/${styleEditTrack.id}/dance-style`, {
+      await apiFetch(`/api/admin/tracks/${styleEditTrack.id}/dance-style`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -212,7 +211,7 @@ export function AdminLibraryPage() {
 
   const handleReanalyze = async (track: AdminTrackDto) => {
     try {
-      await reanalyzeTrack(track.id!, adminRequestOptions());
+      await reanalyzeTrack(track.id!);
       toast('Omanalys startad');
       fetchData();
       loadStatusCounts();
@@ -223,7 +222,7 @@ export function AdminLibraryPage() {
 
   const handleReclassify = async (track: AdminTrackDto) => {
     try {
-      await reclassifyTrack(track.id!, adminRequestOptions());
+      await reclassifyTrack(track.id!);
       toast('Omklassificering startad');
       fetchData();
       loadStatusCounts();
@@ -235,7 +234,7 @@ export function AdminLibraryPage() {
   const handleDelete = async () => {
     if (!deleteModal) return;
     try {
-      await deleteTrack(deleteModal.id!, adminRequestOptions());
+      await deleteTrack(deleteModal.id!);
       toast('Spår raderat');
       setDeleteModal(null);
       fetchData();
@@ -251,7 +250,6 @@ export function AdminLibraryPage() {
       await rejectTrack(
         rejectModal.id!,
         { reason: rejectReason || undefined },
-        adminRequestOptions(),
       );
       toast('Spår avvisat');
       setRejectModal(null);
@@ -265,7 +263,7 @@ export function AdminLibraryPage() {
 
   const handleUnflag = async (track: AdminTrackDto) => {
     try {
-      await unflagTrack1(track.id!, adminRequestOptions());
+      await unflagTrack1(track.id!);
       toast('Flagga borttagen');
       fetchData();
     } catch {
@@ -303,13 +301,13 @@ export function AdminLibraryPage() {
 
   const handleBulkReanalyze = () => {
     runBulkAction('Omanalysera', (id) =>
-      reanalyzeTrack(id, adminRequestOptions()),
+      reanalyzeTrack(id),
     );
   };
 
   const handleBulkReclassify = () => {
     runBulkAction('Omklassificera', (id) =>
-      reclassifyTrack(id, adminRequestOptions()),
+      reclassifyTrack(id),
     );
   };
 
@@ -317,14 +315,14 @@ export function AdminLibraryPage() {
     setBulkRejectModal(false);
     setBulkRejectReason('');
     runBulkAction('Avvisa', (id) =>
-      rejectTrack(id, { reason: bulkRejectReason || undefined }, adminRequestOptions()),
+      rejectTrack(id, { reason: bulkRejectReason || undefined }),
     );
   };
 
   const handleBulkDelete = () => {
     setBulkDeleteModal(false);
     runBulkAction('Radera', (id) =>
-      deleteTrack(id, adminRequestOptions()),
+      deleteTrack(id),
     );
   };
 

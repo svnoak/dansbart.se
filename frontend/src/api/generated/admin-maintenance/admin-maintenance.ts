@@ -29,7 +29,7 @@ import type {
   RetrainModelParams
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Trigger heuristic reclassification for all tracks
@@ -44,7 +44,7 @@ export const getReclassifyAllUrl = () => {
 
 export const reclassifyAll = async ( options?: RequestInit): Promise<ReclassifyAll200> => {
   
-  return customFetch<ReclassifyAll200>(getReclassifyAllUrl(),
+  return httpClient<ReclassifyAll200>(getReclassifyAllUrl(),
   {      
     ...options,
     method: 'POST'
@@ -75,7 +75,7 @@ export const getRetrainModelUrl = (params?: RetrainModelParams,) => {
 
 export const retrainModel = async (params?: RetrainModelParams, options?: RequestInit): Promise<RetrainModel200> => {
   
-  return customFetch<RetrainModel200>(getRetrainModelUrl(params),
+  return httpClient<RetrainModel200>(getRetrainModelUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -105,7 +105,7 @@ export const getResumeUrl = (params?: ResumeParams,) => {
 
 export const resume = async (params?: ResumeParams, options?: RequestInit): Promise<Resume200> => {
   
-  return customFetch<Resume200>(getResumeUrl(params),
+  return httpClient<Resume200>(getResumeUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -136,7 +136,7 @@ export const getReanalyzeUrl = (params?: ReanalyzeParams,) => {
 
 export const reanalyze = async (params?: ReanalyzeParams, options?: RequestInit): Promise<Reanalyze200> => {
   
-  return customFetch<Reanalyze200>(getReanalyzeUrl(params),
+  return httpClient<Reanalyze200>(getReanalyzeUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -167,7 +167,7 @@ export const getQueuePendingTracksUrl = (params?: QueuePendingTracksParams,) => 
 
 export const queuePendingTracks = async (params?: QueuePendingTracksParams, options?: RequestInit): Promise<QueuePendingTracks200> => {
   
-  return customFetch<QueuePendingTracks200>(getQueuePendingTracksUrl(params),
+  return httpClient<QueuePendingTracks200>(getQueuePendingTracksUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -198,7 +198,7 @@ export const getPauseUrl = (params?: PauseParams,) => {
 
 export const pause = async (params?: PauseParams, options?: RequestInit): Promise<Pause200> => {
   
-  return customFetch<Pause200>(getPauseUrl(params),
+  return httpClient<Pause200>(getPauseUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -228,7 +228,7 @@ export const getCleanupOrphanedUrl = (params?: CleanupOrphanedParams,) => {
 
 export const cleanupOrphaned = async (params?: CleanupOrphanedParams, options?: RequestInit): Promise<CleanupOrphaned200> => {
   
-  return customFetch<CleanupOrphaned200>(getCleanupOrphanedUrl(params),
+  return httpClient<CleanupOrphaned200>(getCleanupOrphanedUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -258,7 +258,7 @@ export const getBackfillIsrcsUrl = (params?: BackfillIsrcsParams,) => {
 
 export const backfillIsrcs = async (params?: BackfillIsrcsParams, options?: RequestInit): Promise<BackfillIsrcs200> => {
   
-  return customFetch<BackfillIsrcs200>(getBackfillIsrcsUrl(params),
+  return httpClient<BackfillIsrcs200>(getBackfillIsrcsUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -288,7 +288,7 @@ export const getBackfillDurationUrl = (params?: BackfillDurationParams,) => {
 
 export const backfillDuration = async (params?: BackfillDurationParams, options?: RequestInit): Promise<BackfillDuration200> => {
   
-  return customFetch<BackfillDuration200>(getBackfillDurationUrl(params),
+  return httpClient<BackfillDuration200>(getBackfillDurationUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -311,7 +311,7 @@ export const getIngestUrl = () => {
 
 export const ingest = async (ingestRequest: IngestRequest, options?: RequestInit): Promise<Ingest200> => {
   
-  return customFetch<Ingest200>(getIngestUrl(),
+  return httpClient<Ingest200>(getIngestUrl(),
   {      
     ...options,
     method: 'POST',
@@ -335,7 +335,7 @@ export const getResetCrawlDataUrl = () => {
 
 export const resetCrawlData = async ( options?: RequestInit): Promise<ResetCrawlData200> => {
   
-  return customFetch<ResetCrawlData200>(getResetCrawlDataUrl(),
+  return httpClient<ResetCrawlData200>(getResetCrawlDataUrl(),
   {      
     ...options,
     method: 'POST'
@@ -358,7 +358,7 @@ export const getGetPauseStatusUrl = () => {
 
 export const getPauseStatus = async ( options?: RequestInit): Promise<GetPauseStatus200> => {
   
-  return customFetch<GetPauseStatus200>(getGetPauseStatusUrl(),
+  return httpClient<GetPauseStatus200>(getGetPauseStatusUrl(),
   {      
     ...options,
     method: 'GET'
@@ -381,7 +381,7 @@ export const getGetIsrcStatsUrl = () => {
 
 export const getIsrcStats = async ( options?: RequestInit): Promise<GetIsrcStats200> => {
   
-  return customFetch<GetIsrcStats200>(getGetIsrcStatsUrl(),
+  return httpClient<GetIsrcStats200>(getGetIsrcStatsUrl(),
   {      
     ...options,
     method: 'GET'

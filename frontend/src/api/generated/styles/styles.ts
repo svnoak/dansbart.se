@@ -9,7 +9,7 @@ import type {
   StyleNode
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get dance style hierarchy tree
@@ -24,7 +24,7 @@ export const getGetStyleTreeUrl = () => {
 
 export const getStyleTree = async ( options?: RequestInit): Promise<StyleNode[]> => {
   
-  return customFetch<StyleNode[]>(getGetStyleTreeUrl(),
+  return httpClient<StyleNode[]>(getGetStyleTreeUrl(),
   {      
     ...options,
     method: 'GET'
@@ -47,7 +47,7 @@ export const getGetKeywordsUrl = () => {
 
 export const getKeywords = async ( options?: RequestInit): Promise<StyleKeyword[]> => {
   
-  return customFetch<StyleKeyword[]>(getGetKeywordsUrl(),
+  return httpClient<StyleKeyword[]>(getGetKeywordsUrl(),
   {      
     ...options,
     method: 'GET'

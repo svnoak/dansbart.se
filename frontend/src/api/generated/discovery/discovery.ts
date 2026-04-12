@@ -13,7 +13,7 @@ import type {
   TrackListDto
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get recently added tracks with verified classification
@@ -35,7 +35,7 @@ export const getGetRecentTracksUrl = (params?: GetRecentTracksParams,) => {
 
 export const getRecentTracks = async (params?: GetRecentTracksParams, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  return customFetch<TrackListDto[]>(getGetRecentTracksUrl(params),
+  return httpClient<TrackListDto[]>(getGetRecentTracksUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -65,7 +65,7 @@ export const getGetPopularTracksUrl = (params?: GetPopularTracksParams,) => {
 
 export const getPopularTracks = async (params?: GetPopularTracksParams, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  return customFetch<TrackListDto[]>(getGetPopularTracksUrl(params),
+  return httpClient<TrackListDto[]>(getGetPopularTracksUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -88,7 +88,7 @@ export const getGetCuratedPlaylistsUrl = () => {
 
 export const getCuratedPlaylists = async ( options?: RequestInit): Promise<CuratedPlaylistDto[]> => {
   
-  return customFetch<CuratedPlaylistDto[]>(getGetCuratedPlaylistsUrl(),
+  return httpClient<CuratedPlaylistDto[]>(getGetCuratedPlaylistsUrl(),
   {      
     ...options,
     method: 'GET'
@@ -118,7 +118,7 @@ export const getGetCuratedTracksUrl = (params?: GetCuratedTracksParams,) => {
 
 export const getCuratedTracks = async (params?: GetCuratedTracksParams, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  return customFetch<TrackListDto[]>(getGetCuratedTracksUrl(params),
+  return httpClient<TrackListDto[]>(getGetCuratedTracksUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -141,7 +141,7 @@ export const getGetStyleOverviewUrl = () => {
 
 export const getStyleOverview = async ( options?: RequestInit): Promise<StyleOverviewDto[]> => {
   
-  return customFetch<StyleOverviewDto[]>(getGetStyleOverviewUrl(),
+  return httpClient<StyleOverviewDto[]>(getGetStyleOverviewUrl(),
   {      
     ...options,
     method: 'GET'

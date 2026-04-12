@@ -47,7 +47,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isAbout = location.pathname === '/about';
   const isTerms = location.pathname === '/terms';
   const isPrivacy = location.pathname === '/privacy';
-  const isInfoPage = isAbout || isTerms || isPrivacy;
+  const isFeedback = location.pathname === '/feedback';
+  const isInfoPage = isAbout || isTerms || isPrivacy || isFeedback;
 
   const [omOpen, setOmOpen] = useState(isInfoPage);
   const [prevIsInfoPage, setPrevIsInfoPage] = useState(isInfoPage);
@@ -116,6 +117,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <div className="flex flex-col gap-1 border-l-2 border-[rgb(var(--color-border))] ml-5 pl-2 py-1">
             <NavLink to="/about" active={isAbout} onClick={onNavigate}>
               Om oss
+            </NavLink>
+            <NavLink to="/feedback" active={isFeedback} onClick={onNavigate}>
+              Feedback
             </NavLink>
             <NavLink to="/privacy" active={isPrivacy} onClick={onNavigate}>
               Integritetspolicy

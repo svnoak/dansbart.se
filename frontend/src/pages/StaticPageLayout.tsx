@@ -43,6 +43,10 @@ export function StaticPageLayout({ title, lastUpdated, children }: StaticPageLay
           <Link to="/about" className="text-[rgb(var(--color-accent))] hover:underline">
             Om oss
           </Link>
+          <span className="text-[rgb(var(--color-border))]">·</span>
+          <Link to="/feedback" className="text-[rgb(var(--color-accent))] hover:underline">
+            Feedback
+          </Link>
         </p>
       </footer>
     </div>

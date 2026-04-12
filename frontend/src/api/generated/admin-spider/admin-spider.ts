@@ -13,7 +13,7 @@ import type {
   TriggerCrawlParams
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Trigger a spider crawl
@@ -35,7 +35,7 @@ export const getTriggerCrawlUrl = (params?: TriggerCrawlParams,) => {
 
 export const triggerCrawl = async (params?: TriggerCrawlParams, options?: RequestInit): Promise<TriggerCrawl200> => {
   
-  return customFetch<TriggerCrawl200>(getTriggerCrawlUrl(params),
+  return httpClient<TriggerCrawl200>(getTriggerCrawlUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -58,7 +58,7 @@ export const getGetTaskStatusUrl = (taskId: string,) => {
 
 export const getTaskStatus = async (taskId: string, options?: RequestInit): Promise<GetTaskStatus200> => {
   
-  return customFetch<GetTaskStatus200>(getGetTaskStatusUrl(taskId),
+  return httpClient<GetTaskStatus200>(getGetTaskStatusUrl(taskId),
   {      
     ...options,
     method: 'GET'
@@ -81,7 +81,7 @@ export const getGetSpiderStatsUrl = () => {
 
 export const getSpiderStats = async ( options?: RequestInit): Promise<GetSpiderStats200> => {
   
-  return customFetch<GetSpiderStats200>(getGetSpiderStatsUrl(),
+  return httpClient<GetSpiderStats200>(getGetSpiderStatsUrl(),
   {      
     ...options,
     method: 'GET'
@@ -111,7 +111,7 @@ export const getGetCrawlHistoryUrl = (params?: GetCrawlHistoryParams,) => {
 
 export const getCrawlHistory = async (params?: GetCrawlHistoryParams, options?: RequestInit): Promise<GetCrawlHistory200> => {
   
-  return customFetch<GetCrawlHistory200>(getGetCrawlHistoryUrl(params),
+  return httpClient<GetCrawlHistory200>(getGetCrawlHistoryUrl(params),
   {      
     ...options,
     method: 'GET'
