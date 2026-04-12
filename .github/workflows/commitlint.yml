@@ -4,19 +4,29 @@ on:
   pull_request:
     branches:
       - '**'
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
 
 jobs:
-  commitlint:
-    name: Lint commit messages
+  lint-pr-title:
+    name: Lint PR title
     runs-on: ubuntu-latest
     if: github.actor != 'renovate[bot]'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          fetch-depth: 0
-
-      - name: Lint commits
-        uses: wagoid/commitlint-github-action@v6
-        with:
-          configFile: commitlint.config.mjs
+          types: |
+            feat
+            fix
+            refactor
+            test
+            docs
+            chore
+            style
+          requireScope: false
