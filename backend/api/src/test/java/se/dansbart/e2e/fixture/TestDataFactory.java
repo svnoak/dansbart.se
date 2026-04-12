@@ -94,6 +94,7 @@ public class TestDataFactory {
         private String username;
         private String displayName = "Test User";
         private String avatarUrl;
+        private String role = "USER";
 
         public UserBuilder withId(String id) {
             this.id = id;
@@ -115,12 +116,18 @@ public class TestDataFactory {
             return this;
         }
 
+        public UserBuilder withRole(String role) {
+            this.role = role;
+            return this;
+        }
+
         public User build() {
             User user = User.builder()
                 .id(id)
                 .username(username != null ? username : "user_" + id.substring(0, 8))
                 .displayName(displayName)
                 .avatarUrl(avatarUrl)
+                .role(role)
                 .build();
             return userJooqRepository.insert(user);
         }
