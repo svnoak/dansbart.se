@@ -50,6 +50,10 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/test_db
           SPRING_DATASOURCE_USERNAME: test
           SPRING_DATASOURCE_PASSWORD: test
+          DISCOURSE_SSO_URL: http://localhost:9999/discourse/sso
+          DISCOURSE_SSO_SECRET: ci-placeholder-secret
+          DISCOURSE_SSO_RETURN_URL: http://localhost:8080/sso/callback
+          DISCOURSE_SSO_SUCCESS_URL: http://localhost:8080/
         run: |
           mvn clean verify -DskipTests=true \
             -Djooq.codegen.jdbc.url=jdbc:postgresql://localhost:5432/test_db \

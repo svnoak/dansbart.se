@@ -16,7 +16,7 @@
           ← Tillbaka till Dansbart.se
         </a>
         <h1 class="text-4xl font-bold text-gray-900 mb-2">Integritetspolicy</h1>
-        <p class="text-gray-600">Senast uppdaterad: 12 december 2025</p>
+        <p class="text-gray-600">Senast uppdaterad: 12 april 2026</p>
       </header>
 
       <main class="prose prose-lg max-w-none">
@@ -39,7 +39,7 @@
         <section class="mb-8">
           <h2 class="text-2xl font-bold text-gray-900 mb-4">Registeransvarig</h2>
           <p class="text-gray-700 mb-4">
-            Dansbart.se drivs som ett ideellt hobbyprojekt. Eftersom vi inte samlar in namn, e-postadresser, IP-adresser eller andra uppgifter som kan kopplas till en fysisk person, behandlar vi inga personuppgifter i lagens mening.
+            Dansbart.se drivs som ett ideellt hobbyprojekt av Kim Siebeneicher (kontakt: <a href="mailto:info@dansbart.se" class="text-indigo-600 hover:text-indigo-800 hover:underline">info@dansbart.se</a>). För anonyma besökare samlar vi inte in namn, e-postadresser, IP-adresser eller andra uppgifter som kan kopplas till en fysisk person. För inloggade användare hanteras kontouppgifter via folkhub.se — se avsnittet <a href="#anvandarkonton" class="text-indigo-600 hover:text-indigo-800 hover:underline">Användarkonton</a> nedan.
           </p>
         </section>
 
@@ -244,6 +244,9 @@
               <strong>Berättigat intresse (GDPR Artikel 6.1f):</strong> För anonym feedback och
               analytics som förbättrar tjänsten
             </li>
+            <li>
+              <strong>Nödvändigt för tjänstens funktion (GDPR Artikel 6.1b):</strong> För behandling av inloggade användares kontouppgifter (e-post, användarnamn, användar-ID) som krävs för att tillhandahålla kontofunktioner
+            </li>
           </ul>
           <p class="text-gray-700 mb-4">
             Eftersom all feedback och analytics-data är anonym och inte kan kopplas till individer,
@@ -263,15 +266,19 @@
           <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
             <p class="text-gray-800 font-semibold mb-2">Viktigt om anonymitet</p>
             <p class="text-gray-700 text-sm">
-              Eftersom Dansbart.se <strong>inte lagrar några personuppgifter</strong> (varken IP-adress, namn, eller användar-ID kopplat till person), finns det ingen information för oss att lämna ut, rätta eller radera.
+              För anonyma besökare lagrar Dansbart.se <strong>inga personuppgifter</strong> (varken IP-adress, namn, eller användar-ID kopplat till person), och det finns ingen information för oss att lämna ut, rätta eller radera.
             </p>
           </div>
           <p class="text-gray-700 mb-4">
-            All data som sparas (feedback, analytics) är frikopplad från din identitet. Det enda som kopplar dig till din session är en textsträng i din egen webbläsares <code>localStorage</code>.
+            All anonym data som sparas (feedback, analytics) är frikopplad från din identitet. Det enda som kopplar dig till din session är en textsträng i din egen webbläsares <code>localStorage</code>.
           </p>
           <p class="text-gray-700 mb-4">
-            <strong>Vill du "radera dig själv"?</strong><br>
+            <strong>Vill du "radera dig själv" som anonym besökare?</strong><br>
             Det gör du enklast genom att rensa din webbläsares cookies och lokala data för dansbart.se. Då försvinner den enda kopplingen (sessions-ID) som finns, och vid nästa besök räknas du som en helt ny, anonym besökare.
+          </p>
+          <p class="text-gray-700 mb-4">
+            <strong>Har du ett konto (inloggad via folkhub.se)?</strong><br>
+            Hantera ditt konto direkt på <a href="https://folkhub.se" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 hover:underline">folkhub.se</a>, eller skriv i <a href="https://folkhub.se/c/dansbart-se/5" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 hover:underline">gemenskapsforumet</a> om du vill begära tillgång till, rättelse av eller radering av dina kontouppgifter. Du kan också nå oss via <a href="mailto:info@dansbart.se" class="text-indigo-600 hover:text-indigo-800 hover:underline">info@dansbart.se</a>.
           </p>
         </section>
 
@@ -286,6 +293,9 @@
             <li><strong>Spotify och YouTube:</strong> När du ger samtycke och spelar musik</li>
             <li>
               <strong>Webbhotell:</strong> Vår server är värd hos en leverantör som följer GDPR
+            </li>
+            <li>
+              <strong>folkhub.se (Discourse):</strong> Inloggningsfunktionen delar din e-post och ditt användarnamn med dansbart.se via DiscourseConnect (SSO). Se <a href="https://folkhub.se" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 hover:underline">folkhub.se</a> för deras integritetspolicy.
             </li>
           </ul>
           <p class="text-gray-700 mb-4">
@@ -325,6 +335,25 @@
           </p>
         </section>
 
+        <!-- Användarkonton -->
+        <section id="anvandarkonton" class="mb-8">
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Användarkonton</h2>
+          <p class="text-gray-700 mb-4">
+            Inloggning på Dansbart.se sker via <strong>DiscourseConnect (SSO)</strong> — du loggar in med ditt konto på <a href="https://folkhub.se" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 hover:underline">folkhub.se</a>. Ett konto på folkhub.se är därmed även ett konto på dansbart.se.
+          </p>
+          <p class="text-gray-700 mb-4">
+            När du loggar in tar dansbart.se emot följande uppgifter från folkhub.se:
+          </p>
+          <ul class="list-disc pl-6 text-gray-700 mb-4 space-y-2">
+            <li>E-postadress</li>
+            <li>Användarnamn</li>
+            <li>Internt användar-ID</li>
+          </ul>
+          <p class="text-gray-700 mb-4">
+            Dessa uppgifter används enbart för att identifiera dig som inloggad användare inom Tjänsten. Kontohantering (t.ex. byte av e-post, radering av konto) görs på <a href="https://folkhub.se" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 hover:underline">folkhub.se</a>. Se folkhub.se:s integritetspolicy för information om hur dina kontouppgifter behandlas där.
+          </p>
+        </section>
+
         <!-- Säkerhet -->
         <section class="mb-8">
           <h2 class="text-2xl font-bold text-gray-900 mb-4">Säkerhet</h2>
@@ -335,7 +364,7 @@
             <li>All kommunikation sker över krypterad HTTPS-anslutning</li>
             <li>Vi samlar inte in känsliga personuppgifter</li>
             <li>Feedback är designad att vara anonym från början</li>
-            <li>Vi har ingen inloggning eller användarhantering, vilket minskar risker</li>
+            <li>Inloggning sker via DiscourseConnect och hanteras av folkhub.se</li>
           </ul>
         </section>
 

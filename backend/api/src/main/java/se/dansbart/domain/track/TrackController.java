@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.DanceStyleDto;
 import se.dansbart.dto.PageResponse;
@@ -87,10 +86,10 @@ public class TrackController {
     @Operation(summary = "Submit style correction feedback for a track")
     public ResponseEntity<TrackStyleVote> submitFeedback(
             @PathVariable UUID id,
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal String userId,
             @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
             @RequestBody FeedbackRequest request) {
-        String voterId = jwt != null ? jwt.getSubject() : voterHeader;
+        String voterId = userId != null ? userId : voterHeader;
         if (voterId == null || voterId.isBlank()) {
             return ResponseEntity.badRequest().build();
         }

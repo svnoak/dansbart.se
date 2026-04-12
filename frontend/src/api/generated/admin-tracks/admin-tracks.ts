@@ -21,7 +21,7 @@ import type {
   UpdateDanceStyleRequest
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Directly set the primary dance style for a track (admin override)
@@ -37,7 +37,7 @@ export const getUpdateDanceStyleUrl = (trackId: string,) => {
 export const updateDanceStyle = async (trackId: string,
     updateDanceStyleRequest: UpdateDanceStyleRequest, options?: RequestInit): Promise<UpdateDanceStyle200> => {
   
-  return customFetch<UpdateDanceStyle200>(getUpdateDanceStyleUrl(trackId),
+  return httpClient<UpdateDanceStyle200>(getUpdateDanceStyleUrl(trackId),
   {      
     ...options,
     method: 'PUT',
@@ -61,7 +61,7 @@ export const getResetStructureUrl = (trackId: string,) => {
 
 export const resetStructure = async (trackId: string, options?: RequestInit): Promise<ResetStructure200> => {
   
-  return customFetch<ResetStructure200>(getResetStructureUrl(trackId),
+  return httpClient<ResetStructure200>(getResetStructureUrl(trackId),
   {      
     ...options,
     method: 'POST'
@@ -85,7 +85,7 @@ export const getRejectTrackUrl = (trackId: string,) => {
 export const rejectTrack = async (trackId: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectTrack200> => {
   
-  return customFetch<RejectTrack200>(getRejectTrackUrl(trackId),
+  return httpClient<RejectTrack200>(getRejectTrackUrl(trackId),
   {      
     ...options,
     method: 'POST',
@@ -109,7 +109,7 @@ export const getReclassifyTrackUrl = (trackId: string,) => {
 
 export const reclassifyTrack = async (trackId: string, options?: RequestInit): Promise<ReclassifyTrack200> => {
   
-  return customFetch<ReclassifyTrack200>(getReclassifyTrackUrl(trackId),
+  return httpClient<ReclassifyTrack200>(getReclassifyTrackUrl(trackId),
   {      
     ...options,
     method: 'POST'
@@ -132,7 +132,7 @@ export const getReanalyzeTrackUrl = (trackId: string,) => {
 
 export const reanalyzeTrack = async (trackId: string, options?: RequestInit): Promise<ReanalyzeTrack200> => {
   
-  return customFetch<ReanalyzeTrack200>(getReanalyzeTrackUrl(trackId),
+  return httpClient<ReanalyzeTrack200>(getReanalyzeTrackUrl(trackId),
   {      
     ...options,
     method: 'POST'
@@ -155,7 +155,7 @@ export const getBulkReanalyzeUrl = () => {
 
 export const bulkReanalyze = async (bulkReanalyzeRequest: BulkReanalyzeRequest, options?: RequestInit): Promise<BulkReanalyze200> => {
   
-  return customFetch<BulkReanalyze200>(getBulkReanalyzeUrl(),
+  return httpClient<BulkReanalyze200>(getBulkReanalyzeUrl(),
   {      
     ...options,
     method: 'POST',
@@ -186,7 +186,7 @@ export const getGetTracks1Url = (params?: GetTracks1Params,) => {
 
 export const getTracks1 = async (params?: GetTracks1Params, options?: RequestInit): Promise<AdminTrackPageResponse> => {
   
-  return customFetch<AdminTrackPageResponse>(getGetTracks1Url(params),
+  return httpClient<AdminTrackPageResponse>(getGetTracks1Url(params),
   {      
     ...options,
     method: 'GET'
@@ -209,7 +209,7 @@ export const getGetStatusCountsUrl = () => {
 
 export const getStatusCounts = async ( options?: RequestInit): Promise<GetStatusCounts200> => {
   
-  return customFetch<GetStatusCounts200>(getGetStatusCountsUrl(),
+  return httpClient<GetStatusCounts200>(getGetStatusCountsUrl(),
   {      
     ...options,
     method: 'GET'
@@ -232,7 +232,7 @@ export const getDeleteTrackUrl = (trackId: string,) => {
 
 export const deleteTrack = async (trackId: string, options?: RequestInit): Promise<DeleteTrack200> => {
   
-  return customFetch<DeleteTrack200>(getDeleteTrackUrl(trackId),
+  return httpClient<DeleteTrack200>(getDeleteTrackUrl(trackId),
   {      
     ...options,
     method: 'DELETE'
@@ -255,7 +255,7 @@ export const getUnflagTrack1Url = (trackId: string,) => {
 
 export const unflagTrack1 = async (trackId: string, options?: RequestInit): Promise<UnflagTrack1200> => {
   
-  return customFetch<UnflagTrack1200>(getUnflagTrack1Url(trackId),
+  return httpClient<UnflagTrack1200>(getUnflagTrack1Url(trackId),
   {      
     ...options,
     method: 'DELETE'

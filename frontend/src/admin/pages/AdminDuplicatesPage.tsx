@@ -5,7 +5,6 @@ import {
   mergeDuplicates,
   mergeAllDuplicates,
 } from '@/api/generated/admin-duplicates/admin-duplicates';
-import { adminRequestOptions } from '@/admin/api/client';
 import { Modal } from '@/admin/components/Modal';
 import { Button } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
@@ -27,7 +26,7 @@ export function AdminDuplicatesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getMergeableDuplicates({}, adminRequestOptions());
+      const result = await getMergeableDuplicates({});
       const items = Array.isArray(result) ? result : [];
       setGroups(
         items.map((item: Record<string, unknown>) => ({
@@ -49,7 +48,7 @@ export function AdminDuplicatesPage() {
 
   const handleAnalyze = async (isrc: string) => {
     try {
-      const result = await analyzeDuplicates(isrc, adminRequestOptions());
+      const result = await analyzeDuplicates(isrc);
       setAnalyzeResult(result as Record<string, unknown>);
       setAnalyzeIsrc(isrc);
     } catch {
@@ -60,7 +59,7 @@ export function AdminDuplicatesPage() {
   const handleMerge = async (isrc: string) => {
     setMerging(true);
     try {
-      await mergeDuplicates(isrc, {}, adminRequestOptions());
+      await mergeDuplicates(isrc, {});
       toast(`Dubbletter med ISRC ${isrc} sammanfogade`);
       fetchData();
     } catch {
@@ -73,7 +72,7 @@ export function AdminDuplicatesPage() {
   const handleMergeAll = async () => {
     setMerging(true);
     try {
-      await mergeAllDuplicates({}, adminRequestOptions());
+      await mergeAllDuplicates({});
       toast('Alla dubbletter sammanfogade');
       setMergeAllModal(false);
       fetchData();

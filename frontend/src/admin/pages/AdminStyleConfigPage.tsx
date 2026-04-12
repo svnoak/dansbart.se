@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { adminFetch } from '@/admin/api/client';
+import { apiFetch } from '@/api/http-client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { Modal } from '@/admin/components/Modal';
@@ -27,13 +27,13 @@ interface PageData {
 const API_BASE = '/api/admin/style-config';
 
 async function fetchConfigs(): Promise<PageData> {
-  const res = await adminFetch(`${API_BASE}?limit=100&offset=0`);
+  const res = await apiFetch(`${API_BASE}?limit=100&offset=0`);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
 }
 
 async function createConfig(data: { mainStyle: string; subStyle?: string; beatsPerBar: number }) {
-  const res = await adminFetch(API_BASE, {
+  const res = await apiFetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -49,7 +49,7 @@ async function updateConfig(
   id: string,
   data: { mainStyle?: string; subStyle?: string; beatsPerBar?: number; isActive?: boolean },
 ) {
-  const res = await adminFetch(`${API_BASE}/${id}`, {
+  const res = await apiFetch(`${API_BASE}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -62,7 +62,7 @@ async function updateConfig(
 }
 
 async function deleteConfig(id: string) {
-  const res = await adminFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete');
   return res.json();
 }

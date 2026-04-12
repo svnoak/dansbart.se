@@ -55,7 +55,7 @@ React frontend --> Java API (REST, :8000) --> PostgreSQL (jOOQ + pgvector)
 
 2. **Set up environment variables:**
    ```bash
-   cp .env.beta.example .env
+   cp .env.example .env
    # Edit .env with your configuration
    ```
 

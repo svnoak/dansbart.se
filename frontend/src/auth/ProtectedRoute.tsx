@@ -2,8 +2,13 @@ import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from './useAuth';
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requiredRole?: string;
+}
+
+export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -14,7 +19,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

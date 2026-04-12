@@ -16,7 +16,7 @@ import type {
   RejectRequest
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Reject a pending artist and add to blocklist
@@ -32,7 +32,7 @@ export const getRejectPendingArtistUrl = (id: string,) => {
 export const rejectPendingArtist = async (id: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectPendingArtist200> => {
   
-  return customFetch<RejectPendingArtist200>(getRejectPendingArtistUrl(id),
+  return httpClient<RejectPendingArtist200>(getRejectPendingArtistUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -56,7 +56,7 @@ export const getApprovePendingArtistUrl = (id: string,) => {
 
 export const approvePendingArtist = async (id: string, options?: RequestInit): Promise<ApprovePendingArtist200> => {
   
-  return customFetch<ApprovePendingArtist200>(getApprovePendingArtistUrl(id),
+  return httpClient<ApprovePendingArtist200>(getApprovePendingArtistUrl(id),
   {      
     ...options,
     method: 'POST'
@@ -86,7 +86,7 @@ export const getGetPendingArtistsUrl = (params?: GetPendingArtistsParams,) => {
 
 export const getPendingArtists = async (params?: GetPendingArtistsParams, options?: RequestInit): Promise<GetPendingArtists200> => {
   
-  return customFetch<GetPendingArtists200>(getGetPendingArtistsUrl(params),
+  return httpClient<GetPendingArtists200>(getGetPendingArtistsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -116,7 +116,7 @@ export const getGetPendingAlbumsUrl = (params?: GetPendingAlbumsParams,) => {
 
 export const getPendingAlbums = async (params?: GetPendingAlbumsParams, options?: RequestInit): Promise<GetPendingAlbums200> => {
   
-  return customFetch<GetPendingAlbums200>(getGetPendingAlbumsUrl(params),
+  return httpClient<GetPendingAlbums200>(getGetPendingAlbumsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -146,7 +146,7 @@ export const getGetPendingArtistsForApprovalUrl = (params?: GetPendingArtistsFor
 
 export const getPendingArtistsForApproval = async (params?: GetPendingArtistsForApprovalParams, options?: RequestInit): Promise<GetPendingArtistsForApproval200> => {
   
-  return customFetch<GetPendingArtistsForApproval200>(getGetPendingArtistsForApprovalUrl(params),
+  return httpClient<GetPendingArtistsForApproval200>(getGetPendingArtistsForApprovalUrl(params),
   {      
     ...options,
     method: 'GET'

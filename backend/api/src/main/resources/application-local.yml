@@ -1,12 +1,6 @@
 # Local development profile
 # Activate with: SPRING_PROFILES_ACTIVE=local
 
-spring:
-  # Disable OAuth2/OIDC for local development
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
-
 logging:
   level:
     se.dansbart: DEBUG

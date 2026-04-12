@@ -15,7 +15,7 @@ import type {
   UsernameAvailability
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get current user profile
@@ -30,7 +30,7 @@ export const getGetCurrentUserUrl = () => {
 
 export const getCurrentUser = async ( options?: RequestInit): Promise<User> => {
   
-  return customFetch<User>(getGetCurrentUserUrl(),
+  return httpClient<User>(getGetCurrentUserUrl(),
   {      
     ...options,
     method: 'GET'
@@ -53,7 +53,7 @@ export const getUpdateProfileUrl = () => {
 
 export const updateProfile = async (updateProfileRequest: UpdateProfileRequest, options?: RequestInit): Promise<User> => {
   
-  return customFetch<User>(getUpdateProfileUrl(),
+  return httpClient<User>(getUpdateProfileUrl(),
   {      
     ...options,
     method: 'PUT',
@@ -77,7 +77,7 @@ export const getGetUserByIdUrl = (id: string,) => {
 
 export const getUserById = async (id: string, options?: RequestInit): Promise<UserPublicProfile> => {
   
-  return customFetch<UserPublicProfile>(getGetUserByIdUrl(id),
+  return httpClient<UserPublicProfile>(getGetUserByIdUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -107,7 +107,7 @@ export const getCheckUsernameAvailabilityUrl = (params: CheckUsernameAvailabilit
 
 export const checkUsernameAvailability = async (params: CheckUsernameAvailabilityParams, options?: RequestInit): Promise<UsernameAvailability> => {
   
-  return customFetch<UsernameAvailability>(getCheckUsernameAvailabilityUrl(params),
+  return httpClient<UsernameAvailability>(getCheckUsernameAvailabilityUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -137,7 +137,7 @@ export const getSearchUsersUrl = (params: SearchUsersParams,) => {
 
 export const searchUsers = async (params: SearchUsersParams, options?: RequestInit): Promise<UserSummaryDto[]> => {
   
-  return customFetch<UserSummaryDto[]>(getSearchUsersUrl(params),
+  return httpClient<UserSummaryDto[]>(getSearchUsersUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -160,7 +160,7 @@ export const getGetSharedPlaylistsUrl = () => {
 
 export const getSharedPlaylists = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  return customFetch<Playlist[]>(getGetSharedPlaylistsUrl(),
+  return httpClient<Playlist[]>(getGetSharedPlaylistsUrl(),
   {      
     ...options,
     method: 'GET'
@@ -183,7 +183,7 @@ export const getGetMyPlaylistsUrl = () => {
 
 export const getMyPlaylists = async ( options?: RequestInit): Promise<Playlist[]> => {
   
-  return customFetch<Playlist[]>(getGetMyPlaylistsUrl(),
+  return httpClient<Playlist[]>(getGetMyPlaylistsUrl(),
   {      
     ...options,
     method: 'GET'

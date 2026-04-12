@@ -1,62 +1,50 @@
 package se.dansbart.e2e.base;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtException;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Test security configuration that provides a mock JWT decoder.
- * This allows tests to use simple test tokens without a real OAuth2 issuer.
+ * Test security config: same authorization rules as SecurityConfig but with CSRF disabled
+ * so MockMvc tests can make mutation requests without CSRF tokens.
  */
 @TestConfiguration
 public class TestSecurityConfig {
 
     @Bean
-    @Primary
-    public JwtDecoder testJwtDecoder() {
-        return token -> {
-            // Parse test tokens in format: "test-user-{userId}" or "test-admin-{userId}"
-            if (token == null || token.isBlank()) {
-                throw new JwtException("Token cannot be empty");
-            }
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/sso/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/tracks/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/artists/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/albums/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/styles/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/discovery/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                .requestMatchers("/api/config/auth").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/playlists/**").authenticated()
+                .requestMatchers("/api/users/**").authenticated()
+                .requestMatchers("/api/feedback/**").authenticated()
+                .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) ->
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED)));
 
-            String subject = extractSubject(token);
-            List<String> groups = extractGroups(token);
-
-            return Jwt.withTokenValue(token)
-                .header("alg", "none")
-                .header("typ", "JWT")
-                .subject(subject)
-                .claim("groups", groups)
-                .claim("preferred_username", "testuser_" + subject)
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-        };
-    }
-
-    private String extractSubject(String token) {
-        // Token format: "test-user-{userId}" or "test-admin-{userId}"
-        if (token.startsWith("test-user-")) {
-            return token.substring("test-user-".length());
-        } else if (token.startsWith("test-admin-")) {
-            return token.substring("test-admin-".length());
-        }
-        // If not a test token format, use the token itself as subject
-        return token;
-    }
-
-    private List<String> extractGroups(String token) {
-        if (token.startsWith("test-admin-")) {
-            return List.of("dansbart-admins", "users");
-        }
-        return List.of("users");
+        return http.build();
     }
 }

@@ -7,7 +7,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.e2e.base.TestContainersConfig;
-import se.dansbart.e2e.base.TestSecurityConfig;
 import se.dansbart.e2e.fixture.TestDataFactory;
 
 /**
@@ -17,7 +16,7 @@ import se.dansbart.e2e.fixture.TestDataFactory;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-@Import({TestSecurityConfig.class, TestDataFactory.class})
+@Import({TestDataFactory.class})
 @Transactional
 public abstract class AbstractRepositoryTest {
 
@@ -33,8 +32,6 @@ public abstract class AbstractRepositoryTest {
         registry.add("spring.data.redis.host", TestContainersConfig::getRedisHost);
         registry.add("spring.data.redis.port", TestContainersConfig::getRedisPort);
         registry.add("dansbart.celery.broker-url", TestContainersConfig::getRedisUrl);
-        registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
-            () -> "http://localhost:9999/test-issuer");
         registry.add("dansbart.auth.enabled", () -> "true");
     }
 }

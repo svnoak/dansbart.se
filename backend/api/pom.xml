@@ -68,20 +68,20 @@
             <version>${pgvector.version}</version>
         </dependency>
 
-        <!-- Security + OAuth2 (Authentik OIDC) -->
+        <!-- Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
-
-        <!-- Redis (for Celery task dispatch) -->
+        <!-- Redis (Celery task dispatch + session storage) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Redis-backed HTTP session (BFF session store) -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
         </dependency>
 
         <!-- Validation -->

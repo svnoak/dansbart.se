@@ -6,7 +6,6 @@ import {
   rejectPendingArtist,
   getPendingAlbums,
 } from '@/api/generated/admin-pending/admin-pending';
-import { adminRequestOptions } from '@/admin/api/client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { Pagination } from '@/admin/components/Pagination';
@@ -50,7 +49,6 @@ export function AdminPendingPage() {
     try {
       const result = await getPendingArtistsForApproval(
         { limit, offset },
-        adminRequestOptions(),
       );
       const r = result as unknown as { items: PendingArtistRow[]; total: number };
       setArtists(Array.isArray(r?.items) ? r.items : []);
@@ -67,7 +65,6 @@ export function AdminPendingPage() {
     try {
       const result = await getPendingAlbums(
         { limit, offset },
-        adminRequestOptions(),
       );
       const r = result as unknown as { items: PendingAlbumRow[]; total: number };
       setAlbums(Array.isArray(r?.items) ? r.items : []);
@@ -94,7 +91,7 @@ export function AdminPendingPage() {
 
   const handleApprove = async (artist: PendingArtistRow) => {
     try {
-      await approvePendingArtist(artist.id, adminRequestOptions());
+      await approvePendingArtist(artist.id);
       toast(`${artist.name} godkänd`);
       fetchArtists();
     } catch {
@@ -108,7 +105,6 @@ export function AdminPendingPage() {
       await rejectPendingArtist(
         rejectModal.id,
         { reason: rejectReason || undefined },
-        adminRequestOptions(),
       );
       toast(`${rejectModal.name} avvisad`);
       setRejectModal(null);

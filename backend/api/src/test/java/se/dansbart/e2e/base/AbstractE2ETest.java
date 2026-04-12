@@ -20,13 +20,13 @@ import se.dansbart.e2e.fixture.TestDataFactory;
  * - TestContainers for PostgreSQL (pgvector) and Redis
  * - MockMvc for HTTP testing
  * - Test data factory for creating test entities
- * - JWT test helper for authentication
+ * - Auth injection via JwtTestHelper (MockMvc post-processor, no real SSO involved)
  * - Transaction rollback for test isolation
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TestSecurityConfig.class, TestDataFactory.class, JwtTestHelper.class})
+@Import({TestDataFactory.class, JwtTestHelper.class, TestSecurityConfig.class})
 @Transactional
 public abstract class AbstractE2ETest {
 
@@ -53,10 +53,6 @@ public abstract class AbstractE2ETest {
         registry.add("spring.data.redis.host", TestContainersConfig::getRedisHost);
         registry.add("spring.data.redis.port", TestContainersConfig::getRedisPort);
         registry.add("dansbart.celery.broker-url", TestContainersConfig::getRedisUrl);
-
-        // Disable real OAuth2 - use mock JWT decoder
-        registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
-            () -> "http://localhost:9999/test-issuer");
 
         // Enable auth for tests
         registry.add("dansbart.auth.enabled", () -> "true");

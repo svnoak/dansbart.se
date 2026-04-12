@@ -92,7 +92,7 @@ The image uses a multi-stage build (Node build, then nginx serve) and `npm ci` f
 - Artist and album detail pages.
 - Flag/Report modal (feedback + flag) and voter util.
 - Similar tracks modal, Add YouTube link modal, Cookie consent, Share track.
-- Auth (Authentik) and playlists (later phase).
+- Auth (DiscourseConnect SSO) and playlists (later phase).
 
 ## Plan reference
 

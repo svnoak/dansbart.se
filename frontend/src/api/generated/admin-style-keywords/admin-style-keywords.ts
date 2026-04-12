@@ -17,7 +17,7 @@ import type {
   UpdateKeyword200
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get a single style keyword by ID
@@ -32,7 +32,7 @@ export const getGetKeywordUrl = (keywordId: string,) => {
 
 export const getKeyword = async (keywordId: string, options?: RequestInit): Promise<GetKeyword200> => {
   
-  return customFetch<GetKeyword200>(getGetKeywordUrl(keywordId),
+  return httpClient<GetKeyword200>(getGetKeywordUrl(keywordId),
   {      
     ...options,
     method: 'GET'
@@ -56,7 +56,7 @@ export const getUpdateKeywordUrl = (keywordId: string,) => {
 export const updateKeyword = async (keywordId: string,
     styleKeywordUpdateRequest: StyleKeywordUpdateRequest, options?: RequestInit): Promise<UpdateKeyword200> => {
   
-  return customFetch<UpdateKeyword200>(getUpdateKeywordUrl(keywordId),
+  return httpClient<UpdateKeyword200>(getUpdateKeywordUrl(keywordId),
   {      
     ...options,
     method: 'PUT',
@@ -80,7 +80,7 @@ export const getDeleteKeywordUrl = (keywordId: string,) => {
 
 export const deleteKeyword = async (keywordId: string, options?: RequestInit): Promise<DeleteKeyword200> => {
   
-  return customFetch<DeleteKeyword200>(getDeleteKeywordUrl(keywordId),
+  return httpClient<DeleteKeyword200>(getDeleteKeywordUrl(keywordId),
   {      
     ...options,
     method: 'DELETE'
@@ -110,7 +110,7 @@ export const getGetKeywords1Url = (params?: GetKeywords1Params,) => {
 
 export const getKeywords1 = async (params?: GetKeywords1Params, options?: RequestInit): Promise<GetKeywords1200> => {
   
-  return customFetch<GetKeywords1200>(getGetKeywords1Url(params),
+  return httpClient<GetKeywords1200>(getGetKeywords1Url(params),
   {      
     ...options,
     method: 'GET'
@@ -133,7 +133,7 @@ export const getCreateKeywordUrl = () => {
 
 export const createKeyword = async (styleKeywordRequest: StyleKeywordRequest, options?: RequestInit): Promise<CreateKeyword200> => {
   
-  return customFetch<CreateKeyword200>(getCreateKeywordUrl(),
+  return httpClient<CreateKeyword200>(getCreateKeywordUrl(),
   {      
     ...options,
     method: 'POST',
@@ -157,7 +157,7 @@ export const getInvalidateCacheUrl = () => {
 
 export const invalidateCache = async ( options?: RequestInit): Promise<InvalidateCache200> => {
   
-  return customFetch<InvalidateCache200>(getInvalidateCacheUrl(),
+  return httpClient<InvalidateCache200>(getInvalidateCacheUrl(),
   {      
     ...options,
     method: 'POST'
@@ -180,7 +180,7 @@ export const getGetStats1Url = () => {
 
 export const getStats1 = async ( options?: RequestInit): Promise<GetStats1200> => {
   
-  return customFetch<GetStats1200>(getGetStats1Url(),
+  return httpClient<GetStats1200>(getGetStats1Url(),
   {      
     ...options,
     method: 'GET'

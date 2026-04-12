@@ -92,6 +92,11 @@ public class Users extends TableImpl<Record> {
      */
     public final TableField<Record, String> USERNAME = createField(DSL.name("username"), SQLDataType.VARCHAR(50).nullable(false), this, "");
 
+    /**
+     * The column <code>public.users.role</code>.
+     */
+    public final TableField<Record, String> ROLE = createField(DSL.name("role"), SQLDataType.VARCHAR(20).nullable(false).defaultValue(DSL.field(DSL.raw("'USER'::character varying"), SQLDataType.VARCHAR)), this, "");
+
     private Users(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

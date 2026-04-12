@@ -11,7 +11,7 @@ import type {
   RejectRequest
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Reject an album and delete pending tracks
@@ -27,7 +27,7 @@ export const getRejectAlbumUrl = (albumId: string,) => {
 export const rejectAlbum = async (albumId: string,
     rejectRequest: RejectRequest, options?: RequestInit): Promise<RejectAlbum200> => {
   
-  return customFetch<RejectAlbum200>(getRejectAlbumUrl(albumId),
+  return httpClient<RejectAlbum200>(getRejectAlbumUrl(albumId),
   {      
     ...options,
     method: 'POST',
@@ -58,7 +58,7 @@ export const getGetAlbums1Url = (params?: GetAlbums1Params,) => {
 
 export const getAlbums1 = async (params?: GetAlbums1Params, options?: RequestInit): Promise<GetAlbums1200> => {
   
-  return customFetch<GetAlbums1200>(getGetAlbums1Url(params),
+  return httpClient<GetAlbums1200>(getGetAlbums1Url(params),
   {      
     ...options,
     method: 'GET'

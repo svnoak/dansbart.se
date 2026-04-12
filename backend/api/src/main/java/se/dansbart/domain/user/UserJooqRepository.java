@@ -56,8 +56,8 @@ public class UserJooqRepository {
 
     public User insert(User user) {
         dsl.insertInto(USERS)
-            .columns(USERS.ID, USERS.USERNAME, USERS.DISPLAY_NAME, USERS.AVATAR_URL, USERS.LAST_LOGIN_AT)
-            .values(user.getId(), user.getUsername(), user.getDisplayName(), user.getAvatarUrl(), user.getLastLoginAt())
+            .columns(USERS.ID, USERS.USERNAME, USERS.DISPLAY_NAME, USERS.AVATAR_URL, USERS.LAST_LOGIN_AT, USERS.ROLE)
+            .values(user.getId(), user.getUsername(), user.getDisplayName(), user.getAvatarUrl(), user.getLastLoginAt(), user.getRole())
             .execute();
         return user;
     }
@@ -73,6 +73,31 @@ public class UserJooqRepository {
         return user;
     }
 
+    public String findRoleById(String id) {
+        return dsl.select(USERS.ROLE)
+            .from(USERS)
+            .where(USERS.ID.eq(id))
+            .fetchOptional(USERS.ROLE)
+            .orElse("USER");
+    }
+
+    public void updateRole(String id, String role) {
+        dsl.update(USERS)
+            .set(USERS.ROLE, role)
+            .where(USERS.ID.eq(id))
+            .execute();
+    }
+
+    public long countAll() {
+        return dsl.fetchCount(USERS);
+    }
+
+    public List<User> findAll() {
+        return dsl.selectFrom(USERS)
+            .orderBy(USERS.USERNAME.asc())
+            .fetch(this::toUser);
+    }
+
     private User toUser(Record r) {
         java.time.LocalDateTime createdAtRaw = r.get(USERS.CREATED_AT);
 
@@ -84,6 +109,7 @@ public class UserJooqRepository {
             .username(r.get(USERS.USERNAME))
             .displayName(r.get(USERS.DISPLAY_NAME))
             .avatarUrl(r.get(USERS.AVATAR_URL))
+            .role(r.get(USERS.ROLE))
             .createdAt(createdAt)
             .lastLoginAt(lastLoginAt)
             .build();

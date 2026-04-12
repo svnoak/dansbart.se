@@ -5,7 +5,6 @@ import {
   getDailyVisits,
   getHourlyVisits,
 } from '@/api/generated/admin-analytics/admin-analytics';
-import { adminRequestOptions } from '@/admin/api/client';
 import { StatCard } from '@/admin/components/StatCard';
 import { Select } from '@/admin/components/forms/Select';
 
@@ -32,9 +31,9 @@ export function AdminStatsPage() {
     try {
       const [statsRes, dashRes, dailyRes, hourlyRes] = await Promise.all([
         getStats().catch(() => null),
-        getDashboard({ days }, adminRequestOptions()).catch(() => null),
-        getDailyVisits({ days }, adminRequestOptions()).catch(() => null),
-        getHourlyVisits({ days }, adminRequestOptions()).catch(() => null),
+        getDashboard({ days }).catch(() => null),
+        getDailyVisits({ days }).catch(() => null),
+        getHourlyVisits({ days }).catch(() => null),
       ]);
       setLibraryStats(statsRes as Record<string, unknown> | null);
       setDashboard(dashRes as Record<string, unknown> | null);

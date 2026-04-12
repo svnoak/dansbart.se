@@ -13,7 +13,7 @@ import type {
   VisitorSession
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Record a user interaction event
@@ -28,7 +28,7 @@ export const getRecordInteractionUrl = () => {
 
 export const recordInteraction = async (recordInteractionRequest: RecordInteractionRequest, options?: RequestInit): Promise<UserInteraction> => {
   
-  return customFetch<UserInteraction>(getRecordInteractionUrl(),
+  return httpClient<UserInteraction>(getRecordInteractionUrl(),
   {      
     ...options,
     method: 'POST',
@@ -52,7 +52,7 @@ export const getRecordInteraction1Url = () => {
 
 export const recordInteraction1 = async (recordInteractionRequest: RecordInteractionRequest, options?: RequestInit): Promise<UserInteraction> => {
   
-  return customFetch<UserInteraction>(getRecordInteraction1Url(),
+  return httpClient<UserInteraction>(getRecordInteraction1Url(),
   {      
     ...options,
     method: 'POST',
@@ -76,7 +76,7 @@ export const getCreateOrUpdateSessionUrl = () => {
 
 export const createOrUpdateSession = async (sessionRequest: SessionRequest, options?: RequestInit): Promise<VisitorSession> => {
   
-  return customFetch<VisitorSession>(getCreateOrUpdateSessionUrl(),
+  return httpClient<VisitorSession>(getCreateOrUpdateSessionUrl(),
   {      
     ...options,
     method: 'POST',
@@ -101,7 +101,7 @@ export const getRecordPlaybackUrl = (trackId: string,) => {
 export const recordPlayback = async (trackId: string,
     recordPlaybackRequest: RecordPlaybackRequest, options?: RequestInit): Promise<TrackPlayback> => {
   
-  return customFetch<TrackPlayback>(getRecordPlaybackUrl(trackId),
+  return httpClient<TrackPlayback>(getRecordPlaybackUrl(trackId),
   {      
     ...options,
     method: 'POST',

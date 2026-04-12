@@ -20,7 +20,7 @@ test.describe('Config', () => {
     expect(res.ok).toBe(true);
     const body = await res.json();
     expect(typeof body.authEnabled).toBe('boolean');
-    expect(['oidc', 'password'].includes(body.authMethod)).toBe(true);
+    expect(body.authMethod).toBe('discourse');
   });
 });
 

@@ -18,6 +18,7 @@ public class User {
     private String username;
     private String displayName;
     private String avatarUrl;
+    private String role;
     private OffsetDateTime createdAt;
     private OffsetDateTime lastLoginAt;
 

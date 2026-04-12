@@ -11,7 +11,7 @@ import type {
   GetExportStats200
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * Useful for understanding dataset size before downloading.
@@ -27,7 +27,7 @@ export const getGetExportStatsUrl = () => {
 
 export const getExportStats = async ( options?: RequestInit): Promise<GetExportStats200> => {
   
-  return customFetch<GetExportStats200>(getGetExportStatsUrl(),
+  return httpClient<GetExportStats200>(getGetExportStatsUrl(),
   {      
     ...options,
     method: 'GET'
@@ -51,7 +51,7 @@ export const getExportFeedbackUrl = () => {
 
 export const exportFeedback = async ( options?: RequestInit): Promise<ExportFeedback200> => {
   
-  return customFetch<ExportFeedback200>(getExportFeedbackUrl(),
+  return httpClient<ExportFeedback200>(getExportFeedbackUrl(),
   {      
     ...options,
     method: 'GET'
@@ -82,7 +82,7 @@ export const getExportDatasetUrl = (params?: ExportDatasetParams,) => {
 
 export const exportDataset = async (params?: ExportDatasetParams, options?: RequestInit): Promise<ExportDataset200> => {
   
-  return customFetch<ExportDataset200>(getExportDatasetUrl(params),
+  return httpClient<ExportDataset200>(getExportDatasetUrl(params),
   {      
     ...options,
     method: 'GET'

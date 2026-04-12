@@ -16,7 +16,7 @@ import type {
   MergeDuplicatesParams
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Merge all duplicate tracks with the given ISRC into a single canonical track
@@ -40,7 +40,7 @@ export const getMergeDuplicatesUrl = (isrc: string,
 export const mergeDuplicates = async (isrc: string,
     params?: MergeDuplicatesParams, options?: RequestInit): Promise<MergeDuplicates200> => {
   
-  return customFetch<MergeDuplicates200>(getMergeDuplicatesUrl(isrc,params),
+  return httpClient<MergeDuplicates200>(getMergeDuplicatesUrl(isrc,params),
   {      
     ...options,
     method: 'POST'
@@ -70,7 +70,7 @@ export const getMergeAllDuplicatesUrl = (params?: MergeAllDuplicatesParams,) => 
 
 export const mergeAllDuplicates = async (params?: MergeAllDuplicatesParams, options?: RequestInit): Promise<MergeAllDuplicates200> => {
   
-  return customFetch<MergeAllDuplicates200>(getMergeAllDuplicatesUrl(params),
+  return httpClient<MergeAllDuplicates200>(getMergeAllDuplicatesUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -100,7 +100,7 @@ export const getGetDuplicatesUrl = (params?: GetDuplicatesParams,) => {
 
 export const getDuplicates = async (params?: GetDuplicatesParams, options?: RequestInit): Promise<GetDuplicates200> => {
   
-  return customFetch<GetDuplicates200>(getGetDuplicatesUrl(params),
+  return httpClient<GetDuplicates200>(getGetDuplicatesUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -130,7 +130,7 @@ export const getGetMergeableDuplicatesUrl = (params?: GetMergeableDuplicatesPara
 
 export const getMergeableDuplicates = async (params?: GetMergeableDuplicatesParams, options?: RequestInit): Promise<GetMergeableDuplicates200> => {
   
-  return customFetch<GetMergeableDuplicates200>(getGetMergeableDuplicatesUrl(params),
+  return httpClient<GetMergeableDuplicates200>(getGetMergeableDuplicatesUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -153,7 +153,7 @@ export const getAnalyzeDuplicatesUrl = (isrc: string,) => {
 
 export const analyzeDuplicates = async (isrc: string, options?: RequestInit): Promise<AnalyzeDuplicates200> => {
   
-  return customFetch<AnalyzeDuplicates200>(getAnalyzeDuplicatesUrl(isrc),
+  return httpClient<AnalyzeDuplicates200>(getAnalyzeDuplicatesUrl(isrc),
   {      
     ...options,
     method: 'GET'

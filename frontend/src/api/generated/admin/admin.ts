@@ -12,7 +12,7 @@ import type {
   TriggerSpiderParams
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Trigger spider crawl
@@ -34,7 +34,7 @@ export const getTriggerSpiderUrl = (params?: TriggerSpiderParams,) => {
 
 export const triggerSpider = async (params?: TriggerSpiderParams, options?: RequestInit): Promise<TriggerSpider200> => {
   
-  return customFetch<TriggerSpider200>(getTriggerSpiderUrl(params),
+  return httpClient<TriggerSpider200>(getTriggerSpiderUrl(params),
   {      
     ...options,
     method: 'POST'
@@ -57,7 +57,7 @@ export const getTriggerReclassifyUrl = () => {
 
 export const triggerReclassify = async ( options?: RequestInit): Promise<TriggerReclassify200> => {
   
-  return customFetch<TriggerReclassify200>(getTriggerReclassifyUrl(),
+  return httpClient<TriggerReclassify200>(getTriggerReclassifyUrl(),
   {      
     ...options,
     method: 'POST'
@@ -80,7 +80,7 @@ export const getTriggerBackfillUrl = (artistId: string,) => {
 
 export const triggerBackfill = async (artistId: string, options?: RequestInit): Promise<TriggerBackfill200> => {
   
-  return customFetch<TriggerBackfill200>(getTriggerBackfillUrl(artistId),
+  return httpClient<TriggerBackfill200>(getTriggerBackfillUrl(artistId),
   {      
     ...options,
     method: 'POST'
@@ -103,7 +103,7 @@ export const getTriggerAnalysisUrl = (trackId: string,) => {
 
 export const triggerAnalysis = async (trackId: string, options?: RequestInit): Promise<TriggerAnalysis200> => {
   
-  return customFetch<TriggerAnalysis200>(getTriggerAnalysisUrl(trackId),
+  return httpClient<TriggerAnalysis200>(getTriggerAnalysisUrl(trackId),
   {      
     ...options,
     method: 'POST'

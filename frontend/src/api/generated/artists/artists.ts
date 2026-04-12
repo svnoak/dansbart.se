@@ -13,7 +13,7 @@ import type {
   Track
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get all artists with pagination
@@ -35,7 +35,7 @@ export const getGetArtistsUrl = (params?: GetArtistsParams,) => {
 
 export const getArtists = async (params?: GetArtistsParams, options?: RequestInit): Promise<PageResponseArtist> => {
   
-  return customFetch<PageResponseArtist>(getGetArtistsUrl(params),
+  return httpClient<PageResponseArtist>(getGetArtistsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -58,7 +58,7 @@ export const getGetArtistUrl = (id: string,) => {
 
 export const getArtist = async (id: string, options?: RequestInit): Promise<Artist> => {
   
-  return customFetch<Artist>(getGetArtistUrl(id),
+  return httpClient<Artist>(getGetArtistUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -81,7 +81,7 @@ export const getGetArtistTracksUrl = (id: string,) => {
 
 export const getArtistTracks = async (id: string, options?: RequestInit): Promise<Track[]> => {
   
-  return customFetch<Track[]>(getGetArtistTracksUrl(id),
+  return httpClient<Track[]>(getGetArtistTracksUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -104,7 +104,7 @@ export const getGetArtistAlbumsUrl = (id: string,) => {
 
 export const getArtistAlbums = async (id: string, options?: RequestInit): Promise<AlbumSummaryDto[]> => {
   
-  return customFetch<AlbumSummaryDto[]>(getGetArtistAlbumsUrl(id),
+  return httpClient<AlbumSummaryDto[]>(getGetArtistAlbumsUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -134,7 +134,7 @@ export const getSearchArtistsUrl = (params: SearchArtistsParams,) => {
 
 export const searchArtists = async (params: SearchArtistsParams, options?: RequestInit): Promise<PageResponseArtist> => {
   
-  return customFetch<PageResponseArtist>(getSearchArtistsUrl(params),
+  return httpClient<PageResponseArtist>(getSearchArtistsUrl(params),
   {      
     ...options,
     method: 'GET'

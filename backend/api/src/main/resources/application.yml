@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: dansbart-api
 
@@ -26,12 +28,12 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${OIDC_ISSUER_URI:https://auth.dansbart.se/application/o/dansbart/}
-          jwk-set-uri: ${OIDC_JWK_SET_URI:https://auth.dansbart.se/application/o/dansbart/jwks/}
+  session:
+    store-type: redis
+    redis:
+      flush-mode: on-save
+      namespace: dansbart:session
+    timeout: 7d
 
   servlet:
     multipart:
@@ -40,6 +42,14 @@ spring:
 
 server:
   port: 8000
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: ${SERVER_SECURE:false}
+        same-site: lax
+        max-age: 604800
 
 springdoc:
   api-docs:
@@ -62,6 +72,13 @@ management:
     health:
       show-details: when_authorized
 
+discourse:
+  connect:
+    url: ${DISCOURSE_SSO_URL}
+    secret: ${DISCOURSE_SSO_SECRET}
+    return-url: ${DISCOURSE_SSO_RETURN_URL}
+    success-url: ${DISCOURSE_SSO_SUCCESS_URL:/admin/library}
+
 logging:
   level:
     se.dansbart: DEBUG
@@ -75,8 +92,3 @@ dansbart:
       audio: audio
       feature: feature
       light: light
-  auth:
-    # Set to false to use ADMIN_PASSWORD instead of Authentik OIDC
-    enabled: ${ENABLE_AUTH_FEATURES:false}
-    # Password for admin access when auth.enabled=false
-    admin-password: ${ADMIN_PASSWORD:}

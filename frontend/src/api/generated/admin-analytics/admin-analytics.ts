@@ -25,7 +25,7 @@ import type {
   GetVisitorStatsParams
 } from '../../models';
 
-import { customFetch } from '../../custom-fetch';
+import { httpClient } from '../../http-client';
 
 /**
  * @summary Get visit patterns by hour of day
@@ -47,7 +47,7 @@ export const getGetHourlyVisitsUrl = (params?: GetHourlyVisitsParams,) => {
 
 export const getHourlyVisits = async (params?: GetHourlyVisitsParams, options?: RequestInit): Promise<GetHourlyVisits200> => {
   
-  return customFetch<GetHourlyVisits200>(getGetHourlyVisitsUrl(params),
+  return httpClient<GetHourlyVisits200>(getGetHourlyVisitsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -77,7 +77,7 @@ export const getGetDailyVisitsUrl = (params?: GetDailyVisitsParams,) => {
 
 export const getDailyVisits = async (params?: GetDailyVisitsParams, options?: RequestInit): Promise<GetDailyVisits200> => {
   
-  return customFetch<GetDailyVisits200>(getGetDailyVisitsUrl(params),
+  return httpClient<GetDailyVisits200>(getGetDailyVisitsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -107,7 +107,7 @@ export const getGetVisitorStatsUrl = (params?: GetVisitorStatsParams,) => {
 
 export const getVisitorStats = async (params?: GetVisitorStatsParams, options?: RequestInit): Promise<GetVisitorStats200> => {
   
-  return customFetch<GetVisitorStats200>(getGetVisitorStatsUrl(params),
+  return httpClient<GetVisitorStats200>(getGetVisitorStatsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -137,7 +137,7 @@ export const getGetMostPlayedTracksUrl = (params?: GetMostPlayedTracksParams,) =
 
 export const getMostPlayedTracks = async (params?: GetMostPlayedTracksParams, options?: RequestInit): Promise<GetMostPlayedTracks200Item[]> => {
   
-  return customFetch<GetMostPlayedTracks200Item[]>(getGetMostPlayedTracksUrl(params),
+  return httpClient<GetMostPlayedTracks200Item[]>(getGetMostPlayedTracksUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -167,7 +167,7 @@ export const getGetReportStatsUrl = (params?: GetReportStatsParams,) => {
 
 export const getReportStats = async (params?: GetReportStatsParams, options?: RequestInit): Promise<GetReportStats200> => {
   
-  return customFetch<GetReportStats200>(getGetReportStatsUrl(params),
+  return httpClient<GetReportStats200>(getGetReportStatsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -197,7 +197,7 @@ export const getGetPlatformStatsUrl = (params?: GetPlatformStatsParams,) => {
 
 export const getPlatformStats = async (params?: GetPlatformStatsParams, options?: RequestInit): Promise<GetPlatformStats200> => {
   
-  return customFetch<GetPlatformStats200>(getGetPlatformStatsUrl(params),
+  return httpClient<GetPlatformStats200>(getGetPlatformStatsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -227,7 +227,7 @@ export const getGetListenTimeUrl = (params?: GetListenTimeParams,) => {
 
 export const getListenTime = async (params?: GetListenTimeParams, options?: RequestInit): Promise<GetListenTime200> => {
   
-  return customFetch<GetListenTime200>(getGetListenTimeUrl(params),
+  return httpClient<GetListenTime200>(getGetListenTimeUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -257,7 +257,7 @@ export const getGetDiscoveryStatsUrl = (params?: GetDiscoveryStatsParams,) => {
 
 export const getDiscoveryStats = async (params?: GetDiscoveryStatsParams, options?: RequestInit): Promise<GetDiscoveryStats200> => {
   
-  return customFetch<GetDiscoveryStats200>(getGetDiscoveryStatsUrl(params),
+  return httpClient<GetDiscoveryStats200>(getGetDiscoveryStatsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -287,7 +287,7 @@ export const getGetDashboardUrl = (params?: GetDashboardParams,) => {
 
 export const getDashboard = async (params?: GetDashboardParams, options?: RequestInit): Promise<GetDashboard200> => {
   
-  return customFetch<GetDashboard200>(getGetDashboardUrl(params),
+  return httpClient<GetDashboard200>(getGetDashboardUrl(params),
   {      
     ...options,
     method: 'GET'

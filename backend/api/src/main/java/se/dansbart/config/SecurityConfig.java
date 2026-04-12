@@ -1,62 +1,74 @@
 package se.dansbart.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 /**
- * Security configuration for Authentik OIDC authentication.
- * Active when ENABLE_AUTH_FEATURES=true (default) and not in 'local' profile.
+ * BFF security configuration.
+ *
+ * Authentication is handled via DiscourseConnect (Discourse's built-in SSO protocol).
+ * Spring stores the session in Redis and issues an httpOnly SESSION cookie to the browser.
+ * The browser never holds a token.
+ *
+ * CSRF is protected via the double-submit cookie pattern:
+ *   - Spring sets a readable XSRF-TOKEN cookie
+ *   - The frontend reads it and sends X-XSRF-TOKEN on mutations
  */
 @Configuration
 @EnableWebSecurity
-@Profile("!local")
-@ConditionalOnProperty(name = "dansbart.auth.enabled", havingValue = "true", matchIfMissing = true)
+@Profile("!local & !test")
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+        requestHandler.setCsrfRequestAttributeName(null);
+
         http
-            .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(requestHandler))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints (no auth required)
+                // SSO endpoints — must be accessible before authentication
+                .requestMatchers("/sso/**").permitAll()
+                // Public endpoints
                 .requestMatchers(HttpMethod.GET, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/artists/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/albums/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/styles/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/discovery/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
-                // Auth config endpoint (public)
                 .requestMatchers("/api/config/auth").permitAll()
-                // Swagger/OpenAPI
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // Health check
                 .requestMatchers("/actuator/health").permitAll()
-                // Public playlist share endpoint (before authenticated playlists)
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
-                // User endpoints require authentication
+                // Admin endpoints
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Authenticated user endpoints
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()
-                // Admin endpoints require specific role
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // Default: require authentication
                 .anyRequest().authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .jwtAuthenticationConverter(new JwtAuthenticationConverter())
-                )
-            );
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) ->
+                    response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED)))
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/")
+                .deleteCookies("SESSION")
+                .invalidateHttpSession(true));
 
         return http.build();
     }
