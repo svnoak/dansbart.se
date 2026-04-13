@@ -5,6 +5,6 @@
  * OpenAPI spec version: v0
  */
 
-export interface LoginRequest {
-  password?: string;
+export interface UpdateRoleRequest {
+  role?: string;
 }

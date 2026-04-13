@@ -9,4 +9,7 @@ export interface UpdatePlaylistRequest {
   name?: string;
   description?: string;
   isPublic?: boolean;
+  danceStyle?: string;
+  subStyle?: string;
+  tempoCategory?: string;
 }

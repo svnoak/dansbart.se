@@ -57,13 +57,16 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<Playlist> update(UUID playlistId, String userId, String name, String description, Boolean isPublic) {
+    public Optional<Playlist> update(UUID playlistId, String userId, String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId))
             .map(playlist -> {
                 if (name != null) playlist.setName(name);
                 if (description != null) playlist.setDescription(description);
                 if (isPublic != null) playlist.setIsPublic(isPublic);
+                if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
+                if (subStyle != null) playlist.setSubStyle(subStyle.isEmpty() ? null : subStyle);
+                if (tempoCategory != null) playlist.setTempoCategory(tempoCategory.isEmpty() ? null : tempoCategory);
                 playlist.setUpdatedAt(OffsetDateTime.now());
                 return playlistJooqRepository.update(playlist);
             });
@@ -181,6 +184,9 @@ public class PlaylistService {
             .description(playlist.getDescription())
             .isPublic(playlist.getIsPublic())
             .shareToken(playlist.getShareToken())
+            .danceStyle(playlist.getDanceStyle())
+            .subStyle(playlist.getSubStyle())
+            .tempoCategory(playlist.getTempoCategory())
             .createdAt(playlist.getCreatedAt())
             .updatedAt(playlist.getUpdatedAt())
             .owner(owner)

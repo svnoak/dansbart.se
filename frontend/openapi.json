@@ -76,6 +76,10 @@
       "description": "Admin artist management endpoints"
     },
     {
+      "name": "Admin: Users",
+      "description": "Admin user management endpoints"
+    },
+    {
       "name": "Admin Albums",
       "description": "Admin album management endpoints"
     },
@@ -2237,50 +2241,6 @@
         }
       }
     },
-    "/api/admin/auth/logout": {
-      "post": {
-        "tags": ["admin-auth-controller"],
-        "operationId": "logout",
-        "parameters": [
-          {
-            "name": "Authorization",
-            "in": "header",
-            "required": false,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": { "schema": { "type": "object" } }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/auth/login": {
-      "post": {
-        "tags": ["admin-auth-controller"],
-        "operationId": "login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/LoginRequest" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": { "schema": { "type": "object" } }
-            }
-          }
-        }
-      }
-    },
     "/api/admin/artists/{artistId}/reject": {
       "post": {
         "tags": ["Admin Artists"],
@@ -2448,6 +2408,30 @@
             "schema": { "type": "string", "format": "uuid" }
           }
         ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/admin/users/{userId}": {
+      "patch": {
+        "tags": ["Admin: Users"],
+        "summary": "Update a user's role",
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateRoleRequest" }
+            }
+          },
+          "required": true
+        },
         "responses": { "200": { "description": "OK" } }
       }
     },
@@ -3510,6 +3494,26 @@
         }
       }
     },
+    "/api/admin/users": {
+      "get": {
+        "tags": ["Admin: Users"],
+        "summary": "List all users",
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/tracks": {
       "get": {
         "tags": ["Admin - Tracks"],
@@ -4124,28 +4128,6 @@
         }
       }
     },
-    "/api/admin/auth/verify": {
-      "get": {
-        "tags": ["admin-auth-controller"],
-        "operationId": "verify",
-        "parameters": [
-          {
-            "name": "Authorization",
-            "in": "header",
-            "required": false,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": { "schema": { "type": "object" } }
-            }
-          }
-        }
-      }
-    },
     "/api/admin/artists": {
       "get": {
         "tags": ["Admin Artists"],
@@ -4681,6 +4663,9 @@
           "user": { "$ref": "#/components/schemas/User" },
           "isPublic": { "type": "boolean" },
           "shareToken": { "type": "string" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "tempoCategory": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" },
           "tracks": {
@@ -4766,6 +4751,7 @@
           "username": { "type": "string" },
           "displayName": { "type": "string" },
           "avatarUrl": { "type": "string" },
+          "role": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" },
           "lastLoginAt": { "type": "string", "format": "date-time" },
           "playlists": {
@@ -4783,7 +4769,10 @@
         "properties": {
           "name": { "type": "string" },
           "description": { "type": "string" },
-          "isPublic": { "type": "boolean" }
+          "isPublic": { "type": "boolean" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "tempoCategory": { "type": "string" }
         }
       },
       "ReorderTracksRequest": {
@@ -5044,10 +5033,6 @@
           "reason": { "type": "string" }
         }
       },
-      "LoginRequest": {
-        "type": "object",
-        "properties": { "password": { "type": "string" } }
-      },
       "BulkRejectRequest": {
         "type": "object",
         "properties": {
@@ -5061,6 +5046,10 @@
         "properties": {
           "ids": { "type": "array", "items": { "type": "string" } }
         }
+      },
+      "UpdateRoleRequest": {
+        "type": "object",
+        "properties": { "role": { "type": "string" } }
       },
       "UserPublicProfile": {
         "type": "object",
@@ -5213,6 +5202,9 @@
           "description": { "type": "string" },
           "isPublic": { "type": "boolean" },
           "shareToken": { "type": "string" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "tempoCategory": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" },
           "owner": { "$ref": "#/components/schemas/UserSummaryDto" },

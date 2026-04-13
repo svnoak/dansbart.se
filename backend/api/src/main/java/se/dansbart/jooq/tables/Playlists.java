@@ -102,6 +102,21 @@ public class Playlists extends TableImpl<Record> {
      */
     public final TableField<Record, LocalDateTime> UPDATED_AT = createField(DSL.name("updated_at"), SQLDataType.LOCALDATETIME(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.LOCALDATETIME)), this, "");
 
+    /**
+     * The column <code>public.playlists.dance_style</code>.
+     */
+    public final TableField<Record, String> DANCE_STYLE = createField(DSL.name("dance_style"), SQLDataType.VARCHAR(100), this, "");
+
+    /**
+     * The column <code>public.playlists.tempo_category</code>.
+     */
+    public final TableField<Record, String> TEMPO_CATEGORY = createField(DSL.name("tempo_category"), SQLDataType.VARCHAR(50), this, "");
+
+    /**
+     * The column <code>public.playlists.sub_style</code>.
+     */
+    public final TableField<Record, String> SUB_STYLE = createField(DSL.name("sub_style"), SQLDataType.VARCHAR(100), this, "");
+
     private Playlists(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

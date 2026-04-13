@@ -62,8 +62,8 @@ public class PlaylistJooqRepository {
     public Playlist insert(Playlist playlist) {
         UUID id = playlist.getId() != null ? playlist.getId() : UUID.randomUUID();
         dsl.insertInto(PLAYLISTS)
-            .columns(PLAYLISTS.ID, PLAYLISTS.USER_ID, PLAYLISTS.NAME, PLAYLISTS.DESCRIPTION, PLAYLISTS.IS_PUBLIC, PLAYLISTS.SHARE_TOKEN)
-            .values(id, playlist.getUserId(), playlist.getName(), playlist.getDescription(), playlist.getIsPublic(), playlist.getShareToken())
+            .columns(PLAYLISTS.ID, PLAYLISTS.USER_ID, PLAYLISTS.NAME, PLAYLISTS.DESCRIPTION, PLAYLISTS.IS_PUBLIC, PLAYLISTS.SHARE_TOKEN, PLAYLISTS.DANCE_STYLE, PLAYLISTS.SUB_STYLE, PLAYLISTS.TEMPO_CATEGORY)
+            .values(id, playlist.getUserId(), playlist.getName(), playlist.getDescription(), playlist.getIsPublic(), playlist.getShareToken(), playlist.getDanceStyle(), playlist.getSubStyle(), playlist.getTempoCategory())
             .execute();
         playlist.setId(id);
         return playlist;
@@ -77,6 +77,9 @@ public class PlaylistJooqRepository {
             .set(PLAYLISTS.DESCRIPTION, playlist.getDescription())
             .set(PLAYLISTS.IS_PUBLIC, playlist.getIsPublic())
             .set(PLAYLISTS.SHARE_TOKEN, playlist.getShareToken())
+            .set(PLAYLISTS.DANCE_STYLE, playlist.getDanceStyle())
+            .set(PLAYLISTS.SUB_STYLE, playlist.getSubStyle())
+            .set(PLAYLISTS.TEMPO_CATEGORY, playlist.getTempoCategory())
             .set(PLAYLISTS.UPDATED_AT, updatedAtRaw)
             .where(PLAYLISTS.ID.eq(playlist.getId()))
             .execute();
@@ -101,6 +104,9 @@ public class PlaylistJooqRepository {
             .userId(r.get(PLAYLISTS.USER_ID))
             .isPublic(r.get(PLAYLISTS.IS_PUBLIC) != null && r.get(PLAYLISTS.IS_PUBLIC))
             .shareToken(r.get(PLAYLISTS.SHARE_TOKEN))
+            .danceStyle(r.get(PLAYLISTS.DANCE_STYLE))
+            .subStyle(r.get(PLAYLISTS.SUB_STYLE))
+            .tempoCategory(r.get(PLAYLISTS.TEMPO_CATEGORY))
             .createdAt(createdAt)
             .updatedAt(updatedAt)
             .build();

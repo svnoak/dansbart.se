@@ -16,6 +16,9 @@ export interface Playlist {
   user?: User;
   isPublic?: boolean;
   shareToken?: string;
+  danceStyle?: string;
+  subStyle?: string;
+  tempoCategory?: string;
   createdAt?: string;
   updatedAt?: string;
   tracks?: PlaylistTrack[];

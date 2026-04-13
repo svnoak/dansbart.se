@@ -1,0 +1,1 @@
+ALTER TABLE playlists ADD COLUMN sub_style VARCHAR(100);

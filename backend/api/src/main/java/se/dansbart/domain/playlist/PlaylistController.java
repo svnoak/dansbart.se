@@ -59,7 +59,7 @@ public class PlaylistController {
             @PathVariable UUID id,
             @AuthenticationPrincipal String userId,
             @RequestBody UpdatePlaylistRequest request) {
-        return playlistService.update(id, userId, request.name(), request.description(), request.isPublic())
+        return playlistService.update(id, userId, request.name(), request.description(), request.isPublic(), request.danceStyle(), request.subStyle(), request.tempoCategory())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
@@ -190,7 +190,7 @@ public class PlaylistController {
 
     // Request DTOs
     public record CreatePlaylistRequest(String name, String description) {}
-    public record UpdatePlaylistRequest(String name, String description, Boolean isPublic) {}
+    public record UpdatePlaylistRequest(String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {}
     public record AddTrackRequest(UUID trackId) {}
     public record RespondToInvitationRequest(boolean accept) {}
     public record ReorderTracksRequest(List<UUID> trackIds) {}
