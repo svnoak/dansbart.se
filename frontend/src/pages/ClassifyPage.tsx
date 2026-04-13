@@ -19,10 +19,10 @@ const RANKS = [
 ];
 
 const TEMPOS = [
-  { label: 'Langsamt', value: 1 },
-  { label: 'Lagom', value: 3 },
-  { label: 'Snabbt', value: 4 },
-  { label: 'Valdigt snabbt', value: 5 },
+  { label: 'långsam', value: 1 },
+  { label: 'lagom', value: 3 },
+  { label: 'snabb', value: 4 },
+  { label: 'väldigt snabb', value: 5 },
 ];
 
 const PINNED_STYLES = ['Polska', 'Schottis', 'Vals', 'Hambo', 'Polkett', 'Snoa'];
@@ -98,6 +98,8 @@ export function ClassifyPage() {
         styleConfirmed: false,
         limit: 20,
         offset: offsetRef.current,
+        sortBy: 'confidence',
+        sortDirection: 'asc',
       });
       const items = data.items ?? [];
       setTracks((prev) => {
@@ -258,7 +260,7 @@ export function ClassifyPage() {
             {sessionCount}
           </span>
           <span className="text-[9px] uppercase font-bold text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]">
-            Antal Latar
+            Antal Låtar
           </span>
         </button>
       </div>
@@ -297,14 +299,14 @@ export function ClassifyPage() {
                 <div className="text-center p-4 bg-[rgb(var(--color-bg))]/50 rounded-xl">
                   <div className="text-3xl font-black text-orange-500">{maxStreak}</div>
                   <div className="text-xs text-[rgb(var(--color-text-muted))] uppercase font-bold">
-                    Basta Streak
+                    Bästa Streak
                   </div>
                 </div>
               </div>
 
               <div className="text-center space-y-3">
                 <p className="text-[rgb(var(--color-text-muted))] text-sm">
-                  Du nadde rangen{' '}
+                  Du nådde rangen{' '}
                   <strong className="text-[rgb(var(--color-accent))]">
                     {currentRank.title}
                   </strong>
@@ -315,14 +317,14 @@ export function ClassifyPage() {
                   onClick={resetGame}
                   className="w-full py-3 bg-[rgb(var(--color-text))] text-[rgb(var(--color-bg))] rounded-xl font-bold shadow-lg hover:opacity-90 transform transition active:scale-95"
                 >
-                  Kor en omgang till
+                  Kör en omgång till
                 </button>
 
                 <button
                   onClick={() => navigate('/')}
                   className="text-xs text-[rgb(var(--color-text-muted))] font-bold uppercase hover:text-[rgb(var(--color-text))]"
                 >
-                  Ga tillbaka till sok
+                  Gå tillbaka till sök
                 </button>
               </div>
             </div>
@@ -414,7 +416,7 @@ export function ClassifyPage() {
                     Tillbaka
                   </button>
                   <h4 className="text-xs font-bold text-[rgb(var(--color-text-muted))] uppercase tracking-widest">
-                    Tempo for{' '}
+                    Tempo för{' '}
                     <span className="text-[rgb(var(--color-accent))]">{selectedStyle}</span>
                   </h4>
                   <div className="w-12" />
@@ -424,10 +426,11 @@ export function ClassifyPage() {
                   <div className="flex flex-col gap-4">
                     <div className="text-center mb-2 px-4">
                       <h3 className="text-xl font-bold text-[rgb(var(--color-text))] leading-tight">
-                        Ar {selectedStyle}{' '}
+                        Är det en {' '}
                         <span className="text-[rgb(var(--color-accent))]">
-                          {aiTempoLabel.toLowerCase()}
+                          {aiTempoLabel.toLowerCase()}{' '}
                         </span>
+                        {selectedStyle.toLowerCase()}
                         ?
                       </h3>
                     </div>
@@ -437,23 +440,23 @@ export function ClassifyPage() {
                         onClick={() => finishVote('half')}
                         className="py-4 bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded-xl text-xs font-bold text-[rgb(var(--color-text-muted))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] active:scale-95 transition-all"
                       >
-                        Den ar
+                        Den är
                         <br />
-                        langsammare
+                        långsammare
                       </button>
                       <button
                         onClick={() => finishVote('ok')}
                         className="py-4 bg-[rgb(var(--color-accent))] text-white rounded-xl text-sm font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
                       >
-                        Ja, det ar
+                        Ja, det är
                         <br />
-                        ratt
+                        rätt
                       </button>
                       <button
                         onClick={() => finishVote('double')}
                         className="py-4 bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded-xl text-xs font-bold text-[rgb(var(--color-text-muted))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] active:scale-95 transition-all"
                       >
-                        Den ar
+                        Den är
                         <br />
                         snabbare
                       </button>
@@ -535,7 +538,7 @@ export function ClassifyPage() {
                           }}
                           className="text-xs text-[rgb(var(--color-text-muted))] hover:text-red-500 underline"
                         >
-                          Rensa / Valj kategori istallet
+                          Rensa / Välj kategori istället
                         </button>
                       </div>
                     )}

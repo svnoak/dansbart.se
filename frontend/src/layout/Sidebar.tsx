@@ -165,7 +165,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </p>
           <Link to="/classify" className="mt-3 block" onClick={onNavigate}>
             <Button variant="primary" size="sm" className="w-full">
-              Starta quiz
+              Musikdomaren
             </Button>
           </Link>
         </div>
