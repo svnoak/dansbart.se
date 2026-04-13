@@ -12,6 +12,7 @@ import se.dansbart.domain.user.User;
 import se.dansbart.e2e.base.AbstractE2ETest;
 
 import java.util.Map;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -22,14 +23,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class PlaylistControllerE2ETest extends AbstractE2ETest {
 
+    private static final UUID OWNER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID OTHER_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
+
     private User owner;
     private User otherUser;
     private Artist artist;
 
     @BeforeEach
     void setUp() {
-        owner = testData.user().withId("owner-123").withUsername("playlist_owner").build();
-        otherUser = testData.user().withId("other-456").withUsername("other_user").build();
+        owner = testData.user().withId(OWNER_ID).withUsername("playlist_owner").build();
+        otherUser = testData.user().withId(OTHER_USER_ID).withUsername("other_user").build();
         artist = testData.artist().withName("Test Artist").verified().build();
     }
 
@@ -50,7 +54,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("My Playlist"))
                 .andExpect(jsonPath("$.description").value("A test playlist"))
-                .andExpect(jsonPath("$.userId").value(owner.getId()));
+                .andExpect(jsonPath("$.userId").value(owner.getId().toString()));
         }
 
         @Test
