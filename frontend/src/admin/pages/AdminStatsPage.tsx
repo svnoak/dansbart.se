@@ -174,8 +174,9 @@ export function AdminStatsPage() {
   const totalTracks = (libraryStats?.totalTracks as number) ?? 0;
   const coveragePct = (libraryStats?.coveragePercent as number) ?? 0;
   const analyzedCount = (libraryStats?.analyzed as number) ?? Math.round((totalTracks * coveragePct) / 100);
-  const pendingAnalysis = (libraryStats?.pendingAnalysis as number) ?? 0;
   const pendingClassification = (libraryStats?.pendingClassification as number) ?? 0;
+  const failedTracks = (libraryStats?.failedTracks as number) ?? 0;
+  const queuedTracks = (libraryStats?.queuedTracks as number) ?? 0;
 
   // Visitor stats — nested under dashboard.visitors
   const visitors = (dashboard?.visitors as Record<string, unknown>) ?? {};
@@ -234,10 +235,11 @@ export function AdminStatsPage() {
       {/* Library stats */}
       <div>
         <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Bibliotek</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard label="Totalt antal spår" value={totalTracks} />
           <StatCard label="Analyserade" value={analyzedCount} sub={`${coveragePct}%`} />
-          <StatCard label="Väntar analys" value={pendingAnalysis} />
+          <StatCard label="Misslyckade" value={failedTracks} />
+          <StatCard label="I kö" value={queuedTracks} />
           <StatCard label="Väntar klassificering" value={pendingClassification} />
           <StatCard label="Spellistor" value={totalPlaylists} />
         </div>
