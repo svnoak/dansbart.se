@@ -246,6 +246,7 @@ class AnalysisService:
             track.polska_score = data.get('polska_score')
             track.hambo_score = data.get('hambo_score')
             track.voice_probability = data.get('voice_probability')
+            track.bpm_stability = data.get('bpm_stability')
 
             track.bars = data.get('bars')
             track.sections = data.get('sections')
