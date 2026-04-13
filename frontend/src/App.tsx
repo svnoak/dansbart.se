@@ -20,6 +20,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 
 import { AuthProvider } from '@/auth/AuthContext';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
+import { PlaylistsPage } from '@/pages/PlaylistsPage';
+import { PlaylistPage } from '@/pages/PlaylistPage';
 import { AdminLayout } from '@/admin/layout/AdminLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { AdminLibraryPage } from '@/admin/pages/AdminLibraryPage';
@@ -57,6 +59,22 @@ export function App() {
                         <Route path="/albums" element={<AlbumsPage />} />
                         <Route path="/artist/:id" element={<ArtistPage />} />
                         <Route path="/album/:id" element={<AlbumPage />} />
+                        <Route
+                          path="/playlists"
+                          element={
+                            <ProtectedRoute>
+                              <PlaylistsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/playlists/:id"
+                          element={
+                            <ProtectedRoute>
+                              <PlaylistPage />
+                            </ProtectedRoute>
+                          }
+                        />
                         <Route path="/about" element={<AboutPage />} />
                         <Route path="/feedback" element={<FeedbackPage />} />
                         <Route path="/terms" element={<TermsPage />} />

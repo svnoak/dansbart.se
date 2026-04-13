@@ -10,6 +10,7 @@ interface TrackRowMenuProps {
   onClose: () => void;
   onAddToQueue: () => void;
   onFlag: () => void;
+  onAddToPlaylist?: () => void;
 }
 
 export function TrackRowMenu({
@@ -19,6 +20,7 @@ export function TrackRowMenu({
   onClose,
   onAddToQueue,
   onFlag,
+  onAddToPlaylist,
 }: TrackRowMenuProps) {
   return (
     <div className="relative shrink-0">
@@ -49,6 +51,21 @@ export function TrackRowMenu({
                 Lägg i kö
               </button>
             </li>
+            {onAddToPlaylist && (
+              <li role="none">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
+                  onClick={() => {
+                    onAddToPlaylist();
+                    onClose();
+                  }}
+                >
+                  Lägg till i spellista
+                </button>
+              </li>
+            )}
             <li role="none">
               <button
                 type="button"

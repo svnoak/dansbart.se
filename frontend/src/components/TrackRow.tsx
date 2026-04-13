@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { usePlayer } from '@/player/usePlayer';
+import { useAuth } from '@/auth/useAuth';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
+import { AddToPlaylistModal } from './AddToPlaylistModal';
 import { FlagTrackModal } from './FlagTrackModal';
 import { PlayButton } from './TrackRow/PlayButton';
 import { StyleBadge } from './TrackRow/StyleBadge';
@@ -36,8 +38,10 @@ export function TrackRow({
   onApplyStyleFilter,
 }: TrackRowProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
+  const { isAuthenticated } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [flagModalOpen, setFlagModalOpen] = useState(false);
+  const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
 
   const isCurrent = currentTrack?.id === track.id;
   const styleColor = getStyleColor(track.danceStyle);
@@ -95,12 +99,18 @@ export function TrackRow({
           onClose={() => setMenuOpen(false)}
           onAddToQueue={() => addToQueue(track)}
           onFlag={() => setFlagModalOpen(true)}
+          onAddToPlaylist={isAuthenticated ? () => setAddToPlaylistOpen(true) : undefined}
         />
       </div>
 
       <FlagTrackModal
         open={flagModalOpen}
         onClose={() => setFlagModalOpen(false)}
+        track={track}
+      />
+      <AddToPlaylistModal
+        open={addToPlaylistOpen}
+        onClose={() => setAddToPlaylistOpen(false)}
         track={track}
       />
     </>

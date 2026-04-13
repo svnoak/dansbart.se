@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
+import { useAuth } from '@/auth/useAuth';
 import { Button } from '@/ui';
-import { LibraryIcon } from '@/icons';
+import { LibraryIcon, PlaylistIcon } from '@/icons';
 
 function NavLink({
   to,
@@ -42,8 +43,10 @@ function NavLink({
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { consentStatus, openCookieSettings } = useConsent();
+  const { isAuthenticated } = useAuth();
   const isSearch = location.pathname === '/search';
   const isHome = location.pathname === '/';
+  const isPlaylists = location.pathname.startsWith('/playlists');
   const isAbout = location.pathname === '/about';
   const isTerms = location.pathname === '/terms';
   const isPrivacy = location.pathname === '/privacy';
@@ -81,6 +84,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       >
         Bibliotek
       </NavLink>
+      {isAuthenticated && (
+        <NavLink
+          to="/playlists"
+          active={isPlaylists}
+          onClick={onNavigate}
+          icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
+        >
+          Spellistor
+        </NavLink>
+      )}
 
       <div className="mt-4">
         <button

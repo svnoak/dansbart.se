@@ -26,6 +26,9 @@ public class Playlist {
     private Boolean isPublic = false;
 
     private String shareToken;
+    private String danceStyle;
+    private String subStyle;
+    private String tempoCategory;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 

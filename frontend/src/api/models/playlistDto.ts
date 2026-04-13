@@ -13,6 +13,9 @@ export interface PlaylistDto {
   description?: string;
   isPublic?: boolean;
   shareToken?: string;
+  danceStyle?: string;
+  subStyle?: string;
+  tempoCategory?: string;
   createdAt?: string;
   updatedAt?: string;
   owner?: UserSummaryDto;

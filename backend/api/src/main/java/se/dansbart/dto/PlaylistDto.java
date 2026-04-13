@@ -20,6 +20,9 @@ public class PlaylistDto {
     private String description;
     private Boolean isPublic;
     private String shareToken;
+    private String danceStyle;
+    private String subStyle;
+    private String tempoCategory;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 

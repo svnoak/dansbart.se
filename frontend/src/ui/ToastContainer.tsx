@@ -21,7 +21,7 @@ export function ToastContainer() {
   if (messages.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 flex-col gap-2">
+    <div className="fixed bottom-20 left-1/2 z-[200] flex -translate-x-1/2 flex-col gap-2">
       {messages.map((msg) => (
         <div
           key={msg.id}
