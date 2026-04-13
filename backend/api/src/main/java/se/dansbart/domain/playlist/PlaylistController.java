@@ -188,6 +188,28 @@ public class PlaylistController {
             .orElse(ResponseEntity.notFound().build());
     }
 
+    @DeleteMapping("/{id}/share-token")
+    @Operation(summary = "Invalidate the share token for playlist")
+    public ResponseEntity<Void> invalidateShareToken(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal String userId) {
+        if (playlistService.invalidateShareToken(id, userId)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/transfer-ownership")
+    @Operation(summary = "Transfer playlist ownership to another user")
+    public ResponseEntity<Playlist> transferOwnership(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal String userId,
+            @RequestBody TransferOwnershipRequest request) {
+        return playlistService.transferOwnership(id, userId, request.newOwnerId())
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
     // Request DTOs
     public record CreatePlaylistRequest(String name, String description) {}
     public record UpdatePlaylistRequest(String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {}
@@ -196,4 +218,5 @@ public class PlaylistController {
     public record ReorderTracksRequest(List<UUID> trackIds) {}
     public record InviteCollaboratorRequest(UUID userId, String permission) {}
     public record UpdateCollaboratorRequest(String permission) {}
+    public record TransferOwnershipRequest(String newOwnerId) {}
 }

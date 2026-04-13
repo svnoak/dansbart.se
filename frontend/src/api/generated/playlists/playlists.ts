@@ -16,6 +16,7 @@ import type {
   PlaylistTrack,
   ReorderTracksRequest,
   RespondToInvitationRequest,
+  TransferOwnershipRequest,
   UpdateCollaboratorRequest,
   UpdatePlaylistRequest
 } from '../../models';
@@ -89,6 +90,31 @@ export const deletePlaylist = async (id: string, options?: RequestInit): Promise
     method: 'DELETE'
     
     
+  }
+);}
+  
+
+/**
+ * @summary Transfer playlist ownership to another user
+ */
+export const getTransferOwnershipUrl = (id: string,) => {
+
+
+  
+
+  return `/api/playlists/${id}/transfer-ownership`
+}
+
+export const transferOwnership = async (id: string,
+    transferOwnershipRequest: TransferOwnershipRequest, options?: RequestInit): Promise<Playlist> => {
+  
+  return httpClient<Playlist>(getTransferOwnershipUrl(id),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      transferOwnershipRequest,)
   }
 );}
   
@@ -284,6 +310,29 @@ export const generateShareToken = async (id: string, options?: RequestInit): Pro
   {      
     ...options,
     method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Invalidate the share token for playlist
+ */
+export const getInvalidateShareTokenUrl = (id: string,) => {
+
+
+  
+
+  return `/api/playlists/${id}/share-token`
+}
+
+export const invalidateShareToken = async (id: string, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getInvalidateShareTokenUrl(id),
+  {      
+    ...options,
+    method: 'DELETE'
     
     
   }
