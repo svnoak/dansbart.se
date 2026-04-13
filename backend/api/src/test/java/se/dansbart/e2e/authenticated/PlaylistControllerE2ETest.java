@@ -135,8 +135,8 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
-        @DisplayName("should return 404 when non-owner tries to update")
-        void updatePlaylist_byNonOwner_shouldReturn404() throws Exception {
+        @DisplayName("should return 404 when non-collaborator tries to update")
+        void updatePlaylist_byNonCollaborator_shouldReturn404() throws Exception {
             Playlist playlist = testData.playlist().withName("Owner's Playlist").withOwner(owner).build();
 
             mockMvc.perform(put("/api/playlists/{id}", playlist.getId())
@@ -144,6 +144,36 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("name", "Hacked Name"))))
                 .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should be able to update name")
+        void updatePlaylist_byEditCollaborator_canUpdateName() throws Exception {
+            Playlist playlist = testData.playlist().withName("Original Name").withOwner(owner).build();
+            testData.addCollaborator(playlist, otherUser, "edit");
+
+            mockMvc.perform(put("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Collaborator Renamed"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Collaborator Renamed"));
+        }
+
+        @Test
+        @DisplayName("edit collaborator should not be able to change owner-only fields")
+        void updatePlaylist_byEditCollaborator_ownerOnlyFieldsIgnored() throws Exception {
+            Playlist playlist = testData.playlist().withName("My Playlist").withOwner(owner).build();
+            testData.addCollaborator(playlist, otherUser, "edit");
+
+            // isPublic is an owner-only field — edit collaborators can pass it but it must be silently ignored
+            mockMvc.perform(put("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Collaborator Name", "isPublic", true))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Collaborator Name"))
+                .andExpect(jsonPath("$.isPublic").value(false));
         }
     }
 
@@ -271,12 +301,108 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
-        @DisplayName("should return 404 when non-owner tries to generate token")
-        void generateShareToken_byNonOwner_shouldReturn404() throws Exception {
+        @DisplayName("should return 404 when non-collaborator tries to generate token")
+        void generateShareToken_byNonCollaborator_shouldReturn404() throws Exception {
             Playlist playlist = testData.playlist().withName("Owner's Playlist").withOwner(owner).build();
 
             mockMvc.perform(post("/api/playlists/{id}/share-token", playlist.getId())
                     .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should be able to generate share token")
+        void generateShareToken_byEditCollaborator_shouldSucceed() throws Exception {
+            Playlist playlist = testData.playlist().withName("Shared Playlist").withOwner(owner).build();
+            testData.addCollaborator(playlist, otherUser, "edit");
+
+            mockMvc.perform(post("/api/playlists/{id}/share-token", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareToken").isNotEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("DELETE /api/playlists/{id}/share-token")
+    class InvalidateShareToken {
+
+        @Test
+        @DisplayName("owner should be able to invalidate share token")
+        void invalidateShareToken_byOwner_shouldSucceed() throws Exception {
+            Playlist playlist = testData.playlist()
+                .withName("My Playlist")
+                .withOwner(owner)
+                .withShareToken("token-to-invalidate")
+                .build();
+
+            mockMvc.perform(delete("/api/playlists/{id}/share-token", playlist.getId())
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isNoContent());
+
+            // Verify token no longer works
+            mockMvc.perform(get("/api/playlists/share/{shareToken}", "token-to-invalidate"))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should be able to invalidate share token")
+        void invalidateShareToken_byEditCollaborator_shouldSucceed() throws Exception {
+            Playlist playlist = testData.playlist()
+                .withName("Shared Playlist")
+                .withOwner(owner)
+                .withShareToken("collab-invalidate-token")
+                .build();
+            testData.addCollaborator(playlist, otherUser, "edit");
+
+            mockMvc.perform(delete("/api/playlists/{id}/share-token", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("should return 404 when non-collaborator tries to invalidate token")
+        void invalidateShareToken_byNonCollaborator_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist()
+                .withName("Owner's Playlist")
+                .withOwner(owner)
+                .withShareToken("some-token")
+                .build();
+
+            mockMvc.perform(delete("/api/playlists/{id}/share-token", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/playlists/{id}/transfer-ownership")
+    class TransferOwnership {
+
+        @Test
+        @DisplayName("owner should be able to transfer ownership to a collaborator")
+        void transferOwnership_byOwner_shouldSucceed() throws Exception {
+            Playlist playlist = testData.playlist().withName("My Playlist").withOwner(owner).build();
+            testData.addCollaborator(playlist, otherUser, "edit");
+
+            mockMvc.perform(put("/api/playlists/{id}/transfer-ownership", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(otherUser.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("non-owner should not be able to transfer ownership")
+        void transferOwnership_byNonOwner_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Owner's Playlist").withOwner(owner).build();
+            testData.addCollaborator(playlist, otherUser, "edit");
+
+            mockMvc.perform(put("/api/playlists/{id}/transfer-ownership", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
                 .andExpect(status().isNotFound());
         }
     }

@@ -192,7 +192,7 @@ public class PlaylistController {
     @Operation(summary = "Invalidate the share token for playlist")
     public ResponseEntity<Void> invalidateShareToken(
             @PathVariable UUID id,
-            @AuthenticationPrincipal String userId) {
+            @AuthenticationPrincipal UUID userId) {
         if (playlistService.invalidateShareToken(id, userId)) {
             return ResponseEntity.noContent().build();
         }
@@ -203,7 +203,7 @@ public class PlaylistController {
     @Operation(summary = "Transfer playlist ownership to another user")
     public ResponseEntity<Playlist> transferOwnership(
             @PathVariable UUID id,
-            @AuthenticationPrincipal String userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestBody TransferOwnershipRequest request) {
         return playlistService.transferOwnership(id, userId, request.newOwnerId())
             .map(ResponseEntity::ok)
@@ -218,5 +218,5 @@ public class PlaylistController {
     public record ReorderTracksRequest(List<UUID> trackIds) {}
     public record InviteCollaboratorRequest(UUID userId, String permission) {}
     public record UpdateCollaboratorRequest(String permission) {}
-    public record TransferOwnershipRequest(String newOwnerId) {}
+    public record TransferOwnershipRequest(UUID newOwnerId) {}
 }
