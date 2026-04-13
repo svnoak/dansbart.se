@@ -287,6 +287,7 @@ public class TrackJooqRepository {
             switch (sortBy) {
                 case "tempoBpm" -> orderFields.add(asc ? TRACKS.TEMPO_BPM.asc().nullsLast() : TRACKS.TEMPO_BPM.desc().nullsLast());
                 case "durationMs" -> orderFields.add(asc ? TRACKS.DURATION_MS.asc().nullsLast() : TRACKS.DURATION_MS.desc().nullsLast());
+                case "confidence" -> orderFields.add(asc ? DSL.max(TRACK_DANCE_STYLES.CONFIDENCE).asc().nullsLast() : DSL.max(TRACK_DANCE_STYLES.CONFIDENCE).desc().nullsLast());
                 default -> {} // fall through to default ordering
             }
         }

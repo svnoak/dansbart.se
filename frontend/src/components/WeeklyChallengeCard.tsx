@@ -12,7 +12,7 @@ export function WeeklyChallengeCard() {
       </p>
       <Link to="/classify" className="mt-4 block">
         <Button variant="primary" size="sm" className="w-full">
-          Starta quiz
+          Musikdomaren
         </Button>
       </Link>
     </Card>
