@@ -110,6 +110,11 @@ class ClassificationService:
             predictions = self.classifier.classify(track, features)
             self._save_predictions(track, predictions)
 
+            # Backfill bpm_stability if missing (was not saved before the bug fix)
+            if track.bpm_stability is None and features.get('bpm_stability') is not None:
+                track.bpm_stability = features['bpm_stability']
+                self.db.add(track)
+
             # Correct bars based on classified style
             if predictions and source.raw_data:
                 from app.services.bar_correction import correct_track_bars
