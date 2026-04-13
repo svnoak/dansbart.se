@@ -132,7 +132,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
     setIsSubmitting(true);
     try {
       await flagTrack(track.id);
-      finish('Rapporterad som ej folkmusik');
+      finish('Rapporterad som ej dansbart');
     } catch {
       setError('Kunde inte rapportera');
       setIsSubmitting(false);
@@ -297,8 +297,8 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 </svg>
               </div>
               <div>
-                <div className="text-sm font-bold text-[rgb(var(--color-text))]">Inte folkmusik</div>
-                <div className="text-xs text-[rgb(var(--color-text-muted))]">Felaktig genre</div>
+                <div className="text-sm font-bold text-[rgb(var(--color-text))]">Inte dansbart</div>
+                <div className="text-xs text-[rgb(var(--color-text-muted))]">Går inte att dansa folkdans till</div>
               </div>
             </button>
             <button
@@ -383,7 +383,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
         return (
           <div>
             <p className="mb-4 text-sm text-[rgb(var(--color-text))]">
-              {'\u00c4'}r du s{'\u00e4'}ker p{'\u00e5'} att du vill rapportera <strong>{track.title}</strong> som <strong>ej folkmusik</strong>?
+              {'\u00c4'}r du s{'\u00e4'}ker p{'\u00e5'} att du vill rapportera <strong>{track.title}</strong> som <strong>inte dansbart</strong>?
             </p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setView('menu')} className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">Tillbaka</button>
