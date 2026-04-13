@@ -6,7 +6,7 @@ import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
-import { BackArrowIcon, EditIcon, PlayIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
+import { BackArrowIcon, EditIcon, PlayIcon, SettingsIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
 import { IconButton, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
@@ -251,6 +251,13 @@ export function PlaylistPage() {
   const autoplayTriggered = useRef(false);
 
   const isOwner = !!(playlist?.owner?.id && user?.id && playlist.owner.id === user.id);
+  const myCollaborator = playlist?.collaborators?.find((c) => c.userId === user?.id);
+  const myPermission: 'owner' | 'edit' | 'view' = isOwner
+    ? 'owner'
+    : myCollaborator?.permission === 'edit'
+      ? 'edit'
+      : 'view';
+  const canEdit = myPermission !== 'view';
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
@@ -457,7 +464,7 @@ export function PlaylistPage() {
               <h1 className="min-w-0 truncate text-2xl font-bold text-[rgb(var(--color-text))]">
                 {playlist.name}
               </h1>
-              {isOwner && (
+              {canEdit && (
                 <button
                   type="button"
                   aria-label="Redigera namn"
@@ -468,6 +475,16 @@ export function PlaylistPage() {
                   className="shrink-0 rounded p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
                 >
                   <EditIcon className="h-4 w-4" aria-hidden />
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  aria-label="Inställningar"
+                  onClick={() => navigate(`/playlists/${id}/settings`)}
+                  className="shrink-0 rounded p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
+                >
+                  <SettingsIcon className="h-4 w-4" aria-hidden />
                 </button>
               )}
             </div>
@@ -719,9 +736,9 @@ export function PlaylistPage() {
               key={pt.id ?? pt.track.id}
               track={pt.track}
               contextTracks={contextTracks}
-              showGrip={sort === 'position' && isOwner}
+              showGrip={sort === 'position' && canEdit}
               isDragOver={dragOverIndex === i}
-              onRemove={isOwner && pt.id ? () => handleRemoveTrack(pt.id!, pt.track!.id!) : undefined}
+              onRemove={canEdit && pt.id ? () => handleRemoveTrack(pt.id!, pt.track!.id!) : undefined}
               onDragStart={() => handleDragStart(i)}
               onDragOver={(e) => handleDragOver(e, i)}
               onDrop={() => handleDrop(i)}
@@ -730,7 +747,7 @@ export function PlaylistPage() {
           ) : null,
         )}
         {/* Trailing drop zone — lets the user drag any item to the very end */}
-        {sort === 'position' && isOwner && displayTracks.length > 0 && (
+        {sort === 'position' && canEdit && displayTracks.length > 0 && (
           <li
             onDragOver={(e) => handleDragOver(e, displayTracks.length)}
             onDrop={() => handleDrop(displayTracks.length)}

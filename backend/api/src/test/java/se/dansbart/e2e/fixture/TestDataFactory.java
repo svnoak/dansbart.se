@@ -18,6 +18,8 @@ import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackDanceStyle;
 import se.dansbart.domain.track.TrackDanceStyleJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
+import se.dansbart.domain.user.PlaylistCollaborator;
+import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
 import se.dansbart.domain.user.User;
 import se.dansbart.domain.user.UserJooqRepository;
 
@@ -58,6 +60,9 @@ public class TestDataFactory {
 
     @Autowired
     private PlaylistTrackJooqRepository playlistTrackJooqRepository;
+
+    @Autowired
+    private PlaylistCollaboratorJooqRepository playlistCollaboratorJooqRepository;
 
     // Builder factory methods
     public UserBuilder user() {
@@ -425,6 +430,20 @@ public class TestDataFactory {
                 .build();
             return playlistJooqRepository.insert(playlist);
         }
+    }
+
+    /**
+     * Add an accepted collaborator to a playlist with the given permission.
+     */
+    public PlaylistCollaborator addCollaborator(Playlist playlist, User user, String permission) {
+        PlaylistCollaborator collab = PlaylistCollaborator.builder()
+            .playlistId(playlist.getId())
+            .userId(user.getId())
+            .permission(permission)
+            .status("accepted")
+            .invitedBy(playlist.getUserId())
+            .build();
+        return playlistCollaboratorJooqRepository.save(collab);
     }
 
     /**

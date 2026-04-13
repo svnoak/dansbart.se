@@ -35,6 +35,6 @@ public class PlaylistDto {
     // Tracks in this playlist (with position)
     private List<PlaylistTrackDto> tracks;
 
-    // Collaborators
-    private List<UserSummaryDto> collaborators;
+    // Collaborators (includes permission + status for role-aware UI)
+    private List<CollaboratorDto> collaborators;
 }

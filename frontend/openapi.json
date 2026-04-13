@@ -200,6 +200,41 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/api/playlists/{id}/transfer-ownership": {
+      "put": {
+        "tags": ["Playlists"],
+        "summary": "Transfer playlist ownership to another user",
+        "operationId": "transferOwnership",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOwnershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Playlist" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/playlists/{id}/tracks/reorder": {
       "put": {
         "tags": ["Playlists"],
@@ -1031,6 +1066,20 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": ["Playlists"],
+        "summary": "Invalidate the share token for playlist",
+        "operationId": "invalidateShareToken",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/api/playlists/{id}/collaborators": {
@@ -4776,6 +4825,10 @@
           "tempoCategory": { "type": "string" }
         }
       },
+      "TransferOwnershipRequest": {
+        "type": "object",
+        "properties": { "newOwnerId": { "type": "string" } }
+      },
       "ReorderTracksRequest": {
         "type": "object",
         "properties": {
@@ -5195,6 +5248,19 @@
           "lastAdded": { "type": "string", "format": "date-time" }
         }
       },
+      "CollaboratorDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "permission": { "type": "string" },
+          "status": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "PlaylistDto": {
         "type": "object",
         "properties": {
@@ -5216,7 +5282,7 @@
           },
           "collaborators": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/UserSummaryDto" }
+            "items": { "$ref": "#/components/schemas/CollaboratorDto" }
           }
         }
       },

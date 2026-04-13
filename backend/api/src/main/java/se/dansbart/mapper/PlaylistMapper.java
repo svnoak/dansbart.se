@@ -20,7 +20,7 @@ public interface PlaylistMapper {
     @Mapping(target = "owner", source = "user")
     @Mapping(target = "trackCount", expression = "java(playlist.getTracks() != null ? playlist.getTracks().size() : 0)")
     @Mapping(target = "tracks", source = "tracks")
-    @Mapping(target = "collaborators", source = "collaborators", qualifiedByName = "toCollaboratorSummaryList")
+    @Mapping(target = "collaborators", source = "collaborators", qualifiedByName = "toCollaboratorList")
     PlaylistDto toDto(Playlist playlist);
 
     /**
@@ -42,18 +42,25 @@ public interface PlaylistMapper {
 
     List<PlaylistTrackDto> toPlaylistTrackDtoList(List<PlaylistTrack> playlistTracks);
 
-    @Named("toCollaboratorSummaryList")
-    default List<UserSummaryDto> toCollaboratorSummaryList(List<PlaylistCollaborator> collaborators) {
+    @Named("toCollaboratorList")
+    default List<CollaboratorDto> toCollaboratorList(List<PlaylistCollaborator> collaborators) {
         if (collaborators == null) {
             return null;
         }
         return collaborators.stream()
-                .map(c -> UserSummaryDto.builder()
-                        .id(c.getUser().getId())
-                        .username(c.getUser().getUsername())
-                        .displayName(c.getUser().getDisplayName())
-                        .avatarUrl(c.getUser().getAvatarUrl())
-                        .build())
+                .map(c -> {
+                    var user = c.getUser();
+                    return CollaboratorDto.builder()
+                            .id(c.getId())
+                            .userId(c.getUserId())
+                            .username(user != null ? user.getUsername() : null)
+                            .displayName(user != null ? user.getDisplayName() : null)
+                            .permission(c.getPermission())
+                            .status(c.getStatus())
+                            .invitedAt(c.getInvitedAt())
+                            .acceptedAt(c.getAcceptedAt())
+                            .build();
+                })
                 .toList();
     }
 }

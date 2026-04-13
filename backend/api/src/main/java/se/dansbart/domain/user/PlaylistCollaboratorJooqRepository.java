@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static se.dansbart.jooq.Tables.PLAYLIST_COLLABORATORS;
+import static se.dansbart.jooq.Tables.USERS;
 
 @Repository
 public class PlaylistCollaboratorJooqRepository {
@@ -43,9 +44,11 @@ public class PlaylistCollaboratorJooqRepository {
     }
 
     public List<PlaylistCollaborator> findByPlaylistId(UUID playlistId) {
-        return dsl.selectFrom(PLAYLIST_COLLABORATORS)
+        return dsl.select()
+            .from(PLAYLIST_COLLABORATORS)
+            .leftJoin(USERS).on(USERS.ID.eq(PLAYLIST_COLLABORATORS.USER_ID))
             .where(PLAYLIST_COLLABORATORS.PLAYLIST_ID.eq(playlistId))
-            .fetch(this::toCollaborator);
+            .fetch(this::toCollaboratorWithUser);
     }
 
     public List<PlaylistCollaborator> findByUserIdAndStatus(UUID userId, String status) {
@@ -116,6 +119,20 @@ public class PlaylistCollaboratorJooqRepository {
         collab.setInvitedBy(r.get(PLAYLIST_COLLABORATORS.INVITED_BY));
         collab.setInvitedAt(r.get(PLAYLIST_COLLABORATORS.INVITED_AT));
         collab.setAcceptedAt(r.get(PLAYLIST_COLLABORATORS.ACCEPTED_AT));
+        return collab;
+    }
+
+    private PlaylistCollaborator toCollaboratorWithUser(Record r) {
+        PlaylistCollaborator collab = toCollaborator(r);
+        String username = r.get(USERS.USERNAME);
+        if (username != null) {
+            User user = new User();
+            user.setId(r.get(USERS.ID));
+            user.setUsername(username);
+            user.setDisplayName(r.get(USERS.DISPLAY_NAME));
+            user.setAvatarUrl(r.get(USERS.AVATAR_URL));
+            collab.setUser(user);
+        }
         return collab;
     }
 }
