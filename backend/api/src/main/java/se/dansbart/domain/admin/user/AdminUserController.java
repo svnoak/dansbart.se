@@ -10,6 +10,7 @@ import se.dansbart.domain.user.User;
 import se.dansbart.domain.user.UserService;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping(value = "/api/admin/users", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -28,7 +29,7 @@ public class AdminUserController {
     @PatchMapping("/{userId}")
     @Operation(summary = "Update a user's role")
     public ResponseEntity<Void> updateRole(
-            @PathVariable String userId,
+            @PathVariable UUID userId,
             @RequestBody UpdateRoleRequest request) {
         userService.setRole(userId, request.role());
         return ResponseEntity.noContent().build();

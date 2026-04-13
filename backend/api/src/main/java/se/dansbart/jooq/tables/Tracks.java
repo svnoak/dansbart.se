@@ -214,11 +214,6 @@ public class Tracks extends TableImpl<Record> {
     public final TableField<Record, Double> BPM_STABILITY = createField(DSL.name("bpm_stability"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>public.tracks.uploader_id</code>.
-     */
-    public final TableField<Record, String> UPLOADER_ID = createField(DSL.name("uploader_id"), SQLDataType.VARCHAR(255), this, "");
-
-    /**
      * The column <code>public.tracks.tempo_bpm</code>.
      */
     public final TableField<Record, Double> TEMPO_BPM = createField(DSL.name("tempo_bpm"), SQLDataType.DOUBLE, this, "");
@@ -227,6 +222,16 @@ public class Tracks extends TableImpl<Record> {
      * The column <code>public.tracks.is_instrumental</code>.
      */
     public final TableField<Record, Boolean> IS_INSTRUMENTAL = createField(DSL.name("is_instrumental"), SQLDataType.BOOLEAN, this, "");
+
+    /**
+     * The column <code>public.tracks.is_danceable</code>.
+     */
+    public final TableField<Record, Boolean> IS_DANCEABLE = createField(DSL.name("is_danceable"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("true"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.tracks.uploader_id</code>.
+     */
+    public final TableField<Record, UUID> UPLOADER_ID = createField(DSL.name("uploader_id"), SQLDataType.UUID, this, "");
 
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -297,7 +302,7 @@ public class Tracks extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
+        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
     }
 
     @Override

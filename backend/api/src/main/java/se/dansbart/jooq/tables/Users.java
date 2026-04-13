@@ -6,11 +6,15 @@ package se.dansbart.jooq.tables;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -29,6 +33,7 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
@@ -56,11 +61,6 @@ public class Users extends TableImpl<Record> {
     public Class<Record> getRecordType() {
         return Record.class;
     }
-
-    /**
-     * The column <code>public.users.id</code>.
-     */
-    public final TableField<Record, String> ID = createField(DSL.name("id"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>public.users.display_name</code>.
@@ -96,6 +96,16 @@ public class Users extends TableImpl<Record> {
      * The column <code>public.users.role</code>.
      */
     public final TableField<Record, String> ROLE = createField(DSL.name("role"), SQLDataType.VARCHAR(20).nullable(false).defaultValue(DSL.field(DSL.raw("'USER'::character varying"), SQLDataType.VARCHAR)), this, "");
+
+    /**
+     * The column <code>public.users.id</code>.
+     */
+    public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("gen_random_uuid()"), SQLDataType.UUID)), this, "");
+
+    /**
+     * The column <code>public.users.discourse_id</code>.
+     */
+    public final TableField<Record, String> DISCOURSE_ID = createField(DSL.name("discourse_id"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     private Users(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -165,8 +175,18 @@ public class Users extends TableImpl<Record> {
     }
 
     @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IDX_USERS_DISCOURSE_ID);
+    }
+
+    @Override
     public UniqueKey<Record> getPrimaryKey() {
         return Keys.USERS_PKEY;
+    }
+
+    @Override
+    public List<UniqueKey<Record>> getUniqueKeys() {
+        return Arrays.asList(Keys.USERS_DISCOURSE_ID_KEY);
     }
 
     private transient PlaylistCollaboratorsPath _playlistCollaboratorsInvitedByFkey;

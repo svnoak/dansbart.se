@@ -2,6 +2,8 @@ package se.dansbart.dto;
 
 import lombok.*;
 
+import java.util.UUID;
+
 /**
  * Minimal User DTO for embedding in other responses.
  */
@@ -12,7 +14,7 @@ import lombok.*;
 @Builder
 public class UserSummaryDto {
 
-    private String id;
+    private UUID id;
     private String username;
     private String displayName;
     private String avatarUrl;

@@ -3,6 +3,7 @@ package se.dansbart.dto;
 import lombok.*;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Full User DTO (for own profile).
@@ -14,7 +15,7 @@ import java.util.List;
 @Builder
 public class UserDto {
 
-    private String id;
+    private UUID id;
     private String username;
     private String displayName;
     private String avatarUrl;

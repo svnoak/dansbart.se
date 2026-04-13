@@ -19,7 +19,7 @@ public class Playlist {
     private UUID id;
     private String name;
     private String description;
-    private String userId;
+    private UUID userId;
     private User user;
 
     @Builder.Default

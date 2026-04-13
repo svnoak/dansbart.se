@@ -27,7 +27,7 @@ import java.util.UUID;
  * Factory for creating test data with a fluent builder API.
  *
  * Usage:
- *   User user = testData.user().withId("user-1").withUsername("john").build();
+ *   User user = testData.user().withId(uuid).withUsername("john").build();
  *   Artist artist = testData.artist().withName("Folk Band").verified().build();
  *   Track track = testData.track().withTitle("Polska").withArtist(artist).complete().build();
  *   Playlist playlist = testData.playlist().withName("My List").withOwner(user).build();
@@ -90,14 +90,20 @@ public class TestDataFactory {
 
     // User Builder
     public class UserBuilder {
-        private String id = UUID.randomUUID().toString();
+        private UUID id = UUID.randomUUID();
+        private String discourseId;
         private String username;
         private String displayName = "Test User";
         private String avatarUrl;
         private String role = "USER";
 
-        public UserBuilder withId(String id) {
+        public UserBuilder withId(UUID id) {
             this.id = id;
+            return this;
+        }
+
+        public UserBuilder withDiscourseId(String discourseId) {
+            this.discourseId = discourseId;
             return this;
         }
 
@@ -122,9 +128,11 @@ public class TestDataFactory {
         }
 
         public User build() {
+            String resolvedDiscourseId = discourseId != null ? discourseId : "discourse_" + id;
             User user = User.builder()
                 .id(id)
-                .username(username != null ? username : "user_" + id.substring(0, 8))
+                .discourseId(resolvedDiscourseId)
+                .username(username != null ? username : "user_" + id.toString().substring(0, 8))
                 .displayName(displayName)
                 .avatarUrl(avatarUrl)
                 .role(role)
@@ -369,8 +377,7 @@ public class TestDataFactory {
     public class PlaylistBuilder {
         private String name = "Test Playlist";
         private String description;
-        private String userId;
-        private User owner;
+        private UUID userId;
         private boolean isPublic = false;
         private String shareToken;
 
@@ -385,12 +392,11 @@ public class TestDataFactory {
         }
 
         public PlaylistBuilder withOwner(User owner) {
-            this.owner = owner;
             this.userId = owner.getId();
             return this;
         }
 
-        public PlaylistBuilder withOwnerId(String userId) {
+        public PlaylistBuilder withOwnerId(UUID userId) {
             this.userId = userId;
             return this;
         }

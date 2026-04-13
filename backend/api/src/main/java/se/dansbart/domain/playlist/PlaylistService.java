@@ -36,17 +36,17 @@ public class PlaylistService {
     }
 
     @Transactional(readOnly = true)
-    public List<Playlist> findByUserId(String userId) {
+    public List<Playlist> findByUserId(UUID userId) {
         return playlistJooqRepository.findByUserId(userId);
     }
 
     @Transactional(readOnly = true)
-    public List<Playlist> findSharedWithUser(String userId) {
+    public List<Playlist> findSharedWithUser(UUID userId) {
         return playlistJooqRepository.findSharedWithUser(userId);
     }
 
     @Transactional
-    public Playlist create(String userId, String name, String description) {
+    public Playlist create(UUID userId, String name, String description) {
         Playlist playlist = Playlist.builder()
             .userId(userId)
             .name(name)
@@ -57,7 +57,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<Playlist> update(UUID playlistId, String userId, String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {
+    public Optional<Playlist> update(UUID playlistId, UUID userId, String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId))
             .map(playlist -> {
@@ -73,7 +73,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public boolean delete(UUID playlistId, String userId) {
+    public boolean delete(UUID playlistId, UUID userId) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId))
             .map(playlist -> {
@@ -84,7 +84,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<PlaylistTrack> addTrack(UUID playlistId, String userId, UUID trackId) {
+    public Optional<PlaylistTrack> addTrack(UUID playlistId, UUID userId, UUID trackId) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
             .flatMap(playlist -> trackJooqRepository.findById(trackId).map(track -> {
@@ -99,7 +99,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public boolean removeTrack(UUID playlistId, String userId, UUID trackId) {
+    public boolean removeTrack(UUID playlistId, UUID userId, UUID trackId) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
             .map(playlist -> {
@@ -110,7 +110,7 @@ public class PlaylistService {
             .orElse(false);
     }
 
-    private boolean hasEditPermission(UUID playlistId, String userId) {
+    private boolean hasEditPermission(UUID playlistId, UUID userId) {
         return playlistJooqRepository.existsByPlaylistIdAndUserIdAndPermission(playlistId, userId, "edit");
     }
 
@@ -197,7 +197,7 @@ public class PlaylistService {
     }
 
     @Transactional(readOnly = true)
-    public List<InvitationDto> getPendingInvitations(String userId) {
+    public List<InvitationDto> getPendingInvitations(UUID userId) {
         return collaboratorRepository.findByUserIdAndStatus(userId, "pending").stream()
             .map(collab -> {
                 Playlist playlist = collab.getPlaylist();
@@ -215,7 +215,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<PlaylistCollaborator> respondToInvitation(UUID invitationId, String userId, boolean accept) {
+    public Optional<PlaylistCollaborator> respondToInvitation(UUID invitationId, UUID userId, boolean accept) {
         return collaboratorRepository.findById(invitationId)
             .filter(collab -> collab.getUserId().equals(userId) && "pending".equals(collab.getStatus()))
             .map(collab -> {
@@ -231,7 +231,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public boolean reorderTracks(UUID playlistId, String userId, List<UUID> trackIds) {
+    public boolean reorderTracks(UUID playlistId, UUID userId, List<UUID> trackIds) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
             .map(playlist -> {
@@ -252,7 +252,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, String ownerId, String inviteeId, String permission) {
+    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, UUID inviteeId, String permission) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(ownerId))
             .filter(p -> !inviteeId.equals(ownerId))
@@ -289,7 +289,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<PlaylistCollaborator> updateCollaborator(UUID playlistId, String userId, UUID collaboratorId, String permission) {
+    public Optional<PlaylistCollaborator> updateCollaborator(UUID playlistId, UUID userId, UUID collaboratorId, String permission) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId))
             .flatMap(p -> collaboratorRepository.findById(collaboratorId))
@@ -301,7 +301,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public boolean removeCollaborator(UUID playlistId, String userId, UUID collaboratorId) {
+    public boolean removeCollaborator(UUID playlistId, UUID userId, UUID collaboratorId) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId))
             .flatMap(p -> collaboratorRepository.findById(collaboratorId))
@@ -314,7 +314,7 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<Playlist> generateShareToken(UUID playlistId, String userId) {
+    public Optional<Playlist> generateShareToken(UUID playlistId, UUID userId) {
         return playlistJooqRepository.findById(playlistId)
             .filter(p -> p.getUserId().equals(userId))
             .map(playlist -> {
@@ -324,7 +324,7 @@ public class PlaylistService {
             });
     }
 
-    private String getDisplayNameForUser(String userId) {
+    private String getDisplayNameForUser(UUID userId) {
         if (userId == null) return null;
         return userJooqRepository.findById(userId)
             .map(u -> u.getDisplayName())

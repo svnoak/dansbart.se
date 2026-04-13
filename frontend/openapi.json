@@ -2421,7 +2421,7 @@
             "name": "userId",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "requestBody": {
@@ -2445,7 +2445,7 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "responses": {
@@ -4659,7 +4659,7 @@
           "id": { "type": "string", "format": "uuid" },
           "name": { "type": "string" },
           "description": { "type": "string" },
-          "userId": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" },
           "user": { "$ref": "#/components/schemas/User" },
           "isPublic": { "type": "boolean" },
           "shareToken": { "type": "string" },
@@ -4683,10 +4683,10 @@
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "playlistId": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" },
           "permission": { "type": "string" },
           "status": { "type": "string" },
-          "invitedBy": { "type": "string" },
+          "invitedBy": { "type": "string", "format": "uuid" },
           "invitedAt": { "type": "string", "format": "date-time" },
           "acceptedAt": { "type": "string", "format": "date-time" },
           "playlist": { "$ref": "#/components/schemas/Playlist" },
@@ -4731,7 +4731,7 @@
           "isFlagged": { "type": "boolean" },
           "flaggedAt": { "type": "string", "format": "date-time" },
           "flagReason": { "type": "string" },
-          "uploaderId": { "type": "string" },
+          "uploaderId": { "type": "string", "format": "uuid" },
           "processingStatus": { "type": "string" },
           "bars": {
             "type": "array",
@@ -4747,7 +4747,8 @@
       "User": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
+          "id": { "type": "string", "format": "uuid" },
+          "discourseId": { "type": "string" },
           "username": { "type": "string" },
           "displayName": { "type": "string" },
           "avatarUrl": { "type": "string" },
@@ -4899,7 +4900,7 @@
       "InviteCollaboratorRequest": {
         "type": "object",
         "properties": {
-          "userId": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" },
           "permission": { "type": "string" }
         }
       },
@@ -5054,7 +5055,7 @@
       "UserPublicProfile": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
+          "id": { "type": "string", "format": "uuid" },
           "displayName": { "type": "string" },
           "avatarUrl": { "type": "string" }
         }
@@ -5069,7 +5070,7 @@
       "UserSummaryDto": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
+          "id": { "type": "string", "format": "uuid" },
           "username": { "type": "string" },
           "displayName": { "type": "string" },
           "avatarUrl": { "type": "string" }
@@ -5233,7 +5234,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" },
           "username": { "type": "string" },
           "displayName": { "type": "string" },
           "permission": { "type": "string" },
@@ -5248,7 +5249,7 @@
           "id": { "type": "string", "format": "uuid" },
           "playlistId": { "type": "string", "format": "uuid" },
           "playlistName": { "type": "string" },
-          "invitedByUserId": { "type": "string" },
+          "invitedByUserId": { "type": "string", "format": "uuid" },
           "invitedByDisplayName": { "type": "string" },
           "permission": { "type": "string" },
           "invitedAt": { "type": "string", "format": "date-time" }

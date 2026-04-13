@@ -15,7 +15,7 @@ public class InvitationDto {
     private UUID id;
     private UUID playlistId;
     private String playlistName;
-    private String invitedByUserId;
+    private UUID invitedByUserId;
     private String invitedByDisplayName;
     private String permission;
     private OffsetDateTime invitedAt;

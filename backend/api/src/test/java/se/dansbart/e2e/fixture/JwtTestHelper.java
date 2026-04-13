@@ -6,26 +6,27 @@ import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 /**
  * Helper for injecting authentication in MockMvc tests.
  *
- * Uses a UsernamePasswordAuthenticationToken with a String principal,
+ * Uses a UsernamePasswordAuthenticationToken with a UUID principal,
  * matching exactly what DiscourseConnectController sets in production.
- * @AuthenticationPrincipal String userId resolves correctly.
+ * @AuthenticationPrincipal UUID userId resolves correctly.
  */
 @Component
 public class JwtTestHelper {
 
-    public RequestPostProcessor userToken(String userId) {
+    public RequestPostProcessor userToken(UUID userId) {
         return authentication(new UsernamePasswordAuthenticationToken(
             userId, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         ));
     }
 
-    public RequestPostProcessor adminToken(String userId) {
+    public RequestPostProcessor adminToken(UUID userId) {
         return authentication(new UsernamePasswordAuthenticationToken(
             userId, null, List.of(
                 new SimpleGrantedAuthority("ROLE_ADMIN"),

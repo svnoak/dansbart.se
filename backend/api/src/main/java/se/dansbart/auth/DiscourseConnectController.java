@@ -56,15 +56,15 @@ public class DiscourseConnectController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "SSO verification failed");
         }
 
-        String externalId = params.get("external_id");
-        String username = params.getOrDefault("username", externalId);
+        String discourseId = params.get("external_id");
+        String username = params.getOrDefault("username", discourseId);
         String name = params.getOrDefault("name", username);
 
-        if (externalId == null) {
+        if (discourseId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing external_id in SSO payload");
         }
 
-        User user = userService.findOrCreate(externalId, username, name);
+        User user = userService.findOrCreate(discourseId, username, name);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 user.getId(),

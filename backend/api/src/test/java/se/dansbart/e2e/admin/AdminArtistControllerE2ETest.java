@@ -21,8 +21,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class AdminArtistControllerE2ETest extends AbstractE2ETest {
 
-    private static final String ADMIN_USER_ID = "admin-user-123";
-    private static final String REGULAR_USER_ID = "regular-user-456";
+    private static final java.util.UUID ADMIN_USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000099");
+    private static final java.util.UUID REGULAR_USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000098");
 
     @Nested
     @DisplayName("Authorization")

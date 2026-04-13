@@ -71,19 +71,9 @@ public class PlaylistCollaborators extends TableImpl<Record> {
     public final TableField<Record, UUID> PLAYLIST_ID = createField(DSL.name("playlist_id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.playlist_collaborators.user_id</code>.
-     */
-    public final TableField<Record, String> USER_ID = createField(DSL.name("user_id"), SQLDataType.VARCHAR(255).nullable(false), this, "");
-
-    /**
      * The column <code>public.playlist_collaborators.permission</code>.
      */
     public final TableField<Record, String> PERMISSION = createField(DSL.name("permission"), SQLDataType.VARCHAR(10).nullable(false), this, "");
-
-    /**
-     * The column <code>public.playlist_collaborators.invited_by</code>.
-     */
-    public final TableField<Record, String> INVITED_BY = createField(DSL.name("invited_by"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>public.playlist_collaborators.invited_at</code>.
@@ -99,6 +89,16 @@ public class PlaylistCollaborators extends TableImpl<Record> {
      * The column <code>public.playlist_collaborators.accepted_at</code>.
      */
     public final TableField<Record, OffsetDateTime> ACCEPTED_AT = createField(DSL.name("accepted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+
+    /**
+     * The column <code>public.playlist_collaborators.user_id</code>.
+     */
+    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "");
+
+    /**
+     * The column <code>public.playlist_collaborators.invited_by</code>.
+     */
+    public final TableField<Record, UUID> INVITED_BY = createField(DSL.name("invited_by"), SQLDataType.UUID, this, "");
 
     private PlaylistCollaborators(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

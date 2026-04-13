@@ -9,6 +9,8 @@ import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.track.Track;
 import se.dansbart.e2e.base.AbstractE2ETest;
 
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -17,6 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * E2E tests for TrackController public endpoints.
  */
 class TrackControllerE2ETest extends AbstractE2ETest {
+
+    private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private Artist artist;
 
@@ -156,7 +160,7 @@ class TrackControllerE2ETest extends AbstractE2ETest {
             Track track = testData.track().withTitle("Bad Track").withArtist(artist).complete().build();
 
             mockMvc.perform(post("/api/tracks/{id}/flag", track.getId())
-                    .with(jwt.userToken("test-user-1"))
+                    .with(jwt.userToken(TEST_USER_ID))
                     .param("reason", "not_folk_music"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("success"));
@@ -166,7 +170,7 @@ class TrackControllerE2ETest extends AbstractE2ETest {
         @DisplayName("should return 404 for non-existent track")
         void flagTrack_withInvalidId_shouldReturn404() throws Exception {
             mockMvc.perform(post("/api/tracks/{id}/flag", "00000000-0000-0000-0000-000000000000")
-                    .with(jwt.userToken("test-user-1")))
+                    .with(jwt.userToken(TEST_USER_ID)))
                 .andExpect(status().isNotFound());
         }
 

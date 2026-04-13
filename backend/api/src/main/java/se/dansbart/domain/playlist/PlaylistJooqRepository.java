@@ -29,7 +29,7 @@ public class PlaylistJooqRepository {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.ID.eq(id)).fetchOptional().map(this::toPlaylist);
     }
 
-    public List<Playlist> findByUserId(String userId) {
+    public List<Playlist> findByUserId(UUID userId) {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.USER_ID.eq(userId)).orderBy(PLAYLISTS.NAME.asc()).fetch(this::toPlaylist);
     }
 
@@ -37,7 +37,7 @@ public class PlaylistJooqRepository {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.SHARE_TOKEN.eq(shareToken)).fetchOptional().map(this::toPlaylist);
     }
 
-    public List<Playlist> findSharedWithUser(String userId) {
+    public List<Playlist> findSharedWithUser(UUID userId) {
         return dsl.selectFrom(PLAYLISTS)
             .where(PLAYLISTS.ID.in(
                 dsl.select(PLAYLIST_COLLABORATORS.PLAYLIST_ID).from(PLAYLIST_COLLABORATORS).where(PLAYLIST_COLLABORATORS.USER_ID.eq(userId))
@@ -50,7 +50,7 @@ public class PlaylistJooqRepository {
         return dsl.fetchCount(dsl.selectFrom(PLAYLIST_TRACKS).where(PLAYLIST_TRACKS.PLAYLIST_ID.eq(playlistId)));
     }
 
-    public boolean existsByPlaylistIdAndUserIdAndPermission(UUID playlistId, String userId, String permission) {
+    public boolean existsByPlaylistIdAndUserIdAndPermission(UUID playlistId, UUID userId, String permission) {
         return dsl.fetchExists(
             dsl.selectOne().from(PLAYLIST_COLLABORATORS)
                 .where(PLAYLIST_COLLABORATORS.PLAYLIST_ID.eq(playlistId))

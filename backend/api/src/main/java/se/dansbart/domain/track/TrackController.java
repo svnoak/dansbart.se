@@ -86,10 +86,10 @@ public class TrackController {
     @Operation(summary = "Submit style correction feedback for a track")
     public ResponseEntity<TrackStyleVote> submitFeedback(
             @PathVariable UUID id,
-            @AuthenticationPrincipal String userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
             @RequestBody FeedbackRequest request) {
-        String voterId = userId != null ? userId : voterHeader;
+        String voterId = userId != null ? userId.toString() : voterHeader;
         if (voterId == null || voterId.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
