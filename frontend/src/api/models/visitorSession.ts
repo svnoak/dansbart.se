@@ -13,4 +13,5 @@ export interface VisitorSession {
   userAgent?: string;
   isReturning?: boolean;
   pageViews?: number;
+  userId?: string;
 }

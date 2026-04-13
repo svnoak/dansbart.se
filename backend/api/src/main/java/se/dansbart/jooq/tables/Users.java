@@ -39,6 +39,7 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
+import se.dansbart.jooq.tables.VisitorSessions.VisitorSessionsPath;
 
 
 /**
@@ -241,6 +242,19 @@ public class Users extends TableImpl<Record> {
             _tracks = new TracksPath(this, null, Keys.TRACKS__TRACKS_UPLOADER_ID_FKEY.getInverseKey());
 
         return _tracks;
+    }
+
+    private transient VisitorSessionsPath _visitorSessions;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.visitor_sessions</code> table
+     */
+    public VisitorSessionsPath visitorSessions() {
+        if (_visitorSessions == null)
+            _visitorSessions = new VisitorSessionsPath(this, null, Keys.VISITOR_SESSIONS__VISITOR_SESSIONS_USER_ID_FKEY.getInverseKey());
+
+        return _visitorSessions;
     }
 
     @Override

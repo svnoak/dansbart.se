@@ -5,6 +5,8 @@
  * OpenAPI spec version: v0
  */
 import type {
+  GetClassifyStats200,
+  GetClassifyStatsParams,
   GetDailyVisits200,
   GetDailyVisitsParams,
   GetDashboard200,
@@ -17,6 +19,8 @@ import type {
   GetListenTimeParams,
   GetMostPlayedTracks200Item,
   GetMostPlayedTracksParams,
+  GetNudgeStats200,
+  GetNudgeStatsParams,
   GetPlatformStats200,
   GetPlatformStatsParams,
   GetReportStats200,
@@ -208,6 +212,36 @@ export const getPlatformStats = async (params?: GetPlatformStatsParams, options?
   
 
 /**
+ * @summary Get SmartNudge funnel statistics
+ */
+export const getGetNudgeStatsUrl = (params?: GetNudgeStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/nudge?${stringifiedParams}` : `/api/admin/analytics/nudge`
+}
+
+export const getNudgeStats = async (params?: GetNudgeStatsParams, options?: RequestInit): Promise<GetNudgeStats200> => {
+  
+  return httpClient<GetNudgeStats200>(getGetNudgeStatsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
  * @summary Get total listen time across all tracks
  */
 export const getGetListenTimeUrl = (params?: GetListenTimeParams,) => {
@@ -288,6 +322,36 @@ export const getGetDashboardUrl = (params?: GetDashboardParams,) => {
 export const getDashboard = async (params?: GetDashboardParams, options?: RequestInit): Promise<GetDashboard200> => {
   
   return httpClient<GetDashboard200>(getGetDashboardUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get classify game activity statistics
+ */
+export const getGetClassifyStatsUrl = (params?: GetClassifyStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/classify?${stringifiedParams}` : `/api/admin/analytics/classify`
+}
+
+export const getClassifyStats = async (params?: GetClassifyStatsParams, options?: RequestInit): Promise<GetClassifyStats200> => {
+  
+  return httpClient<GetClassifyStats200>(getGetClassifyStatsUrl(params),
   {      
     ...options,
     method: 'GET'

@@ -81,4 +81,18 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "30") int days) {
         return ResponseEntity.ok(analyticsService.getDiscoveryStats(days));
     }
+
+    @GetMapping("/nudge")
+    @Operation(summary = "Get SmartNudge funnel statistics")
+    public ResponseEntity<Map<String, Object>> getNudgeStats(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(analyticsService.getNudgeStats(days));
+    }
+
+    @GetMapping("/classify")
+    @Operation(summary = "Get classify game activity statistics")
+    public ResponseEntity<Map<String, Object>> getClassifyStats(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(analyticsService.getClassifyStats(days));
+    }
 }

@@ -4,18 +4,61 @@ import {
   getDashboard,
   getDailyVisits,
   getHourlyVisits,
+  getMostPlayedTracks,
+  getPlatformStats,
+  getListenTime,
 } from '@/api/generated/admin-analytics/admin-analytics';
 import { StatCard } from '@/admin/components/StatCard';
 import { Select } from '@/admin/components/forms/Select';
 
 interface DayData {
   date: string;
-  visits: number;
+  total: number;
+  loggedIn: number;
+  anonymous: number;
 }
 
 interface HourData {
   hour: number;
-  visits: number;
+  total: number;
+  loggedIn: number;
+  anonymous: number;
+}
+
+interface MostPlayedTrack {
+  trackId: string;
+  title: string;
+  playCount: number;
+  completionRate: number;
+  totalDurationSeconds: number;
+}
+
+interface PlatformEntry {
+  platform: string;
+  playCount: number;
+  totalDuration: number;
+}
+
+interface NudgeEvents {
+  nudge_shown?: number;
+  nudge_dismissed?: number;
+  nudge_completed?: number;
+  [key: string]: number | undefined;
+}
+
+interface ClassifyEvents {
+  classify_start?: number;
+  classify_vote?: number;
+  classify_abandon?: number;
+  [key: string]: number | undefined;
+}
+
+function formatMinutes(seconds: number): string {
+  const m = Math.round(seconds / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem > 0 ? `${h} h ${rem} min` : `${h} h`;
 }
 
 export function AdminStatsPage() {
@@ -24,21 +67,100 @@ export function AdminStatsPage() {
   const [dashboard, setDashboard] = useState<Record<string, unknown> | null>(null);
   const [daily, setDaily] = useState<DayData[]>([]);
   const [hourly, setHourly] = useState<HourData[]>([]);
+  const [mostPlayed, setMostPlayed] = useState<MostPlayedTrack[]>([]);
+  const [platforms, setPlatforms] = useState<PlatformEntry[]>([]);
+  const [listenTime, setListenTime] = useState<Record<string, unknown> | null>(null);
+  const [nudgeEvents, setNudgeEvents] = useState<NudgeEvents>({});
+  const [classifyEvents, setClassifyEvents] = useState<ClassifyEvents>({});
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsRes, dashRes, dailyRes, hourlyRes] = await Promise.all([
-        getStats().catch(() => null),
-        getDashboard({ days }).catch(() => null),
-        getDailyVisits({ days }).catch(() => null),
-        getHourlyVisits({ days }).catch(() => null),
-      ]);
+      const [statsRes, dashRes, dailyRes, hourlyRes, mostPlayedRes, platformRes, listenRes, nudgeRes, classifyRes] =
+        await Promise.all([
+          getStats().catch(() => null),
+          getDashboard({ days }).catch(() => null),
+          getDailyVisits({ days }).catch(() => null),
+          getHourlyVisits({ days }).catch(() => null),
+          getMostPlayedTracks({ days, limit: 10 }).catch(() => null),
+          getPlatformStats({ days }).catch(() => null),
+          getListenTime({ days }).catch(() => null),
+          fetch(`/api/admin/analytics/nudge?days=${days}`, { credentials: 'include' })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetch(`/api/admin/analytics/classify?days=${days}`, { credentials: 'include' })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+        ]);
+
       setLibraryStats(statsRes as Record<string, unknown> | null);
       setDashboard(dashRes as Record<string, unknown> | null);
-      setDaily(Array.isArray(dailyRes) ? dailyRes as DayData[] : []);
-      setHourly(Array.isArray(hourlyRes) ? hourlyRes as HourData[] : []);
+
+      // Daily visits: backend now returns { byDate: [{date, total, loggedIn, anonymous}], days }
+      // Fill in missing days so the chart always covers the full selected range.
+      const byDateArray: any[] = (dailyRes as any)?.byDate ?? [];
+      const dateMap = new Map(byDateArray.map((d: any) => [String(d.date ?? ''), d]));
+      const dailyFilled: DayData[] = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const entry = dateMap.get(key);
+        dailyFilled.push({
+          date: key,
+          total: entry ? Number(entry.total ?? 0) : 0,
+          loggedIn: entry ? Number(entry.loggedIn ?? 0) : 0,
+          anonymous: entry ? Number(entry.anonymous ?? 0) : 0,
+        });
+      }
+      setDaily(dailyFilled);
+
+      // Hourly visits: backend now returns { byHour: [{hour, total, loggedIn, anonymous}], days }
+      // Always show all 24 hours.
+      const byHourArray: any[] = (hourlyRes as any)?.byHour ?? [];
+      const hourMap = new Map(byHourArray.map((h: any) => [Number(h.hour), h]));
+      setHourly(
+        Array.from({ length: 24 }, (_, h) => {
+          const entry = hourMap.get(h);
+          return {
+            hour: h,
+            total: entry ? Number(entry.total ?? 0) : 0,
+            loggedIn: entry ? Number(entry.loggedIn ?? 0) : 0,
+            anonymous: entry ? Number(entry.anonymous ?? 0) : 0,
+          };
+        }),
+      );
+
+      // Most played tracks
+      const tracksData = mostPlayedRes ?? (dashRes as any)?.mostPlayedTracks ?? [];
+      setMostPlayed(
+        Array.isArray(tracksData)
+          ? tracksData.map((t: any) => ({
+              trackId: String(t.trackId ?? ''),
+              title: String(t.title ?? 'Okänd'),
+              playCount: Number(t.playCount ?? 0),
+              completionRate: Number(t.completionRate ?? 0),
+              totalDurationSeconds: Number(t.totalDurationSeconds ?? 0),
+            }))
+          : [],
+      );
+
+      // Platform stats
+      const platformData = (platformRes as any)?.platforms ?? (dashRes as any)?.platformStats?.platforms ?? [];
+      setPlatforms(
+        Array.isArray(platformData)
+          ? platformData.map((p: any) => ({
+              platform: String(p.platform ?? ''),
+              playCount: Number(p.playCount ?? 0),
+              totalDuration: Number(p.totalDuration ?? 0),
+            }))
+          : [],
+      );
+
+      setListenTime(listenRes as Record<string, unknown> | null);
+      setNudgeEvents((nudgeRes as any)?.events ?? {});
+      setClassifyEvents((classifyRes as any)?.events ?? {});
     } finally {
       setLoading(false);
     }
@@ -48,15 +170,41 @@ export function AdminStatsPage() {
     fetchData();
   }, [fetchData]);
 
+  // Library stats
   const totalTracks = (libraryStats?.totalTracks as number) ?? 0;
   const coveragePct = (libraryStats?.coveragePercent as number) ?? 0;
-  const analyzedCount = Math.round((totalTracks * coveragePct) / 100);
-  const pendingCount = (dashboard?.pendingTracks as number) ?? 0;
-  const failedCount = (dashboard?.failedTracks as number) ?? 0;
-  const totalVisitors = (dashboard?.totalVisitors as number) ?? 0;
+  const analyzedCount = (libraryStats?.analyzed as number) ?? Math.round((totalTracks * coveragePct) / 100);
+  const pendingAnalysis = (libraryStats?.pendingAnalysis as number) ?? 0;
+  const pendingClassification = (libraryStats?.pendingClassification as number) ?? 0;
 
-  const maxDaily = Math.max(1, ...daily.map((d) => d.visits));
-  const maxHourly = Math.max(1, ...hourly.map((h) => h.visits));
+  // Visitor stats — nested under dashboard.visitors
+  const visitors = (dashboard?.visitors as Record<string, unknown>) ?? {};
+  const totalVisitors = (visitors.totalVisitors as number) ?? 0;
+  const loggedInVisitors = (visitors.loggedInVisitors as number) ?? 0;
+  const anonymousVisitors = (visitors.anonymousVisitors as number) ?? 0;
+  const totalPageViews = (visitors.totalPageViews as number) ?? 0;
+
+  // User and playlist counts from dashboard
+  const totalUsers = (dashboard?.totalUsers as number) ?? 0;
+  const totalPlaylists = (dashboard?.totalPlaylists as number) ?? 0;
+
+  // Listen time
+  const totalHours = (listenTime?.totalHours as number) ?? (dashboard as any)?.listenTime?.totalHours ?? 0;
+  const totalMinutesListened = (listenTime?.totalMinutes as number) ?? (dashboard as any)?.listenTime?.totalMinutes ?? 0;
+
+  const maxDaily = Math.max(1, ...daily.map((d) => d.total));
+  const maxHourly = Math.max(1, ...hourly.map((h) => h.total));
+  const showHourly = days === 1;
+
+  // SmartNudge funnel
+  const nudgeShown = nudgeEvents.nudge_shown ?? 0;
+  const nudgeDismissed = nudgeEvents.nudge_dismissed ?? 0;
+  const nudgeCompleted = nudgeEvents.nudge_completed ?? 0;
+
+  // Classify stats
+  const classifyStart = classifyEvents.classify_start ?? 0;
+  const classifyVotes = classifyEvents.classify_vote ?? 0;
+  const classifyAbandon = classifyEvents.classify_abandon ?? 0;
 
   if (loading) {
     return (
@@ -76,74 +224,232 @@ export function AdminStatsPage() {
           onChange={(e) => setDays(Number(e.target.value))}
           className="w-auto"
         >
+          <option value={1}>Senaste 24 timmar</option>
           <option value={7}>Senaste 7 dagar</option>
           <option value={30}>Senaste 30 dagar</option>
           <option value={90}>Senaste 90 dagar</option>
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Totalt antal spår" value={totalTracks} />
-        <StatCard
-          label="Analyserade"
-          value={analyzedCount}
-          sub={`${coveragePct}%`}
-        />
-        <StatCard label="Väntande" value={pendingCount} />
-        <StatCard label="Misslyckade" value={failedCount} />
-        <StatCard label="Besökare" value={totalVisitors} sub={`Senaste ${days} dagar`} />
-        <StatCard
-          label="Spår per dag"
-          value={daily.length > 0 ? Math.round(daily.reduce((s, d) => s + d.visits, 0) / daily.length) : 0}
-          sub="Genomsnitt"
-        />
+      {/* Library stats */}
+      <div>
+        <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Bibliotek</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <StatCard label="Totalt antal spår" value={totalTracks} />
+          <StatCard label="Analyserade" value={analyzedCount} sub={`${coveragePct}%`} />
+          <StatCard label="Väntar analys" value={pendingAnalysis} />
+          <StatCard label="Väntar klassificering" value={pendingClassification} />
+          <StatCard label="Spellistor" value={totalPlaylists} />
+        </div>
       </div>
 
-      {/* Daily visits chart */}
-      {daily.length > 0 && (
-        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-          <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
-            Dagliga besök
-          </h2>
-          <div className="mt-3 flex items-end gap-[2px] h-40">
-            {daily.map((d) => (
-              <div
-                key={d.date}
-                className="flex-1 rounded-t bg-[rgb(var(--color-accent))] opacity-80 hover:opacity-100 transition-opacity"
-                style={{ height: `${(d.visits / maxDaily) * 100}%`, minHeight: d.visits > 0 ? '2px' : '0' }}
-                title={`${d.date}: ${d.visits} besök`}
+      {/* Visitor stats */}
+      <div>
+        <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Besökare — senaste {days} dagar</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <StatCard label="Unika besökare" value={totalVisitors} />
+          <StatCard label="Inloggade" value={loggedInVisitors} />
+          <StatCard label="Anonyma" value={anonymousVisitors} />
+          <StatCard label="Sidvisningar" value={totalPageViews} />
+          <StatCard label="Registrerade användare" value={totalUsers} />
+        </div>
+      </div>
+
+      {/* Listen time */}
+      {(totalHours > 0 || totalMinutesListened > 0) && (
+        <div>
+          <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Lyssning — senaste {days} dagar</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <StatCard
+              label="Total lyssnad tid"
+              value={totalHours > 0 ? `${totalHours} h` : `${totalMinutesListened} min`}
+            />
+            {platforms.map((p) => (
+              <StatCard
+                key={p.platform}
+                label={p.platform === 'youtube' ? 'YouTube-spelningar' : p.platform === 'spotify' ? 'Spotify-spelningar' : `${p.platform}-spelningar`}
+                value={p.playCount}
+                sub={formatMinutes(p.totalDuration)}
               />
             ))}
-          </div>
-          <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
-            <span>{daily[0]?.date ?? ''}</span>
-            <span>{daily[daily.length - 1]?.date ?? ''}</span>
           </div>
         </div>
       )}
 
-      {/* Hourly pattern chart */}
-      {hourly.length > 0 && (
+      {/* Most played tracks */}
+      {mostPlayed.length > 0 && (
         <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-          <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
-            Besök per timme
+          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
+            Mest spelade spår — senaste {days} dagar
           </h2>
-          <div className="mt-3 flex items-end gap-1 h-32">
-            {hourly.map((h) => (
-              <div
-                key={h.hour}
-                className="flex-1 rounded-t bg-[rgb(var(--color-accent-muted))] border border-[rgb(var(--color-accent))]/30 hover:bg-[rgb(var(--color-accent))]/40 transition-colors"
-                style={{ height: `${(h.visits / maxHourly) * 100}%`, minHeight: h.visits > 0 ? '2px' : '0' }}
-                title={`${String(h.hour).padStart(2, '0')}:00 - ${h.visits} besök`}
-              />
+          <div className="space-y-2">
+            {mostPlayed.map((t, i) => (
+              <div key={t.trackId} className="flex items-center gap-3">
+                <span className="w-5 shrink-0 text-right text-xs text-[rgb(var(--color-text-muted))]">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-[rgb(var(--color-text))]">{t.title}</p>
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
+                    <div
+                      className="h-full rounded-full bg-[rgb(var(--color-accent))]"
+                      style={{ width: `${Math.min(100, t.completionRate)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xs font-medium text-[rgb(var(--color-text))]">{t.playCount} spelningar</p>
+                  <p className="text-[10px] text-[rgb(var(--color-text-muted))]">{formatMinutes(t.totalDurationSeconds)} totalt</p>
+                </div>
+              </div>
             ))}
           </div>
-          <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
-            <span>00:00</span>
-            <span>06:00</span>
-            <span>12:00</span>
-            <span>18:00</span>
-            <span>23:00</span>
+          <p className="mt-2 text-[10px] text-[rgb(var(--color-text-muted))]">Stapeln visar genomföringsgrad</p>
+        </div>
+      )}
+
+      {/* Visitor chart — hourly when days=1, daily otherwise */}
+      <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
+            {showHourly ? 'Besök per timme' : 'Dagliga besök'}
+          </h2>
+          <div className="flex items-center gap-3 text-[10px] text-[rgb(var(--color-text-muted))]">
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]" />
+              Inloggade
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]/30" />
+              Anonyma
+            </span>
+          </div>
+        </div>
+
+        {showHourly ? (
+          <>
+            <div className="flex items-end gap-[3px] h-40">
+              {hourly.map((h) => (
+                <div key={h.hour} className="group relative flex-1 h-full flex items-end">
+                  <div
+                    className="relative w-full rounded-t overflow-hidden"
+                    style={{ height: `${(h.total / maxHourly) * 100}%`, minHeight: h.total > 0 ? '2px' : '0' }}
+                  >
+                    {/* loggedIn on top, anonymous on bottom — flex-col fills proportionally */}
+                    <div className="h-full w-full flex flex-col">
+                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: h.loggedIn }} />
+                      <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: h.anonymous }} />
+                    </div>
+                    {h.total > 0 && (
+                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
+                        {String(h.hour).padStart(2, '0')}:00 · {h.total} ({h.loggedIn} in / {h.anonymous} anon)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
+              <span>00:00</span>
+              <span>06:00</span>
+              <span>12:00</span>
+              <span>18:00</span>
+              <span>23:00</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-end gap-[2px] h-40">
+              {daily.map((d) => (
+                <div key={d.date} className="group relative flex-1 h-full flex items-end">
+                  <div
+                    className="relative w-full rounded-t overflow-hidden"
+                    style={{ height: `${(d.total / maxDaily) * 100}%`, minHeight: d.total > 0 ? '2px' : '0' }}
+                  >
+                    <div className="h-full w-full flex flex-col">
+                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: d.loggedIn }} />
+                      <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: d.anonymous }} />
+                    </div>
+                    {d.total > 0 && (
+                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
+                        {d.date} · {d.total} ({d.loggedIn} in / {d.anonymous} anon)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
+              <span>{daily[0]?.date ?? ''}</span>
+              <span>{daily[daily.length - 1]?.date ?? ''}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* SmartNudge funnel */}
+      {nudgeShown > 0 && (
+        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
+            SmartNudge — senaste {days} dagar
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-[rgb(var(--color-text))]">{nudgeShown}</p>
+              <p className="text-xs text-[rgb(var(--color-text-muted))]">Visade</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-500">{nudgeCompleted}</p>
+              <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                Slutförda
+                {nudgeShown > 0 && (
+                  <span className="ml-1">({Math.round((nudgeCompleted / nudgeShown) * 100)}%)</span>
+                )}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-[rgb(var(--color-text-muted))]">{nudgeDismissed}</p>
+              <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                Avvisade
+                {nudgeShown > 0 && (
+                  <span className="ml-1">({Math.round((nudgeDismissed / nudgeShown) * 100)}%)</span>
+                )}
+              </p>
+            </div>
+          </div>
+          {nudgeShown > 0 && (
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
+              <div
+                className="h-full rounded-full bg-green-500"
+                style={{ width: `${Math.min(100, (nudgeCompleted / nudgeShown) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Classify activity */}
+      {classifyStart > 0 && (
+        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
+            Musikdomaren — senaste {days} dagar
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-[rgb(var(--color-text))]">{classifyStart}</p>
+              <p className="text-xs text-[rgb(var(--color-text-muted))]">Sessioner startade</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-[rgb(var(--color-accent))]">{classifyVotes}</p>
+              <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                Röster
+                {classifyStart > 0 && (
+                  <span className="ml-1">({Math.round(classifyVotes / classifyStart)} snitt/session)</span>
+                )}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-[rgb(var(--color-text-muted))]">{classifyAbandon}</p>
+              <p className="text-xs text-[rgb(var(--color-text-muted))]">Avbrutna sessioner</p>
+            </div>
           </div>
         </div>
       )}

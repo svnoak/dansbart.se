@@ -48,13 +48,14 @@ public class TrackPlaybackJooqRepository {
     }
 
     /**
-     * Returns [trackId, playCount, completionRate] for most played tracks since a time.
+     * Returns [trackId, playCount, completionRate, totalDurationSeconds] for most played tracks since a time.
      */
     public List<Object[]> findMostPlayedTracks(OffsetDateTime since, int limit) {
         var c = TRACK_PLAYBACKS.COMPLETED;
         var playCount = count(TRACK_PLAYBACKS.ID).as("play_count");
         var completionRate = sum(when(c.eq(true), 1).otherwise(0)).mul(100.0).div(count(TRACK_PLAYBACKS.ID)).as("completion_rate");
-        var query = dsl.select(TRACK_PLAYBACKS.TRACK_ID, playCount, completionRate)
+        var totalDuration = sum(TRACK_PLAYBACKS.DURATION_SECONDS).as("total_duration");
+        var query = dsl.select(TRACK_PLAYBACKS.TRACK_ID, playCount, completionRate, totalDuration)
             .from(TRACK_PLAYBACKS)
             .where(since == null ? DSL.noCondition() : TRACK_PLAYBACKS.PLAYED_AT.ge(since))
             .groupBy(TRACK_PLAYBACKS.TRACK_ID)
@@ -63,7 +64,8 @@ public class TrackPlaybackJooqRepository {
         return query.fetch().map(r -> new Object[]{
             r.get(TRACK_PLAYBACKS.TRACK_ID),
             r.get("play_count", Long.class),
-            r.get("completion_rate", Double.class)
+            r.get("completion_rate", Double.class),
+            r.get("total_duration", Long.class)
         });
     }
 

@@ -5,8 +5,6 @@
  * OpenAPI spec version: v0
  */
 
-export interface SessionRequest {
-  sessionId?: string;
-  userAgent?: string;
-  userId?: string;
-}
+export type GetNudgeStatsParams = {
+days?: number;
+};

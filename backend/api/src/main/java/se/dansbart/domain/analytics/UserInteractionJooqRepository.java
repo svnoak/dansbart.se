@@ -74,6 +74,24 @@ public class UserInteractionJooqRepository {
     }
 
     /**
+     * Returns [event_type, count] for events matching the given prefix since the given time.
+     */
+    public List<Object[]> countEventsByPrefix(String prefix, java.time.OffsetDateTime since) {
+        return dsl.select(
+                USER_INTERACTIONS.EVENT_TYPE,
+                count(USER_INTERACTIONS.ID).as("count")
+            )
+            .from(USER_INTERACTIONS)
+            .where(USER_INTERACTIONS.EVENT_TYPE.like(prefix + "%")
+                .and(since == null ? org.jooq.impl.DSL.noCondition() : USER_INTERACTIONS.CREATED_AT.ge(since)))
+            .groupBy(USER_INTERACTIONS.EVENT_TYPE)
+            .fetch(r -> new Object[]{
+                r.get(USER_INTERACTIONS.EVENT_TYPE),
+                r.get("count", Long.class)
+            });
+    }
+
+    /**
      * Returns [event_type, count] for discovery_* events since the given time.
      */
     public List<Object[]> countDiscoveryEvents(java.time.OffsetDateTime since) {

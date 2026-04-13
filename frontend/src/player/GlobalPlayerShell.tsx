@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
+import { recordPlayback } from '@/api/generated/analytics/analytics';
+import { getVoterId } from '@/utils/voter';
 import { useConsent } from '@/consent/useConsent';
 import { usePlayer } from '@/player/usePlayer';
 import {
@@ -52,6 +54,13 @@ export function GlobalPlayerShell() {
   const isDraggingRef = useRef(false);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
+  // Playback tracking refs
+  const playStartTimeRef = useRef<number | null>(null);
+  const accumulatedSecondsRef = useRef(0);
+  const trackCompletedRef = useRef(false);
+  const prevTrackRef = useRef(currentTrack);
+  const prevActiveSourceRef = useRef(activeSource);
+
   const windowWidth = useWindowWidth();
   const bars = useStructureBars(currentTrack?.id);
 
@@ -79,12 +88,17 @@ export function GlobalPlayerShell() {
     }
   }
 
+  const handleTrackEnded = useCallback(() => {
+    trackCompletedRef.current = true;
+    next();
+  }, [next]);
+
   const { ytPlayerRef } = useYouTubePlayer({
     youtubeVideoId,
     consentStatus,
     isPlaying,
     activeSource,
-    onEnded: next,
+    onEnded: handleTrackEnded,
   });
 
   const { playbackPositionMs, setPlaybackPositionMs, playbackDurationMs, setPlaybackDurationMs } =
@@ -119,6 +133,46 @@ export function GlobalPlayerShell() {
       // ignore
     }
   }, [isPlaying, isYouTubeEmbed]);
+
+  // Accumulate playtime while isPlaying
+  useEffect(() => {
+    if (isPlaying) {
+      playStartTimeRef.current = Date.now();
+    } else {
+      if (playStartTimeRef.current !== null) {
+        accumulatedSecondsRef.current += (Date.now() - playStartTimeRef.current) / 1000;
+        playStartTimeRef.current = null;
+      }
+    }
+  }, [isPlaying]);
+
+  // Fire recordPlayback when track changes or on unmount
+  useEffect(() => {
+    const prev = prevTrackRef.current;
+    const prevSource = prevActiveSourceRef.current;
+    prevTrackRef.current = currentTrack;
+    prevActiveSourceRef.current = activeSource;
+
+    if (prev && prev.id !== currentTrack?.id) {
+      // Flush any in-progress playtime
+      if (playStartTimeRef.current !== null) {
+        accumulatedSecondsRef.current += (Date.now() - playStartTimeRef.current) / 1000;
+        playStartTimeRef.current = null;
+      }
+      const seconds = Math.round(accumulatedSecondsRef.current);
+      if (seconds > 0 && prev.id) {
+        recordPlayback(prev.id, {
+          platform: prevSource,
+          durationSeconds: seconds,
+          completed: trackCompletedRef.current,
+          sessionId: getVoterId(),
+        }).catch(() => {});
+      }
+      accumulatedSecondsRef.current = 0;
+      trackCompletedRef.current = false;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrack?.id]);
 
   const trackDurationMs = currentTrack?.durationMs ?? 0;
   const durationMs = playbackDurationMs > 0 ? playbackDurationMs : trackDurationMs;

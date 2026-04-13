@@ -5,8 +5,4 @@
  * OpenAPI spec version: v0
  */
 
-export interface SessionRequest {
-  sessionId?: string;
-  userAgent?: string;
-  userId?: string;
-}
+export type GetNudgeStats200 = {[key: string]: { [key: string]: unknown }};

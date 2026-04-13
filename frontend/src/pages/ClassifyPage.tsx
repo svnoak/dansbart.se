@@ -4,6 +4,7 @@ import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
 import { getStyleTree } from '@/api/generated/styles/styles';
 import { getTracks, submitFeedback } from '@/api/generated/tracks/tracks';
+import { recordInteraction1 } from '@/api/generated/analytics/analytics';
 import { usePlayer } from '@/player/usePlayer';
 import { getVoterId } from '@/utils/voter';
 import { getTempoLabel } from '@/utils/tempoLabel';
@@ -158,6 +159,14 @@ export function ClassifyPage() {
         { headers: { 'X-Voter-ID': getVoterId() } },
       ).catch(() => {});
 
+      recordInteraction1({
+        trackId: activeTrack.id,
+        eventType: 'classify_vote',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        eventData: { style: selectedStyle, tempo: correction } as any,
+        sessionId: getVoterId(),
+      }).catch(() => {});
+
       advance();
     },
     [activeTrack?.id, selectedStyle, advance],
@@ -214,6 +223,28 @@ export function ClassifyPage() {
   useEffect(() => {
     fetchStyles();
     fetchTracks();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Analytics: track classify session start and abandon
+  const sessionCountRef = useRef(0);
+  const maxStreakRef = useRef(0);
+  useEffect(() => {
+    sessionCountRef.current = sessionCount;
+    maxStreakRef.current = maxStreak;
+  }, [sessionCount, maxStreak]);
+
+  useEffect(() => {
+    recordInteraction1({ eventType: 'classify_start', sessionId: getVoterId() }).catch(() => {});
+    return () => {
+      if (sessionCountRef.current > 0) {
+        recordInteraction1({
+          eventType: 'classify_abandon',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          eventData: { votes: sessionCountRef.current, maxStreak: maxStreakRef.current } as any,
+          sessionId: getVoterId(),
+        }).catch(() => {});
+      }
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcuts

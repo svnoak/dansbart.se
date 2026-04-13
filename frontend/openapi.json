@@ -4456,6 +4456,34 @@
         }
       }
     },
+    "/api/admin/analytics/nudge": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get SmartNudge funnel statistics",
+        "operationId": "getNudgeStats",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/analytics/listen-time": {
       "get": {
         "tags": ["Admin Analytics"],
@@ -4517,6 +4545,34 @@
         "tags": ["Admin Analytics"],
         "summary": "Get comprehensive analytics dashboard data",
         "operationId": "getDashboard",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/analytics/classify": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get classify game activity statistics",
+        "operationId": "getClassifyStats",
         "parameters": [
           {
             "name": "days",
@@ -4827,7 +4883,7 @@
       },
       "TransferOwnershipRequest": {
         "type": "object",
-        "properties": { "newOwnerId": { "type": "string" } }
+        "properties": { "newOwnerId": { "type": "string", "format": "uuid" } }
       },
       "ReorderTracksRequest": {
         "type": "object",
@@ -4988,7 +5044,8 @@
         "type": "object",
         "properties": {
           "sessionId": { "type": "string" },
-          "userAgent": { "type": "string" }
+          "userAgent": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" }
         }
       },
       "VisitorSession": {
@@ -5000,7 +5057,8 @@
           "lastSeen": { "type": "string", "format": "date-time" },
           "userAgent": { "type": "string" },
           "isReturning": { "type": "boolean" },
-          "pageViews": { "type": "integer", "format": "int32" }
+          "pageViews": { "type": "integer", "format": "int32" },
+          "userId": { "type": "string", "format": "uuid" }
         }
       },
       "RecordPlaybackRequest": {
@@ -5252,7 +5310,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" },
           "username": { "type": "string" },
           "displayName": { "type": "string" },
           "permission": { "type": "string" },
@@ -5294,19 +5352,6 @@
           "addedAt": { "type": "string", "format": "date-time" },
           "addedByUserId": { "type": "string", "format": "uuid" },
           "track": { "$ref": "#/components/schemas/TrackListDto" }
-        }
-      },
-      "CollaboratorDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "displayName": { "type": "string" },
-          "permission": { "type": "string" },
-          "status": { "type": "string" },
-          "invitedAt": { "type": "string", "format": "date-time" },
-          "acceptedAt": { "type": "string", "format": "date-time" }
         }
       },
       "InvitationDto": {

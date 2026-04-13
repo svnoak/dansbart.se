@@ -23,4 +23,6 @@ public class VisitorSession {
 
     @Builder.Default
     private Integer pageViews = 1;
+
+    private UUID userId;
 }
