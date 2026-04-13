@@ -430,7 +430,7 @@ export function ClassifyPage() {
                         <span className="text-[rgb(var(--color-accent))]">
                           {aiTempoLabel.toLowerCase()}{' '}
                         </span>
-                        {selectedStyle.toLowerCase()}
+                        {selectedStyle?.toLowerCase()}
                         ?
                       </h3>
                     </div>
