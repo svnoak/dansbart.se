@@ -22,6 +22,8 @@ import { AuthProvider } from '@/auth/AuthContext';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { PlaylistsPage } from '@/pages/PlaylistsPage';
 import { PlaylistPage } from '@/pages/PlaylistPage';
+import { PlaylistSettingsPage } from '@/pages/PlaylistSettingsPage';
+import { SharedPlaylistPage } from '@/pages/SharedPlaylistPage';
 import { AdminLayout } from '@/admin/layout/AdminLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { AdminLibraryPage } from '@/admin/pages/AdminLibraryPage';
@@ -75,6 +77,15 @@ export function App() {
                             </ProtectedRoute>
                           }
                         />
+                        <Route
+                          path="/playlists/:id/settings"
+                          element={
+                            <ProtectedRoute>
+                              <PlaylistSettingsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="/shared/:token" element={<SharedPlaylistPage />} />
                         <Route path="/about" element={<AboutPage />} />
                         <Route path="/feedback" element={<FeedbackPage />} />
                         <Route path="/terms" element={<TermsPage />} />

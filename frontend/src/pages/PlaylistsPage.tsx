@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getMyPlaylists1, createPlaylist } from '@/api/generated/playlists/playlists';
+import {
+  getMyPlaylists1,
+  createPlaylist,
+  getInvitations,
+  respondToInvitation,
+} from '@/api/generated/playlists/playlists';
 import type { Playlist } from '@/api/models/playlist';
+import type { InvitationDto } from '@/api/models/invitationDto';
 import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
 import { toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
@@ -19,22 +25,51 @@ export function PlaylistsPage() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [invitations, setInvitations] = useState<InvitationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    getMyPlaylists1({ signal: controller.signal })
-      .then(setPlaylists)
+    Promise.all([
+      getMyPlaylists1({ signal: controller.signal }),
+      getInvitations({ signal: controller.signal }),
+    ])
+      .then(([pls, invs]) => {
+        setPlaylists(pls);
+        setInvitations(invs);
+      })
       .catch(() => {
         if (controller.signal.aborted) return;
         setPlaylists([]);
+        setInvitations([]);
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, []);
+
+  async function handleRespond(invitationId: string, accept: boolean) {
+    setRespondingId(invitationId);
+    try {
+      await respondToInvitation(invitationId, { accept });
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+      if (accept) {
+        // Refresh playlist list so accepted playlist appears
+        const updated = await getMyPlaylists1();
+        setPlaylists(updated);
+        toast('Inbjudan accepterad');
+      } else {
+        toast('Inbjudan avböjd');
+      }
+    } catch {
+      toast('Kunde inte svara på inbjudan', 'error');
+    } finally {
+      setRespondingId(null);
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -98,6 +133,56 @@ export function PlaylistsPage() {
       )}
 
       {loading && <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>}
+
+      {/* Pending invitations */}
+      {!loading && invitations.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+            Inbjudningar
+          </h2>
+          <ul className="space-y-2">
+            {invitations.map((inv) => (
+              <li
+                key={inv.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                    {inv.playlistName ?? 'Okänd spellista'}
+                  </p>
+                  <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                    Inbjuden av {inv.invitedByDisplayName ?? inv.invitedByUserId}
+                    {inv.permission && (
+                      <span className="ml-1.5">
+                        &middot;{' '}
+                        {inv.permission === 'edit' ? 'Redaktör' : 'Visare'}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    disabled={respondingId === inv.id}
+                    onClick={() => handleRespond(inv.id!, true)}
+                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 hover:opacity-90"
+                  >
+                    Acceptera
+                  </button>
+                  <button
+                    type="button"
+                    disabled={respondingId === inv.id}
+                    onClick={() => handleRespond(inv.id!, false)}
+                    className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-xs text-[rgb(var(--color-text-muted))] disabled:opacity-50 hover:bg-[rgb(var(--color-border))]/50"
+                  >
+                    Avböj
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {!loading && playlists.length === 0 && (
         <p className="text-[rgb(var(--color-text-muted))]">Du har inga spellistor ännu.</p>

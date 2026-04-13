@@ -228,6 +228,11 @@ public class Tracks extends TableImpl<Record> {
      */
     public final TableField<Record, Boolean> IS_INSTRUMENTAL = createField(DSL.name("is_instrumental"), SQLDataType.BOOLEAN, this, "");
 
+    /**
+     * The column <code>public.tracks.is_danceable</code>.
+     */
+    public final TableField<Record, Boolean> IS_DANCEABLE = createField(DSL.name("is_danceable"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("true"), SQLDataType.BOOLEAN)), this, "");
+
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -297,7 +302,7 @@ public class Tracks extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
+        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
     }
 
     @Override

@@ -59,14 +59,18 @@ public class PlaylistService {
     @Transactional
     public Optional<Playlist> update(UUID playlistId, String userId, String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId))
+            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
             .map(playlist -> {
+                boolean isOwner = playlist.getUserId().equals(userId);
+                // Edit collaborators may only update name
                 if (name != null) playlist.setName(name);
-                if (description != null) playlist.setDescription(description);
-                if (isPublic != null) playlist.setIsPublic(isPublic);
-                if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
-                if (subStyle != null) playlist.setSubStyle(subStyle.isEmpty() ? null : subStyle);
-                if (tempoCategory != null) playlist.setTempoCategory(tempoCategory.isEmpty() ? null : tempoCategory);
+                if (isOwner) {
+                    if (description != null) playlist.setDescription(description);
+                    if (isPublic != null) playlist.setIsPublic(isPublic);
+                    if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
+                    if (subStyle != null) playlist.setSubStyle(subStyle.isEmpty() ? null : subStyle);
+                    if (tempoCategory != null) playlist.setTempoCategory(tempoCategory.isEmpty() ? null : tempoCategory);
+                }
                 playlist.setUpdatedAt(OffsetDateTime.now());
                 return playlistJooqRepository.update(playlist);
             });
@@ -169,14 +173,20 @@ public class PlaylistService {
                 .track(trackDto)
                 .build());
         }
-        List<UserSummaryDto> collaborators = collaboratorRepository.findByPlaylistId(playlist.getId()).stream()
-            .map(c -> c.getUser() != null ? UserSummaryDto.builder()
-                .id(c.getUser().getId())
-                .username(c.getUser().getUsername())
-                .displayName(c.getUser().getDisplayName())
-                .avatarUrl(c.getUser().getAvatarUrl())
-                .build() : null)
-            .filter(java.util.Objects::nonNull)
+        List<CollaboratorDto> collaborators = collaboratorRepository.findByPlaylistId(playlist.getId()).stream()
+            .map(c -> {
+                var user = c.getUser();
+                return CollaboratorDto.builder()
+                    .id(c.getId())
+                    .userId(c.getUserId())
+                    .username(user != null ? user.getUsername() : null)
+                    .displayName(user != null ? user.getDisplayName() : null)
+                    .permission(c.getPermission())
+                    .status(c.getStatus())
+                    .invitedAt(c.getInvitedAt())
+                    .acceptedAt(c.getAcceptedAt())
+                    .build();
+            })
             .collect(Collectors.toList());
         return PlaylistDto.builder()
             .id(playlist.getId())
@@ -316,9 +326,56 @@ public class PlaylistService {
     @Transactional
     public Optional<Playlist> generateShareToken(UUID playlistId, String userId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId))
+            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
             .map(playlist -> {
                 playlist.setShareToken(UUID.randomUUID().toString());
+                playlist.setUpdatedAt(OffsetDateTime.now());
+                return playlistJooqRepository.update(playlist);
+            });
+    }
+
+    @Transactional
+    public boolean invalidateShareToken(UUID playlistId, String userId) {
+        return playlistJooqRepository.findById(playlistId)
+            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
+            .map(playlist -> {
+                playlist.setShareToken(null);
+                playlist.setUpdatedAt(OffsetDateTime.now());
+                playlistJooqRepository.update(playlist);
+                return true;
+            })
+            .orElse(false);
+    }
+
+    @Transactional
+    public Optional<Playlist> transferOwnership(UUID playlistId, String userId, String newOwnerId) {
+        return playlistJooqRepository.findById(playlistId)
+            .filter(p -> p.getUserId().equals(userId))
+            .filter(p -> !newOwnerId.equals(userId))
+            .map(playlist -> {
+                // Add former owner as edit collaborator if not already a collaborator
+                if (collaboratorRepository.findByPlaylistIdAndUserId(playlistId, userId).isEmpty()) {
+                    PlaylistCollaborator formerOwnerCollab = PlaylistCollaborator.builder()
+                        .playlistId(playlistId)
+                        .userId(userId)
+                        .permission("edit")
+                        .status("accepted")
+                        .invitedBy(userId)
+                        .build();
+                    collaboratorRepository.save(formerOwnerCollab);
+                } else {
+                    collaboratorRepository.findByPlaylistIdAndUserId(playlistId, userId)
+                        .ifPresent(c -> {
+                            c.setPermission("edit");
+                            c.setStatus("accepted");
+                            collaboratorRepository.save(c);
+                        });
+                }
+                // Remove new owner from collaborators if they are one
+                collaboratorRepository.findByPlaylistIdAndUserId(playlistId, newOwnerId)
+                    .ifPresent(collaboratorRepository::delete);
+                // Transfer ownership
+                playlist.setUserId(newOwnerId);
                 playlist.setUpdatedAt(OffsetDateTime.now());
                 return playlistJooqRepository.update(playlist);
             });

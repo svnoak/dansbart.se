@@ -82,6 +82,7 @@ public class Indexes {
     public static final Index IX_TRACK_PLAYBACKS_TRACK_ID = Internal.createIndex(DSL.name("ix_track_playbacks_track_id"), TrackPlaybacks.TRACK_PLAYBACKS, new OrderField[] { TrackPlaybacks.TRACK_PLAYBACKS.TRACK_ID }, false);
     public static final Index IX_TRACK_STYLE_VOTES_VOTER_ID = Internal.createIndex(DSL.name("ix_track_style_votes_voter_id"), TrackStyleVotes.TRACK_STYLE_VOTES, new OrderField[] { TrackStyleVotes.TRACK_STYLE_VOTES.VOTER_ID }, false);
     public static final Index IX_TRACKS_ANALYSIS_VERSION = Internal.createIndex(DSL.name("ix_tracks_analysis_version"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.ANALYSIS_VERSION }, false);
+    public static final Index IX_TRACKS_IS_DANCEABLE = Internal.createIndex(DSL.name("ix_tracks_is_danceable"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.IS_DANCEABLE }, false);
     public static final Index IX_TRACKS_IS_FLAGGED = Internal.createIndex(DSL.name("ix_tracks_is_flagged"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.IS_FLAGGED }, false);
     public static final Index IX_TRACKS_MUSIC_GENRE = Internal.createIndex(DSL.name("ix_tracks_music_genre"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.MUSIC_GENRE }, false);
     public static final Index IX_TRACKS_TITLE = Internal.createIndex(DSL.name("ix_tracks_title"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.TITLE }, false);

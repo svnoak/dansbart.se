@@ -1,20 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
 import { Button } from '@/ui';
 import { LibraryIcon, PlaylistIcon } from '@/icons';
+import { getInvitations } from '@/api/generated/playlists/playlists';
 
 function NavLink({
   to,
   active,
   icon,
+  badge,
   onClick,
   children,
 }: {
   to: string;
   active: boolean;
   icon?: React.ReactNode | null;
+  badge?: number;
   onClick?: () => void;
   children: string;
 }) {
@@ -35,7 +38,12 @@ function NavLink({
           {icon}
         </span>
       )}
-      {children}
+      <span className="flex-1">{children}</span>
+      {badge != null && badge > 0 && (
+        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1 text-[10px] font-bold text-white">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
@@ -44,6 +52,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { consentStatus, openCookieSettings } = useConsent();
   const { isAuthenticated } = useAuth();
+  const [invitationCount, setInvitationCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    getInvitations()
+      .then((invitations) => { if (!cancelled) setInvitationCount(invitations.length); })
+      .catch(() => { if (!cancelled) setInvitationCount(0); });
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
   const isSearch = location.pathname === '/search';
   const isHome = location.pathname === '/';
   const isPlaylists = location.pathname.startsWith('/playlists');
@@ -90,6 +108,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           active={isPlaylists}
           onClick={onNavigate}
           icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
+          badge={invitationCount}
         >
           Spellistor
         </NavLink>

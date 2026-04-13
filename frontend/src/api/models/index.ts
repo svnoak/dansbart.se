@@ -183,6 +183,7 @@ export * from './trackPlayback';
 export * from './trackStructureVersion';
 export * from './trackStructureVersionStructureData';
 export * from './trackStyleVote';
+export * from './transferOwnershipRequest';
 export * from './triggerAnalysis200';
 export * from './triggerBackfill200';
 export * from './triggerCrawl200';

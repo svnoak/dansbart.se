@@ -4,6 +4,7 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { CollaboratorDto } from './collaboratorDto';
 import type { PlaylistTrackDto } from './playlistTrackDto';
 import type { UserSummaryDto } from './userSummaryDto';
 
@@ -21,5 +22,5 @@ export interface PlaylistDto {
   owner?: UserSummaryDto;
   trackCount?: number;
   tracks?: PlaylistTrackDto[];
-  collaborators?: UserSummaryDto[];
+  collaborators?: CollaboratorDto[];
 }
