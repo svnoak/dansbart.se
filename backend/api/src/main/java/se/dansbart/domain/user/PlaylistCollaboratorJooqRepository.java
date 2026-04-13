@@ -25,14 +25,14 @@ public class PlaylistCollaboratorJooqRepository {
             .fetchOptional(this::toCollaborator);
     }
 
-    public Optional<PlaylistCollaborator> findByPlaylistIdAndUserId(UUID playlistId, String userId) {
+    public Optional<PlaylistCollaborator> findByPlaylistIdAndUserId(UUID playlistId, UUID userId) {
         return dsl.selectFrom(PLAYLIST_COLLABORATORS)
             .where(PLAYLIST_COLLABORATORS.PLAYLIST_ID.eq(playlistId)
                 .and(PLAYLIST_COLLABORATORS.USER_ID.eq(userId)))
             .fetchOptional(this::toCollaborator);
     }
 
-    public boolean existsByPlaylistIdAndUserIdAndPermission(UUID playlistId, String userId, String permission) {
+    public boolean existsByPlaylistIdAndUserIdAndPermission(UUID playlistId, UUID userId, String permission) {
         return dsl.fetchExists(
             dsl.selectOne()
                 .from(PLAYLIST_COLLABORATORS)
@@ -48,7 +48,7 @@ public class PlaylistCollaboratorJooqRepository {
             .fetch(this::toCollaborator);
     }
 
-    public List<PlaylistCollaborator> findByUserIdAndStatus(String userId, String status) {
+    public List<PlaylistCollaborator> findByUserIdAndStatus(UUID userId, String status) {
         return dsl.selectFrom(PLAYLIST_COLLABORATORS)
             .where(PLAYLIST_COLLABORATORS.USER_ID.eq(userId)
                 .and(PLAYLIST_COLLABORATORS.STATUS.eq(status)))
@@ -119,4 +119,3 @@ public class PlaylistCollaboratorJooqRepository {
         return collab;
     }
 }
-

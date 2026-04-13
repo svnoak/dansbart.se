@@ -68,11 +68,6 @@ public class Playlists extends TableImpl<Record> {
     public final TableField<Record, UUID> ID = createField(DSL.name("id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.playlists.user_id</code>.
-     */
-    public final TableField<Record, String> USER_ID = createField(DSL.name("user_id"), SQLDataType.VARCHAR(255).nullable(false), this, "");
-
-    /**
      * The column <code>public.playlists.name</code>.
      */
     public final TableField<Record, String> NAME = createField(DSL.name("name"), SQLDataType.VARCHAR.nullable(false), this, "");
@@ -116,6 +111,11 @@ public class Playlists extends TableImpl<Record> {
      * The column <code>public.playlists.sub_style</code>.
      */
     public final TableField<Record, String> SUB_STYLE = createField(DSL.name("sub_style"), SQLDataType.VARCHAR(100), this, "");
+
+    /**
+     * The column <code>public.playlists.user_id</code>.
+     */
+    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "");
 
     private Playlists(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

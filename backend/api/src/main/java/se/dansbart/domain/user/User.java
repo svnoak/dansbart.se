@@ -6,6 +6,7 @@ import se.dansbart.domain.playlist.Playlist;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -14,7 +15,8 @@ import java.util.List;
 @Builder
 public class User {
 
-    private String id;
+    private UUID id;
+    private String discourseId;
     private String username;
     private String displayName;
     private String avatarUrl;

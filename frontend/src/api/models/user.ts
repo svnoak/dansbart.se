@@ -9,6 +9,7 @@ import type { PlaylistCollaborator } from './playlistCollaborator';
 
 export interface User {
   id?: string;
+  discourseId?: string;
   username?: string;
   displayName?: string;
   avatarUrl?: string;

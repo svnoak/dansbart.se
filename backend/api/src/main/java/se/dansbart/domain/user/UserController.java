@@ -12,6 +12,7 @@ import se.dansbart.dto.UserSummaryDto;
 import se.dansbart.mapper.UserMapper;
 
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.MediaType;
 
 @RestController
@@ -26,7 +27,7 @@ public class UserController {
 
     @GetMapping("/me")
     @Operation(summary = "Get current user profile")
-    public ResponseEntity<User> getCurrentUser(@AuthenticationPrincipal String userId) {
+    public ResponseEntity<User> getCurrentUser(@AuthenticationPrincipal UUID userId) {
         return userService.findById(userId)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -35,7 +36,7 @@ public class UserController {
     @PutMapping("/me")
     @Operation(summary = "Update current user profile")
     public ResponseEntity<User> updateProfile(
-            @AuthenticationPrincipal String userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestBody UpdateProfileRequest request) {
         return userService.updateProfile(userId, request.displayName(), request.avatarUrl())
             .map(ResponseEntity::ok)
@@ -44,19 +45,19 @@ public class UserController {
 
     @GetMapping("/me/playlists")
     @Operation(summary = "Get current user's playlists")
-    public ResponseEntity<List<Playlist>> getMyPlaylists(@AuthenticationPrincipal String userId) {
+    public ResponseEntity<List<Playlist>> getMyPlaylists(@AuthenticationPrincipal UUID userId) {
         return ResponseEntity.ok(playlistService.findByUserId(userId));
     }
 
     @GetMapping("/me/shared-playlists")
     @Operation(summary = "Get playlists shared with current user")
-    public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal String userId) {
+    public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal UUID userId) {
         return ResponseEntity.ok(playlistService.findSharedWithUser(userId));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get user by ID (public profile)")
-    public ResponseEntity<UserPublicProfile> getUserById(@PathVariable String id) {
+    public ResponseEntity<UserPublicProfile> getUserById(@PathVariable UUID id) {
         return userService.findById(id)
             .map(user -> new UserPublicProfile(user.getId(), user.getDisplayName(), user.getAvatarUrl()))
             .map(ResponseEntity::ok)
@@ -76,7 +77,7 @@ public class UserController {
     @Operation(summary = "Check if a username is available (case-insensitive)")
     public ResponseEntity<UsernameAvailability> checkUsernameAvailability(
             @RequestParam String username,
-            @AuthenticationPrincipal String userId) {
+            @AuthenticationPrincipal UUID userId) {
         if (username.length() < 3 || username.length() > 50) {
             return ResponseEntity.ok(new UsernameAvailability(false, username));
         }
@@ -86,7 +87,7 @@ public class UserController {
 
     public record UpdateProfileRequest(String displayName, String avatarUrl) {}
 
-    public record UserPublicProfile(String id, String displayName, String avatarUrl) {}
+    public record UserPublicProfile(UUID id, String displayName, String avatarUrl) {}
 
     public record UsernameAvailability(boolean available, String username) {}
 }

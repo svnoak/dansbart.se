@@ -13,7 +13,7 @@ import java.util.UUID;
 public class CollaboratorDto {
 
     private UUID id;
-    private String userId;
+    private UUID userId;
     private String username;
     private String displayName;
     private String permission;

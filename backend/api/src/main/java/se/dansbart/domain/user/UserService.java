@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -16,7 +17,7 @@ public class UserService {
     private final UserJooqRepository userJooqRepository;
 
     @Transactional(readOnly = true)
-    public Optional<User> findById(String id) {
+    public Optional<User> findById(UUID id) {
         return userJooqRepository.findById(id);
     }
 
@@ -26,16 +27,24 @@ public class UserService {
     }
 
     @Transactional
-    public User findOrCreate(String id, String username, String displayName) {
-        return userJooqRepository.findById(id)
+    public User findOrCreate(String discourseId, String username, String displayName) {
+        return userJooqRepository.findByDiscourseId(discourseId)
             .map(user -> {
+                // Only update username if it changed and the new name is not taken by someone else
+                if (!user.getUsername().equalsIgnoreCase(username)) {
+                    long conflicts = userJooqRepository.countByUsernameCaseInsensitiveExcluding(username, user.getId());
+                    if (conflicts == 0) {
+                        user.setUsername(username);
+                    }
+                }
+                user.setDisplayName(displayName);
                 user.setLastLoginAt(OffsetDateTime.now());
                 return userJooqRepository.update(user);
             })
             .orElseGet(() -> {
                 String role = userJooqRepository.countAll() == 0 ? "ADMIN" : "USER";
                 User newUser = User.builder()
-                    .id(id)
+                    .discourseId(discourseId)
                     .username(username)
                     .displayName(displayName)
                     .role(role)
@@ -46,7 +55,7 @@ public class UserService {
     }
 
     @Transactional
-    public Optional<User> updateProfile(String userId, String displayName, String avatarUrl) {
+    public Optional<User> updateProfile(UUID userId, String displayName, String avatarUrl) {
         return userJooqRepository.findById(userId)
             .map(user -> {
                 if (displayName != null) user.setDisplayName(displayName);
@@ -65,7 +74,7 @@ public class UserService {
      * Optionally excludes a specific user ID from the check.
      */
     @Transactional(readOnly = true)
-    public boolean isUsernameAvailable(String username, String excludeUserId) {
+    public boolean isUsernameAvailable(String username, UUID excludeUserId) {
         if (excludeUserId != null) {
             return userJooqRepository.countByUsernameCaseInsensitiveExcluding(username, excludeUserId) == 0;
         }
@@ -78,7 +87,7 @@ public class UserService {
     }
 
     @Transactional
-    public void setRole(String userId, String role) {
+    public void setRole(UUID userId, String role) {
         userJooqRepository.updateRole(userId, role);
     }
 }

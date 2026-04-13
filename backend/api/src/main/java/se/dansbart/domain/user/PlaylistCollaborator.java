@@ -15,7 +15,7 @@ public class PlaylistCollaborator {
 
     private UUID id;
     private UUID playlistId;
-    private String userId;
+    private UUID userId;
 
     @Builder.Default
     private String permission = "view";
@@ -23,7 +23,7 @@ public class PlaylistCollaborator {
     @Builder.Default
     private String status = "pending";
 
-    private String invitedBy;
+    private UUID invitedBy;
     private OffsetDateTime invitedAt;
     private OffsetDateTime acceptedAt;
 

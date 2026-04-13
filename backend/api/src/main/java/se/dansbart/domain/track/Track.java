@@ -73,7 +73,7 @@ public class Track {
     private String flagReason;
 
     // User Upload
-    private String uploaderId;
+    private UUID uploaderId;
 
     @JsonIgnore
     private User uploader;

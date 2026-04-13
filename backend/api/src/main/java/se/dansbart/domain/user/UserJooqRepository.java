@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.jooq.impl.DSL.lower;
 import static se.dansbart.jooq.Tables.USERS;
@@ -22,8 +23,12 @@ public class UserJooqRepository {
         this.dsl = dsl;
     }
 
-    public Optional<User> findById(String id) {
+    public Optional<User> findById(UUID id) {
         return dsl.selectFrom(USERS).where(USERS.ID.eq(id)).fetchOptional().map(this::toUser);
+    }
+
+    public Optional<User> findByDiscourseId(String discourseId) {
+        return dsl.selectFrom(USERS).where(USERS.DISCOURSE_ID.eq(discourseId)).fetchOptional().map(this::toUser);
     }
 
     public Optional<User> findByUsername(String username) {
@@ -45,7 +50,7 @@ public class UserJooqRepository {
         return dsl.fetchCount(dsl.selectFrom(USERS).where(lower(USERS.USERNAME).eq(username.toLowerCase())));
     }
 
-    public long countByUsernameCaseInsensitiveExcluding(String username, String excludeUserId) {
+    public long countByUsernameCaseInsensitiveExcluding(String username, UUID excludeUserId) {
         if (username == null || username.isBlank()) return 0;
         return dsl.fetchCount(
             dsl.selectFrom(USERS)
@@ -55,10 +60,12 @@ public class UserJooqRepository {
     }
 
     public User insert(User user) {
+        UUID id = user.getId() != null ? user.getId() : UUID.randomUUID();
         dsl.insertInto(USERS)
-            .columns(USERS.ID, USERS.USERNAME, USERS.DISPLAY_NAME, USERS.AVATAR_URL, USERS.LAST_LOGIN_AT, USERS.ROLE)
-            .values(user.getId(), user.getUsername(), user.getDisplayName(), user.getAvatarUrl(), user.getLastLoginAt(), user.getRole())
+            .columns(USERS.ID, USERS.DISCOURSE_ID, USERS.USERNAME, USERS.DISPLAY_NAME, USERS.AVATAR_URL, USERS.LAST_LOGIN_AT, USERS.ROLE)
+            .values(id, user.getDiscourseId(), user.getUsername(), user.getDisplayName(), user.getAvatarUrl(), user.getLastLoginAt(), user.getRole())
             .execute();
+        user.setId(id);
         return user;
     }
 
@@ -73,7 +80,7 @@ public class UserJooqRepository {
         return user;
     }
 
-    public String findRoleById(String id) {
+    public String findRoleById(UUID id) {
         return dsl.select(USERS.ROLE)
             .from(USERS)
             .where(USERS.ID.eq(id))
@@ -81,7 +88,7 @@ public class UserJooqRepository {
             .orElse("USER");
     }
 
-    public void updateRole(String id, String role) {
+    public void updateRole(UUID id, String role) {
         dsl.update(USERS)
             .set(USERS.ROLE, role)
             .where(USERS.ID.eq(id))
@@ -106,6 +113,7 @@ public class UserJooqRepository {
 
         return User.builder()
             .id(r.get(USERS.ID))
+            .discourseId(r.get(USERS.DISCOURSE_ID))
             .username(r.get(USERS.USERNAME))
             .displayName(r.get(USERS.DISPLAY_NAME))
             .avatarUrl(r.get(USERS.AVATAR_URL))

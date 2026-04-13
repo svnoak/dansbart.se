@@ -87,6 +87,7 @@ public class Keys {
     public static final UniqueKey<Record> TRACK_STYLE_VOTES_PKEY = Internal.createUniqueKey(TrackStyleVotes.TRACK_STYLE_VOTES, DSL.name("track_style_votes_pkey"), new TableField[] { TrackStyleVotes.TRACK_STYLE_VOTES.ID }, true);
     public static final UniqueKey<Record> TRACKS_PKEY = Internal.createUniqueKey(Tracks.TRACKS, DSL.name("tracks_pkey"), new TableField[] { Tracks.TRACKS.ID }, true);
     public static final UniqueKey<Record> USER_INTERACTIONS_PKEY = Internal.createUniqueKey(UserInteractions.USER_INTERACTIONS, DSL.name("user_interactions_pkey"), new TableField[] { UserInteractions.USER_INTERACTIONS.ID }, true);
+    public static final UniqueKey<Record> USERS_DISCOURSE_ID_KEY = Internal.createUniqueKey(Users.USERS, DSL.name("users_discourse_id_key"), new TableField[] { Users.USERS.DISCOURSE_ID }, true);
     public static final UniqueKey<Record> USERS_PKEY = Internal.createUniqueKey(Users.USERS, DSL.name("users_pkey"), new TableField[] { Users.USERS.ID }, true);
     public static final UniqueKey<Record> VISITOR_SESSIONS_PKEY = Internal.createUniqueKey(VisitorSessions.VISITOR_SESSIONS, DSL.name("visitor_sessions_pkey"), new TableField[] { VisitorSessions.VISITOR_SESSIONS.ID }, true);
 
