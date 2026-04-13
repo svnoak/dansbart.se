@@ -258,55 +258,57 @@ export function AdminStatsPage() {
       </div>
 
       {/* Listen time */}
-      {(totalHours > 0 || totalMinutesListened > 0) && (
-        <div>
-          <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Lyssning — senaste {days} dagar</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div>
+        <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Lyssning — senaste {days} dagar</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Total lyssnad tid"
+            value={totalHours > 0 ? `${totalHours} h` : totalMinutesListened > 0 ? `${totalMinutesListened} min` : '0 min'}
+          />
+          {platforms.map((p) => (
             <StatCard
-              label="Total lyssnad tid"
-              value={totalHours > 0 ? `${totalHours} h` : `${totalMinutesListened} min`}
+              key={p.platform}
+              label={p.platform === 'youtube' ? 'YouTube-spelningar' : p.platform === 'spotify' ? 'Spotify-spelningar' : `${p.platform}-spelningar`}
+              value={p.playCount}
+              sub={formatMinutes(p.totalDuration)}
             />
-            {platforms.map((p) => (
-              <StatCard
-                key={p.platform}
-                label={p.platform === 'youtube' ? 'YouTube-spelningar' : p.platform === 'spotify' ? 'Spotify-spelningar' : `${p.platform}-spelningar`}
-                value={p.playCount}
-                sub={formatMinutes(p.totalDuration)}
-              />
-            ))}
-          </div>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Most played tracks */}
-      {mostPlayed.length > 0 && (
-        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-            Mest spelade spår — senaste {days} dagar
-          </h2>
-          <div className="space-y-2">
-            {mostPlayed.map((t, i) => (
-              <div key={t.trackId} className="flex items-center gap-3">
-                <span className="w-5 shrink-0 text-right text-xs text-[rgb(var(--color-text-muted))]">{i + 1}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-[rgb(var(--color-text))]">{t.title}</p>
-                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
-                    <div
-                      className="h-full rounded-full bg-[rgb(var(--color-accent))]"
-                      style={{ width: `${Math.min(100, t.completionRate)}%` }}
-                    />
+      <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+        <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
+          Mest spelade spår — senaste {days} dagar
+        </h2>
+        {mostPlayed.length === 0 ? (
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga spelningar registrerade ännu.</p>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {mostPlayed.map((t, i) => (
+                <div key={t.trackId} className="flex items-center gap-3">
+                  <span className="w-5 shrink-0 text-right text-xs text-[rgb(var(--color-text-muted))]">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-[rgb(var(--color-text))]">{t.title}</p>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
+                      <div
+                        className="h-full rounded-full bg-[rgb(var(--color-accent))]"
+                        style={{ width: `${Math.min(100, t.completionRate)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs font-medium text-[rgb(var(--color-text))]">{t.playCount} spelningar</p>
+                    <p className="text-[10px] text-[rgb(var(--color-text-muted))]">{formatMinutes(t.totalDurationSeconds)} totalt</p>
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-xs font-medium text-[rgb(var(--color-text))]">{t.playCount} spelningar</p>
-                  <p className="text-[10px] text-[rgb(var(--color-text-muted))]">{formatMinutes(t.totalDurationSeconds)} totalt</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 text-[10px] text-[rgb(var(--color-text-muted))]">Stapeln visar genomföringsgrad</p>
-        </div>
-      )}
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-[rgb(var(--color-text-muted))]">Stapeln visar genomföringsgrad</p>
+          </>
+        )}
+      </div>
 
       {/* Visitor chart — hourly when days=1, daily otherwise */}
       <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">

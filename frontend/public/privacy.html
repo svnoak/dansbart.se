@@ -16,7 +16,7 @@
           ← Tillbaka till Dansbart.se
         </a>
         <h1 class="text-4xl font-bold text-gray-900 mb-2">Integritetspolicy</h1>
-        <p class="text-gray-600">Senast uppdaterad: 12 april 2026</p>
+        <p class="text-gray-600">Senast uppdaterad: 13 april 2026</p>
       </header>
 
       <main class="prose prose-lg max-w-none">
@@ -67,14 +67,9 @@
               undvika upprepad feedback på samma låt - <strong>skickas aldrig till servern</strong>
             </li>
             <li>
-              <code class="bg-gray-100 px-2 py-1 rounded text-sm">analytics_session_id</code> -
+              <code class="bg-gray-100 px-2 py-1 rounded text-sm">dansbart_voter_id_v1</code> -
               Slumpmässigt genererat sessions-ID - <strong>skickas till servern</strong> för att
               identifiera återkommande besökare i statistiksyfte
-            </li>
-            <li>
-              <code class="bg-gray-100 px-2 py-1 rounded text-sm">analytics_returning_visitor</code>
-              - Flagga som indikerar om du är en återkommande besökare -
-              <strong>används endast lokalt</strong>
             </li>
           </ul>
           <p class="text-gray-700 mb-4">
@@ -114,16 +109,17 @@
             <li>
               <strong>Sessionsdata:</strong> Slumpmässigt genererat sessions-ID (lagrat lokalt i din
               webbläsare), tidsstämplar för första och senaste besök, antal sidvisningar,
-              användar-agent (webbläsare och enhet)
+              användar-agent (webbläsare och enhet). För inloggade användare kopplas sessionen till
+              ditt interna användar-ID.
             </li>
             <li>
               <strong>Uppspelningsstatistik:</strong> Vilka låtar som spelades, vilken plattform
-              (YouTube/Spotify), hur länge du lyssnade, om du lyssnade färdigt (>30 sekunder)
+              (YouTube/Spotify), hur länge du lyssnade, om du lyssnade färdigt
             </li>
             <li>
-              <strong>Interaktionsdata:</strong> När du ser eller interagerar med
-              feedback-förfrågningar, när du öppnar eller stänger modaler, vilken typ av rapporter
-              du skickar in
+              <strong>Interaktionsdata:</strong> Användning av Musikdomaren (klassificeringsverktyget)
+              och SmartNudge-feedback — t.ex. om en session startades, antal röster, och om
+              feedback slutfördes eller avbröts
             </li>
             <li>
               <strong>Besöksmönster:</strong> Tidpunkt för besök (timme på dygnet, datum) för att
@@ -149,16 +145,19 @@
                 Facebook Pixel eller andra externa analytics-tjänster
               </li>
               <li>
-                <strong>Anonymiserat:</strong> All data är anonym och kan inte kopplas till en
-                specifik person
+                <strong>Anonyma besökare:</strong> Data kan inte kopplas till en specifik person
+              </li>
+              <li>
+                <strong>Inloggade användare:</strong> Analytics-data kopplas till ditt användar-ID
+                för att kunna särskilja inloggade från anonyma besökare i statistiken. Rättslig
+                grund: berättigat intresse (GDPR Artikel 6.1f)
               </li>
             </ul>
           </div>
           <p class="text-gray-700 mb-4">
             Sessions-ID:t används för att identifiera om du är en återkommande besökare (för
-            statistik), men det kan inte användas för att identifiera dig personligen. Om du rensar
-            webbläsarens localStorage eller använder privat surfläge kommer ett nytt sessions-ID att
-            genereras.
+            statistik). Om du rensar webbläsarens localStorage eller använder privat surfläge
+            kommer ett nytt sessions-ID att genereras.
           </p>
 
           <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">4. Tredjepartscookies</h3>
@@ -227,7 +226,10 @@
           </ul>
           <p class="text-gray-700 mb-4">
             All feedback och analytics-data används för att förbättra tjänsten för alla användare.
-            Vi bygger ingen personlig profil av dig och all data är anonym och aggregerad.
+            Vi bygger ingen personlig profil av dig. För anonyma besökare är all data helt frikopplad
+            från din identitet. För inloggade användare kopplas viss statistik (besökssessioner) till
+            ditt användar-ID — detta används enbart för att särskilja inloggade från anonyma
+            besökare i aggregerad statistik.
           </p>
         </section>
 
@@ -249,11 +251,12 @@
             </li>
           </ul>
           <p class="text-gray-700 mb-4">
-            Eftersom all feedback och analytics-data är anonym och inte kan kopplas till individer,
-            bedömer vi att vårt berättigade intresse att förbättra tjänsten väger tyngre än
-            eventuella integritetsrisker. Vi har genomfört en intresseavvägning enligt GDPR och
-            bedömer att den anonyma karaktären av databehandlingen innebär minimal risk för den
-            registrerades rättigheter och friheter.
+            För anonym feedback och analytics bedömer vi att vårt berättigade intresse att förbättra
+            tjänsten väger tyngre än eventuella integritetsrisker, då data inte kan kopplas till en
+            identifierad person. För inloggade användares sessions-koppling bedömer vi likaså att
+            berättigat intresse är tillämpligt — kopplingen används enbart för att producera
+            aggregerad statistik (andel inloggade vs anonyma besökare) och innebär ingen
+            profilering eller spårning i marknadsföringssyfte.
           </p>
         </section>
 
