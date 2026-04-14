@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
+import { getVoterId } from '@/utils/voter';
 import { useSearchParams } from 'react-router-dom';
 import { getTracks } from '@/api/generated/tracks/tracks';
 import { searchArtists, getArtists } from '@/api/generated/artists/artists';
@@ -20,6 +22,7 @@ import { TrackRow, ArtistCard, AlbumCard } from '@/components';
 const PAGE_SIZE = 20;
 
 export function SearchPage() {
+  useAnalyticsFlag('search');
   const [searchParams] = useSearchParams();
   const { filters, setFilters, toTracksParams } = useSearchParamsState();
 
@@ -46,6 +49,34 @@ export function SearchPage() {
   );
   const applyDraft = useCallback(() => {
     setFilters({ ...draftFilters, offset: 0 });
+    // Track filter shape — no text query stored
+    const activeFilters = [
+      draftFilters.style,
+      draftFilters.subStyle,
+      draftFilters.source,
+      draftFilters.vocals,
+      draftFilters.confirmed,
+      draftFilters.tempoEnabled,
+      draftFilters.bouncinessEnabled,
+      draftFilters.articulationEnabled,
+    ].filter(Boolean).length;
+    fetch('/api/analytics/interaction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'search',
+        sessionId: getVoterId(),
+        eventData: {
+          style: draftFilters.style || null,
+          hasQuery: Boolean(draftFilters.q),
+          hasTempoFilter: draftFilters.tempoEnabled ?? false,
+          hasDurationFilter: draftFilters.minDuration != null || draftFilters.maxDuration != null,
+          hasBouncinessFilter: draftFilters.bouncinessEnabled ?? false,
+          hasArticulationFilter: draftFilters.articulationEnabled ?? false,
+          filterCount: activeFilters,
+        },
+      }),
+    }).catch(() => {});
   }, [draftFilters, setFilters]);
 
   const [styleOverview, setStyleOverview] = useState<StyleOverviewDto[] | null>(null);

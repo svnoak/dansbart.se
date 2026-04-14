@@ -12,11 +12,8 @@ import java.util.UUID;
 
 import org.jooq.Condition;
 import org.jooq.Field;
-import org.jooq.ForeignKey;
 import org.jooq.Index;
-import org.jooq.InverseForeignKey;
 import org.jooq.Name;
-import org.jooq.Path;
 import org.jooq.PlainSQL;
 import org.jooq.QueryPart;
 import org.jooq.Record;
@@ -35,7 +32,6 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
-import se.dansbart.jooq.tables.Users.UsersPath;
 
 
 /**
@@ -95,9 +91,34 @@ public class VisitorSessions extends TableImpl<Record> {
     public final TableField<Record, Integer> PAGE_VIEWS = createField(DSL.name("page_views"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.INTEGER)), this, "");
 
     /**
-     * The column <code>public.visitor_sessions.user_id</code>.
+     * The column <code>public.visitor_sessions.is_authenticated</code>.
      */
-    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID, this, "");
+    public final TableField<Record, Boolean> IS_AUTHENTICATED = createField(DSL.name("is_authenticated"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.device_type</code>.
+     */
+    public final TableField<Record, String> DEVICE_TYPE = createField(DSL.name("device_type"), SQLDataType.VARCHAR(20), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_search</code>.
+     */
+    public final TableField<Record, Boolean> USED_SEARCH = createField(DSL.name("used_search"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_playlists</code>.
+     */
+    public final TableField<Record, Boolean> USED_PLAYLISTS = createField(DSL.name("used_playlists"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_library</code>.
+     */
+    public final TableField<Record, Boolean> USED_LIBRARY = createField(DSL.name("used_library"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_discovery</code>.
+     */
+    public final TableField<Record, Boolean> USED_DISCOVERY = createField(DSL.name("used_discovery"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
     private VisitorSessions(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -128,39 +149,6 @@ public class VisitorSessions extends TableImpl<Record> {
         this(DSL.name("visitor_sessions"), null);
     }
 
-    public <O extends Record> VisitorSessions(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
-        super(path, childPath, parentPath, VISITOR_SESSIONS);
-    }
-
-    /**
-     * A subtype implementing {@link Path} for simplified path-based joins.
-     */
-    public static class VisitorSessionsPath extends VisitorSessions implements Path<Record> {
-
-        private static final long serialVersionUID = 1L;
-        public <O extends Record> VisitorSessionsPath(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
-            super(path, childPath, parentPath);
-        }
-        private VisitorSessionsPath(Name alias, Table<Record> aliased) {
-            super(alias, aliased);
-        }
-
-        @Override
-        public VisitorSessionsPath as(String alias) {
-            return new VisitorSessionsPath(DSL.name(alias), this);
-        }
-
-        @Override
-        public VisitorSessionsPath as(Name alias) {
-            return new VisitorSessionsPath(alias, this);
-        }
-
-        @Override
-        public VisitorSessionsPath as(Table<?> alias) {
-            return new VisitorSessionsPath(alias.getQualifiedName(), this);
-        }
-    }
-
     @Override
     public Schema getSchema() {
         return aliased() ? null : Public.PUBLIC;
@@ -174,23 +162,6 @@ public class VisitorSessions extends TableImpl<Record> {
     @Override
     public UniqueKey<Record> getPrimaryKey() {
         return Keys.VISITOR_SESSIONS_PKEY;
-    }
-
-    @Override
-    public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.VISITOR_SESSIONS__VISITOR_SESSIONS_USER_ID_FKEY);
-    }
-
-    private transient UsersPath _users;
-
-    /**
-     * Get the implicit join path to the <code>public.users</code> table.
-     */
-    public UsersPath users() {
-        if (_users == null)
-            _users = new UsersPath(this, Keys.VISITOR_SESSIONS__VISITOR_SESSIONS_USER_ID_FKEY, null);
-
-        return _users;
     }
 
     @Override

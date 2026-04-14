@@ -14,15 +14,27 @@ import { Select } from '@/admin/components/forms/Select';
 interface DayData {
   date: string;
   total: number;
-  loggedIn: number;
+  authenticated: number;
   anonymous: number;
 }
 
 interface HourData {
   hour: number;
   total: number;
-  loggedIn: number;
+  authenticated: number;
   anonymous: number;
+}
+
+interface BehavioralFlags {
+  usedSearch: number;
+  usedPlaylists: number;
+  usedLibrary: number;
+  usedDiscovery: number;
+}
+
+interface TopPath {
+  path: string;
+  total: number;
 }
 
 interface MostPlayedTrack {
@@ -72,12 +84,16 @@ export function AdminStatsPage() {
   const [listenTime, setListenTime] = useState<Record<string, unknown> | null>(null);
   const [nudgeEvents, setNudgeEvents] = useState<NudgeEvents>({});
   const [classifyEvents, setClassifyEvents] = useState<ClassifyEvents>({});
+  const [sessionDuration, setSessionDuration] = useState<Record<string, unknown> | null>(null);
+  const [behavioralFlags, setBehavioralFlags] = useState<{ totals: BehavioralFlags } | null>(null);
+  const [topPaths, setTopPaths] = useState<TopPath[]>([]);
+  const [searchStats, setSearchStats] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsRes, dashRes, dailyRes, hourlyRes, mostPlayedRes, platformRes, listenRes, nudgeRes, classifyRes] =
+      const [statsRes, dashRes, dailyRes, hourlyRes, mostPlayedRes, platformRes, listenRes, nudgeRes, classifyRes, durationRes, flagsRes, pathsRes, searchRes] =
         await Promise.all([
           getStats().catch(() => null),
           getDashboard({ days }).catch(() => null),
@@ -90,6 +106,18 @@ export function AdminStatsPage() {
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null),
           fetch(`/api/admin/analytics/classify?days=${days}`, { credentials: 'include' })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetch(`/api/admin/analytics/session-duration?days=${days}`, { credentials: 'include' })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetch(`/api/admin/analytics/behavioral-flags?days=${days}`, { credentials: 'include' })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetch(`/api/admin/analytics/top-paths?days=${days}&limit=15`, { credentials: 'include' })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+          fetch(`/api/admin/analytics/search-stats?days=${days}`, { credentials: 'include' })
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null),
         ]);
@@ -110,7 +138,7 @@ export function AdminStatsPage() {
         dailyFilled.push({
           date: key,
           total: entry ? Number(entry.total ?? 0) : 0,
-          loggedIn: entry ? Number(entry.loggedIn ?? 0) : 0,
+          authenticated: entry ? Number(entry.authenticated ?? 0) : 0,
           anonymous: entry ? Number(entry.anonymous ?? 0) : 0,
         });
       }
@@ -126,7 +154,7 @@ export function AdminStatsPage() {
           return {
             hour: h,
             total: entry ? Number(entry.total ?? 0) : 0,
-            loggedIn: entry ? Number(entry.loggedIn ?? 0) : 0,
+            authenticated: entry ? Number(entry.authenticated ?? 0) : 0,
             anonymous: entry ? Number(entry.anonymous ?? 0) : 0,
           };
         }),
@@ -161,6 +189,10 @@ export function AdminStatsPage() {
       setListenTime(listenRes as Record<string, unknown> | null);
       setNudgeEvents((nudgeRes as any)?.events ?? {});
       setClassifyEvents((classifyRes as any)?.events ?? {});
+      setSessionDuration(durationRes as Record<string, unknown> | null);
+      setBehavioralFlags((flagsRes as any)?.totals ? flagsRes : null);
+      setTopPaths(Array.isArray(pathsRes) ? pathsRes : []);
+      setSearchStats(searchRes as Record<string, unknown> | null);
     } finally {
       setLoading(false);
     }
@@ -181,13 +213,20 @@ export function AdminStatsPage() {
   // Visitor stats — nested under dashboard.visitors
   const visitors = (dashboard?.visitors as Record<string, unknown>) ?? {};
   const totalVisitors = (visitors.totalVisitors as number) ?? 0;
-  const loggedInVisitors = (visitors.loggedInVisitors as number) ?? 0;
+  const authenticatedVisitors = (visitors.authenticatedVisitors as number) ?? 0;
   const anonymousVisitors = (visitors.anonymousVisitors as number) ?? 0;
   const totalPageViews = (visitors.totalPageViews as number) ?? 0;
 
   // User and playlist counts from dashboard
   const mobileVisitors = (visitors.mobileVisitors as number) ?? 0;
   const desktopVisitors = (visitors.desktopVisitors as number) ?? 0;
+
+  const avgDurationSeconds = (sessionDuration?.avgDurationSeconds as number) ?? 0;
+  const avgDurationFormatted = avgDurationSeconds >= 60
+    ? `${Math.floor(avgDurationSeconds / 60)} min`
+    : `${avgDurationSeconds} sek`;
+
+  const behavioralTotals = behavioralFlags?.totals ?? { usedSearch: 0, usedPlaylists: 0, usedLibrary: 0, usedDiscovery: 0 };
 
   // User and playlist counts from dashboard
   const totalUsers = (dashboard?.totalUsers as number) ?? 0;
@@ -254,11 +293,12 @@ export function AdminStatsPage() {
         <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Besökare — senaste {days} dagar</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           <StatCard label="Unika besökare" value={totalVisitors} />
-          <StatCard label="Inloggade" value={loggedInVisitors} />
+          <StatCard label="Inloggade" value={authenticatedVisitors} />
           <StatCard label="Anonyma" value={anonymousVisitors} />
           <StatCard label="Mobila besökare" value={mobileVisitors} />
           <StatCard label="Datorbesökare" value={desktopVisitors} />
           <StatCard label="Sidvisningar" value={totalPageViews} />
+          <StatCard label="Snitt sessionslängd" value={avgDurationSeconds > 0 ? avgDurationFormatted : '–'} />
           <StatCard label="Registrerade användare" value={totalUsers} />
         </div>
       </div>
@@ -325,7 +365,7 @@ export function AdminStatsPage() {
           <div className="flex items-center gap-3 text-[10px] text-[rgb(var(--color-text-muted))]">
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]" />
-              Inloggade
+              Autentiserade
             </span>
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]/30" />
@@ -345,12 +385,12 @@ export function AdminStatsPage() {
                   >
                     {/* loggedIn on top, anonymous on bottom — flex-col fills proportionally */}
                     <div className="h-full w-full flex flex-col">
-                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: h.loggedIn }} />
+                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: h.authenticated }} />
                       <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: h.anonymous }} />
                     </div>
                     {h.total > 0 && (
                       <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
-                        {String(h.hour).padStart(2, '0')}:00 · {h.total} ({h.loggedIn} in / {h.anonymous} anon)
+                        {String(h.hour).padStart(2, '0')}:00 · {h.total} ({h.authenticated} inloggade / {h.anonymous} anonyma)
                       </span>
                     )}
                   </div>
@@ -375,12 +415,12 @@ export function AdminStatsPage() {
                     style={{ height: `${(d.total / maxDaily) * 100}%`, minHeight: d.total > 0 ? '2px' : '0' }}
                   >
                     <div className="h-full w-full flex flex-col">
-                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: d.loggedIn }} />
+                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: d.authenticated }} />
                       <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: d.anonymous }} />
                     </div>
                     {d.total > 0 && (
                       <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
-                        {d.date} · {d.total} ({d.loggedIn} in / {d.anonymous} anon)
+                        {d.date} · {d.total} ({d.authenticated} inloggade / {d.anonymous} anonyma)
                       </span>
                     )}
                   </div>
@@ -433,6 +473,134 @@ export function AdminStatsPage() {
               />
             </div>
           )}
+        </div>
+      )}
+
+      {/* Behavioral area usage */}
+      {totalVisitors > 0 && (
+        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
+            Funktionsanvändning — senaste {days} dagar
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {(
+              [
+                { label: 'Bibliotek', value: behavioralTotals.usedLibrary },
+                { label: 'Sök', value: behavioralTotals.usedSearch },
+                { label: 'Spellistor', value: behavioralTotals.usedPlaylists },
+                { label: 'Klassificering', value: behavioralTotals.usedDiscovery },
+              ] as const
+            ).map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-xs text-[rgb(var(--color-text-muted))] mb-1">{label}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold text-[rgb(var(--color-text))]">{value}</span>
+                  {totalVisitors > 0 && (
+                    <span className="text-xs text-[rgb(var(--color-text-muted))]">
+                      {Math.round((value / totalVisitors) * 100)}% av besök
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
+                  <div
+                    className="h-full rounded-full bg-[rgb(var(--color-accent))]"
+                    style={{ width: `${Math.min(100, (value / Math.max(1, totalVisitors)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Search stats */}
+      {(() => {
+        const sf = (searchStats?.filters as Record<string, number>) ?? {};
+        const total = sf.total ?? 0;
+        const topStyles = (searchStats?.topStyles as { style: string; count: number }[]) ?? [];
+        if (total === 0) return null;
+        const filters = [
+          { label: 'Textfråga',      value: sf.withQuery ?? 0 },
+          { label: 'Dansstil',       value: sf.withStyle ?? 0 },
+          { label: 'Tempo',          value: sf.withTempo ?? 0 },
+          { label: 'Längd',          value: sf.withDuration ?? 0 },
+          { label: 'Studsfull',      value: sf.withBounciness ?? 0 },
+          { label: 'Artikulation',   value: sf.withArticulation ?? 0 },
+        ];
+        return (
+          <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
+                Sökanvändning — senaste {days} dagar
+              </h2>
+              <span className="text-xs text-[rgb(var(--color-text-muted))]">{total} sökningar</span>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-2">Filtertyp</p>
+                <div className="space-y-2">
+                  {filters.map(({ label, value }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <span className="w-24 shrink-0 text-xs text-[rgb(var(--color-text-muted))]">{label}</span>
+                      <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
+                        <div
+                          className="h-full rounded-full bg-[rgb(var(--color-accent))]/70"
+                          style={{ width: `${Math.min(100, (value / Math.max(1, total)) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="w-16 shrink-0 text-right text-xs text-[rgb(var(--color-text))]">
+                        {value} ({Math.round((value / Math.max(1, total)) * 100)}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {topStyles.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-2">Mest sökta stilar</p>
+                  <div className="space-y-2">
+                    {topStyles.map(({ style, count }) => (
+                      <div key={style} className="flex items-center gap-2">
+                        <span className="w-24 shrink-0 truncate text-xs text-[rgb(var(--color-text-muted))]">{style}</span>
+                        <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
+                          <div
+                            className="h-full rounded-full bg-[rgb(var(--color-accent))]"
+                            style={{ width: `${Math.min(100, (count / Math.max(1, topStyles[0].count)) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="w-8 shrink-0 text-right text-xs font-medium text-[rgb(var(--color-text))]">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Top paths */}
+      {topPaths.length > 0 && (
+        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
+          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
+            Mest besökta sidor — senaste {days} dagar
+          </h2>
+          <div className="space-y-2">
+            {topPaths.map((p) => (
+              <div key={p.path} className="flex items-center gap-3">
+                <code className="min-w-0 flex-1 truncate text-xs text-[rgb(var(--color-text-muted))]">{p.path}</code>
+                <div className="w-24 shrink-0">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
+                    <div
+                      className="h-full rounded-full bg-[rgb(var(--color-accent))]/60"
+                      style={{ width: `${Math.min(100, (p.total / Math.max(1, topPaths[0].total)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="w-10 shrink-0 text-right text-xs font-medium text-[rgb(var(--color-text))]">{p.total}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping(value = "/api/analytics", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -51,13 +52,29 @@ public class AnalyticsController {
         VisitorSession session = analyticsService.createOrUpdateSession(
             request.sessionId(),
             request.userAgent(),
-            request.userId(),
+            request.isAuthenticated(),
             request.deviceType()
         );
         return ResponseEntity.ok(session);
     }
 
+    @PostMapping("/session/flag")
+    @Operation(summary = "Mark that this session touched a site area (search, playlists, library, discovery)")
+    public ResponseEntity<Void> recordSessionFlag(@RequestBody SessionFlagRequest request) {
+        analyticsService.recordBehavioralFlag(request.sessionId(), request.area());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PostMapping("/path")
+    @Operation(summary = "Record a path navigation for aggregate counting")
+    public ResponseEntity<Void> recordPathView(@RequestBody PathViewRequest request) {
+        analyticsService.recordPathView(request.path());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
     public record RecordPlaybackRequest(String platform, Integer durationSeconds, Boolean completed, String sessionId) {}
     public record RecordInteractionRequest(UUID trackId, String eventType, Map<String, Object> eventData, String sessionId) {}
-    public record SessionRequest(String sessionId, String userAgent, UUID userId, String deviceType) {}
+    public record SessionRequest(String sessionId, String userAgent, Boolean isAuthenticated, String deviceType) {}
+    public record SessionFlagRequest(String sessionId, String area) {}
+    public record PathViewRequest(String path) {}
 }

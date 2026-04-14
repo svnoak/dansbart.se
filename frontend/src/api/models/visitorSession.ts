@@ -13,5 +13,10 @@ export interface VisitorSession {
   userAgent?: string;
   isReturning?: boolean;
   pageViews?: number;
-  userId?: string;
+  isAuthenticated?: boolean;
+  deviceType?: string;
+  usedSearch?: boolean;
+  usedPlaylists?: boolean;
+  usedLibrary?: boolean;
+  usedDiscovery?: boolean;
 }

@@ -95,4 +95,33 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "30") int days) {
         return ResponseEntity.ok(analyticsService.getClassifyStats(days));
     }
+
+    @GetMapping("/session-duration")
+    @Operation(summary = "Get average session duration statistics")
+    public ResponseEntity<Map<String, Object>> getSessionDuration(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(analyticsService.getSessionDurationStats(days));
+    }
+
+    @GetMapping("/behavioral-flags")
+    @Operation(summary = "Get behavioral area usage breakdown")
+    public ResponseEntity<Map<String, Object>> getBehavioralFlags(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(analyticsService.getBehavioralFlags(days));
+    }
+
+    @GetMapping("/search-stats")
+    @Operation(summary = "Get search filter usage statistics")
+    public ResponseEntity<Map<String, Object>> getSearchStats(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(analyticsService.getSearchStats(days));
+    }
+
+    @GetMapping("/top-paths")
+    @Operation(summary = "Get top navigated paths by aggregate visit count")
+    public ResponseEntity<List<Map<String, Object>>> getTopPaths(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "20") int limit) {
+        return ResponseEntity.ok(analyticsService.getTopPaths(days, limit));
+    }
 }

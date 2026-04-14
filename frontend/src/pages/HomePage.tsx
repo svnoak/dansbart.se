@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getArtists } from '@/api/generated/artists/artists';
 import { getAlbums } from '@/api/generated/albums/albums';
@@ -27,6 +28,7 @@ function formatLastAdded(iso?: string) {
 }
 
 export function HomePage() {
+  useAnalyticsFlag('library');
   const [styles, setStyles] = useState<StyleOverviewDto[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);

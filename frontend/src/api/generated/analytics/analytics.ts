@@ -5,8 +5,10 @@
  * OpenAPI spec version: v0
  */
 import type {
+  PathViewRequest,
   RecordInteractionRequest,
   RecordPlaybackRequest,
+  SessionFlagRequest,
   SessionRequest,
   TrackPlayback,
   UserInteraction,
@@ -88,6 +90,30 @@ export const createOrUpdateSession = async (sessionRequest: SessionRequest, opti
   
 
 /**
+ * @summary Mark that this session touched a site area (search, playlists, library, discovery)
+ */
+export const getRecordSessionFlagUrl = () => {
+
+
+  
+
+  return `/api/analytics/session/flag`
+}
+
+export const recordSessionFlag = async (sessionFlagRequest: SessionFlagRequest, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getRecordSessionFlagUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sessionFlagRequest,)
+  }
+);}
+  
+
+/**
  * @summary Record a track playback event
  */
 export const getRecordPlaybackUrl = (trackId: string,) => {
@@ -108,6 +134,30 @@ export const recordPlayback = async (trackId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       recordPlaybackRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Record a path navigation for aggregate counting
+ */
+export const getRecordPathViewUrl = () => {
+
+
+  
+
+  return `/api/analytics/path`
+}
+
+export const recordPathView = async (pathViewRequest: PathViewRequest, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getRecordPathViewUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      pathViewRequest,)
   }
 );}
   

@@ -19,6 +19,7 @@ import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
+import se.dansbart.jooq.tables.PathCounts;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
 import se.dansbart.jooq.tables.PlaylistCollaborators;
@@ -63,6 +64,7 @@ public class Keys {
     public static final UniqueKey<Record> FOLKWIKI_TUNES_FOLKWIKI_ID_KEY = Internal.createUniqueKey(FolkwikiTunes.FOLKWIKI_TUNES, DSL.name("folkwiki_tunes_folkwiki_id_key"), new TableField[] { FolkwikiTunes.FOLKWIKI_TUNES.FOLKWIKI_ID }, true);
     public static final UniqueKey<Record> FOLKWIKI_TUNES_PKEY = Internal.createUniqueKey(FolkwikiTunes.FOLKWIKI_TUNES, DSL.name("folkwiki_tunes_pkey"), new TableField[] { FolkwikiTunes.FOLKWIKI_TUNES.ID }, true);
     public static final UniqueKey<Record> GENRE_PROFILES_PKEY = Internal.createUniqueKey(GenreProfiles.GENRE_PROFILES, DSL.name("genre_profiles_pkey"), new TableField[] { GenreProfiles.GENRE_PROFILES.ID }, true);
+    public static final UniqueKey<Record> PATH_COUNTS_PKEY = Internal.createUniqueKey(PathCounts.PATH_COUNTS, DSL.name("path_counts_pkey"), new TableField[] { PathCounts.PATH_COUNTS.PATH, PathCounts.PATH_COUNTS.DATE }, true);
     public static final UniqueKey<Record> PENDING_ARTIST_APPROVALS_PKEY = Internal.createUniqueKey(PendingArtistApprovals.PENDING_ARTIST_APPROVALS, DSL.name("pending_artist_approvals_pkey"), new TableField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.ID }, true);
     public static final UniqueKey<Record> UNIQUE_PENDING_ARTIST = Internal.createUniqueKey(PendingArtistApprovals.PENDING_ARTIST_APPROVALS, DSL.name("unique_pending_artist"), new TableField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.SPOTIFY_ID }, true);
     public static final UniqueKey<Record> PLAYBACK_LINKS_PKEY = Internal.createUniqueKey(PlaybackLinks.PLAYBACK_LINKS, DSL.name("playback_links_pkey"), new TableField[] { PlaybackLinks.PLAYBACK_LINKS.ID }, true);
@@ -117,5 +119,4 @@ public class Keys {
     public static final ForeignKey<Record, Record> TRACK_STYLE_VOTES__TRACK_STYLE_VOTES_TRACK_ID_FKEY = Internal.createForeignKey(TrackStyleVotes.TRACK_STYLE_VOTES, DSL.name("track_style_votes_track_id_fkey"), new TableField[] { TrackStyleVotes.TRACK_STYLE_VOTES.TRACK_ID }, Keys.TRACKS_PKEY, new TableField[] { Tracks.TRACKS.ID }, true);
     public static final ForeignKey<Record, Record> TRACKS__TRACKS_UPLOADER_ID_FKEY = Internal.createForeignKey(Tracks.TRACKS, DSL.name("tracks_uploader_id_fkey"), new TableField[] { Tracks.TRACKS.UPLOADER_ID }, Keys.USERS_PKEY, new TableField[] { Users.USERS.ID }, true);
     public static final ForeignKey<Record, Record> USER_INTERACTIONS__USER_INTERACTIONS_TRACK_ID_FKEY = Internal.createForeignKey(UserInteractions.USER_INTERACTIONS, DSL.name("user_interactions_track_id_fkey"), new TableField[] { UserInteractions.USER_INTERACTIONS.TRACK_ID }, Keys.TRACKS_PKEY, new TableField[] { Tracks.TRACKS.ID }, true);
-    public static final ForeignKey<Record, Record> VISITOR_SESSIONS__VISITOR_SESSIONS_USER_ID_FKEY = Internal.createForeignKey(VisitorSessions.VISITOR_SESSIONS, DSL.name("visitor_sessions_user_id_fkey"), new TableField[] { VisitorSessions.VISITOR_SESSIONS.USER_ID }, Keys.USERS_PKEY, new TableField[] { Users.USERS.ID }, true);
 }

@@ -19,6 +19,7 @@ import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
+import se.dansbart.jooq.tables.PathCounts;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
 import se.dansbart.jooq.tables.PlaylistCollaborators;
@@ -92,6 +93,11 @@ public class Public extends SchemaImpl {
      * The table <code>public.genre_profiles</code>.
      */
     public final GenreProfiles GENRE_PROFILES = GenreProfiles.GENRE_PROFILES;
+
+    /**
+     * The table <code>public.path_counts</code>.
+     */
+    public final PathCounts PATH_COUNTS = PathCounts.PATH_COUNTS;
 
     /**
      * The table <code>public.pending_artist_approvals</code>.
@@ -212,6 +218,7 @@ public class Public extends SchemaImpl {
             DanceStyleConfig.DANCE_STYLE_CONFIG,
             FolkwikiTunes.FOLKWIKI_TUNES,
             GenreProfiles.GENRE_PROFILES,
+            PathCounts.PATH_COUNTS,
             PendingArtistApprovals.PENDING_ARTIST_APPROVALS,
             PlaybackLinks.PLAYBACK_LINKS,
             PlaylistCollaborators.PLAYLIST_COLLABORATORS,

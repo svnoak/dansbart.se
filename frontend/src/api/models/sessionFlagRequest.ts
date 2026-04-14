@@ -5,9 +5,7 @@
  * OpenAPI spec version: v0
  */
 
-export interface SessionRequest {
+export interface SessionFlagRequest {
   sessionId?: string;
-  userAgent?: string;
-  isAuthenticated?: boolean;
-  deviceType?: string;
+  area?: string;
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
 import { useNavigate } from 'react-router-dom';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
@@ -29,6 +30,7 @@ const TEMPOS = [
 const PINNED_STYLES = ['Polska', 'Schottis', 'Vals', 'Hambo', 'Polkett', 'Snoa'];
 
 export function ClassifyPage() {
+  useAnalyticsFlag('discovery');
   const navigate = useNavigate();
   const player = usePlayer();
 
