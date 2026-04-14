@@ -23,4 +23,21 @@ public class VisitorSession {
 
     @Builder.Default
     private Integer pageViews = 1;
+
+    @Builder.Default
+    private Boolean isAuthenticated = false;
+
+    private String deviceType;
+
+    @Builder.Default
+    private Boolean usedSearch = false;
+
+    @Builder.Default
+    private Boolean usedPlaylists = false;
+
+    @Builder.Default
+    private Boolean usedLibrary = false;
+
+    @Builder.Default
+    private Boolean usedDiscovery = false;
 }

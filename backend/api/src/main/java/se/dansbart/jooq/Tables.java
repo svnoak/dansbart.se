@@ -12,6 +12,7 @@ import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
+import se.dansbart.jooq.tables.PathCounts;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
 import se.dansbart.jooq.tables.PlaylistCollaborators;
@@ -78,6 +79,11 @@ public class Tables {
      * The table <code>public.genre_profiles</code>.
      */
     public static final GenreProfiles GENRE_PROFILES = GenreProfiles.GENRE_PROFILES;
+
+    /**
+     * The table <code>public.path_counts</code>.
+     */
+    public static final PathCounts PATH_COUNTS = PathCounts.PATH_COUNTS;
 
     /**
      * The table <code>public.pending_artist_approvals</code>.

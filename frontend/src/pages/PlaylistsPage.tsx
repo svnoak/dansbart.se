@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   getMyPlaylists1,
@@ -22,6 +23,7 @@ const TEMPO_LABELS: Record<string, string> = {
 };
 
 export function PlaylistsPage() {
+  useAnalyticsFlag('playlists');
   const navigate = useNavigate();
   const { theme } = useTheme();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);

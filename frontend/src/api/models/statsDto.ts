@@ -11,6 +11,8 @@ export interface StatsDto {
   classified?: number;
   pendingAnalysis?: number;
   pendingClassification?: number;
+  failedTracks?: number;
+  queuedTracks?: number;
   coveragePercent?: number;
   lastAdded?: string;
 }

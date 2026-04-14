@@ -16,7 +16,7 @@
           ← Tillbaka till Dansbart.se
         </a>
         <h1 class="text-4xl font-bold text-gray-900 mb-2">Integritetspolicy</h1>
-        <p class="text-gray-600">Senast uppdaterad: 12 april 2026</p>
+        <p class="text-gray-600">Senast uppdaterad: 14 april 2026</p>
       </header>
 
       <main class="prose prose-lg max-w-none">
@@ -67,14 +67,9 @@
               undvika upprepad feedback på samma låt - <strong>skickas aldrig till servern</strong>
             </li>
             <li>
-              <code class="bg-gray-100 px-2 py-1 rounded text-sm">analytics_session_id</code> -
+              <code class="bg-gray-100 px-2 py-1 rounded text-sm">dansbart_voter_id_v1</code> -
               Slumpmässigt genererat sessions-ID - <strong>skickas till servern</strong> för att
               identifiera återkommande besökare i statistiksyfte
-            </li>
-            <li>
-              <code class="bg-gray-100 px-2 py-1 rounded text-sm">analytics_returning_visitor</code>
-              - Flagga som indikerar om du är en återkommande besökare -
-              <strong>används endast lokalt</strong>
             </li>
           </ul>
           <p class="text-gray-700 mb-4">
@@ -114,16 +109,27 @@
             <li>
               <strong>Sessionsdata:</strong> Slumpmässigt genererat sessions-ID (lagrat lokalt i din
               webbläsare), tidsstämplar för första och senaste besök, antal sidvisningar,
-              användar-agent (webbläsare och enhet)
+              användar-agent (webbläsare och operativsystem), enhetstyp (mobil eller dator –
+              härlett från användar-agenten), samt vilka funktionsområden du besökt (sök,
+              spellistor, bibliotek, klassificering) som enkla ja/nej-flaggor
             </li>
             <li>
               <strong>Uppspelningsstatistik:</strong> Vilka låtar som spelades, vilken plattform
-              (YouTube/Spotify), hur länge du lyssnade, om du lyssnade färdigt (>30 sekunder)
+              (YouTube/Spotify), hur länge du lyssnade, om du lyssnade färdigt
             </li>
             <li>
-              <strong>Interaktionsdata:</strong> När du ser eller interagerar med
-              feedback-förfrågningar, när du öppnar eller stänger modaler, vilken typ av rapporter
-              du skickar in
+              <strong>Interaktionsdata:</strong> Användning av Musikdomaren (klassificeringsverktyget)
+              och SmartNudge-feedback — t.ex. om en session startades, antal röster, och om
+              feedback slutfördes eller avbröts
+            </li>
+            <li>
+              <strong>Sökfilterformer:</strong> Vilka filtertyper som användes vid sökning (t.ex.
+              om stilfilter, tempogräns eller längdfilter valdes) — aldrig söktermer eller
+              faktiska filtervärden
+            </li>
+            <li>
+              <strong>Sidbesök (aggregerat):</strong> Anonyma räknare per URL-sökväg och datum —
+              utan koppling till session, enhet eller person
             </li>
             <li>
               <strong>Besöksmönster:</strong> Tidpunkt för besök (timme på dygnet, datum) för att
@@ -149,16 +155,16 @@
                 Facebook Pixel eller andra externa analytics-tjänster
               </li>
               <li>
-                <strong>Anonymiserat:</strong> All data är anonym och kan inte kopplas till en
-                specifik person
+                <strong>Inget användar-ID i analytics:</strong> Analytics-data kopplas aldrig till
+                ditt konto eller användar-ID. För inloggade besökare sparas enbart en boolean-flagga
+                (inloggad: ja/nej) — ingen länk till vem du är
               </li>
             </ul>
           </div>
           <p class="text-gray-700 mb-4">
             Sessions-ID:t används för att identifiera om du är en återkommande besökare (för
-            statistik), men det kan inte användas för att identifiera dig personligen. Om du rensar
-            webbläsarens localStorage eller använder privat surfläge kommer ett nytt sessions-ID att
-            genereras.
+            statistik). Om du rensar webbläsarens localStorage eller använder privat surfläge
+            kommer ett nytt sessions-ID att genereras.
           </p>
 
           <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">4. Tredjepartscookies</h3>
@@ -227,7 +233,11 @@
           </ul>
           <p class="text-gray-700 mb-4">
             All feedback och analytics-data används för att förbättra tjänsten för alla användare.
-            Vi bygger ingen personlig profil av dig och all data är anonym och aggregerad.
+            Vi bygger ingen personlig profil av dig. All analytics-data är frikopplad från din
+            identitet — oavsett om du är inloggad eller anonym. För inloggade besökare lagrar vi
+            enbart en boolean-flagga (inloggad: ja/nej) för att producera aggregerad statistik om
+            andelen inloggade respektive anonyma besökare. Ditt användar-ID kopplas aldrig till
+            analytics-data.
           </p>
         </section>
 
@@ -249,11 +259,11 @@
             </li>
           </ul>
           <p class="text-gray-700 mb-4">
-            Eftersom all feedback och analytics-data är anonym och inte kan kopplas till individer,
-            bedömer vi att vårt berättigade intresse att förbättra tjänsten väger tyngre än
-            eventuella integritetsrisker. Vi har genomfört en intresseavvägning enligt GDPR och
-            bedömer att den anonyma karaktären av databehandlingen innebär minimal risk för den
-            registrerades rättigheter och friheter.
+            För anonym feedback och analytics bedömer vi att vårt berättigade intresse att förbättra
+            tjänsten väger tyngre än eventuella integritetsrisker, då data inte kan kopplas till en
+            identifierad person. Analytics-systemet är byggt utan koppling till användar-ID — även
+            för inloggade besökare lagras enbart en boolean-flagga — vilket innebär minimal
+            integritetsrisk och ingen profilering eller spårning i marknadsföringssyfte.
           </p>
         </section>
 

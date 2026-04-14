@@ -5,6 +5,10 @@
  * OpenAPI spec version: v0
  */
 import type {
+  GetBehavioralFlags200,
+  GetBehavioralFlagsParams,
+  GetClassifyStats200,
+  GetClassifyStatsParams,
   GetDailyVisits200,
   GetDailyVisitsParams,
   GetDashboard200,
@@ -17,10 +21,18 @@ import type {
   GetListenTimeParams,
   GetMostPlayedTracks200Item,
   GetMostPlayedTracksParams,
+  GetNudgeStats200,
+  GetNudgeStatsParams,
   GetPlatformStats200,
   GetPlatformStatsParams,
   GetReportStats200,
   GetReportStatsParams,
+  GetSearchStats200,
+  GetSearchStatsParams,
+  GetSessionDuration200,
+  GetSessionDurationParams,
+  GetTopPaths200Item,
+  GetTopPathsParams,
   GetVisitorStats200,
   GetVisitorStatsParams
 } from '../../models';
@@ -148,6 +160,96 @@ export const getMostPlayedTracks = async (params?: GetMostPlayedTracksParams, op
   
 
 /**
+ * @summary Get top navigated paths by aggregate visit count
+ */
+export const getGetTopPathsUrl = (params?: GetTopPathsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/top-paths?${stringifiedParams}` : `/api/admin/analytics/top-paths`
+}
+
+export const getTopPaths = async (params?: GetTopPathsParams, options?: RequestInit): Promise<GetTopPaths200Item[]> => {
+  
+  return httpClient<GetTopPaths200Item[]>(getGetTopPathsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get average session duration statistics
+ */
+export const getGetSessionDurationUrl = (params?: GetSessionDurationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/session-duration?${stringifiedParams}` : `/api/admin/analytics/session-duration`
+}
+
+export const getSessionDuration = async (params?: GetSessionDurationParams, options?: RequestInit): Promise<GetSessionDuration200> => {
+  
+  return httpClient<GetSessionDuration200>(getGetSessionDurationUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get search filter usage statistics
+ */
+export const getGetSearchStatsUrl = (params?: GetSearchStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/search-stats?${stringifiedParams}` : `/api/admin/analytics/search-stats`
+}
+
+export const getSearchStats = async (params?: GetSearchStatsParams, options?: RequestInit): Promise<GetSearchStats200> => {
+  
+  return httpClient<GetSearchStats200>(getGetSearchStatsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
  * @summary Get statistics on all types of reports
  */
 export const getGetReportStatsUrl = (params?: GetReportStatsParams,) => {
@@ -198,6 +300,36 @@ export const getGetPlatformStatsUrl = (params?: GetPlatformStatsParams,) => {
 export const getPlatformStats = async (params?: GetPlatformStatsParams, options?: RequestInit): Promise<GetPlatformStats200> => {
   
   return httpClient<GetPlatformStats200>(getGetPlatformStatsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get SmartNudge funnel statistics
+ */
+export const getGetNudgeStatsUrl = (params?: GetNudgeStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/nudge?${stringifiedParams}` : `/api/admin/analytics/nudge`
+}
+
+export const getNudgeStats = async (params?: GetNudgeStatsParams, options?: RequestInit): Promise<GetNudgeStats200> => {
+  
+  return httpClient<GetNudgeStats200>(getGetNudgeStatsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -288,6 +420,66 @@ export const getGetDashboardUrl = (params?: GetDashboardParams,) => {
 export const getDashboard = async (params?: GetDashboardParams, options?: RequestInit): Promise<GetDashboard200> => {
   
   return httpClient<GetDashboard200>(getGetDashboardUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get classify game activity statistics
+ */
+export const getGetClassifyStatsUrl = (params?: GetClassifyStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/classify?${stringifiedParams}` : `/api/admin/analytics/classify`
+}
+
+export const getClassifyStats = async (params?: GetClassifyStatsParams, options?: RequestInit): Promise<GetClassifyStats200> => {
+  
+  return httpClient<GetClassifyStats200>(getGetClassifyStatsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get behavioral area usage breakdown
+ */
+export const getGetBehavioralFlagsUrl = (params?: GetBehavioralFlagsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/behavioral-flags?${stringifiedParams}` : `/api/admin/analytics/behavioral-flags`
+}
+
+export const getBehavioralFlags = async (params?: GetBehavioralFlagsParams, options?: RequestInit): Promise<GetBehavioralFlags200> => {
+  
+  return httpClient<GetBehavioralFlags200>(getGetBehavioralFlagsUrl(params),
   {      
     ...options,
     method: 'GET'

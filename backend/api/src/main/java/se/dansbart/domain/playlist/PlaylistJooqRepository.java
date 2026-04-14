@@ -46,6 +46,10 @@ public class PlaylistJooqRepository {
             .fetch(this::toPlaylist);
     }
 
+    public long countAll() {
+        return dsl.fetchCount(PLAYLISTS);
+    }
+
     public int getTrackCount(UUID playlistId) {
         return dsl.fetchCount(dsl.selectFrom(PLAYLIST_TRACKS).where(PLAYLIST_TRACKS.PLAYLIST_ID.eq(playlistId)));
     }

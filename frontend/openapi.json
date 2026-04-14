@@ -1224,6 +1224,22 @@
         }
       }
     },
+    "/api/analytics/session/flag": {
+      "post": {
+        "tags": ["Analytics"],
+        "summary": "Mark that this session touched a site area (search, playlists, library, discovery)",
+        "operationId": "recordSessionFlag",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SessionFlagRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/analytics/playback/{trackId}": {
       "post": {
         "tags": ["Analytics"],
@@ -1255,6 +1271,22 @@
             }
           }
         }
+      }
+    },
+    "/api/analytics/path": {
+      "post": {
+        "tags": ["Analytics"],
+        "summary": "Record a path navigation for aggregate counting",
+        "operationId": "recordPathView",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PathViewRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/api/admin/trigger/spider": {
@@ -4400,6 +4432,99 @@
         }
       }
     },
+    "/api/admin/analytics/top-paths": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get top navigated paths by aggregate visit count",
+        "operationId": "getTopPaths",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 20 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/analytics/session-duration": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get average session duration statistics",
+        "operationId": "getSessionDuration",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/analytics/search-stats": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get search filter usage statistics",
+        "operationId": "getSearchStats",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/analytics/reports": {
       "get": {
         "tags": ["Admin Analytics"],
@@ -4439,6 +4564,34 @@
             "in": "query",
             "required": false,
             "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/analytics/nudge": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get SmartNudge funnel statistics",
+        "operationId": "getNudgeStats",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
           }
         ],
         "responses": {
@@ -4517,6 +4670,62 @@
         "tags": ["Admin Analytics"],
         "summary": "Get comprehensive analytics dashboard data",
         "operationId": "getDashboard",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/analytics/classify": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get classify game activity statistics",
+        "operationId": "getClassifyStats",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/analytics/behavioral-flags": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get behavioral area usage breakdown",
+        "operationId": "getBehavioralFlags",
         "parameters": [
           {
             "name": "days",
@@ -4827,7 +5036,7 @@
       },
       "TransferOwnershipRequest": {
         "type": "object",
-        "properties": { "newOwnerId": { "type": "string" } }
+        "properties": { "newOwnerId": { "type": "string", "format": "uuid" } }
       },
       "ReorderTracksRequest": {
         "type": "object",
@@ -4988,7 +5197,9 @@
         "type": "object",
         "properties": {
           "sessionId": { "type": "string" },
-          "userAgent": { "type": "string" }
+          "userAgent": { "type": "string" },
+          "isAuthenticated": { "type": "boolean" },
+          "deviceType": { "type": "string" }
         }
       },
       "VisitorSession": {
@@ -5000,7 +5211,20 @@
           "lastSeen": { "type": "string", "format": "date-time" },
           "userAgent": { "type": "string" },
           "isReturning": { "type": "boolean" },
-          "pageViews": { "type": "integer", "format": "int32" }
+          "pageViews": { "type": "integer", "format": "int32" },
+          "isAuthenticated": { "type": "boolean" },
+          "deviceType": { "type": "string" },
+          "usedSearch": { "type": "boolean" },
+          "usedPlaylists": { "type": "boolean" },
+          "usedLibrary": { "type": "boolean" },
+          "usedDiscovery": { "type": "boolean" }
+        }
+      },
+      "SessionFlagRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string" },
+          "area": { "type": "string" }
         }
       },
       "RecordPlaybackRequest": {
@@ -5024,6 +5248,10 @@
           "completed": { "type": "boolean" },
           "sessionId": { "type": "string" }
         }
+      },
+      "PathViewRequest": {
+        "type": "object",
+        "properties": { "path": { "type": "string" } }
       },
       "RejectRequest": {
         "type": "object",
@@ -5244,6 +5472,8 @@
           "classified": { "type": "integer", "format": "int64" },
           "pendingAnalysis": { "type": "integer", "format": "int64" },
           "pendingClassification": { "type": "integer", "format": "int64" },
+          "failedTracks": { "type": "integer", "format": "int64" },
+          "queuedTracks": { "type": "integer", "format": "int64" },
           "coveragePercent": { "type": "integer", "format": "int32" },
           "lastAdded": { "type": "string", "format": "date-time" }
         }
@@ -5252,7 +5482,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" },
           "username": { "type": "string" },
           "displayName": { "type": "string" },
           "permission": { "type": "string" },
@@ -5294,19 +5524,6 @@
           "addedAt": { "type": "string", "format": "date-time" },
           "addedByUserId": { "type": "string", "format": "uuid" },
           "track": { "$ref": "#/components/schemas/TrackListDto" }
-        }
-      },
-      "CollaboratorDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "displayName": { "type": "string" },
-          "permission": { "type": "string" },
-          "status": { "type": "string" },
-          "invitedAt": { "type": "string", "format": "date-time" },
-          "acceptedAt": { "type": "string", "format": "date-time" }
         }
       },
       "InvitationDto": {

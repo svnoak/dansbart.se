@@ -18,6 +18,8 @@ public class StatsDto {
     private Long classified;
     private Long pendingAnalysis;
     private Long pendingClassification;
+    private Long failedTracks;
+    private Long queuedTracks;
     private Integer coveragePercent;
     private OffsetDateTime lastAdded;
 }

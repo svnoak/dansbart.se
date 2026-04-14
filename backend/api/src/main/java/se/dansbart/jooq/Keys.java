@@ -19,6 +19,7 @@ import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
+import se.dansbart.jooq.tables.PathCounts;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
 import se.dansbart.jooq.tables.PlaylistCollaborators;
@@ -63,6 +64,7 @@ public class Keys {
     public static final UniqueKey<Record> FOLKWIKI_TUNES_FOLKWIKI_ID_KEY = Internal.createUniqueKey(FolkwikiTunes.FOLKWIKI_TUNES, DSL.name("folkwiki_tunes_folkwiki_id_key"), new TableField[] { FolkwikiTunes.FOLKWIKI_TUNES.FOLKWIKI_ID }, true);
     public static final UniqueKey<Record> FOLKWIKI_TUNES_PKEY = Internal.createUniqueKey(FolkwikiTunes.FOLKWIKI_TUNES, DSL.name("folkwiki_tunes_pkey"), new TableField[] { FolkwikiTunes.FOLKWIKI_TUNES.ID }, true);
     public static final UniqueKey<Record> GENRE_PROFILES_PKEY = Internal.createUniqueKey(GenreProfiles.GENRE_PROFILES, DSL.name("genre_profiles_pkey"), new TableField[] { GenreProfiles.GENRE_PROFILES.ID }, true);
+    public static final UniqueKey<Record> PATH_COUNTS_PKEY = Internal.createUniqueKey(PathCounts.PATH_COUNTS, DSL.name("path_counts_pkey"), new TableField[] { PathCounts.PATH_COUNTS.PATH, PathCounts.PATH_COUNTS.DATE }, true);
     public static final UniqueKey<Record> PENDING_ARTIST_APPROVALS_PKEY = Internal.createUniqueKey(PendingArtistApprovals.PENDING_ARTIST_APPROVALS, DSL.name("pending_artist_approvals_pkey"), new TableField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.ID }, true);
     public static final UniqueKey<Record> UNIQUE_PENDING_ARTIST = Internal.createUniqueKey(PendingArtistApprovals.PENDING_ARTIST_APPROVALS, DSL.name("unique_pending_artist"), new TableField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.SPOTIFY_ID }, true);
     public static final UniqueKey<Record> PLAYBACK_LINKS_PKEY = Internal.createUniqueKey(PlaybackLinks.PLAYBACK_LINKS, DSL.name("playback_links_pkey"), new TableField[] { PlaybackLinks.PLAYBACK_LINKS.ID }, true);

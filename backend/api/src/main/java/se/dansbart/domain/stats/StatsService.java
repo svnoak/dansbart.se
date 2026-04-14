@@ -40,13 +40,25 @@ public class StatsService {
             .where(statusCondition)
             .fetchOne(0, Long.class);
 
+        // Tracks with FAILED status
+        Long failedTracks = dsl.selectCount()
+            .from(TRACKS)
+            .where(TRACKS.PROCESSING_STATUS.eq("FAILED"))
+            .fetchOne(0, Long.class);
+
+        // Tracks actively queued or being processed
+        Long queuedTracks = dsl.selectCount()
+            .from(TRACKS)
+            .where(TRACKS.PROCESSING_STATUS.in("PENDING", "PROCESSING"))
+            .fetchOne(0, Long.class);
+
         // Last added track date
         var maxCreated = dsl.select(max(TRACKS.CREATED_AT)).from(TRACKS).where(statusCondition).fetchOne();
         OffsetDateTime lastAdded = maxCreated != null ? maxCreated.get(0, OffsetDateTime.class) : null;
 
         // Calculate derived values
-        long pendingAnalysis = totalTracks - analyzed;
-        long pendingClassification = analyzed - classified;
+        long pendingAnalysis = Math.max(0, totalTracks - analyzed);
+        long pendingClassification = Math.max(0, analyzed - classified);
         int coveragePercent = totalTracks > 0
             ? (int) ((classified * 100) / totalTracks)
             : 0;
@@ -57,6 +69,8 @@ public class StatsService {
             .classified(classified)
             .pendingAnalysis(pendingAnalysis)
             .pendingClassification(pendingClassification)
+            .failedTracks(failedTracks)
+            .queuedTracks(queuedTracks)
             .coveragePercent(coveragePercent)
             .lastAdded(lastAdded)
             .build();

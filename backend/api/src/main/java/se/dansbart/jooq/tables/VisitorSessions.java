@@ -90,6 +90,36 @@ public class VisitorSessions extends TableImpl<Record> {
      */
     public final TableField<Record, Integer> PAGE_VIEWS = createField(DSL.name("page_views"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.INTEGER)), this, "");
 
+    /**
+     * The column <code>public.visitor_sessions.is_authenticated</code>.
+     */
+    public final TableField<Record, Boolean> IS_AUTHENTICATED = createField(DSL.name("is_authenticated"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.device_type</code>.
+     */
+    public final TableField<Record, String> DEVICE_TYPE = createField(DSL.name("device_type"), SQLDataType.VARCHAR(20), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_search</code>.
+     */
+    public final TableField<Record, Boolean> USED_SEARCH = createField(DSL.name("used_search"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_playlists</code>.
+     */
+    public final TableField<Record, Boolean> USED_PLAYLISTS = createField(DSL.name("used_playlists"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_library</code>.
+     */
+    public final TableField<Record, Boolean> USED_LIBRARY = createField(DSL.name("used_library"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.visitor_sessions.used_discovery</code>.
+     */
+    public final TableField<Record, Boolean> USED_DISCOVERY = createField(DSL.name("used_discovery"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
     private VisitorSessions(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

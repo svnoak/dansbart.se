@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Header } from '@/layout/Header';
 import { Sidebar } from '@/layout/Sidebar';
 import { GlobalPlayerShell } from '@/player/GlobalPlayerShell';
@@ -6,6 +7,9 @@ import { QueuePanel } from '@/player/components/QueuePanel';
 import { usePlayer } from '@/player/usePlayer';
 import { useTrackFromUrl } from '@/player/useTrackFromUrl';
 import { ToastContainer } from '@/ui';
+import { useAuth } from '@/auth/useAuth';
+import { createOrUpdateSession, recordPathView } from '@/api/generated/analytics/analytics';
+import { getVoterId } from '@/utils/voter';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +20,16 @@ export function Layout({ children }: LayoutProps) {
   const { queue, currentTrack, queueOpen, closeQueue, playFromQueue, removeFromQueue, clearQueue, reorderQueue } =
     usePlayer();
   useTrackFromUrl();
+
+  const location = useLocation();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const deviceType = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    createOrUpdateSession({ sessionId: getVoterId(), userAgent: navigator.userAgent, isAuthenticated: user != null, deviceType } as any).catch(() => {});
+    recordPathView({ path: location.pathname } as any).catch(() => {});
+  }, [location.pathname, user]);
 
   return (
     <div className="flex h-screen flex-col bg-[rgb(var(--color-bg))]">

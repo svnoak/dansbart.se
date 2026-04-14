@@ -8,7 +8,7 @@ function extractMainContent(html: string): string {
   return main?.innerHTML ?? '';
 }
 
-const LAST_UPDATED = '12 december 2025';
+const LAST_UPDATED = '13 april 2026';
 
 export function PrivacyPage() {
   const [content, setContent] = useState<string | null>(null);
