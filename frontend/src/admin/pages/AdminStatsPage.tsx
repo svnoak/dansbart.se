@@ -186,6 +186,10 @@ export function AdminStatsPage() {
   const totalPageViews = (visitors.totalPageViews as number) ?? 0;
 
   // User and playlist counts from dashboard
+  const mobileVisitors = (visitors.mobileVisitors as number) ?? 0;
+  const desktopVisitors = (visitors.desktopVisitors as number) ?? 0;
+
+  // User and playlist counts from dashboard
   const totalUsers = (dashboard?.totalUsers as number) ?? 0;
   const totalPlaylists = (dashboard?.totalPlaylists as number) ?? 0;
 
@@ -248,10 +252,12 @@ export function AdminStatsPage() {
       {/* Visitor stats */}
       <div>
         <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Besökare — senaste {days} dagar</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           <StatCard label="Unika besökare" value={totalVisitors} />
           <StatCard label="Inloggade" value={loggedInVisitors} />
           <StatCard label="Anonyma" value={anonymousVisitors} />
+          <StatCard label="Mobila besökare" value={mobileVisitors} />
+          <StatCard label="Datorbesökare" value={desktopVisitors} />
           <StatCard label="Sidvisningar" value={totalPageViews} />
           <StatCard label="Registrerade användare" value={totalUsers} />
         </div>

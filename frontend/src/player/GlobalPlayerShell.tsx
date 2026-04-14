@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { recordPlayback } from '@/api/generated/analytics/analytics';
+import { recordPlayback, recordInteraction1 } from '@/api/generated/analytics/analytics';
 import { getVoterId } from '@/utils/voter';
 import { useConsent } from '@/consent/useConsent';
 import { usePlayer } from '@/player/usePlayer';
@@ -354,7 +354,7 @@ export function GlobalPlayerShell() {
       )}
 
       {!(expanded && isMobile) && location.pathname !== '/classify' && (
-        <SmartNudge track={currentTrack} isPlaying={isPlaying} bottomOffset={isMobile ? mobileBottomOffset : desktopBottomOffset} />
+        <SmartNudge track={currentTrack} isPlaying={isPlaying} bottomOffset={isMobile ? mobileBottomOffset : desktopBottomOffset} mobilePlayerOpen={false} />
       )}
 
       {/* Fixed bottom bar: progress on top, then 3-column row */}
@@ -397,15 +397,20 @@ export function GlobalPlayerShell() {
         {/* Main row: left (art + title) | center (controls) | right (source) */}
         <div
           className={`flex h-20 items-center justify-between px-4 py-3 ${isMobile ? 'cursor-pointer' : ''}`}
-          onClick={(e) =>
-            isMobile &&
-            !(e.target as HTMLElement).closest('button') &&
-            currentTrack &&
-            setExpanded((v) => !v)
-          }
+          onClick={(e) => {
+            if (isMobile && !(e.target as HTMLElement).closest('button') && currentTrack) {
+              if (!expanded) {
+                recordInteraction1({ eventType: 'mobile_player_opened' }).catch(() => {});
+              }
+              setExpanded((v) => !v);
+            }
+          }}
           onKeyDown={(e) => {
             if (isMobile && currentTrack && (e.key === 'Enter' || e.key === ' ')) {
               e.preventDefault();
+              if (!expanded) {
+                recordInteraction1({ eventType: 'mobile_player_opened' }).catch(() => {});
+              }
               setExpanded((v) => !v);
             }
           }}

@@ -40,7 +40,7 @@ public class AdminAnalyticsService {
         } catch (Exception e) {
             // Return empty dashboard when analytics data is unavailable (e.g. fresh E2E DB)
             Map<String, Object> empty = new HashMap<>();
-            empty.put("visitors", Map.of("totalVisitors", 0L, "totalPageViews", 0L, "loggedInVisitors", 0L, "anonymousVisitors", 0L, "days", days));
+            empty.put("visitors", Map.of("totalVisitors", 0L, "totalPageViews", 0L, "loggedInVisitors", 0L, "anonymousVisitors", 0L, "mobileVisitors", 0L, "desktopVisitors", 0L, "days", days));
             empty.put("mostPlayedTracks", List.of());
             empty.put("listenTime", Map.of("totalSeconds", 0L, "totalMinutes", 0L, "totalHours", 0L, "days", days));
             empty.put("platformStats", Map.of("platforms", List.of(), "days", days));
@@ -60,12 +60,16 @@ public class AdminAnalyticsService {
         Long pageViews = visitorRepository.sumPageViewsSince(since);
         long loggedInVisitors = visitorRepository.countLoggedInSessionsSince(since);
         long anonymousVisitors = visitorRepository.countAnonymousSessionsSince(since);
+        long mobileVisitors = visitorRepository.countMobileSessionsSince(since);
+        long desktopVisitors = visitorRepository.countDesktopSessionsSince(since);
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalVisitors", totalVisitors);
         stats.put("totalPageViews", pageViews != null ? pageViews : 0);
         stats.put("loggedInVisitors", loggedInVisitors);
         stats.put("anonymousVisitors", anonymousVisitors);
+        stats.put("mobileVisitors", mobileVisitors);
+        stats.put("desktopVisitors", desktopVisitors);
         stats.put("days", days);
         return stats;
     }

@@ -32,6 +32,7 @@ public class VisitorSessionJooqRepository {
 
     @SuppressWarnings("unchecked")
     private static final Field<UUID> USER_ID_FIELD = (Field<UUID>) DSL.field(DSL.name("user_id"), UUID.class);
+    private static final Field<String> DEVICE_TYPE_FIELD = DSL.field(DSL.name("device_type"), String.class);
 
     public VisitorSession insert(VisitorSession session) {
         UUID id = session.getId() != null ? session.getId() : UUID.randomUUID();
@@ -43,7 +44,8 @@ public class VisitorSessionJooqRepository {
                 VISITOR_SESSIONS.USER_AGENT,
                 VISITOR_SESSIONS.IS_RETURNING,
                 VISITOR_SESSIONS.PAGE_VIEWS,
-                USER_ID_FIELD
+                USER_ID_FIELD,
+                DEVICE_TYPE_FIELD
             )
             .values(
                 id,
@@ -52,7 +54,8 @@ public class VisitorSessionJooqRepository {
                 session.getUserAgent(),
                 session.getIsReturning(),
                 session.getPageViews(),
-                session.getUserId()
+                session.getUserId(),
+                session.getDeviceType()
             )
             .execute();
         session.setId(id);
@@ -69,6 +72,7 @@ public class VisitorSessionJooqRepository {
             .set(VISITOR_SESSIONS.IS_RETURNING, session.getIsReturning())
             .set(VISITOR_SESSIONS.PAGE_VIEWS, session.getPageViews())
             .set(USER_ID_FIELD, session.getUserId())
+            .set(DEVICE_TYPE_FIELD, session.getDeviceType())
             .where(VISITOR_SESSIONS.ID.eq(session.getId()))
             .execute();
         return session;
@@ -87,6 +91,22 @@ public class VisitorSessionJooqRepository {
             .from(VISITOR_SESSIONS)
             .where(VISITOR_SESSIONS.FIRST_SEEN.ge(since))
             .and(USER_ID_FIELD.isNull())
+            .fetchOne(0, Long.class);
+    }
+
+    public long countMobileSessionsSince(OffsetDateTime since) {
+        return dsl.select(countDistinct(VISITOR_SESSIONS.SESSION_ID))
+            .from(VISITOR_SESSIONS)
+            .where(VISITOR_SESSIONS.FIRST_SEEN.ge(since))
+            .and(DEVICE_TYPE_FIELD.eq("mobile"))
+            .fetchOne(0, Long.class);
+    }
+
+    public long countDesktopSessionsSince(OffsetDateTime since) {
+        return dsl.select(countDistinct(VISITOR_SESSIONS.SESSION_ID))
+            .from(VISITOR_SESSIONS)
+            .where(VISITOR_SESSIONS.FIRST_SEEN.ge(since))
+            .and(DEVICE_TYPE_FIELD.eq("desktop"))
             .fetchOne(0, Long.class);
     }
 
@@ -194,6 +214,7 @@ public class VisitorSessionJooqRepository {
         vs.setIsReturning(Boolean.TRUE.equals(r.get(VISITOR_SESSIONS.IS_RETURNING)));
         vs.setPageViews(r.get(VISITOR_SESSIONS.PAGE_VIEWS));
         try { vs.setUserId(r.get(USER_ID_FIELD)); } catch (Exception ignored) {}
+        try { vs.setDeviceType(r.get(DEVICE_TYPE_FIELD)); } catch (Exception ignored) {}
         return vs;
     }
 }

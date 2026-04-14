@@ -25,4 +25,5 @@ public class VisitorSession {
     private Integer pageViews = 1;
 
     private UUID userId;
+    private String deviceType;
 }

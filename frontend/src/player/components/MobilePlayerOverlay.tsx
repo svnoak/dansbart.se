@@ -143,7 +143,7 @@ export function MobilePlayerOverlay({
         </div>
 
         {/* Inline SmartNudge */}
-        <SmartNudge track={currentTrack} isPlaying={isPlaying} inline />
+        <SmartNudge track={currentTrack} isPlaying={isPlaying} inline mobilePlayerOpen={true} />
       </div>
 
       {/* Fixed bottom controls section */}

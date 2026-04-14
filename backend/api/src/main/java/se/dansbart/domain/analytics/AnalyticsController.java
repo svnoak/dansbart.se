@@ -51,12 +51,13 @@ public class AnalyticsController {
         VisitorSession session = analyticsService.createOrUpdateSession(
             request.sessionId(),
             request.userAgent(),
-            request.userId()
+            request.userId(),
+            request.deviceType()
         );
         return ResponseEntity.ok(session);
     }
 
     public record RecordPlaybackRequest(String platform, Integer durationSeconds, Boolean completed, String sessionId) {}
     public record RecordInteractionRequest(UUID trackId, String eventType, Map<String, Object> eventData, String sessionId) {}
-    public record SessionRequest(String sessionId, String userAgent, UUID userId) {}
+    public record SessionRequest(String sessionId, String userAgent, UUID userId, String deviceType) {}
 }

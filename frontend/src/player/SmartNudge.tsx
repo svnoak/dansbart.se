@@ -36,6 +36,7 @@ interface SmartNudgeProps {
   isPlaying: boolean;
   bottomOffset?: number;
   inline?: boolean;
+  mobilePlayerOpen?: boolean;
 }
 
 function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<string, unknown>) {
@@ -46,7 +47,7 @@ function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<
   }).catch(() => {});
 }
 
-export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudgeProps) {
+export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlayerOpen }: SmartNudgeProps) {
   const [step, setStep] = useState<Step>('hidden');
   const [mode, setMode] = useState<Mode>('correction');
   const [correction, setCorrection] = useState({ main: '', style: '', tempo: 'ok' });
@@ -154,6 +155,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudg
         trackAnalytics('nudge_shown', track?.id, {
           has_style: trackHasStyle,
           has_tempo: trackHasTempo,
+          mobilePlayerOpen: mobilePlayerOpen ?? false,
         });
 
         if (!trackHasStyle && !trackHasTempo) {
@@ -169,7 +171,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudg
         autoDismissTimer.current = setTimeout(() => {
           const s = stepRef.current;
           if (s === 'verify' || s === 'verify-style-only') {
-            trackAnalytics('nudge_dismissed', track?.id, { reason: 'auto_timeout', step: s });
+            trackAnalytics('nudge_dismissed', track?.id, { reason: 'auto_timeout', step: s, mobilePlayerOpen: mobilePlayerOpen ?? false });
             setStep('hidden');
           }
         }, 20000);
@@ -218,7 +220,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudg
         if (nextStep === 'bonus') {
           setStep('bonus');
         } else if (nextStep === 'success') {
-          trackAnalytics('nudge_completed', track.id, { step: stepRef.current });
+          trackAnalytics('nudge_completed', track.id, { step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
           setStep('success');
           setTimeout(() => setStep('hidden'), 2500);
         }
@@ -555,7 +557,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudg
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => {
-                    trackAnalytics('nudge_dismissed', track?.id, { reason: 'vet_ej', step: stepRef.current });
+                    trackAnalytics('nudge_dismissed', track?.id, { reason: 'vet_ej', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
                     setStep('hidden');
                     setDropdownOpen(false);
                   }}
@@ -745,7 +747,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudg
               <div className="flex justify-between items-center mb-3 md:mb-2">
                 <p className="text-sm md:text-xs font-bold text-gray-400 uppercase">Redigera</p>
                 <button
-                  onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'close', step: stepRef.current }); setStep('hidden'); }}
+                  onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'close', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false }); setStep('hidden'); }}
                   className="text-gray-400 hover:text-white text-sm md:text-xs"
                 >
                   Stäng
@@ -808,7 +810,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline }: SmartNudg
               </div>
               <div className="flex gap-3 md:gap-2">
                 <button
-                  onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'nej', step: stepRef.current }); setStep('hidden'); }}
+                  onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'nej', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false }); setStep('hidden'); }}
                   className="bg-teal-800 hover:bg-teal-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
                 >
                   Nej

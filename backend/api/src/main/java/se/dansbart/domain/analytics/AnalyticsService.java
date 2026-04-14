@@ -41,7 +41,7 @@ public class AnalyticsService {
     }
 
     @Transactional
-    public VisitorSession createOrUpdateSession(String sessionId, String userAgent, UUID userId) {
+    public VisitorSession createOrUpdateSession(String sessionId, String userAgent, UUID userId, String deviceType) {
         // Be defensive against missing/blank session IDs coming from older clients/tests.
         // The DB column is NOT NULL + UNIQUE, so always persist a non-empty value.
         final String normalizedSessionId = (sessionId == null || sessionId.isBlank())
@@ -57,6 +57,7 @@ public class AnalyticsService {
                 session.setPageViews(session.getPageViews() + 1);
                 session.setIsReturning(true);
                 if (userId != null) session.setUserId(userId);
+                if (deviceType != null && session.getDeviceType() == null) session.setDeviceType(deviceType);
                 return visitorSessionJooqRepository.update(session);
             })
             .orElseGet(() -> {
@@ -67,6 +68,7 @@ public class AnalyticsService {
                     .pageViews(1)
                     .isReturning(false)
                     .userId(userId)
+                    .deviceType(deviceType)
                     .build();
                 return visitorSessionJooqRepository.insert(session);
             });
