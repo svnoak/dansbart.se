@@ -49,12 +49,17 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/discovery/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                // Anonymous community contributions (feedback, flagging, links, analytics)
+                .requestMatchers(HttpMethod.POST, "/api/analytics/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/tracks/**").permitAll()
+                .requestMatchers(HttpMethod.PATCH, "/api/tracks/**").permitAll()
                 .requestMatchers("/api/config/auth").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")
                 // Authenticated user endpoints
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
