@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.StyleKeywordJooqRepository;
+import se.dansbart.worker.TaskDispatcher;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +17,7 @@ public class AdminFolkwikiService {
 
     private final FolkwikiMatchJooqRepository matchRepository;
     private final StyleKeywordJooqRepository styleKeywordRepository;
+    private final TaskDispatcher taskDispatcher;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getMatches(String status, int limit, int offset) {
@@ -57,6 +59,30 @@ public class AdminFolkwikiService {
         );
     }
 
+    public Map<String, Object> backfillBars() {
+        var tracks = matchRepository.findAllPrimaryTrackStyles();
+        for (var t : tracks) {
+            taskDispatcher.dispatchCorrectBars(
+                UUID.fromString(t.get("trackId")),
+                t.get("danceStyle"),
+                t.get("subStyle")
+            );
+        }
+        return Map.of("dispatched", tracks.size());
+    }
+
+    @Transactional
+    public Map<String, Object> correctTuneStyle(int folkwikiTuneId, String newStyle) {
+        if (newStyle == null || newStyle.isBlank()) {
+            throw new IllegalArgumentException("Style får inte vara tomt");
+        }
+        boolean updated = matchRepository.updateTuneStyle(folkwikiTuneId, newStyle.strip());
+        if (!updated) {
+            throw new IllegalArgumentException("Folkwiki-låt hittades inte");
+        }
+        return Map.of("status", "success", "folkwikiTuneId", folkwikiTuneId, "style", newStyle.strip());
+    }
+
     @Transactional
     public Map<String, Object> confirmMatch(UUID trackId, int folkwikiTuneId, boolean force) {
         String folkwikiStyle = matchRepository.getFolkwikiStyle(folkwikiTuneId);
@@ -84,6 +110,9 @@ public class AdminFolkwikiService {
         // Update the track's dance style to match folkwiki
         matchRepository.updateTrackClassification(trackId, folkwikiStyle);
 
+        // Re-derive bar positions for the new style (best-effort, no rollback on failure)
+        taskDispatcher.dispatchCorrectBars(trackId, folkwikiStyle, null);
+
         return Map.of(
             "status", "success",
             "trackId", trackId.toString(),
@@ -100,6 +129,7 @@ public class AdminFolkwikiService {
 
         if (overrideStyle != null && !overrideStyle.isBlank()) {
             matchRepository.updateTrackClassification(trackId, overrideStyle);
+            taskDispatcher.dispatchCorrectBars(trackId, overrideStyle, null);
             Map<String, Object> result = new HashMap<>();
             result.put("status", "success");
             result.put("trackId", trackId.toString());

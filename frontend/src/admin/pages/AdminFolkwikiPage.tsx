@@ -69,7 +69,8 @@ export function AdminFolkwikiPage() {
     folkwikiStyle: string;
     styleTree: StyleNode[];
   } | null>(null);
-  const [styleModalMode, setStyleModalMode] = useState<'pick' | 'new'>('pick');
+  const [styleModalMode, setStyleModalMode] = useState<'correct' | 'pick' | 'new'>('correct');
+  const [correctedStyle, setCorrectedStyle] = useState('');
   const [selectedMainStyle, setSelectedMainStyle] = useState('');
   const [newMainStyle, setNewMainStyle] = useState('');
   const [addingKeyword, setAddingKeyword] = useState(false);
@@ -194,7 +195,8 @@ export function AdminFolkwikiPage() {
       if (data.status === 'style_unknown') {
         const tree = await getStyleTree();
         setStyleModal({ match, folkwikiStyle: data.folkwikiStyle, styleTree: tree });
-        setStyleModalMode('pick');
+        setStyleModalMode('correct');
+        setCorrectedStyle(data.folkwikiStyle);
         setSelectedMainStyle('');
         setNewMainStyle('');
         return;
@@ -235,6 +237,29 @@ export function AdminFolkwikiPage() {
       const { match } = styleModal;
       setStyleModal(null);
       await handleAction(match, 'confirm', true);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Misslyckades', 'error');
+    } finally {
+      setAddingKeyword(false);
+    }
+  };
+
+  const handleCorrectStyleAndConfirm = async () => {
+    if (!styleModal || !correctedStyle.trim()) return;
+    setAddingKeyword(true);
+    try {
+      const res = await apiFetch(`/api/admin/folkwiki/tunes/${styleModal.match.folkwikiTuneId}/style`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ style: correctedStyle.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Kunde inte spara stil');
+      }
+      const { match } = styleModal;
+      setStyleModal(null);
+      await handleAction(match, 'confirm', false);
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Misslyckades', 'error');
     } finally {
@@ -534,29 +559,56 @@ export function AdminFolkwikiPage() {
 
             {/* Mode tabs */}
             <div className="flex gap-1 rounded-lg bg-[rgb(var(--color-bg))] p-1">
-              <button
-                onClick={() => setStyleModalMode('pick')}
-                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  styleModalMode === 'pick'
-                    ? 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] shadow-sm'
-                    : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-                }`}
-              >
-                Substil till befintlig
-              </button>
-              <button
-                onClick={() => setStyleModalMode('new')}
-                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  styleModalMode === 'new'
-                    ? 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] shadow-sm'
-                    : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-                }`}
-              >
-                Ny huvudstil
-              </button>
+              {(
+                [
+                  { value: 'correct', label: 'Rätta stavning' },
+                  { value: 'pick', label: 'Substil till befintlig' },
+                  { value: 'new', label: 'Ny huvudstil' },
+                ] as { value: 'correct' | 'pick' | 'new'; label: string }[]
+              ).map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setStyleModalMode(tab.value)}
+                  className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                    styleModalMode === tab.value
+                      ? 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] shadow-sm'
+                      : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            {styleModalMode === 'pick' ? (
+            {styleModalMode === 'correct' ? (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium">
+                  Rätt stavning
+                </label>
+                <input
+                  type="text"
+                  value={correctedStyle}
+                  onChange={(e) => setCorrectedStyle(e.target.value)}
+                  className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                />
+                <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                  Sparar <span className="font-medium">{correctedStyle || '...'}</span> direkt i folkwiki-tabellen och bekräftar sedan matchningen.
+                </p>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setStyleModal(null)}>
+                    Avbryt
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={!correctedStyle.trim() || addingKeyword}
+                    onClick={handleCorrectStyleAndConfirm}
+                  >
+                    {addingKeyword ? 'Sparar...' : 'Rätta och bekräfta'}
+                  </Button>
+                </div>
+              </div>
+            ) : styleModalMode === 'pick' ? (
               <div className="space-y-3">
                 <label className="block text-sm font-medium">
                   Huvudstil

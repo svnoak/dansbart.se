@@ -30,9 +30,12 @@ class Track(Base):
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
+
     # Relationships needed for classification and ingestion
     analysis_sources = relationship("AnalysisSource", back_populates="track", cascade="all, delete-orphan")
     dance_styles = relationship("TrackDanceStyle", back_populates="track", cascade="all, delete-orphan")
+    structure_versions = relationship("TrackStructureVersion", back_populates="track", cascade="all, delete-orphan")
     artist_links = relationship("TrackArtist", back_populates="track", cascade="all, delete-orphan")
     album_links = relationship("TrackAlbum", back_populates="track", cascade="all, delete-orphan")
     playback_links = relationship("PlaybackLink", back_populates="track", cascade="all, delete-orphan")
@@ -106,6 +109,18 @@ class DanceStyleConfig(Base):
     sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
     beats_per_bar: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+
+
+class TrackStructureVersion(Base):
+    """Audio structure annotations (bars, sections) - subset of fields needed for bar updates."""
+    __tablename__ = "track_structure_versions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
+    structure_data: Mapped[dict] = mapped_column(JSONB)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    track = relationship("Track", back_populates="structure_versions")
 
 
 # =============================================================================

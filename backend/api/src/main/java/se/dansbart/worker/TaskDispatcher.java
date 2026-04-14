@@ -54,6 +54,22 @@ public class TaskDispatcher {
     }
 
     /**
+     * Dispatch bar correction task to the feature worker.
+     * Re-derives bar positions from stored beat times using the confirmed dance style.
+     */
+    public void dispatchCorrectBars(UUID trackId, String mainStyle, String subStyle) {
+        Map<String, Object> kwargs = new java.util.HashMap<>();
+        if (subStyle != null) kwargs.put("sub_style", subStyle);
+        String taskMessage = buildCeleryMessage(
+            "app.workers.tasks_feature.correct_bars_task",
+            List.of(trackId.toString(), mainStyle),
+            kwargs
+        );
+        pushToQueue(FEATURE_QUEUE, taskMessage);
+        log.info("Dispatched bar correction for track {} style {}", trackId, mainStyle);
+    }
+
+    /**
      * Dispatch library reclassification task to the feature worker.
      */
     public void dispatchReclassifyLibrary() {

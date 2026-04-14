@@ -112,6 +112,35 @@ public class FolkwikiMatchJooqRepository {
             .fetchOneInto(String.class);
     }
 
+    public List<Map<String, String>> findAllPrimaryTrackStyles() {
+        return dsl.select(
+                TRACK_DANCE_STYLES.TRACK_ID,
+                TRACK_DANCE_STYLES.DANCE_STYLE,
+                TRACK_DANCE_STYLES.SUB_STYLE
+            )
+            .from(TRACK_DANCE_STYLES)
+            .where(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true))
+            .fetch()
+            .stream()
+            .map(r -> {
+                Map<String, String> row = new java.util.HashMap<>();
+                row.put("trackId", r.get(TRACK_DANCE_STYLES.TRACK_ID).toString());
+                row.put("danceStyle", r.get(TRACK_DANCE_STYLES.DANCE_STYLE));
+                row.put("subStyle", r.get(TRACK_DANCE_STYLES.SUB_STYLE));
+                return row;
+            })
+            .toList();
+    }
+
+    public boolean updateTuneStyle(int folkwikiTuneId, String style) {
+        int rows = dsl.update(FOLKWIKI_TUNES)
+            .set(FOLKWIKI_TUNES.STYLE, style)
+            .set(FOLKWIKI_TUNES.UPDATED_AT, OffsetDateTime.now())
+            .where(FOLKWIKI_TUNES.ID.eq(folkwikiTuneId))
+            .execute();
+        return rows > 0;
+    }
+
     public void updateTrackClassification(UUID trackId, String danceStyle) {
         var existing = dsl.select(TRACK_DANCE_STYLES.ID)
             .from(TRACK_DANCE_STYLES)
