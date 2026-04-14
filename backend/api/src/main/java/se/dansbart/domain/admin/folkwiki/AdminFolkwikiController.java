@@ -52,6 +52,24 @@ public class AdminFolkwikiController {
         return ResponseEntity.ok(folkwikiService.getStatusCounts());
     }
 
+    @PostMapping("/backfill-bars")
+    @Operation(summary = "Dispatch bar correction tasks for all folkwiki-confirmed tracks")
+    public ResponseEntity<Map<String, Object>> backfillBars() {
+        return ResponseEntity.ok(folkwikiService.backfillBars());
+    }
+
+    @PutMapping("/tunes/{folkwikiTuneId}/style")
+    @Operation(summary = "Correct the style string stored on a folkwiki tune")
+    public ResponseEntity<Map<String, Object>> correctTuneStyle(
+            @PathVariable int folkwikiTuneId,
+            @RequestBody Map<String, String> body) {
+        try {
+            return ResponseEntity.ok(folkwikiService.correctTuneStyle(folkwikiTuneId, body.get("style")));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/matches/{trackId}/{folkwikiTuneId}/confirm")
     @Operation(summary = "Confirm a match and apply folkwiki style to track")
     public ResponseEntity<Map<String, Object>> confirmMatch(

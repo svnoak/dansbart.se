@@ -8,9 +8,11 @@ import structlog
 from celery import shared_task
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
-from app.core.models import Track
+from app.core.models import Track, AnalysisSource
 from app.services.classification import ClassificationService
 from app.services.training import ModelTrainingService
+from app.services.style_config_cache import get_beats_per_bar
+from sqlalchemy import desc
 
 log = structlog.get_logger()
 
@@ -102,6 +104,74 @@ def classify_track_task(self, track_id: str, analysis_data: dict = None):
         return {"status": "success", "track_id": track_id}
     except Exception as e:
         log.error("classification_failed", track_id=track_id, exc_info=True)
+        raise
+    finally:
+        db.close()
+
+
+@celery_app.task(bind=True, acks_late=True, queue='feature')
+def correct_bars_task(self, track_id: str, main_style: str, sub_style: str = None):
+    """
+    Re-derive bar positions for a track based on its confirmed dance style.
+
+    Reads stored beat times from analysis_sources, looks up beats_per_bar
+    from dance_style_config, and updates track.bars and any active
+    TrackStructureVersion.
+
+    Args:
+        track_id: UUID of the track to update
+        main_style: Confirmed main dance style (e.g. "Schottis")
+        sub_style: Optional sub-style for more specific BPB lookup
+    """
+    log.info("correct_bars_start", track_id=track_id, main_style=main_style, sub_style=sub_style)
+
+    db = SessionLocal()
+    try:
+        track = db.query(Track).filter(Track.id == track_id).first()
+        if not track:
+            log.warn("track_not_found", track_id=track_id)
+            return {"error": "Track not found"}
+
+        source = (
+            db.query(AnalysisSource)
+            .filter(
+                AnalysisSource.track_id == track.id,
+                AnalysisSource.source_type == "neckenml_analyzer",
+            )
+            .order_by(desc(AnalysisSource.analyzed_at))
+            .first()
+        )
+        if not source:
+            log.info("correct_bars_skipped", reason="no_analysis_source", track_id=track_id)
+            return {"status": "skipped", "reason": "no_analysis_source"}
+
+        beat_times = source.raw_data.get("rhythm_extractor", {}).get("beats", [])
+        if not beat_times:
+            log.info("correct_bars_skipped", reason="no_beat_times", track_id=track_id)
+            return {"status": "skipped", "reason": "no_beat_times"}
+
+        beats_per_bar = get_beats_per_bar(db, main_style, sub_style)
+        if beats_per_bar is None:
+            log.info("correct_bars_skipped", reason="no_style_config",
+                     track_id=track_id, main_style=main_style)
+            return {"status": "skipped", "reason": "no_style_config"}
+
+        bars = [beat_times[i] for i in range(0, len(beat_times), beats_per_bar)]
+        track.bars = bars
+
+        for sv in track.structure_versions:
+            if sv.is_active and sv.structure_data:
+                sv.structure_data = {**sv.structure_data, "bars": bars}
+
+        db.commit()
+
+        log.info("correct_bars_done", track_id=track_id, main_style=main_style,
+                 beats_per_bar=beats_per_bar, bar_count=len(bars))
+        return {"status": "success", "bar_count": len(bars), "beats_per_bar": beats_per_bar}
+
+    except Exception as e:
+        db.rollback()
+        log.error("correct_bars_failed", track_id=track_id, exc_info=True)
         raise
     finally:
         db.close()

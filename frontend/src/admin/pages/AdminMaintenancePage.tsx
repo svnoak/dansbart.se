@@ -190,9 +190,15 @@ export function AdminMaintenancePage() {
     {
       id: 'reclassify-all',
       label: 'Omklassificera alla',
-      description: 'Kör om dansstilsklassificering för hela biblioteket',
+      description: 'Kör om dansstilsklassificering för hela biblioteket och räknar om taktpositioner för alla spår med en bekräftad dansstil',
       needsConfirm: true,
-      action: () => run('Omklassificera', () => reclassifyAll()),
+      action: () => run('Omklassificera', async () => {
+        const [reclassify, bars] = await Promise.all([
+          reclassifyAll(),
+          apiFetch('/api/admin/folkwiki/backfill-bars', { method: 'POST' }).then((r) => r.json()),
+        ]);
+        return { ...reclassify as object, barsDispatched: (bars as { dispatched: number }).dispatched };
+      }),
     },
   ];
 
