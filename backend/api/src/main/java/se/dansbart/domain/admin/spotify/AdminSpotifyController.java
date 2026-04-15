@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
 
@@ -19,13 +20,13 @@ public class AdminSpotifyController {
 
     @GetMapping("/artist/{spotifyId}/albums")
     @Operation(summary = "Preview artist's albums from Spotify")
-    public ResponseEntity<Map<String, Object>> getArtistAlbums(@PathVariable String spotifyId) {
+    public ResponseEntity<List<Map<String, Object>>> getArtistAlbums(@PathVariable String spotifyId) {
         return ResponseEntity.ok(spotifyService.getArtistAlbums(spotifyId));
     }
 
     @GetMapping("/album/{spotifyId}/tracks")
     @Operation(summary = "Preview album's tracks from Spotify")
-    public ResponseEntity<Map<String, Object>> getAlbumTracks(@PathVariable String spotifyId) {
+    public ResponseEntity<List<Map<String, Object>>> getAlbumTracks(@PathVariable String spotifyId) {
         return ResponseEntity.ok(spotifyService.getAlbumTracks(spotifyId));
     }
 

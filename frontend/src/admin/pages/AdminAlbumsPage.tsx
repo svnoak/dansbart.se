@@ -80,7 +80,7 @@ export function AdminAlbumsPage() {
         rejectModal.id,
         { reason: rejectReason || undefined },
       );
-      toast(`Album avvisat`);
+      toast('Album raderat & blockerat');
       setRejectModal(null);
       setRejectReason('');
       fetchData();
@@ -127,7 +127,7 @@ export function AdminAlbumsPage() {
           onClick={() => setRejectModal(a)}
           className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
         >
-          Avvisa
+          Radera & blockera
         </button>
       ),
       className: 'w-20',
@@ -169,10 +169,10 @@ export function AdminAlbumsPage() {
       <Modal
         open={!!rejectModal}
         onClose={() => { setRejectModal(null); setRejectReason(''); }}
-        title="Avvisa album"
+        title="Radera & blockera album"
       >
         <p className="text-sm text-[rgb(var(--color-text))]">
-          Avvisa <strong>{rejectModal?.name}</strong> och radera väntande spår?
+          Radera <strong>{rejectModal?.name}</strong> och blockera albumet? Väntande spår raderas.
         </p>
         <div className="mt-3">
           <TextInput
@@ -190,7 +190,7 @@ export function AdminAlbumsPage() {
             className="bg-red-600 hover:bg-red-700"
             onClick={handleReject}
           >
-            Avvisa
+            Radera & blockera
           </Button>
         </div>
       </Modal>

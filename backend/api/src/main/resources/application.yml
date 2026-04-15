@@ -92,3 +92,6 @@ dansbart:
       audio: audio
       feature: feature
       light: light
+  spotify:
+    client-id: ${SPOTIPY_CLIENT_ID:}
+    client-secret: ${SPOTIPY_CLIENT_SECRET:}

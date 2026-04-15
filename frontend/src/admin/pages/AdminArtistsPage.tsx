@@ -88,7 +88,7 @@ export function AdminArtistsPage() {
         rejectModal.id,
         { reason: rejectReason || undefined },
       );
-      toast(`${rejectModal.name} avvisad`);
+      toast(`${rejectModal.name} raderad & blockerad`);
       setRejectModal(null);
       setRejectReason('');
       fetchData();
@@ -98,8 +98,8 @@ export function AdminArtistsPage() {
   };
 
   const actionsFor = (artist: ArtistRow): ActionItem[] => [
-    { label: 'Godkänn', onClick: () => handleApprove(artist) },
-    { label: 'Avvisa', onClick: () => setRejectModal(artist), variant: 'danger' },
+    { label: 'Godkänn & analysera', onClick: () => handleApprove(artist) },
+    { label: 'Radera & blockera', onClick: () => setRejectModal(artist), variant: 'danger' },
   ];
 
   const columns: Column<ArtistRow>[] = [
@@ -178,10 +178,10 @@ export function AdminArtistsPage() {
       <Modal
         open={!!rejectModal}
         onClose={() => { setRejectModal(null); setRejectReason(''); }}
-        title="Avvisa artist"
+        title="Radera & blockera artist"
       >
         <p className="text-sm text-[rgb(var(--color-text))]">
-          Avvisa <strong>{rejectModal?.name}</strong> och radera väntande spår?
+          Radera <strong>{rejectModal?.name}</strong> och blockera artisten? Väntande spår raderas.
         </p>
         <div className="mt-3">
           <TextInput
@@ -199,7 +199,7 @@ export function AdminArtistsPage() {
             className="bg-red-600 hover:bg-red-700"
             onClick={handleReject}
           >
-            Avvisa
+            Radera & blockera
           </Button>
         </div>
       </Modal>
