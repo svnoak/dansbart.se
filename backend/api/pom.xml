@@ -58,7 +58,7 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
-            <version>10.8.1</version>
+            <version>12.4.0</version>
         </dependency>
 
         <!-- pgvector for embeddings -->
@@ -181,7 +181,7 @@
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
-                <version>10.8.1</version>
+                <version>12.4.0</version>
                 <executions>
                     <execution>
                         <id>flyway-migrate</id>
@@ -206,7 +206,7 @@
                     <dependency>
                         <groupId>org.flywaydb</groupId>
                         <artifactId>flyway-database-postgresql</artifactId>
-                        <version>10.8.1</version>
+                        <version>12.4.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
