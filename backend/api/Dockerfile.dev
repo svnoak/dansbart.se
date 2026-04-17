@@ -1,5 +1,5 @@
 # Development image: JDK + run Spring Boot with source mounted for hot reload
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:25.0.2_10-jdk-alpine
 
 WORKDIR /app
 
