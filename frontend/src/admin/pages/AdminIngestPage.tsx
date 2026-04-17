@@ -75,21 +75,21 @@ export function AdminIngestPage() {
     try {
       if (parsed.type === 'artist') {
         const result = await getArtistAlbums1(parsed.id);
-        const albums = Array.isArray(result) ? result : [];
+        const albums = Array.isArray(result) ? result : Object.values(result);
         setPreview(
           albums.map((a: Record<string, unknown>) => ({
             name: (a.name as string) ?? 'Okänt album',
-            id: (a.spotifyId as string) ?? (a.id as string) ?? '',
+            id: (a.id as string) ?? '',
             trackCount: (a.totalTracks as number) ?? 0,
           })),
         );
       } else if (parsed.type === 'album') {
         const result = await getAlbumTracks1(parsed.id);
-        const tracks = Array.isArray(result) ? result : [];
+        const tracks = Array.isArray(result) ? result : Object.values(result);
         setPreview(
           tracks.map((t: Record<string, unknown>) => ({
-            name: (t.name as string) ?? (t.title as string) ?? 'Okänd låt',
-            id: (t.spotifyId as string) ?? (t.id as string) ?? '',
+            name: (t.name as string) ?? 'Okänd låt',
+            id: (t.id as string) ?? '',
           })),
         );
       } else if (parsed.type === 'track') {
@@ -179,7 +179,7 @@ export function AdminIngestPage() {
             onClick={handlePreview}
             disabled={!url.trim() || loadingPreview}
           >
-            {loadingPreview ? 'Laddar...' : 'Förhandsgranska'}
+            {loadingPreview ? 'Hämtar...' : 'Hämta från Spotify'}
           </Button>
         </div>
 

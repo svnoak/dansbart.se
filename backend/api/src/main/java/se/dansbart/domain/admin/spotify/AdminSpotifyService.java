@@ -9,7 +9,8 @@ import java.util.*;
 
 /**
  * Service for Spotify preview and ingestion operations.
- * Previews fetch data from Spotify API, while ingestions queue tracks for processing.
+ * Previews fetch data directly from the Spotify API synchronously.
+ * Ingestions queue tracks for background processing via Celery workers.
  */
 @Service
 @RequiredArgsConstructor
@@ -17,56 +18,45 @@ import java.util.*;
 public class AdminSpotifyService {
 
     private final TaskDispatcher taskDispatcher;
+    private final SpotifyHttpClient spotifyHttpClient;
 
     /**
-     * Preview an artist's albums from Spotify.
-     * This fetches album metadata without ingesting tracks.
+     * Preview an artist's albums directly from Spotify.
+     * Returns album metadata without ingesting any tracks.
      */
-    public Map<String, Object> getArtistAlbums(String spotifyArtistId) {
-        String taskId = UUID.randomUUID().toString();
-
-        // Dispatch preview task to light worker
-        taskDispatcher.dispatchSpotifyPreview("artist_albums", spotifyArtistId);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("status", "queued");
-        result.put("taskId", taskId);
-        result.put("spotifyArtistId", spotifyArtistId);
-        result.put("message", "Artist albums preview queued");
-        return result;
+    public List<Map<String, Object>> getArtistAlbums(String spotifyArtistId) {
+        List<SpotifyHttpClient.SpotifyAlbum> albums = spotifyHttpClient.getArtistAlbums(spotifyArtistId);
+        return albums.stream().map(a -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", a.id());
+            item.put("name", a.name());
+            item.put("totalTracks", a.totalTracks());
+            return item;
+        }).toList();
     }
 
     /**
-     * Preview an album's tracks from Spotify.
-     * This fetches track metadata without ingesting them.
+     * Preview an album's tracks directly from Spotify.
+     * Returns track metadata without ingesting them.
      */
-    public Map<String, Object> getAlbumTracks(String spotifyAlbumId) {
-        String taskId = UUID.randomUUID().toString();
-
-        // Dispatch preview task to light worker
-        taskDispatcher.dispatchSpotifyPreview("album_tracks", spotifyAlbumId);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("status", "queued");
-        result.put("taskId", taskId);
-        result.put("spotifyAlbumId", spotifyAlbumId);
-        result.put("message", "Album tracks preview queued");
-        return result;
+    public List<Map<String, Object>> getAlbumTracks(String spotifyAlbumId) {
+        List<SpotifyHttpClient.SpotifyTrack> tracks = spotifyHttpClient.getAlbumTracks(spotifyAlbumId);
+        return tracks.stream().map(t -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", t.id());
+            item.put("name", t.name());
+            return item;
+        }).toList();
     }
 
     /**
      * Ingest an album from Spotify.
-     * This queues all tracks from the album for full processing.
+     * Queues all tracks from the album for full processing.
      */
     public Map<String, Object> ingestAlbum(String spotifyAlbumId) {
-        String taskId = UUID.randomUUID().toString();
-
-        // Use existing ingest mechanism with album type
         taskDispatcher.dispatchSpotifyIngest("album", spotifyAlbumId);
-
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
-        result.put("taskId", taskId);
         result.put("spotifyAlbumId", spotifyAlbumId);
         result.put("message", "Album ingestion queued");
         return result;
@@ -76,14 +66,9 @@ public class AdminSpotifyService {
      * Ingest a single track from Spotify.
      */
     public Map<String, Object> ingestTrack(String spotifyTrackId) {
-        String taskId = UUID.randomUUID().toString();
-
-        // Dispatch track ingestion task
         taskDispatcher.dispatchSpotifyIngest("track", spotifyTrackId);
-
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
-        result.put("taskId", taskId);
         result.put("spotifyTrackId", spotifyTrackId);
         result.put("message", "Track ingestion queued");
         return result;

@@ -92,7 +92,7 @@ export function AdminPendingPage() {
   const handleApprove = async (artist: PendingArtistRow) => {
     try {
       await approvePendingArtist(artist.id);
-      toast(`${artist.name} godkänd`);
+      toast(`${artist.name} godkänd, importerar diskografi`);
       fetchArtists();
     } catch {
       toast('Kunde inte godkänna', 'error');
@@ -138,7 +138,7 @@ export function AdminPendingPage() {
       render: (a) => (
         <div className="flex items-center gap-2">
           <Button variant="primary" size="sm" onClick={() => handleApprove(a)}>
-            Godkänn
+            Godkänn & importera
           </Button>
           <Button
             variant="ghost"

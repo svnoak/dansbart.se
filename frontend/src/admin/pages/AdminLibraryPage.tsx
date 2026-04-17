@@ -251,7 +251,7 @@ export function AdminLibraryPage() {
         rejectModal.id!,
         { reason: rejectReason || undefined },
       );
-      toast('Spår avvisat');
+      toast('Spår raderat & blockerat');
       setRejectModal(null);
       setRejectReason('');
       fetchData();
@@ -314,7 +314,7 @@ export function AdminLibraryPage() {
   const handleBulkReject = () => {
     setBulkRejectModal(false);
     setBulkRejectReason('');
-    runBulkAction('Avvisa', (id) =>
+    runBulkAction('Radera & blockera', (id) =>
       rejectTrack(id, { reason: bulkRejectReason || undefined }),
     );
   };
@@ -335,7 +335,7 @@ export function AdminLibraryPage() {
       items.push({ label: 'Ta bort flagga', onClick: () => handleUnflag(track) });
     }
     items.push(
-      { label: 'Avvisa', onClick: () => setRejectModal(track), variant: 'danger' },
+      { label: 'Radera & blockera', onClick: () => setRejectModal(track), variant: 'danger' },
       { label: 'Radera', onClick: () => setDeleteModal(track), variant: 'danger' },
     );
     return items;
@@ -562,7 +562,7 @@ export function AdminLibraryPage() {
               className="text-red-600 hover:text-red-700"
               onClick={() => setBulkRejectModal(true)}
             >
-              Avvisa
+              Radera & blockera
             </Button>
             <Button
               variant="ghost"
@@ -642,10 +642,10 @@ export function AdminLibraryPage() {
       <Modal
         open={!!rejectModal}
         onClose={() => { setRejectModal(null); setRejectReason(''); }}
-        title="Avvisa spår"
+        title="Radera & blockera spår"
       >
         <p className="text-sm text-[rgb(var(--color-text))]">
-          Avvisa <strong>{rejectModal?.title}</strong> och lägg till på blocklistan?
+          Radera <strong>{rejectModal?.title}</strong> och lägg till på blocklistan?
         </p>
         <div className="mt-3">
           <TextInput
@@ -663,7 +663,7 @@ export function AdminLibraryPage() {
             className="bg-red-600 hover:bg-red-700"
             onClick={handleReject}
           >
-            Avvisa
+            Radera & blockera
           </Button>
         </div>
       </Modal>
@@ -672,10 +672,10 @@ export function AdminLibraryPage() {
       <Modal
         open={bulkRejectModal}
         onClose={() => { setBulkRejectModal(false); setBulkRejectReason(''); }}
-        title="Avvisa spår"
+        title="Radera & blockera spår"
       >
         <p className="text-sm text-[rgb(var(--color-text))]">
-          Avvisa {selectedIds.size} markerade spår och lägg till på blocklistan?
+          Radera {selectedIds.size} markerade spår och lägg till på blocklistan?
         </p>
         <div className="mt-3">
           <TextInput
@@ -693,7 +693,7 @@ export function AdminLibraryPage() {
             className="bg-red-600 hover:bg-red-700"
             onClick={handleBulkReject}
           >
-            Avvisa {selectedIds.size} spår
+            Radera & blockera ({selectedIds.size})
           </Button>
         </div>
       </Modal>

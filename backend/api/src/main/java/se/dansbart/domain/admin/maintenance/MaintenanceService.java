@@ -187,15 +187,16 @@ public class MaintenanceService {
         if (resourceId == null || resourceId.isBlank()) {
             throw new IllegalArgumentException("resourceId is required");
         }
-        // Validate resource type
+        // Normalize and validate resource type
+        String normalizedType = resourceType != null ? resourceType.toLowerCase() : "";
         Set<String> validTypes = Set.of("playlist", "album", "artist");
-        if (!validTypes.contains(resourceType)) {
+        if (!validTypes.contains(normalizedType)) {
             throw new IllegalArgumentException("Invalid resourceType. Must be one of: " + String.join(", ", validTypes));
         }
 
         // Dispatch Spotify ingestion task (playlist, album, or artist) to light worker
         String taskId = UUID.randomUUID().toString();
-        taskDispatcher.dispatchSpotifyIngest(resourceType, resourceId);
+        taskDispatcher.dispatchSpotifyIngest(normalizedType, resourceId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "queued");
