@@ -10,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 /**
  * BFF security configuration.
@@ -40,8 +41,9 @@ public class SecurityConfig {
                 .csrfTokenRequestHandler(requestHandler)
                 // Anonymous-callable endpoints: no session yet, so no XSRF-TOKEN cookie exists
                 .ignoringRequestMatchers("/api/analytics/**")
-                .ignoringRequestMatchers(HttpMethod.POST, "/api/tracks/**")
-                .ignoringRequestMatchers(HttpMethod.PATCH, "/api/tracks/**"))
+                .ignoringRequestMatchers(
+                    new AntPathRequestMatcher("/api/tracks/**", "POST"),
+                    new AntPathRequestMatcher("/api/tracks/**", "PATCH")))
             .authorizeHttpRequests(auth -> auth
                 // SSO endpoints — must be accessible before authentication
                 .requestMatchers("/sso/**").permitAll()
