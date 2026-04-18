@@ -37,7 +37,11 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(requestHandler))
+                .csrfTokenRequestHandler(requestHandler)
+                // Anonymous-callable endpoints: no session yet, so no XSRF-TOKEN cookie exists
+                .ignoringRequestMatchers("/api/analytics/**")
+                .ignoringRequestMatchers(HttpMethod.POST, "/api/tracks/**")
+                .ignoringRequestMatchers(HttpMethod.PATCH, "/api/tracks/**"))
             .authorizeHttpRequests(auth -> auth
                 // SSO endpoints — must be accessible before authentication
                 .requestMatchers("/sso/**").permitAll()
@@ -57,8 +61,6 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
-                // Analytics — called by all visitors including anonymous
-                .requestMatchers(HttpMethod.POST, "/api/analytics/**").permitAll()
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")
