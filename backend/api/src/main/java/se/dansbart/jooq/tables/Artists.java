@@ -85,6 +85,16 @@ public class Artists extends TableImpl<Record> {
      */
     public final TableField<Record, Boolean> IS_VERIFIED = createField(DSL.name("is_verified"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
+    /**
+     * The column <code>public.artists.musicbrainz_id</code>.
+     */
+    public final TableField<Record, String> MUSICBRAINZ_ID = createField(DSL.name("musicbrainz_id"), SQLDataType.VARCHAR, this, "");
+
+    /**
+     * The column <code>public.artists.description</code>.
+     */
+    public final TableField<Record, String> DESCRIPTION = createField(DSL.name("description"), SQLDataType.CLOB, this, "");
+
     private Artists(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -154,7 +164,7 @@ public class Artists extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_ARTISTS_NAME, Indexes.IX_ARTISTS_NAME_TRGM);
+        return Arrays.asList(Indexes.IX_ARTISTS_MUSICBRAINZ_ID, Indexes.IX_ARTISTS_NAME, Indexes.IX_ARTISTS_NAME_TRGM);
     }
 
     @Override

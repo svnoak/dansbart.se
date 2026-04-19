@@ -190,6 +190,13 @@ public class ArtistJooqRepository {
         return artist;
     }
 
+    public void updateDescription(UUID id, String description) {
+        dsl.update(ARTISTS)
+            .set(ARTISTS.DESCRIPTION, description)
+            .where(ARTISTS.ID.eq(id))
+            .execute();
+    }
+
     private Artist toArtist(Record r) {
         return Artist.builder()
             .id(r.get(ARTISTS.ID))
@@ -197,6 +204,7 @@ public class ArtistJooqRepository {
             .imageUrl(r.get(ARTISTS.IMAGE_URL))
             .spotifyId(r.get(ARTISTS.SPOTIFY_ID))
             .isVerified(r.get(ARTISTS.IS_VERIFIED) != null && r.get(ARTISTS.IS_VERIFIED))
+            .description(r.get(ARTISTS.DESCRIPTION))
             .build();
     }
 }

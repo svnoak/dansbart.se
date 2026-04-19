@@ -15,6 +15,9 @@ import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.worker.TaskDispatcher;
 
+import se.dansbart.dto.ArtistDto;
+import se.dansbart.mapper.ArtistMapper;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +36,16 @@ public class AdminArtistService {
     private final TrackJooqRepository trackJooqRepository;
     private final RejectionLogJooqRepository rejectionLogJooqRepository;
     private final TaskDispatcher taskDispatcher;
+    private final ArtistMapper artistMapper;
+
+    @Transactional
+    public ArtistDto updateDescription(UUID artistId, String description) {
+        Artist artist = artistJooqRepository.findById(artistId)
+            .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
+        artistJooqRepository.updateDescription(artistId, description);
+        artist.setDescription(description);
+        return artistMapper.toDto(artist);
+    }
 
     @Transactional(readOnly = true)
     public Map<String, Object> getArtistsPaginated(String search, String isolated, int limit, int offset) {

@@ -5,4 +5,4 @@
  * OpenAPI spec version: v0
  */
 
-export type GetArtistAlbums1200 = {[key: string]: { [key: string]: unknown }};
+export type GetAlbumTracks1200Item = {[key: string]: { [key: string]: unknown }};

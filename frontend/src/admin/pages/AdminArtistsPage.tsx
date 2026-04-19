@@ -5,6 +5,7 @@ import {
   approveArtist,
   rejectArtist,
 } from '@/api/generated/admin-artists/admin-artists';
+import { httpClient } from '@/api/http-client';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { FilterBar } from '@/admin/components/FilterBar';
@@ -23,6 +24,7 @@ interface ArtistRow {
   trackCount?: number;
   approvedTrackCount?: number;
   pendingTrackCount?: number;
+  description?: string;
 }
 
 interface ArtistPageData {
@@ -40,6 +42,8 @@ export function AdminArtistsPage() {
   const [loading, setLoading] = useState(true);
   const [rejectModal, setRejectModal] = useState<ArtistRow | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [editModal, setEditModal] = useState<ArtistRow | null>(null);
+  const [editDescription, setEditDescription] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -97,8 +101,29 @@ export function AdminArtistsPage() {
     }
   };
 
+  const handleEdit = async () => {
+    if (!editModal) return;
+    try {
+      await httpClient(`/api/admin/artists/${editModal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: editDescription }),
+      });
+      toast(`${editModal.name} uppdaterad`);
+      setEditModal(null);
+      setEditDescription('');
+      fetchData();
+    } catch {
+      toast('Kunde inte uppdatera artist', 'error');
+    }
+  };
+
   const actionsFor = (artist: ArtistRow): ActionItem[] => [
     { label: 'Godkänn & analysera', onClick: () => handleApprove(artist) },
+    {
+      label: 'Redigera beskrivning',
+      onClick: () => { setEditModal(artist); setEditDescription(artist.description ?? ''); },
+    },
     { label: 'Radera & blockera', onClick: () => setRejectModal(artist), variant: 'danger' },
   ];
 
@@ -200,6 +225,32 @@ export function AdminArtistsPage() {
             onClick={handleReject}
           >
             Radera & blockera
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!editModal}
+        onClose={() => { setEditModal(null); setEditDescription(''); }}
+        title={`Redigera: ${editModal?.name}`}
+      >
+        <p className="text-xs text-[rgb(var(--color-text-muted))] mb-2">
+          Stödjer markdown. Lägg till länkar med{' '}
+          <code className="font-mono">[text](url)</code>, t.ex.{' '}
+          <code className="font-mono">[Facebook](https://facebook.com/...)</code>
+        </p>
+        <textarea
+          className="w-full rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] text-[rgb(var(--color-text))] text-sm p-2 min-h-[140px] resize-y focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]"
+          placeholder="Beskrivning av artisten..."
+          value={editDescription}
+          onChange={(e) => setEditDescription(e.target.value)}
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => { setEditModal(null); setEditDescription(''); }}>
+            Avbryt
+          </Button>
+          <Button variant="primary" onClick={handleEdit}>
+            Spara
           </Button>
         </div>
       </Modal>

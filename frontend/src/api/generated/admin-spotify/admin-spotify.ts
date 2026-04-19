@@ -5,8 +5,8 @@
  * OpenAPI spec version: v0
  */
 import type {
-  GetAlbumTracks1200,
-  GetArtistAlbums1200,
+  GetAlbumTracks1200Item,
+  GetArtistAlbums1200Item,
   IngestAlbum200,
   IngestAlbumRequest,
   IngestTrack200,
@@ -74,9 +74,9 @@ export const getGetArtistAlbums1Url = (spotifyId: string,) => {
   return `/api/admin/spotify/artist/${spotifyId}/albums`
 }
 
-export const getArtistAlbums1 = async (spotifyId: string, options?: RequestInit): Promise<GetArtistAlbums1200> => {
+export const getArtistAlbums1 = async (spotifyId: string, options?: RequestInit): Promise<GetArtistAlbums1200Item[]> => {
   
-  return httpClient<GetArtistAlbums1200>(getGetArtistAlbums1Url(spotifyId),
+  return httpClient<GetArtistAlbums1200Item[]>(getGetArtistAlbums1Url(spotifyId),
   {      
     ...options,
     method: 'GET'
@@ -97,9 +97,9 @@ export const getGetAlbumTracks1Url = (spotifyId: string,) => {
   return `/api/admin/spotify/album/${spotifyId}/tracks`
 }
 
-export const getAlbumTracks1 = async (spotifyId: string, options?: RequestInit): Promise<GetAlbumTracks1200> => {
+export const getAlbumTracks1 = async (spotifyId: string, options?: RequestInit): Promise<GetAlbumTracks1200Item[]> => {
   
-  return httpClient<GetAlbumTracks1200>(getGetAlbumTracks1Url(spotifyId),
+  return httpClient<GetAlbumTracks1200Item[]>(getGetAlbumTracks1Url(spotifyId),
   {      
     ...options,
     method: 'GET'

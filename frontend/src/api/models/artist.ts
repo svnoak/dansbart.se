@@ -4,11 +4,28 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { AlbumSummaryDto } from './albumSummaryDto';
 
+/**
+ * Artist detail view used in public APIs
+ */
 export interface Artist {
+  /** Unique identifier of the artist */
   id?: string;
+  /** Display name of the artist */
   name?: string;
+  /** URL to artist image (if available) */
   imageUrl?: string;
+  /** Spotify artist ID */
   spotifyId?: string;
+  /** Whether the artist has been manually verified */
   isVerified?: boolean;
+  /** Admin-provided description, supports markdown */
+  description?: string;
+  /** Number of tracks associated with this artist */
+  trackCount?: number;
+  /** Number of albums associated with this artist */
+  albumCount?: number;
+  /** Albums linked to this artist */
+  albums?: AlbumSummaryDto[];
 }

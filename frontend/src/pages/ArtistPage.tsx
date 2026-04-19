@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { getArtist, getArtistAlbums } from '@/api/generated/artists/artists';
 import type { Artist } from '@/api/models/artist';
 import type { Album } from '@/api/models/album';
@@ -72,6 +73,22 @@ export function ArtistPage() {
           )}
         </div>
       </div>
+
+      {artist.description && (
+        <div className="prose prose-sm max-w-none text-[rgb(var(--color-text))] [&_a]:text-[rgb(var(--color-primary))] [&_a]:underline">
+          <ReactMarkdown
+            components={{
+              a: ({ href, children }) => (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              ),
+            }}
+          >
+            {artist.description}
+          </ReactMarkdown>
+        </div>
+      )}
 
       <section aria-labelledby="albums-heading">
         <SectionTitle id="albums-heading">Album</SectionTitle>
