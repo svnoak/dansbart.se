@@ -6,36 +6,10 @@
   "prHourlyLimit": 2,
   "packageRules": [
     {
-      "description": "Group all GitHub Actions updates",
-      "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions",
-      "automerge": false
-    },
-    {
-      "description": "Group all Docker base image updates",
-      "matchManagers": ["dockerfile", "docker-compose"],
-      "groupName": "Docker base images",
-      "automerge": false
-    },
-    {
-      "description": "Group non-major npm dependency updates",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "npm dependencies (non-major)",
-      "automerge": false
-    },
-    {
-      "description": "Group Python dependency updates",
-      "matchManagers": ["pip_requirements"],
-      "groupName": "Python dependencies",
-      "automerge": false
-    },
-    {
-      "description": "Group non-major Maven dependency updates",
-      "matchManagers": ["maven"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "Maven dependencies (non-major)",
-      "automerge": false
+      "description": "Group all non-major updates into a single PR",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "all non-major dependencies",
+      "automerge": true
     }
   ]
 }
