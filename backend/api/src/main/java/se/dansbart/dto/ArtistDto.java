@@ -32,6 +32,9 @@ public class ArtistDto {
     @Schema(description = "Whether the artist has been manually verified")
     private Boolean isVerified;
 
+    @Schema(description = "Admin-provided description, supports markdown")
+    private String description;
+
     // Statistics
     @Schema(description = "Number of tracks associated with this artist")
     private Integer trackCount;

@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import se.dansbart.dto.ArtistDto;
+import se.dansbart.dto.request.UpdateArtistDescriptionRequest;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,6 +47,18 @@ public class AdminArtistController {
     public ResponseEntity<Map<String, Object>> getCollaborationNetwork(@PathVariable UUID artistId) {
         try {
             return ResponseEntity.ok(artistService.getCollaborationNetwork(artistId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PatchMapping("/{artistId}")
+    @Operation(summary = "Update artist description")
+    public ResponseEntity<ArtistDto> updateArtistDescription(
+            @PathVariable UUID artistId,
+            @RequestBody UpdateArtistDescriptionRequest request) {
+        try {
+            return ResponseEntity.ok(artistService.updateDescription(artistId, request.getDescription()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }

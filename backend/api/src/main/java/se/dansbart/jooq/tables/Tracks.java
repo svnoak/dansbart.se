@@ -233,6 +233,11 @@ public class Tracks extends TableImpl<Record> {
      */
     public final TableField<Record, UUID> UPLOADER_ID = createField(DSL.name("uploader_id"), SQLDataType.UUID, this, "");
 
+    /**
+     * The column <code>public.tracks.musicbrainz_id</code>.
+     */
+    public final TableField<Record, String> MUSICBRAINZ_ID = createField(DSL.name("musicbrainz_id"), SQLDataType.VARCHAR, this, "");
+
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -302,7 +307,7 @@ public class Tracks extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
+        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_MUSICBRAINZ_ID, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
     }
 
     @Override

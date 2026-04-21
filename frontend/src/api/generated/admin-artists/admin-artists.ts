@@ -6,6 +6,7 @@
  */
 import type {
   ApproveArtist200,
+  Artist,
   BulkApproveArtists200,
   BulkApproveRequest,
   BulkRejectArtists200,
@@ -15,7 +16,8 @@ import type {
   GetCollaborationNetwork200,
   GetIsolationStatus200,
   RejectArtist200,
-  RejectRequest
+  RejectRequest,
+  UpdateArtistDescriptionRequest
 } from '../../models';
 
 import { httpClient } from '../../http-client';
@@ -112,6 +114,31 @@ export const bulkApproveArtists = async (bulkApproveRequest: BulkApproveRequest,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       bulkApproveRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Update artist description
+ */
+export const getUpdateArtistDescriptionUrl = (artistId: string,) => {
+
+
+  
+
+  return `/api/admin/artists/${artistId}`
+}
+
+export const updateArtistDescription = async (artistId: string,
+    updateArtistDescriptionRequest: UpdateArtistDescriptionRequest, options?: RequestInit): Promise<Artist> => {
+  
+  return httpClient<Artist>(getUpdateArtistDescriptionUrl(artistId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateArtistDescriptionRequest,)
   }
 );}
   

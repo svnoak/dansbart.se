@@ -26,6 +26,8 @@ public class Artist {
     @Builder.Default
     private Boolean isVerified = false;
 
+    private String description;
+
     @JsonIgnore
     @Builder.Default
     private List<TrackArtist> trackLinks = new ArrayList<>();

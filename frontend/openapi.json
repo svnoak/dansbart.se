@@ -577,6 +577,45 @@
         }
       }
     },
+    "/api/admin/folkwiki/tunes/{folkwikiTuneId}/style": {
+      "put": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Correct the style string stored on a folkwiki tune",
+        "operationId": "correctTuneStyle",
+        "parameters": [
+          {
+            "name": "folkwikiTuneId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/folkwiki/matches/{trackId}/{folkwikiTuneId}/reject": {
       "put": {
         "tags": ["Admin Folkwiki"],
@@ -2274,6 +2313,26 @@
         }
       }
     },
+    "/api/admin/folkwiki/backfill-bars": {
+      "post": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Dispatch bar correction tasks for all folkwiki-confirmed tracks",
+        "operationId": "backfillBars",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/danger/reset-crawl-data": {
       "post": {
         "tags": ["Admin Maintenance"],
@@ -2514,6 +2573,41 @@
           "required": true
         },
         "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/admin/artists/{artistId}": {
+      "patch": {
+        "tags": ["Admin Artists"],
+        "summary": "Update artist description",
+        "operationId": "updateArtistDescription",
+        "parameters": [
+          {
+            "name": "artistId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateArtistDescriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Artist" }
+              }
+            }
+          }
+        }
       }
     },
     "/api/users/{id}": {
@@ -3833,8 +3927,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
                 }
               }
             }
@@ -3861,8 +3958,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
                 }
               }
             }
@@ -5333,6 +5433,70 @@
         "type": "object",
         "properties": { "role": { "type": "string" } }
       },
+      "UpdateArtistDescriptionRequest": {
+        "type": "object",
+        "properties": { "description": { "type": "string" } }
+      },
+      "AlbumSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "coverImageUrl": { "type": "string" },
+          "releaseDate": { "type": "string" },
+          "trackCount": { "type": "integer", "format": "int32" }
+        },
+        "description": "Albums linked to this artist"
+      },
+      "Artist": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the artist",
+            "format": "uuid",
+            "example": "3f7a7b2e-4b9c-4b1d-9b9e-2a6c9e2d1f3a"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the artist",
+            "example": "Björn Ståbi"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "URL to artist image (if available)"
+          },
+          "spotifyId": {
+            "type": "string",
+            "description": "Spotify artist ID",
+            "example": "1Xyo4u8uXC1ZmMpatF05PJ"
+          },
+          "isVerified": {
+            "type": "boolean",
+            "description": "Whether the artist has been manually verified"
+          },
+          "description": {
+            "type": "string",
+            "description": "Admin-provided description, supports markdown"
+          },
+          "trackCount": {
+            "type": "integer",
+            "description": "Number of tracks associated with this artist",
+            "format": "int32"
+          },
+          "albumCount": {
+            "type": "integer",
+            "description": "Number of albums associated with this artist",
+            "format": "int32"
+          },
+          "albums": {
+            "type": "array",
+            "description": "Albums linked to this artist",
+            "items": { "$ref": "#/components/schemas/AlbumSummaryDto" }
+          }
+        },
+        "description": "Artist detail view used in public APIs"
+      },
       "UserPublicProfile": {
         "type": "object",
         "properties": {
@@ -5559,16 +5723,6 @@
           "trackCount": { "type": "integer", "format": "int64" }
         }
       },
-      "Artist": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "name": { "type": "string" },
-          "imageUrl": { "type": "string" },
-          "spotifyId": { "type": "string" },
-          "isVerified": { "type": "boolean" }
-        }
-      },
       "PageResponseArtist": {
         "type": "object",
         "properties": {
@@ -5581,17 +5735,6 @@
           "size": { "type": "integer", "format": "int32" },
           "hasMore": { "type": "boolean" }
         }
-      },
-      "AlbumSummaryDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "title": { "type": "string" },
-          "coverImageUrl": { "type": "string" },
-          "releaseDate": { "type": "string" },
-          "trackCount": { "type": "integer", "format": "int32" }
-        },
-        "description": "Albums linked to this artist"
       },
       "Album": {
         "type": "object",
