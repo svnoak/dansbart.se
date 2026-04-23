@@ -27,6 +27,10 @@
       "description": "Track duplicate management endpoints"
     },
     {
+      "name": "Explorer",
+      "description": "Public R-pattern explorer endpoints"
+    },
+    {
       "name": "Structure Versions",
       "description": "Track structure version voting and reporting"
     },
@@ -562,6 +566,45 @@
             "schema": { "type": "string", "format": "uuid" }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/folkwiki/tunes/{folkwikiTuneId}/style": {
+      "put": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Correct the style string stored on a folkwiki tune",
+        "operationId": "correctTuneStyle",
+        "parameters": [
+          {
+            "name": "folkwikiTuneId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -2274,6 +2317,26 @@
         }
       }
     },
+    "/api/admin/folkwiki/backfill-bars": {
+      "post": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Dispatch bar correction tasks for all folkwiki-confirmed tracks",
+        "operationId": "backfillBars",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/danger/reset-crawl-data": {
       "post": {
         "tags": ["Admin Maintenance"],
@@ -3128,6 +3191,76 @@
         }
       }
     },
+    "/api/explorer/tracks": {
+      "get": {
+        "tags": ["Explorer"],
+        "summary": "Fetch tracks for the Explorer scatter plot",
+        "operationId": "getExplorerTracks",
+        "parameters": [
+          {
+            "name": "meter",
+            "in": "query",
+            "description": "Meter filter: '3/4' or '4/4' (omit for all)",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "minBpm",
+            "in": "query",
+            "description": "Minimum tempo BPM",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32" }
+          },
+          {
+            "name": "maxBpm",
+            "in": "query",
+            "description": "Maximum tempo BPM",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32" }
+          },
+          {
+            "name": "minAsymmetry",
+            "in": "query",
+            "description": "Minimum asymmetry score (0.0–0.5)",
+            "required": false,
+            "schema": { "type": "number", "format": "float" }
+          },
+          {
+            "name": "maxAsymmetry",
+            "in": "query",
+            "description": "Maximum asymmetry score (0.0–0.5)",
+            "required": false,
+            "schema": { "type": "number", "format": "float" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of tracks to return",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 500 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Offset for pagination",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseExplorerTrackDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/discovery/recent": {
       "get": {
         "tags": ["Discovery"],
@@ -3833,8 +3966,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
                 }
               }
             }
@@ -3861,8 +3997,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
                 }
               }
             }
@@ -4982,7 +5121,21 @@
           "polskaScore": { "type": "number", "format": "float" },
           "hamboScore": { "type": "number", "format": "float" },
           "bpmStability": { "type": "number", "format": "float" },
+          "r1Mean": { "type": "number", "format": "float" },
+          "r2Mean": { "type": "number", "format": "float" },
+          "r3Mean": { "type": "number", "format": "float" },
+          "asymmetryScore": { "type": "number", "format": "float" },
+          "asymmetryConsistency": { "type": "number", "format": "float" },
+          "patternType": { "type": "string" },
+          "ternaryConfidence": { "type": "number", "format": "float" },
+          "meterAmbiguous": { "type": "boolean" },
           "isInstrumental": { "type": "boolean" },
+          "liltScore": { "type": "number", "format": "float" },
+          "liltConsistency": { "type": "number", "format": "float" },
+          "liltPattern": {
+            "type": "array",
+            "items": { "type": "number", "format": "float" }
+          },
           "analysisVersion": { "type": "string" },
           "musicGenre": { "type": "string" },
           "genreConfidence": { "type": "number", "format": "float" },
@@ -5536,6 +5689,52 @@
           "invitedByDisplayName": { "type": "string" },
           "permission": { "type": "string" },
           "invitedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ExplorerTrackDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "artistName": { "type": "string" },
+          "asymmetryScore": { "type": "number", "format": "float" },
+          "tempoBpm": { "type": "number", "format": "float" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "musicGenre": { "type": "string" },
+          "r1Mean": { "type": "number", "format": "float" },
+          "r2Mean": { "type": "number", "format": "float" },
+          "r3Mean": { "type": "number", "format": "float" },
+          "patternType": { "type": "string" },
+          "asymmetryConsistency": { "type": "number", "format": "float" },
+          "ternaryConfidence": { "type": "number", "format": "float" },
+          "meterAmbiguous": { "type": "boolean" },
+          "polskaScore": { "type": "number", "format": "float" },
+          "hamboScore": { "type": "number", "format": "float" },
+          "bpmStability": { "type": "number", "format": "float" },
+          "swingRatio": { "type": "number", "format": "float" },
+          "liltScore": { "type": "number", "format": "float" },
+          "liltConsistency": { "type": "number", "format": "float" },
+          "effectiveBpm": { "type": "integer", "format": "int32" },
+          "tempoCategory": { "type": "string" },
+          "confidence": { "type": "number", "format": "float" },
+          "playbackLinks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
+          }
+        }
+      },
+      "PageResponseExplorerTrackDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ExplorerTrackDto" }
+          },
+          "total": { "type": "integer", "format": "int64" },
+          "page": { "type": "integer", "format": "int32" },
+          "size": { "type": "integer", "format": "int32" },
+          "hasMore": { "type": "boolean" }
         }
       },
       "CuratedPlaylistDto": {

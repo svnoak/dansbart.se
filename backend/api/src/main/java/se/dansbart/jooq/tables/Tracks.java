@@ -40,6 +40,8 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Albums.AlbumsPath;
 import se.dansbart.jooq.tables.AnalysisSources.AnalysisSourcesPath;
 import se.dansbart.jooq.tables.Artists.ArtistsPath;
+import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
+import se.dansbart.jooq.tables.Dances.DancesPath;
 import se.dansbart.jooq.tables.FolkwikiTunes.FolkwikiTunesPath;
 import se.dansbart.jooq.tables.PlaybackLinks.PlaybackLinksPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
@@ -233,6 +235,66 @@ public class Tracks extends TableImpl<Record> {
      */
     public final TableField<Record, UUID> UPLOADER_ID = createField(DSL.name("uploader_id"), SQLDataType.UUID, this, "");
 
+    /**
+     * The column <code>public.tracks.musicbrainz_id</code>.
+     */
+    public final TableField<Record, String> MUSICBRAINZ_ID = createField(DSL.name("musicbrainz_id"), SQLDataType.VARCHAR, this, "");
+
+    /**
+     * The column <code>public.tracks.r1_mean</code>.
+     */
+    public final TableField<Record, Double> R1_MEAN = createField(DSL.name("r1_mean"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.r2_mean</code>.
+     */
+    public final TableField<Record, Double> R2_MEAN = createField(DSL.name("r2_mean"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.r3_mean</code>.
+     */
+    public final TableField<Record, Double> R3_MEAN = createField(DSL.name("r3_mean"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.asymmetry_score</code>.
+     */
+    public final TableField<Record, Double> ASYMMETRY_SCORE = createField(DSL.name("asymmetry_score"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.asymmetry_consistency</code>.
+     */
+    public final TableField<Record, Double> ASYMMETRY_CONSISTENCY = createField(DSL.name("asymmetry_consistency"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.pattern_type</code>.
+     */
+    public final TableField<Record, String> PATTERN_TYPE = createField(DSL.name("pattern_type"), SQLDataType.VARCHAR(32), this, "");
+
+    /**
+     * The column <code>public.tracks.ternary_confidence</code>.
+     */
+    public final TableField<Record, Double> TERNARY_CONFIDENCE = createField(DSL.name("ternary_confidence"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.meter_ambiguous</code>.
+     */
+    public final TableField<Record, Boolean> METER_AMBIGUOUS = createField(DSL.name("meter_ambiguous"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.tracks.lilt_score</code>.
+     */
+    public final TableField<Record, Double> LILT_SCORE = createField(DSL.name("lilt_score"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.lilt_consistency</code>.
+     */
+    public final TableField<Record, Double> LILT_CONSISTENCY = createField(DSL.name("lilt_consistency"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.lilt_pattern</code>.
+     */
+    public final TableField<Record, JSONB> LILT_PATTERN = createField(DSL.name("lilt_pattern"), SQLDataType.JSONB, this, "");
+
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -302,7 +364,7 @@ public class Tracks extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
+        return Arrays.asList(Indexes.IDX_TRACKS_ASYMMETRY_SCORE, Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_LILT_SCORE, Indexes.IDX_TRACKS_PATTERN_TYPE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_MUSICBRAINZ_ID, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
     }
 
     @Override
@@ -338,6 +400,19 @@ public class Tracks extends TableImpl<Record> {
             _analysisSources = new AnalysisSourcesPath(this, null, Keys.ANALYSIS_SOURCES__ANALYSIS_SOURCES_TRACK_ID_FKEY.getInverseKey());
 
         return _analysisSources;
+    }
+
+    private transient DanceTracksPath _danceTracks;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_tracks</code> table
+     */
+    public DanceTracksPath danceTracks() {
+        if (_danceTracks == null)
+            _danceTracks = new DanceTracksPath(this, null, Keys.DANCE_TRACKS__DANCE_TRACKS_TRACK_ID_FKEY.getInverseKey());
+
+        return _danceTracks;
     }
 
     private transient PlaybackLinksPath _playbackLinks;
@@ -481,6 +556,14 @@ public class Tracks extends TableImpl<Record> {
             _userInteractions = new UserInteractionsPath(this, null, Keys.USER_INTERACTIONS__USER_INTERACTIONS_TRACK_ID_FKEY.getInverseKey());
 
         return _userInteractions;
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>public.dances</code>
+     * table
+     */
+    public DancesPath dances() {
+        return danceTracks().dances();
     }
 
     /**
