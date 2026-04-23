@@ -247,6 +247,19 @@ class AnalysisService:
             track.hambo_score = data.get('hambo_score')
             track.voice_probability = data.get('voice_probability')
             track.bpm_stability = data.get('bpm_stability')
+            track.lilt_score = data.get('lilt_score')
+            track.lilt_consistency = data.get('lilt_consistency')
+            track.lilt_pattern = data.get('lilt_pattern') or []
+
+            ratios = data.get('avg_beat_ratios') or [None, None, None]
+            track.r1_mean = ratios[0] if len(ratios) > 0 else None
+            track.r2_mean = ratios[1] if len(ratios) > 1 else None
+            track.r3_mean = ratios[2] if len(ratios) > 2 else None
+            track.asymmetry_score = data.get('asymmetry_score')
+            track.asymmetry_consistency = data.get('asymmetry_consistency')
+            track.pattern_type = data.get('pattern_type')
+            track.ternary_confidence = data.get('ternary_confidence')
+            track.meter_ambiguous = data.get('meter_ambiguous', False)
 
             track.bars = data.get('bars')
             track.sections = data.get('sections')

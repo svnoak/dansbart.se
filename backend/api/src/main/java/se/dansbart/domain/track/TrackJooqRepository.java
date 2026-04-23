@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import se.dansbart.dto.ExplorerTrackDto;
 import se.dansbart.dto.PlaybackLinkDto;
 import se.dansbart.dto.TrackListDto;
 
@@ -679,6 +680,140 @@ public class TrackJooqRepository {
             .fetch(TRACKS.ID);
     }
 
+    /**
+     * Explorer tracks for the public scatter plot. Filters by meter, BPM, and asymmetry.
+     * Returns at most `limit` tracks ordered by asymmetry_score DESC so interesting tracks appear first.
+     */
+    public List<ExplorerTrackDto> findExplorerTracks(
+            String meter, Integer minBpm, Integer maxBpm,
+            Float minAsymmetry, Float maxAsymmetry,
+            int limit, int offset) {
+
+        Condition base = buildExplorerCondition(meter, minBpm, maxBpm, minAsymmetry, maxAsymmetry);
+
+        List<UUID> ids = dsl.select(TRACKS.ID)
+            .from(TRACKS)
+            .where(base)
+            .orderBy(TRACKS.ASYMMETRY_SCORE.desc().nullsLast())
+            .limit(limit)
+            .offset(offset)
+            .fetch(TRACKS.ID);
+
+        if (ids.isEmpty()) return List.of();
+
+        Map<UUID, ExplorerTrackDto> dtoById = new LinkedHashMap<>();
+        dsl.select(
+                TRACKS.ID, TRACKS.TITLE, TRACKS.TEMPO_BPM,
+                TRACKS.R1_MEAN, TRACKS.R2_MEAN, TRACKS.R3_MEAN,
+                TRACKS.ASYMMETRY_SCORE, TRACKS.ASYMMETRY_CONSISTENCY,
+                TRACKS.PATTERN_TYPE, TRACKS.TERNARY_CONFIDENCE, TRACKS.METER_AMBIGUOUS,
+                TRACKS.POLSKA_SCORE, TRACKS.HAMBO_SCORE, TRACKS.BPM_STABILITY, TRACKS.SWING_RATIO,
+                TRACKS.LILT_SCORE, TRACKS.LILT_CONSISTENCY,
+                TRACKS.ARTICULATION, TRACKS.BOUNCINESS, TRACKS.LOUDNESS,
+                TRACKS.PUNCHINESS, TRACKS.VOICE_PROBABILITY,
+                TRACKS.MUSIC_GENRE)
+            .from(TRACKS)
+            .where(TRACKS.ID.in(ids))
+            .forEach(r -> {
+                Double tempoBpm = r.get(TRACKS.TEMPO_BPM);
+                dtoById.put(r.get(TRACKS.ID), ExplorerTrackDto.builder()
+                    .id(r.get(TRACKS.ID))
+                    .title(r.get(TRACKS.TITLE))
+                    .tempoBpm(tempoBpm != null ? tempoBpm.floatValue() : null)
+                    .r1Mean(r.get(TRACKS.R1_MEAN) != null ? r.get(TRACKS.R1_MEAN).floatValue() : null)
+                    .r2Mean(r.get(TRACKS.R2_MEAN) != null ? r.get(TRACKS.R2_MEAN).floatValue() : null)
+                    .r3Mean(r.get(TRACKS.R3_MEAN) != null ? r.get(TRACKS.R3_MEAN).floatValue() : null)
+                    .asymmetryScore(r.get(TRACKS.ASYMMETRY_SCORE) != null ? r.get(TRACKS.ASYMMETRY_SCORE).floatValue() : null)
+                    .asymmetryConsistency(r.get(TRACKS.ASYMMETRY_CONSISTENCY) != null ? r.get(TRACKS.ASYMMETRY_CONSISTENCY).floatValue() : null)
+                    .patternType(r.get(TRACKS.PATTERN_TYPE))
+                    .ternaryConfidence(r.get(TRACKS.TERNARY_CONFIDENCE) != null ? r.get(TRACKS.TERNARY_CONFIDENCE).floatValue() : null)
+                    .meterAmbiguous(r.get(TRACKS.METER_AMBIGUOUS))
+                    .polskaScore(r.get(TRACKS.POLSKA_SCORE) != null ? r.get(TRACKS.POLSKA_SCORE).floatValue() : null)
+                    .hamboScore(r.get(TRACKS.HAMBO_SCORE) != null ? r.get(TRACKS.HAMBO_SCORE).floatValue() : null)
+                    .bpmStability(r.get(TRACKS.BPM_STABILITY) != null ? r.get(TRACKS.BPM_STABILITY).floatValue() : null)
+                    .swingRatio(r.get(TRACKS.SWING_RATIO) != null ? r.get(TRACKS.SWING_RATIO).floatValue() : null)
+                    .liltScore(r.get(TRACKS.LILT_SCORE) != null ? r.get(TRACKS.LILT_SCORE).floatValue() : null)
+                    .liltConsistency(r.get(TRACKS.LILT_CONSISTENCY) != null ? r.get(TRACKS.LILT_CONSISTENCY).floatValue() : null)
+                    .articulation(r.get(TRACKS.ARTICULATION) != null ? r.get(TRACKS.ARTICULATION).floatValue() : null)
+                    .bounciness(r.get(TRACKS.BOUNCINESS) != null ? r.get(TRACKS.BOUNCINESS).floatValue() : null)
+                    .loudness(r.get(TRACKS.LOUDNESS) != null ? r.get(TRACKS.LOUDNESS).floatValue() : null)
+                    .punchiness(r.get(TRACKS.PUNCHINESS) != null ? r.get(TRACKS.PUNCHINESS).floatValue() : null)
+                    .voiceProbability(r.get(TRACKS.VOICE_PROBABILITY) != null ? r.get(TRACKS.VOICE_PROBABILITY).floatValue() : null)
+                    .musicGenre(r.get(TRACKS.MUSIC_GENRE))
+                    .build());
+            });
+
+        dsl.select(TRACK_DANCE_STYLES.TRACK_ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACK_DANCE_STYLES.SUB_STYLE,
+                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE)
+            .from(TRACK_DANCE_STYLES)
+            .where(TRACK_DANCE_STYLES.TRACK_ID.in(ids).and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true)))
+            .forEach(r -> {
+                UUID tid = r.get(TRACK_DANCE_STYLES.TRACK_ID);
+                ExplorerTrackDto dto = dtoById.get(tid);
+                if (dto != null && dto.getDanceStyle() == null) {
+                    Double c = r.get(TRACK_DANCE_STYLES.CONFIDENCE);
+                    dto.setDanceStyle(r.get(TRACK_DANCE_STYLES.DANCE_STYLE));
+                    dto.setSubStyle(r.get(TRACK_DANCE_STYLES.SUB_STYLE));
+                    dto.setEffectiveBpm(r.get(TRACK_DANCE_STYLES.EFFECTIVE_BPM));
+                    dto.setTempoCategory(r.get(TRACK_DANCE_STYLES.TEMPO_CATEGORY));
+                    dto.setConfidence(c != null ? c.floatValue() : null);
+                }
+            });
+
+        dsl.select(TRACK_ARTISTS.TRACK_ID, ARTISTS.NAME)
+            .from(TRACK_ARTISTS)
+            .join(ARTISTS).on(TRACK_ARTISTS.ARTIST_ID.eq(ARTISTS.ID))
+            .where(TRACK_ARTISTS.TRACK_ID.in(ids))
+            .orderBy(TRACK_ARTISTS.ROLE.eq("primary").desc())
+            .forEach(r -> {
+                UUID tid = r.get(TRACK_ARTISTS.TRACK_ID);
+                ExplorerTrackDto dto = dtoById.get(tid);
+                if (dto != null && dto.getArtistName() == null) {
+                    dto.setArtistName(r.get(ARTISTS.NAME));
+                }
+            });
+
+        dsl.select(PLAYBACK_LINKS.TRACK_ID, PLAYBACK_LINKS.PLATFORM, PLAYBACK_LINKS.DEEP_LINK)
+            .from(PLAYBACK_LINKS)
+            .where(PLAYBACK_LINKS.TRACK_ID.in(ids).and(PLAYBACK_LINKS.IS_WORKING.eq(true)))
+            .orderBy(PLAYBACK_LINKS.PLATFORM.asc())
+            .forEach(r -> {
+                UUID tid = r.get(PLAYBACK_LINKS.TRACK_ID);
+                ExplorerTrackDto dto = dtoById.get(tid);
+                if (dto != null) {
+                    if (dto.getPlaybackLinks() == null) dto.setPlaybackLinks(new ArrayList<>());
+                    dto.getPlaybackLinks().add(PlaybackLinkDto.builder()
+                        .platform(r.get(PLAYBACK_LINKS.PLATFORM))
+                        .deepLink(r.get(PLAYBACK_LINKS.DEEP_LINK))
+                        .build());
+                }
+            });
+
+        return ids.stream().map(dtoById::get).filter(d -> d != null).toList();
+    }
+
+    public long countExplorerTracks(
+            String meter, Integer minBpm, Integer maxBpm,
+            Float minAsymmetry, Float maxAsymmetry) {
+        Condition base = buildExplorerCondition(meter, minBpm, maxBpm, minAsymmetry, maxAsymmetry);
+        return dsl.fetchCount(dsl.selectFrom(TRACKS).where(base));
+    }
+
+    private Condition buildExplorerCondition(
+            String meter, Integer minBpm, Integer maxBpm,
+            Float minAsymmetry, Float maxAsymmetry) {
+        Condition c = TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING")
+            .and(TRACKS.IS_FLAGGED.eq(false))
+            .and(TRACKS.TEMPO_BPM.isNotNull());
+        if ("3/4".equals(meter)) c = c.and(TRACKS.TERNARY_CONFIDENCE.ge(0.6));
+        if ("4/4".equals(meter)) c = c.and(TRACKS.TERNARY_CONFIDENCE.lt(0.4));
+        if (minBpm != null) c = c.and(TRACKS.TEMPO_BPM.ge((double) minBpm));
+        if (maxBpm != null) c = c.and(TRACKS.TEMPO_BPM.le((double) maxBpm));
+        if (minAsymmetry != null) c = c.and(TRACKS.ASYMMETRY_SCORE.ge((double) minAsymmetry));
+        if (maxAsymmetry != null) c = c.and(TRACKS.ASYMMETRY_SCORE.le((double) maxAsymmetry));
+        return c;
+    }
+
     /** Find tracks by ISRC. */
     public List<Track> findByIsrc(String isrc) {
         return dsl.selectFrom(TRACKS).where(TRACKS.ISRC.eq(isrc)).fetch(this::toTrack);
@@ -727,6 +862,17 @@ public class TrackJooqRepository {
             .polskaScore(r.get(TRACKS.POLSKA_SCORE) != null ? r.get(TRACKS.POLSKA_SCORE).floatValue() : null)
             .hamboScore(r.get(TRACKS.HAMBO_SCORE) != null ? r.get(TRACKS.HAMBO_SCORE).floatValue() : null)
             .bpmStability(r.get(TRACKS.BPM_STABILITY) != null ? r.get(TRACKS.BPM_STABILITY).floatValue() : null)
+            .r1Mean(r.get(TRACKS.R1_MEAN) != null ? r.get(TRACKS.R1_MEAN).floatValue() : null)
+            .r2Mean(r.get(TRACKS.R2_MEAN) != null ? r.get(TRACKS.R2_MEAN).floatValue() : null)
+            .r3Mean(r.get(TRACKS.R3_MEAN) != null ? r.get(TRACKS.R3_MEAN).floatValue() : null)
+            .asymmetryScore(r.get(TRACKS.ASYMMETRY_SCORE) != null ? r.get(TRACKS.ASYMMETRY_SCORE).floatValue() : null)
+            .asymmetryConsistency(r.get(TRACKS.ASYMMETRY_CONSISTENCY) != null ? r.get(TRACKS.ASYMMETRY_CONSISTENCY).floatValue() : null)
+            .patternType(r.get(TRACKS.PATTERN_TYPE))
+            .ternaryConfidence(r.get(TRACKS.TERNARY_CONFIDENCE) != null ? r.get(TRACKS.TERNARY_CONFIDENCE).floatValue() : null)
+            .meterAmbiguous(r.get(TRACKS.METER_AMBIGUOUS))
+            .liltScore(r.get(TRACKS.LILT_SCORE) != null ? r.get(TRACKS.LILT_SCORE).floatValue() : null)
+            .liltConsistency(r.get(TRACKS.LILT_CONSISTENCY) != null ? r.get(TRACKS.LILT_CONSISTENCY).floatValue() : null)
+            .liltPattern(parseJsonBToFloatList(r.get(TRACKS.LILT_PATTERN)))
             .isInstrumental(null)
             .analysisVersion(r.get(TRACKS.ANALYSIS_VERSION))
             .musicGenre(r.get(TRACKS.MUSIC_GENRE))

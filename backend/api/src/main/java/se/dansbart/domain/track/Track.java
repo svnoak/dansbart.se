@@ -51,7 +51,24 @@ public class Track {
 
     private Float bpmStability;
 
+    // R-Pattern Classification (Phase 1)
+    private Float r1Mean;
+    private Float r2Mean;
+    private Float r3Mean;
+    private Float asymmetryScore;
+    private Float asymmetryConsistency;
+    private String patternType;
+    private Float ternaryConfidence;
+    private Boolean meterAmbiguous;
+
     private Boolean isInstrumental;
+
+    // Lilt (per-beat rhythmic lift)
+    private Float liltScore;
+
+    private Float liltConsistency;
+
+    private List<Float> liltPattern;
 
     // Vector embedding for similarity search (pgvector); not exposed to API
     @JsonIgnore

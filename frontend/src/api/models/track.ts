@@ -22,7 +22,18 @@ export interface Track {
   polskaScore?: number;
   hamboScore?: number;
   bpmStability?: number;
+  r1Mean?: number;
+  r2Mean?: number;
+  r3Mean?: number;
+  asymmetryScore?: number;
+  asymmetryConsistency?: number;
+  patternType?: string;
+  ternaryConfidence?: number;
+  meterAmbiguous?: boolean;
   isInstrumental?: boolean;
+  liltScore?: number;
+  liltConsistency?: number;
+  liltPattern?: number[];
   analysisVersion?: string;
   musicGenre?: string;
   genreConfidence?: number;

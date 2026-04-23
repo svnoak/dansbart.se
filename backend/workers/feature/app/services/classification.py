@@ -110,6 +110,9 @@ class ClassificationService:
                 continue
 
             features = self._get_features_from_source(source)
+
+            self._update_track_metadata(track, features)
+
             predictions = self.classifier.classify(track, features)
             self._save_predictions(track, predictions)
 
@@ -146,10 +149,7 @@ class ClassificationService:
             log.warn("no_analysis_data", track_title=track.title)
             return
 
-        # Update vocals flag
-        is_instrumental = features.get('is_likely_instrumental', True)
-        track.has_vocals = not is_instrumental
-        self.db.add(track)
+        self._update_track_metadata(track, features)
 
         # Run classification
         predictions = self.classifier.classify(track, features)
@@ -164,3 +164,29 @@ class ClassificationService:
                      dance_tempo=primary['dance_tempo'])
         else:
             log.warn("no_classification_results", track_title=track.title)
+
+def _update_track_metadata(self, track: Track, features: dict):
+        """Map analysis features directly to track attributes."""
+        if not features:
+            return
+
+        track.has_vocals = not features.get('is_likely_instrumental', True)
+
+        # Lilt fields
+        track.lilt_score = features.get('lilt_score')
+        track.lilt_consistency = features.get('lilt_consistency')
+        track.lilt_pattern = features.get('lilt_pattern') or []
+
+        # R-pattern fields
+        ratios = features.get('avg_beat_ratios') or [None, None, None]
+        track.r1_mean = ratios[0] if len(ratios) > 0 else None
+        track.r2_mean = ratios[1] if len(ratios) > 1 else None
+        track.r3_mean = ratios[2] if len(ratios) > 2 else None
+
+        track.asymmetry_score = features.get('asymmetry_score')
+        track.asymmetry_consistency = features.get('asymmetry_consistency')
+        track.pattern_type = features.get('pattern_type')
+        track.ternary_confidence = features.get('ternary_confidence')
+        track.meter_ambiguous = features.get('meter_ambiguous', False)
+
+        self.db.add(track)

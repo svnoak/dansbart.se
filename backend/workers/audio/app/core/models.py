@@ -48,6 +48,22 @@ class Track(Base):
     polska_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     hambo_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     bpm_stability: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Lilt (per-beat rhythmic lift)
+    lilt_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lilt_consistency: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lilt_pattern: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
+    # R-Pattern Classification
+    r1_mean: Mapped[float | None] = mapped_column(Float, nullable=True)
+    r2_mean: Mapped[float | None] = mapped_column(Float, nullable=True)
+    r3_mean: Mapped[float | None] = mapped_column(Float, nullable=True)
+    asymmetry_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    asymmetry_consistency: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pattern_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    ternary_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    meter_ambiguous: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
     is_instrumental: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # Analysis vector embedding

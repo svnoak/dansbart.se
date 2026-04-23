@@ -6,6 +6,7 @@ import { Layout } from '@/layout/Layout';
 import { PlayerProvider } from '@/player/PlayerContext';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { AboutPage } from '@/pages/AboutPage';
+import { ExplorerPage } from '@/pages/ExplorerPage';
 import { FeedbackPage } from '@/pages/FeedbackPage';
 import { AlbumPage } from '@/pages/AlbumPage';
 import { ArtistPage } from '@/pages/ArtistPage';
@@ -57,6 +58,14 @@ export function App() {
                         <Route path="/" element={<HomePage />} />
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/classify" element={<ClassifyPage />} />
+                        <Route
+                          path="/explorer"
+                          element={
+                            <ProtectedRoute requiredRole="ADMIN">
+                              <ExplorerPage />
+                            </ProtectedRoute>
+                          }
+                        />
                         <Route path="/artists" element={<ArtistsPage />} />
                         <Route path="/albums" element={<AlbumsPage />} />
                         <Route path="/artist/:id" element={<ArtistPage />} />
