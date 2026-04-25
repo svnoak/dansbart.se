@@ -140,6 +140,13 @@
             <version>${jooq.version}</version>
         </dependency>
 
+        <!-- OpenFeature for feature flag management -->
+        <dependency>
+            <groupId>dev.openfeature</groupId>
+            <artifactId>sdk</artifactId>
+            <version>1.12.1</version>
+        </dependency>
+
         <!-- OpenAPI / Swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>
