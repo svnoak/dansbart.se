@@ -1,5 +1,5 @@
 # Build stage
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:21.0.10_7-jdk-alpine AS build
 WORKDIR /app
 
 # Copy Maven wrapper and pom.xml
@@ -17,7 +17,7 @@ COPY src src
 RUN ./mvnw package -DskipTests -B -DskipDbBuild=true
 
 # Runtime stage
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21.0.10_7-jre-alpine
 WORKDIR /app
 
 # Copy the built JAR
