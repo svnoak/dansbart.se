@@ -85,11 +85,6 @@ public class Artists extends TableImpl<Record> {
      */
     public final TableField<Record, Boolean> IS_VERIFIED = createField(DSL.name("is_verified"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
-    /**
-     * The column <code>public.artists.description</code>.
-     */
-    public final TableField<Record, String> DESCRIPTION = createField(DSL.name("description"), SQLDataType.CLOB, this, "");
-
     private Artists(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

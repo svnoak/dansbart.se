@@ -58,10 +58,7 @@ public class Indexes {
     public static final Index IDX_PLAYLIST_COLLABORATORS_USER = Internal.createIndex(DSL.name("idx_playlist_collaborators_user"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.USER_ID }, false);
     public static final Index IDX_TRACK_FOLKWIKI_MATCHES_FOLKWIKI_TUNE_ID = Internal.createIndex(DSL.name("idx_track_folkwiki_matches_folkwiki_tune_id"), TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES, new OrderField[] { TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES.FOLKWIKI_TUNE_ID }, false);
     public static final Index IDX_TRACK_FOLKWIKI_MATCHES_STATUS = Internal.createIndex(DSL.name("idx_track_folkwiki_matches_status"), TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES, new OrderField[] { TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES.MATCH_STATUS }, false);
-    public static final Index IDX_TRACKS_ASYMMETRY_SCORE = Internal.createIndex(DSL.name("idx_tracks_asymmetry_score"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.ASYMMETRY_SCORE }, false);
     public static final Index IDX_TRACKS_ISRC_NON_UNIQUE = Internal.createIndex(DSL.name("idx_tracks_isrc_non_unique"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.ISRC }, false);
-    public static final Index IDX_TRACKS_LILT_SCORE = Internal.createIndex(DSL.name("idx_tracks_lilt_score"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.LILT_SCORE }, false);
-    public static final Index IDX_TRACKS_PATTERN_TYPE = Internal.createIndex(DSL.name("idx_tracks_pattern_type"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.PATTERN_TYPE }, false);
     public static final Index IDX_TRACKS_PROCESSING_STATUS = Internal.createIndex(DSL.name("idx_tracks_processing_status"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.PROCESSING_STATUS }, false);
     public static final Index IDX_USERS_DISCOURSE_ID = Internal.createIndex(DSL.name("idx_users_discourse_id"), Users.USERS, new OrderField[] { Users.USERS.DISCOURSE_ID }, false);
     public static final Index IX_ALBUMS_SPOTIFY_ID = Internal.createIndex(DSL.name("ix_albums_spotify_id"), Albums.ALBUMS, new OrderField[] { Albums.ALBUMS.SPOTIFY_ID }, true);
