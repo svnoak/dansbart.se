@@ -8,6 +8,6 @@
 export interface DanceImportItem {
   name?: string;
   danceDescriptionUrl?: string;
-  danstyp?: string;
-  musik?: string;
+  danceType?: string;
+  music?: string;
 }

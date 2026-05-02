@@ -30,11 +30,11 @@ public class DanceController {
     @Operation(summary = "List dances with optional search, style filter, and pagination")
     public ResponseEntity<PageResponse<DanceDto>> getDances(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String danstyp,
+            @RequestParam(required = false) String danceType,
             @RequestParam(defaultValue = "20") Integer limit,
             @RequestParam(defaultValue = "0") Integer offset) {
         var pageable = PageRequest.of(offset / limit, limit);
-        return ResponseEntity.ok(PageResponse.from(danceService.getDances(search, danstyp, pageable)));
+        return ResponseEntity.ok(PageResponse.from(danceService.getDances(search, danceType, pageable)));
     }
 
     @GetMapping("/{id}")

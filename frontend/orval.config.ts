@@ -31,7 +31,6 @@ export default defineConfig({
           'Admin',
           'Admin Spider',
           'Admin: Users',
-          'Explorer',
           'Dances',
           'Admin Dances',
         ],

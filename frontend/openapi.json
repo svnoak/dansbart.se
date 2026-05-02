@@ -31,10 +31,6 @@
       "description": "Track duplicate management endpoints"
     },
     {
-      "name": "Explorer",
-      "description": "Public R-pattern explorer endpoints"
-    },
-    {
       "name": "Structure Versions",
       "description": "Track structure version voting and reporting"
     },
@@ -3300,76 +3296,6 @@
         }
       }
     },
-    "/api/explorer/tracks": {
-      "get": {
-        "tags": ["Explorer"],
-        "summary": "Fetch tracks for the Explorer scatter plot",
-        "operationId": "getExplorerTracks",
-        "parameters": [
-          {
-            "name": "meter",
-            "in": "query",
-            "description": "Meter filter: '3/4' or '4/4' (omit for all)",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "name": "minBpm",
-            "in": "query",
-            "description": "Minimum tempo BPM",
-            "required": false,
-            "schema": { "type": "integer", "format": "int32" }
-          },
-          {
-            "name": "maxBpm",
-            "in": "query",
-            "description": "Maximum tempo BPM",
-            "required": false,
-            "schema": { "type": "integer", "format": "int32" }
-          },
-          {
-            "name": "minAsymmetry",
-            "in": "query",
-            "description": "Minimum asymmetry score (0.0–0.5)",
-            "required": false,
-            "schema": { "type": "number", "format": "float" }
-          },
-          {
-            "name": "maxAsymmetry",
-            "in": "query",
-            "description": "Maximum asymmetry score (0.0–0.5)",
-            "required": false,
-            "schema": { "type": "number", "format": "float" }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "Maximum number of tracks to return",
-            "required": false,
-            "schema": { "type": "integer", "format": "int32", "default": 500 }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "description": "Offset for pagination",
-            "required": false,
-            "schema": { "type": "integer", "format": "int32", "default": 0 }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageResponseExplorerTrackDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/discovery/recent": {
       "get": {
         "tags": ["Discovery"],
@@ -5719,8 +5645,8 @@
         "properties": {
           "name": { "type": "string" },
           "danceDescriptionUrl": { "type": "string" },
-          "danstyp": { "type": "string" },
-          "musik": { "type": "string" }
+          "danceType": { "type": "string" },
+          "music": { "type": "string" }
         }
       },
       "BlockSpotifyRequest": {
@@ -5954,63 +5880,6 @@
           "invitedAt": { "type": "string", "format": "date-time" }
         }
       },
-      "ExplorerTrackDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "title": { "type": "string" },
-          "artistName": { "type": "string" },
-          "asymmetryScore": { "type": "number", "format": "float" },
-          "tempoBpm": { "type": "number", "format": "float" },
-          "danceStyle": { "type": "string" },
-          "subStyle": { "type": "string" },
-          "musicGenre": { "type": "string" },
-          "r1Mean": { "type": "number", "format": "float" },
-          "r2Mean": { "type": "number", "format": "float" },
-          "r3Mean": { "type": "number", "format": "float" },
-          "patternType": { "type": "string" },
-          "asymmetryConsistency": { "type": "number", "format": "float" },
-          "umapX": { "type": "number", "format": "float" },
-          "umapY": { "type": "number", "format": "float" },
-          "umapRhythmX": { "type": "number", "format": "float" },
-          "umapRhythmY": { "type": "number", "format": "float" },
-          "ternaryConfidence": { "type": "number", "format": "float" },
-          "meterAmbiguous": { "type": "boolean" },
-          "polskaScore": { "type": "number", "format": "float" },
-          "hamboScore": { "type": "number", "format": "float" },
-          "bpmStability": { "type": "number", "format": "float" },
-          "swingRatio": { "type": "number", "format": "float" },
-          "liltScore": { "type": "number", "format": "float" },
-          "liltConsistency": { "type": "number", "format": "float" },
-          "articulation": { "type": "number", "format": "float" },
-          "bounciness": { "type": "number", "format": "float" },
-          "loudness": { "type": "number", "format": "float" },
-          "punchiness": { "type": "number", "format": "float" },
-          "voiceProbability": { "type": "number", "format": "float" },
-          "effectiveBpm": { "type": "integer", "format": "int32" },
-          "tempoCategory": { "type": "string" },
-          "confidence": { "type": "number", "format": "float" },
-          "playbackLinks": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
-          },
-          "rasymmetryMagnitude": { "type": "number", "format": "float" },
-          "rdirectionConsistency": { "type": "number", "format": "float" }
-        }
-      },
-      "PageResponseExplorerTrackDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/ExplorerTrackDto" }
-          },
-          "total": { "type": "integer", "format": "int64" },
-          "page": { "type": "integer", "format": "int32" },
-          "size": { "type": "integer", "format": "int32" },
-          "hasMore": { "type": "boolean" }
-        }
-      },
       "CuratedPlaylistDto": {
         "type": "object",
         "properties": {
@@ -6052,16 +5921,16 @@
           },
           "danceDescriptionUrl": {
             "type": "string",
-            "description": "Link to the dance description page (e.g. ACLA)"
+            "description": "Link to the dance description page "
           },
           "danstyp": {
             "type": "string",
-            "description": "Dance category from ACLA (e.g. Hambo, Vals, Polka)",
+            "description": "Dance category (e.g. Hambo, Vals, Polka)",
             "example": "Hambo"
           },
           "musik": {
             "type": "string",
-            "description": "Tune/track name from ACLA description (e.g. Lugn hambo)",
+            "description": "Tune/track name description (e.g. Lugn hambo)",
             "example": "Lugn hambo"
           },
           "confirmedTrackCount": {

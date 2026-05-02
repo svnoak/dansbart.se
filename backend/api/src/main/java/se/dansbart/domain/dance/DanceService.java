@@ -32,8 +32,8 @@ public class DanceService {
     private final DanceTrackVoteRepository voteRepository;
     private final TrackFeedbackService trackFeedbackService;
 
-    public Page<DanceDto> getDances(String search, String danstyp, Pageable pageable) {
-        Page<Dance> page = danceJooqRepository.findAll(search, danstyp, pageable);
+    public Page<DanceDto> getDances(String search, String danceType, Pageable pageable) {
+        Page<Dance> page = danceJooqRepository.findAll(search, danceType, pageable);
         List<UUID> ids = page.getContent().stream().map(Dance::getId).toList();
         Map<UUID, Integer> counts = danceJooqRepository.countConfirmedByDanceIds(ids);
         List<DanceDto> dtos = page.getContent().stream()
@@ -80,7 +80,7 @@ public class DanceService {
         String name = item.getName() == null ? "" : item.getName().strip();
         boolean updated = danceJooqRepository.update(
                 id, name, slugify(name),
-                item.getDanceDescriptionUrl(), item.getDanstyp(), item.getMusik());
+                item.getDanceDescriptionUrl(), item.getDanceType(), item.getMusic());
         if (!updated) return Optional.empty();
         return danceJooqRepository.findById(id)
                 .map(d -> toDto(d, danceJooqRepository.countConfirmedTracksByDanceId(d.getId())));
@@ -99,16 +99,16 @@ public class DanceService {
                         .name(item.getName().strip())
                         .slug(slugify(item.getName()))
                         .danceDescriptionUrl(item.getDanceDescriptionUrl())
-                        .danstyp(item.getDanstyp())
-                        .musik(item.getMusik())
+                        .danceType(item.getDanceType())
+                        .music(item.getMusic())
                         .build())
                 .toList();
         int imported = danceJooqRepository.upsertDances(dances);
 
         int linked = 0;
         for (Dance dance : dances) {
-            if (dance.getMusik() == null || dance.getMusik().isBlank()) continue;
-            String fragment = stripArtistSuffix(dance.getMusik());
+            if (dance.getMusic() == null || dance.getMusic().isBlank()) continue;
+            String fragment = stripArtistSuffix(dance.getMusic());
             if (fragment.length() < 3) continue;
             Optional<Dance> saved = danceJooqRepository.findBySlug(dance.getSlug());
             if (saved.isEmpty()) continue;
@@ -130,19 +130,19 @@ public class DanceService {
         Optional<Dance> danceOpt = danceJooqRepository.findById(danceId);
         if (danceOpt.isEmpty()) return Page.empty();
         Dance dance = danceOpt.get();
-        if (dance.getDanstyp() == null || dance.getDanstyp().isBlank()) return Page.empty();
+        if (dance.getDanceType() == null || dance.getDanceType().isBlank()) return Page.empty();
 
-        String danstyp = dance.getDanstyp();
+        String danceType = dance.getDanceType();
         String danceName = dance.getName() != null ? dance.getName().toLowerCase() : "";
-        String musik = dance.getMusik() != null ? extractMusikFragment(dance.getMusik()).toLowerCase() : null;
+        String music = dance.getMusic() != null ? extractMusicFragment(dance.getMusic()).toLowerCase() : null;
 
         // Exclude upvoted tracks (shown in Passande musik) and downvote-suppressed tracks
         List<UUID> excluded = new ArrayList<>();
         excluded.addAll(voteRepository.findPassandeTrackIds(danceId));
         excluded.addAll(voteRepository.findSuppressedTrackIds(danceId));
 
-        List<UUID> ids = danceJooqRepository.findRecommendedTrackIds(danceId, danstyp, danceName, musik, limit, offset, excluded);
-        long total = danceJooqRepository.countRecommendedTracks(danceId, danstyp, danceName, musik, excluded);
+        List<UUID> ids = danceJooqRepository.findRecommendedTrackIds(danceId, danceType, danceName, music, limit, offset, excluded);
+        long total = danceJooqRepository.countRecommendedTracks(danceId, danceType, danceName, music, excluded);
         List<TrackListDto> dtos = trackJooqRepository.findTrackListDtosByIds(ids);
 
         int pageNum = limit > 0 ? offset / limit : 0;
@@ -164,8 +164,8 @@ public class DanceService {
         if (vote == 1) {
             danceJooqRepository.addTrackConfirmed(danceId, trackId, null);
             danceJooqRepository.findById(danceId).ifPresent(dance -> {
-                if (dance.getDanstyp() != null && !dance.getDanstyp().isBlank()) {
-                    trackFeedbackService.submitStyleFeedback(trackId, voterId, dance.getDanstyp(), null);
+                if (dance.getDanceType() != null && !dance.getDanceType().isBlank()) {
+                    trackFeedbackService.submitStyleFeedback(trackId, voterId, dance.getDanceType(), null);
                 }
             });
         }
@@ -185,13 +185,13 @@ public class DanceService {
         return new PageImpl<>(dtos, pageable, total);
     }
 
-    // Extracts the most useful tune-name fragment from the musik field for recommendation matching.
+    // Extracts the most useful tune-name fragment from the music field for recommendation matching.
     // "Lugn Hambo (Ex Horgalåten)" → "Horgalåten"  (parenthetical with "Ex" = "for example")
     // "(Horgalåten)" → "Horgalåten"
     // "Horgalåten, arr. Svensson" → "Horgalåten"  (falls back to stripArtistSuffix)
-    private static String extractMusikFragment(String musik) {
-        if (musik == null) return "";
-        String stripped = musik.strip();
+    private static String extractMusicFragment(String music) {
+        if (music == null) return "";
+        String stripped = music.strip();
         int parenOpen = stripped.lastIndexOf('(');
         int parenClose = stripped.lastIndexOf(')');
         if (parenOpen >= 0 && parenClose > parenOpen) {
@@ -204,8 +204,8 @@ public class DanceService {
         return stripArtistSuffix(stripped);
     }
 
-    private static String stripArtistSuffix(String musik) {
-        String result = musik.strip();
+    private static String stripArtistSuffix(String music) {
+        String result = music.strip();
         int commaIdx = result.indexOf(',');
         if (commaIdx > 0) result = result.substring(0, commaIdx).strip();
         int avIdx = result.toLowerCase().lastIndexOf(" av ");
@@ -221,8 +221,8 @@ public class DanceService {
                 .name(dance.getName())
                 .slug(dance.getSlug())
                 .danceDescriptionUrl(dance.getDanceDescriptionUrl())
-                .danstyp(dance.getDanstyp())
-                .musik(dance.getMusik())
+                .danceType(dance.getDanceType())
+                .music(dance.getMusic())
                 .confirmedTrackCount(confirmedTrackCount)
                 .build();
     }

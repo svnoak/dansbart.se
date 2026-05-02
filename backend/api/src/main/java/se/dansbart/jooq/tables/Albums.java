@@ -159,7 +159,7 @@ public class Albums extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_ALBUMS_SPOTIFY_ID, Indexes.IX_ALBUMS_TITLE, Indexes.IX_ALBUMS_TITLE_TRGM);
+        return Arrays.asList(Indexes.IX_ALBUMS_SPOTIFY_ID, Indexes.IX_ALBUMS_TITLE);
     }
 
     @Override

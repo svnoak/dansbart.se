@@ -8,20 +8,20 @@ type DanceDto = {
   name?: string;
   slug?: string;
   danceDescriptionUrl?: string | null;
-  danstyp?: string | null;
-  musik?: string | null;
+  danceType?: string | null;
+  music?: string | null;
   confirmedTrackCount?: number;
 };
 
 function getDances(
-  params: { limit: number; offset: number; search?: string; danstyp?: string },
+  params: { limit: number; offset: number; search?: string; danceType?: string },
   opts?: RequestInit,
 ): Promise<{ items: DanceDto[]; total: number }> {
   const q = new URLSearchParams({
     limit: String(params.limit),
     offset: String(params.offset),
     ...(params.search ? { search: params.search } : {}),
-    ...(params.danstyp ? { danstyp: params.danstyp } : {}),
+    ...(params.danceType ? { danceType: params.danceType } : {}),
   });
   return httpClient(`/api/dances?${q}`, opts);
 }

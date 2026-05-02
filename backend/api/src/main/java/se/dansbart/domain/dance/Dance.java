@@ -15,7 +15,7 @@ public class Dance {
     private String name;
     private String slug;
     private String danceDescriptionUrl;
-    private String danstyp;
-    private String musik;
+    private String danceType;
+    private String music;
     private OffsetDateTime createdAt;
 }

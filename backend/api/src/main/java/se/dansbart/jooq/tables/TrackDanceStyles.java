@@ -189,7 +189,7 @@ public class TrackDanceStyles extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_TRACK_DANCE_STYLES_CONFIDENCE, Indexes.IX_TRACK_DANCE_STYLES_DANCE_STYLE, Indexes.IX_TRACK_DANCE_STYLES_SUB_STYLE);
+        return Arrays.asList(Indexes.IX_TRACK_DANCE_STYLES_DANCE_STYLE, Indexes.IX_TRACK_DANCE_STYLES_SUB_STYLE);
     }
 
     @Override

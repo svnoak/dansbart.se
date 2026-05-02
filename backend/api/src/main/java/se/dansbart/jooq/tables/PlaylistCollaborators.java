@@ -171,7 +171,7 @@ public class PlaylistCollaborators extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_PLAYLIST_COLLABORATORS_PLAYLIST, Indexes.IDX_PLAYLIST_COLLABORATORS_STATUS, Indexes.IDX_PLAYLIST_COLLABORATORS_USER);
+        return Arrays.asList(Indexes.IDX_PLAYLIST_COLLABORATORS_PLAYLIST, Indexes.IDX_PLAYLIST_COLLABORATORS_STATUS, Indexes.IDX_PLAYLIST_COLLABORATORS_USER, Indexes.IX_PLAYLIST_COLLABORATORS_PLAYLIST_ID, Indexes.IX_PLAYLIST_COLLABORATORS_STATUS);
     }
 
     @Override

@@ -43,7 +43,7 @@ public class AdminDanceController {
     }
 
     @GetMapping("/invalid-styles")
-    @Operation(summary = "List dances whose danstyp is not found in dance_style_config")
+    @Operation(summary = "List dances whose danceType is not found in dance_style_config")
     public ResponseEntity<PageResponse<DanceDto>> getInvalidStyles(
             @RequestParam(defaultValue = "50") Integer limit,
             @RequestParam(defaultValue = "0") Integer offset) {

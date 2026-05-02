@@ -22,14 +22,14 @@ public class DanceDto {
     @Schema(description = "URL-safe slug derived from the name", example = "hambo")
     private String slug;
 
-    @Schema(description = "Link to the dance description page (e.g. ACLA)")
+    @Schema(description = "Link to the external dance description page")
     private String danceDescriptionUrl;
 
-    @Schema(description = "Dance category from ACLA (e.g. Hambo, Vals, Polka)", example = "Hambo")
-    private String danstyp;
+    @Schema(description = "Dance category from (e.g. Hambo, Vals, Polka)", example = "Hambo")
+    private String danceType;
 
-    @Schema(description = "Tune/track name from ACLA description (e.g. Lugn hambo)", example = "Lugn hambo")
-    private String musik;
+    @Schema(description = "Tune/track name description (e.g. Lugn hambo)", example = "Lugn hambo")
+    private String music;
 
     @Schema(description = "Number of confirmed tracks linked to this dance")
     private long confirmedTrackCount;

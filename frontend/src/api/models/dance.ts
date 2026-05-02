@@ -18,9 +18,9 @@ export interface Dance {
   /** Link to the dance description page (e.g. ACLA) */
   danceDescriptionUrl?: string;
   /** Dance category from ACLA (e.g. Hambo, Vals, Polka) */
-  danstyp?: string;
+  danceType?: string;
   /** Tune/track name from ACLA description (e.g. Lugn hambo) */
-  musik?: string;
+  music?: string;
   /** Number of confirmed tracks linked to this dance */
   confirmedTrackCount?: number;
 }

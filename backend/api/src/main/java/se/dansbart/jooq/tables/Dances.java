@@ -80,14 +80,14 @@ public class Dances extends TableImpl<Record> {
     public final TableField<Record, String> DANCE_DESCRIPTION_URL = createField(DSL.name("dance_description_url"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>public.dances.danstyp</code>.
+     * The column <code>public.dances.dance_type</code>.
      */
-    public final TableField<Record, String> DANSTYP = createField(DSL.name("danstyp"), SQLDataType.VARCHAR, this, "");
+    public final TableField<Record, String> DANCE_TYPE = createField(DSL.name("dance_type"), SQLDataType.VARCHAR, this, "");
 
     /**
-     * The column <code>public.dances.musik</code>.
+     * The column <code>public.dances.music</code>.
      */
-    public final TableField<Record, String> MUSIK = createField(DSL.name("musik"), SQLDataType.VARCHAR, this, "");
+    public final TableField<Record, String> MUSIC = createField(DSL.name("music"), SQLDataType.VARCHAR, this, "");
 
     /**
      * The column <code>public.dances.created_at</code>.

@@ -3,8 +3,8 @@ CREATE TABLE dances (
     name                  VARCHAR NOT NULL,
     slug                  VARCHAR NOT NULL UNIQUE,
     dance_description_url VARCHAR,
-    danstyp               VARCHAR,   -- dance category from ACLA (e.g. "Hambo", "Vals")
-    musik                 VARCHAR,   -- tune/track name from ACLA (e.g. "Lugn hambo")
+    dance_type            VARCHAR,   -- dance category (e.g. "Hambo", "Vals")
+    music                 VARCHAR,   -- tune/track name (e.g. "Lugn hambo")
     created_at            TIMESTAMPTZ DEFAULT NOW()
 );
 

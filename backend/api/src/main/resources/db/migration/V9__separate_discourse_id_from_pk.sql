@@ -43,6 +43,7 @@ ALTER TABLE public.playlists DROP CONSTRAINT IF EXISTS playlists_user_id_fkey;
 ALTER TABLE public.playlist_collaborators DROP CONSTRAINT IF EXISTS playlist_collaborators_user_id_fkey;
 ALTER TABLE public.playlist_collaborators DROP CONSTRAINT IF EXISTS playlist_collaborators_invited_by_fkey;
 ALTER TABLE public.tracks DROP CONSTRAINT IF EXISTS tracks_uploader_id_fkey;
+ALTER TABLE public.tracks DROP CONSTRAINT IF EXISTS fk_tracks_uploader;
 ALTER TABLE public.playlist_collaborators DROP CONSTRAINT IF EXISTS unique_playlist_user_collaboration;
 
 -- Step 5: Drop old PK on users

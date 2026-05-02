@@ -154,7 +154,7 @@ public class Artists extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_ARTISTS_NAME, Indexes.IX_ARTISTS_NAME_TRGM);
+        return Arrays.asList(Indexes.IX_ARTISTS_NAME);
     }
 
     @Override
