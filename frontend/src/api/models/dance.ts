@@ -15,11 +15,11 @@ export interface Dance {
   name?: string;
   /** URL-safe slug derived from the name */
   slug?: string;
-  /** Link to the dance description page (e.g. ACLA) */
+  /** Link to the external dance description page */
   danceDescriptionUrl?: string;
-  /** Dance category from ACLA (e.g. Hambo, Vals, Polka) */
+  /** Dance category from (e.g. Hambo, Vals, Polka) */
   danceType?: string;
-  /** Tune/track name from ACLA description (e.g. Lugn hambo) */
+  /** Tune/track name description (e.g. Lugn hambo) */
   music?: string;
   /** Number of confirmed tracks linked to this dance */
   confirmedTrackCount?: number;

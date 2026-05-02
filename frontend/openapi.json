@@ -701,6 +701,53 @@
         }
       }
     },
+    "/api/admin/dances/{id}": {
+      "put": {
+        "tags": ["Admin Dances"],
+        "summary": "Update a dance's fields",
+        "operationId": "updateDance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DanceImportItem" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Dance" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Admin Dances"],
+        "summary": "Delete a dance and all its track links",
+        "operationId": "deleteDance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/tracks/{id}/structure": {
       "post": {
         "tags": ["Tracks"],
@@ -1223,6 +1270,68 @@
         }
       }
     },
+    "/api/dances/{id}/tracks/{trackId}/vote": {
+      "post": {
+        "tags": ["Dances"],
+        "summary": "Vote on a recommended track for a dance",
+        "operationId": "voteOnTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "X-Voter-ID",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DanceTrackVoteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "tags": ["Dances"],
+        "summary": "Remove a vote on a recommended track",
+        "operationId": "removeVote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "X-Voter-ID",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/analytics/track/interaction": {
       "post": {
         "tags": ["Analytics"],
@@ -1365,26 +1474,6 @@
           "required": true
         },
         "responses": { "200": { "description": "OK" } }
-      }
-    },
-    "/api/admin/trigger/umap-projection": {
-      "post": {
-        "tags": ["Admin"],
-        "summary": "Beräkna UMAP-projektion för alla låtar med inbäddningar",
-        "operationId": "triggerUmapProjection",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "string" }
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/admin/trigger/spider": {
@@ -2412,6 +2501,48 @@
         }
       }
     },
+    "/api/admin/dances/{danceId}/tracks/{trackId}": {
+      "post": {
+        "tags": ["Admin Dances"],
+        "summary": "Add a track to a dance directly as confirmed (admin shortcut)",
+        "operationId": "addTrack_1",
+        "parameters": [
+          {
+            "name": "danceId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "tags": ["Admin Dances"],
+        "summary": "Remove a track-dance link (confirmed or pending)",
+        "operationId": "removeTrack_1",
+        "parameters": [
+          {
+            "name": "danceId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/admin/dances/track-links/{linkId}/confirm": {
       "post": {
         "tags": ["Admin Dances"],
@@ -2431,7 +2562,7 @@
     "/api/admin/dances/import": {
       "post": {
         "tags": ["Admin Dances"],
-        "summary": "Import dances from JSON (upsert by slug)",
+        "summary": "Import dances from JSON (upsert by slug), auto-links matching tracks",
         "operationId": "importDances",
         "requestBody": {
           "content": {
@@ -3433,11 +3564,17 @@
     "/api/dances": {
       "get": {
         "tags": ["Dances"],
-        "summary": "List dances with optional search and pagination",
+        "summary": "List dances with optional search, style filter, and pagination",
         "operationId": "getDances",
         "parameters": [
           {
             "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "danceType",
             "in": "query",
             "required": false,
             "schema": { "type": "string" }
@@ -3497,6 +3634,73 @@
         "tags": ["Dances"],
         "summary": "Get confirmed tracks for a dance",
         "operationId": "getDanceTracks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TrackListDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dances/{id}/recommendations": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "Get track recommendations for a dance based on the same dance style",
+        "operationId": "getRecommendations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 5 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseTrackListDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dances/{id}/passande": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "Get community-upvoted tracks for a dance",
+        "operationId": "getPassandeTracks",
         "parameters": [
           {
             "name": "id",
@@ -4506,6 +4710,37 @@
         }
       }
     },
+    "/api/admin/dances/invalid-styles": {
+      "get": {
+        "tags": ["Admin Dances"],
+        "summary": "List dances whose danceType is not found in dance_style_config",
+        "operationId": "getInvalidStyles",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponseDance" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/artists": {
       "get": {
         "tags": ["Admin Artists"],
@@ -5197,28 +5432,6 @@
           }
         }
       }
-    },
-    "/api/admin/dances/{danceId}/tracks/{trackId}": {
-      "delete": {
-        "tags": ["Admin Dances"],
-        "summary": "Remove a track-dance link (confirmed or pending)",
-        "operationId": "removeTrack_1",
-        "parameters": [
-          {
-            "name": "danceId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "trackId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          }
-        ],
-        "responses": { "200": { "description": "OK" } }
-      }
     }
   },
   "components": {
@@ -5301,21 +5514,7 @@
           "polskaScore": { "type": "number", "format": "float" },
           "hamboScore": { "type": "number", "format": "float" },
           "bpmStability": { "type": "number", "format": "float" },
-          "r1Mean": { "type": "number", "format": "float" },
-          "r2Mean": { "type": "number", "format": "float" },
-          "r3Mean": { "type": "number", "format": "float" },
-          "asymmetryScore": { "type": "number", "format": "float" },
-          "asymmetryConsistency": { "type": "number", "format": "float" },
-          "patternType": { "type": "string" },
-          "ternaryConfidence": { "type": "number", "format": "float" },
-          "meterAmbiguous": { "type": "boolean" },
           "isInstrumental": { "type": "boolean" },
-          "liltScore": { "type": "number", "format": "float" },
-          "liltConsistency": { "type": "number", "format": "float" },
-          "liltPattern": {
-            "type": "array",
-            "items": { "type": "number", "format": "float" }
-          },
           "analysisVersion": { "type": "string" },
           "musicGenre": { "type": "string" },
           "genreConfidence": { "type": "number", "format": "float" },
@@ -5414,6 +5613,55 @@
           "isActive": { "type": "boolean" }
         }
       },
+      "DanceImportItem": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "danceDescriptionUrl": { "type": "string" },
+          "danceType": { "type": "string" },
+          "music": { "type": "string" }
+        }
+      },
+      "Dance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the dance",
+            "example": "Hambo"
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from the name",
+            "example": "hambo"
+          },
+          "danceDescriptionUrl": {
+            "type": "string",
+            "description": "Link to the external dance description page"
+          },
+          "danceType": {
+            "type": "string",
+            "description": "Dance category from (e.g. Hambo, Vals, Polka)",
+            "example": "Hambo"
+          },
+          "music": {
+            "type": "string",
+            "description": "Tune/track name description (e.g. Lugn hambo)",
+            "example": "Lugn hambo"
+          },
+          "confirmedTrackCount": {
+            "type": "integer",
+            "description": "Number of confirmed tracks linked to this dance",
+            "format": "int64"
+          }
+        },
+        "description": "Dance entry with link to description and track count"
+      },
       "StructureRequest": {
         "type": "object",
         "properties": {
@@ -5498,6 +5746,10 @@
           "userId": { "type": "string", "format": "uuid" },
           "permission": { "type": "string" }
         }
+      },
+      "DanceTrackVoteRequest": {
+        "type": "object",
+        "properties": { "vote": { "type": "string" } }
       },
       "RecordInteractionRequest": {
         "type": "object",
@@ -5638,15 +5890,6 @@
         "properties": {
           "resourceId": { "type": "string" },
           "resourceType": { "type": "string" }
-        }
-      },
-      "DanceImportItem": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string" },
-          "danceDescriptionUrl": { "type": "string" },
-          "danceType": { "type": "string" },
-          "music": { "type": "string" }
         }
       },
       "BlockSpotifyRequest": {
@@ -5900,46 +6143,6 @@
           "subStyles": { "type": "array", "items": { "type": "string" } },
           "trackCount": { "type": "integer", "format": "int64" }
         }
-      },
-      "Dance": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique identifier",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "description": "Display name of the dance",
-            "example": "Hambo"
-          },
-          "slug": {
-            "type": "string",
-            "description": "URL-safe slug derived from the name",
-            "example": "hambo"
-          },
-          "danceDescriptionUrl": {
-            "type": "string",
-            "description": "Link to the dance description page "
-          },
-          "danstyp": {
-            "type": "string",
-            "description": "Dance category (e.g. Hambo, Vals, Polka)",
-            "example": "Hambo"
-          },
-          "musik": {
-            "type": "string",
-            "description": "Tune/track name description (e.g. Lugn hambo)",
-            "example": "Lugn hambo"
-          },
-          "confirmedTrackCount": {
-            "type": "integer",
-            "description": "Number of confirmed tracks linked to this dance",
-            "format": "int64"
-          }
-        },
-        "description": "Dance entry with link to description and track count"
       },
       "PageResponseDance": {
         "type": "object",
