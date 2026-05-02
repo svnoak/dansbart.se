@@ -90,11 +90,6 @@ public class Albums extends TableImpl<Record> {
      */
     public final TableField<Record, String> SPOTIFY_ID = createField(DSL.name("spotify_id"), SQLDataType.VARCHAR, this, "");
 
-    /**
-     * The column <code>public.albums.musicbrainz_id</code>.
-     */
-    public final TableField<Record, String> MUSICBRAINZ_ID = createField(DSL.name("musicbrainz_id"), SQLDataType.VARCHAR, this, "");
-
     private Albums(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -164,7 +159,7 @@ public class Albums extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_ALBUMS_MUSICBRAINZ_ID, Indexes.IX_ALBUMS_SPOTIFY_ID, Indexes.IX_ALBUMS_TITLE, Indexes.IX_ALBUMS_TITLE_TRGM);
+        return Arrays.asList(Indexes.IX_ALBUMS_SPOTIFY_ID, Indexes.IX_ALBUMS_TITLE, Indexes.IX_ALBUMS_TITLE_TRGM);
     }
 
     @Override

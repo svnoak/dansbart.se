@@ -236,96 +236,6 @@ public class Tracks extends TableImpl<Record> {
      */
     public final TableField<Record, UUID> UPLOADER_ID = createField(DSL.name("uploader_id"), SQLDataType.UUID, this, "");
 
-    /**
-     * The column <code>public.tracks.musicbrainz_id</code>.
-     */
-    public final TableField<Record, String> MUSICBRAINZ_ID = createField(DSL.name("musicbrainz_id"), SQLDataType.VARCHAR, this, "");
-
-    /**
-     * The column <code>public.tracks.r1_mean</code>.
-     */
-    public final TableField<Record, Double> R1_MEAN = createField(DSL.name("r1_mean"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.r2_mean</code>.
-     */
-    public final TableField<Record, Double> R2_MEAN = createField(DSL.name("r2_mean"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.r3_mean</code>.
-     */
-    public final TableField<Record, Double> R3_MEAN = createField(DSL.name("r3_mean"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.asymmetry_score</code>.
-     */
-    public final TableField<Record, Double> ASYMMETRY_SCORE = createField(DSL.name("asymmetry_score"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.asymmetry_consistency</code>.
-     */
-    public final TableField<Record, Double> ASYMMETRY_CONSISTENCY = createField(DSL.name("asymmetry_consistency"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.pattern_type</code>.
-     */
-    public final TableField<Record, String> PATTERN_TYPE = createField(DSL.name("pattern_type"), SQLDataType.VARCHAR(32), this, "");
-
-    /**
-     * The column <code>public.tracks.ternary_confidence</code>.
-     */
-    public final TableField<Record, Double> TERNARY_CONFIDENCE = createField(DSL.name("ternary_confidence"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.meter_ambiguous</code>.
-     */
-    public final TableField<Record, Boolean> METER_AMBIGUOUS = createField(DSL.name("meter_ambiguous"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
-
-    /**
-     * The column <code>public.tracks.lilt_score</code>.
-     */
-    public final TableField<Record, Double> LILT_SCORE = createField(DSL.name("lilt_score"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.lilt_consistency</code>.
-     */
-    public final TableField<Record, Double> LILT_CONSISTENCY = createField(DSL.name("lilt_consistency"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.lilt_pattern</code>.
-     */
-    public final TableField<Record, JSONB> LILT_PATTERN = createField(DSL.name("lilt_pattern"), SQLDataType.JSONB, this, "");
-
-    /**
-     * The column <code>public.tracks.r_direction_consistency</code>.
-     */
-    public final TableField<Record, Double> R_DIRECTION_CONSISTENCY = createField(DSL.name("r_direction_consistency"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.r_asymmetry_magnitude</code>.
-     */
-    public final TableField<Record, Double> R_ASYMMETRY_MAGNITUDE = createField(DSL.name("r_asymmetry_magnitude"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.umap_x</code>.
-     */
-    public final TableField<Record, Double> UMAP_X = createField(DSL.name("umap_x"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.umap_y</code>.
-     */
-    public final TableField<Record, Double> UMAP_Y = createField(DSL.name("umap_y"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.umap_rhythm_x</code>.
-     */
-    public final TableField<Record, Double> UMAP_RHYTHM_X = createField(DSL.name("umap_rhythm_x"), SQLDataType.DOUBLE, this, "");
-
-    /**
-     * The column <code>public.tracks.umap_rhythm_y</code>.
-     */
-    public final TableField<Record, Double> UMAP_RHYTHM_Y = createField(DSL.name("umap_rhythm_y"), SQLDataType.DOUBLE, this, "");
-
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -395,7 +305,7 @@ public class Tracks extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_TRACKS_ASYMMETRY_SCORE, Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_LILT_SCORE, Indexes.IDX_TRACKS_PATTERN_TYPE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_MUSICBRAINZ_ID, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
+        return Arrays.asList(Indexes.IDX_TRACKS_ISRC_NON_UNIQUE, Indexes.IDX_TRACKS_PROCESSING_STATUS, Indexes.IX_TRACKS_ANALYSIS_VERSION, Indexes.IX_TRACKS_IS_DANCEABLE, Indexes.IX_TRACKS_IS_FLAGGED, Indexes.IX_TRACKS_MUSIC_GENRE, Indexes.IX_TRACKS_TITLE, Indexes.IX_TRACKS_TITLE_TRGM, Indexes.IX_TRACKS_UPLOADER_ID);
     }
 
     @Override
