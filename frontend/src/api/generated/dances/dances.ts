@@ -205,17 +205,17 @@ export const getRecommendations = async (id: string,
 /**
  * @summary Get community-upvoted tracks for a dance
  */
-export const getGetPassandeTracksUrl = (id: string,) => {
+export const getGetMatchingTracksUrl = (id: string,) => {
 
 
   
 
-  return `/api/dances/${id}/passande`
+  return `/api/dances/${id}/matching`
 }
 
-export const getPassandeTracks = async (id: string, options?: RequestInit): Promise<TrackListDto[]> => {
+export const getMatchingTracks = async (id: string, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  return httpClient<TrackListDto[]>(getGetPassandeTracksUrl(id),
+  return httpClient<TrackListDto[]>(getGetMatchingTracksUrl(id),
   {      
     ...options,
     method: 'GET'

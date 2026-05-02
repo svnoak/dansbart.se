@@ -138,7 +138,7 @@ public class DanceService {
 
         // Exclude upvoted tracks (shown in Passande musik) and downvote-suppressed tracks
         List<UUID> excluded = new ArrayList<>();
-        excluded.addAll(voteRepository.findPassandeTrackIds(danceId));
+        excluded.addAll(voteRepository.findMatchingTrackIds(danceId));
         excluded.addAll(voteRepository.findSuppressedTrackIds(danceId));
 
         List<UUID> ids = danceJooqRepository.findRecommendedTrackIds(danceId, danceType, danceName, music, limit, offset, excluded);
@@ -150,12 +150,12 @@ public class DanceService {
         return new PageImpl<>(dtos, pageable, total);
     }
 
-    public List<TrackListDto> getPassandeTracks(UUID danceId) {
+    public List<TrackListDto> getMatchingTracks(UUID danceId) {
         Set<UUID> confirmedIds = danceJooqRepository.findConfirmedTracksByDanceId(danceId)
                 .stream().map(DanceTrack::getTrackId).collect(Collectors.toSet());
-        List<UUID> passandeIds = voteRepository.findPassandeTrackIds(danceId)
+        List<UUID> matchingIds = voteRepository.findMatchingTrackIds(danceId)
                 .stream().filter(id -> !confirmedIds.contains(id)).toList();
-        return trackJooqRepository.findTrackListDtosByIds(passandeIds);
+        return trackJooqRepository.findTrackListDtosByIds(matchingIds);
     }
 
     @Transactional

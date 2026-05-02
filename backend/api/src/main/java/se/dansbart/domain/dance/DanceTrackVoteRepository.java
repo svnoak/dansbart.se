@@ -53,7 +53,7 @@ public class DanceTrackVoteRepository {
     }
 
     /** Track IDs for this dance that have at least one upvote. */
-    public List<UUID> findPassandeTrackIds(UUID danceId) {
+    public List<UUID> findMatchingTrackIds(UUID danceId) {
         return dsl.selectDistinct(COL_TRACK_ID)
                 .from(DANCE_TRACK_VOTES)
                 .where(COL_DANCE_ID.eq(danceId))

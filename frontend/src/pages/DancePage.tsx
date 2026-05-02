@@ -17,8 +17,8 @@ type DanceDto = {
   name?: string;
   slug?: string;
   danceDescriptionUrl?: string | null;
-  danstyp?: string | null;
-  musik?: string | null;
+  danceType?: string | null;
+  music?: string | null;
   confirmedTrackCount?: number;
 };
 
@@ -29,7 +29,7 @@ function getConfirmedTracks(id: string): Promise<TrackListDto[]> {
   return httpClient(`/api/dances/${id}/tracks`);
 }
 function getMatchingDanceTracks(id: string): Promise<TrackListDto[]> {
-  return httpClient(`/api/dances/${id}/passande`);
+  return httpClient(`/api/dances/${id}/matching`);
 }
 function getRecommendations(
   danceId: string,
@@ -207,11 +207,11 @@ export function DancePage() {
               </a>
             )}
           </div>
-          {dance.danstyp && (
-            <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">{dance.danstyp}</p>
+          {dance.danceType && (
+            <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">{dance.danceType}</p>
           )}
-          {dance.musik && (
-            <p className="mt-0.5 text-xs text-[rgb(var(--color-text-muted))]">Musik: {dance.musik}</p>
+          {dance.music && (
+            <p className="mt-0.5 text-xs text-[rgb(var(--color-text-muted))]">Musik: {dance.music}</p>
           )}
         </div>
 
@@ -240,7 +240,7 @@ export function DancePage() {
         )}
       </section>
 
-      {dance.danstyp && (
+      {dance.danceType && (
         <section aria-labelledby="recommendations-heading">
           <SectionTitle id="recommendations-heading">Förslag på musik</SectionTitle>
 

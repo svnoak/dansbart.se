@@ -60,10 +60,10 @@ public class DanceController {
         return ResponseEntity.ok(PageResponse.from(danceService.getRecommendations(id, limit, offset)));
     }
 
-    @GetMapping("/{id}/passande")
+    @GetMapping("/{id}/matching")
     @Operation(summary = "Get community-upvoted tracks for a dance")
-    public ResponseEntity<List<TrackListDto>> getPassandeTracks(@PathVariable UUID id) {
-        return ResponseEntity.ok(danceService.getPassandeTracks(id));
+    public ResponseEntity<List<TrackListDto>> getMatchingTracks(@PathVariable UUID id) {
+        return ResponseEntity.ok(danceService.getMatchingTracks(id));
     }
 
     @PostMapping("/{id}/tracks/{trackId}/vote")

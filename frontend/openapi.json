@@ -3696,11 +3696,11 @@
         }
       }
     },
-    "/api/dances/{id}/passande": {
+    "/api/dances/{id}/matching": {
       "get": {
         "tags": ["Dances"],
         "summary": "Get community-upvoted tracks for a dance",
-        "operationId": "getPassandeTracks",
+        "operationId": "getMatchingTracks",
         "parameters": [
           {
             "name": "id",
