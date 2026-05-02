@@ -14,6 +14,8 @@ import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
+import se.dansbart.jooq.tables.DanceTrackVotes;
+import se.dansbart.jooq.tables.DanceTracks;
 import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PathCounts;
@@ -46,6 +48,9 @@ public class Indexes {
     // -------------------------------------------------------------------------
 
     public static final Index IDX_DANCE_STYLE_CONFIG_MAIN_STYLE = Internal.createIndex(DSL.name("idx_dance_style_config_main_style"), DanceStyleConfig.DANCE_STYLE_CONFIG, new OrderField[] { DanceStyleConfig.DANCE_STYLE_CONFIG.MAIN_STYLE }, false);
+    public static final Index IDX_DANCE_TRACKS_CONFIRMED = Internal.createIndex(DSL.name("idx_dance_tracks_confirmed"), DanceTracks.DANCE_TRACKS, new OrderField[] { DanceTracks.DANCE_TRACKS.IS_CONFIRMED }, false);
+    public static final Index IDX_DANCE_TRACKS_DANCE_ID = Internal.createIndex(DSL.name("idx_dance_tracks_dance_id"), DanceTracks.DANCE_TRACKS, new OrderField[] { DanceTracks.DANCE_TRACKS.DANCE_ID }, false);
+    public static final Index IDX_DANCE_TRACKS_TRACK_ID = Internal.createIndex(DSL.name("idx_dance_tracks_track_id"), DanceTracks.DANCE_TRACKS, new OrderField[] { DanceTracks.DANCE_TRACKS.TRACK_ID }, false);
     public static final Index IDX_FOLKWIKI_TUNES_NORMALIZED_TITLE = Internal.createIndex(DSL.name("idx_folkwiki_tunes_normalized_title"), FolkwikiTunes.FOLKWIKI_TUNES, new OrderField[] { FolkwikiTunes.FOLKWIKI_TUNES.NORMALIZED_TITLE }, false);
     public static final Index IDX_FOLKWIKI_TUNES_STYLE = Internal.createIndex(DSL.name("idx_folkwiki_tunes_style"), FolkwikiTunes.FOLKWIKI_TUNES, new OrderField[] { FolkwikiTunes.FOLKWIKI_TUNES.STYLE }, false);
     public static final Index IDX_PLAYLIST_COLLABORATORS_PLAYLIST = Internal.createIndex(DSL.name("idx_playlist_collaborators_playlist"), PlaylistCollaborators.PLAYLIST_COLLABORATORS, new OrderField[] { PlaylistCollaborators.PLAYLIST_COLLABORATORS.PLAYLIST_ID }, false);
@@ -64,6 +69,8 @@ public class Indexes {
     public static final Index IX_ARTISTS_NAME_TRGM = Internal.createIndex(DSL.name("ix_artists_name_trgm"), Artists.ARTISTS, new OrderField[] { Artists.ARTISTS.NAME }, false);
     public static final Index IX_DANCE_MOVEMENT_FEEDBACK_DANCE_STYLE = Internal.createIndex(DSL.name("ix_dance_movement_feedback_dance_style"), DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK, new OrderField[] { DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK.DANCE_STYLE }, false);
     public static final Index IX_DANCE_MOVEMENT_FEEDBACK_MOVEMENT_TAG = Internal.createIndex(DSL.name("ix_dance_movement_feedback_movement_tag"), DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK, new OrderField[] { DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK.MOVEMENT_TAG }, false);
+    public static final Index IX_DANCE_TRACK_VOTES_DANCE_ID = Internal.createIndex(DSL.name("ix_dance_track_votes_dance_id"), DanceTrackVotes.DANCE_TRACK_VOTES, new OrderField[] { DanceTrackVotes.DANCE_TRACK_VOTES.DANCE_ID }, false);
+    public static final Index IX_DANCE_TRACK_VOTES_TRACK_ID = Internal.createIndex(DSL.name("ix_dance_track_votes_track_id"), DanceTrackVotes.DANCE_TRACK_VOTES, new OrderField[] { DanceTrackVotes.DANCE_TRACK_VOTES.TRACK_ID }, false);
     public static final Index IX_GENRE_PROFILES_GENRE_NAME = Internal.createIndex(DSL.name("ix_genre_profiles_genre_name"), GenreProfiles.GENRE_PROFILES, new OrderField[] { GenreProfiles.GENRE_PROFILES.GENRE_NAME }, true);
     public static final Index IX_PENDING_ARTIST_APPROVALS_SPOTIFY_ID = Internal.createIndex(DSL.name("ix_pending_artist_approvals_spotify_id"), PendingArtistApprovals.PENDING_ARTIST_APPROVALS, new OrderField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.SPOTIFY_ID }, false);
     public static final Index IX_PENDING_ARTIST_APPROVALS_STATUS = Internal.createIndex(DSL.name("ix_pending_artist_approvals_status"), PendingArtistApprovals.PENDING_ARTIST_APPROVALS, new OrderField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.STATUS }, false);

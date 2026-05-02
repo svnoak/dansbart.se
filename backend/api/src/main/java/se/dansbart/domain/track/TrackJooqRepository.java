@@ -117,6 +117,24 @@ public class TrackJooqRepository {
                 .hasVocals(r.get(TRACKS.HAS_VOCALS))
                 .build()));
         Map<UUID, StyleInfo> styleByTrack = new LinkedHashMap<>();
+        // User-confirmed styles take priority over ML primary — query them first ordered
+        // so primary-confirmed beats secondary-confirmed, then fall back to ML primary below.
+        dsl.select(TRACK_DANCE_STYLES.TRACK_ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACK_DANCE_STYLES.SUB_STYLE,
+                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE)
+            .from(TRACK_DANCE_STYLES)
+            .where(TRACK_DANCE_STYLES.TRACK_ID.in(trackIds).and(TRACK_DANCE_STYLES.IS_USER_CONFIRMED.eq(true)))
+            .orderBy(TRACK_DANCE_STYLES.IS_PRIMARY.desc())
+            .forEach(r -> {
+                UUID tid = r.get(TRACK_DANCE_STYLES.TRACK_ID);
+                if (!styleByTrack.containsKey(tid)) {
+                    styleByTrack.put(tid, new StyleInfo(
+                        r.get(TRACK_DANCE_STYLES.DANCE_STYLE),
+                        r.get(TRACK_DANCE_STYLES.SUB_STYLE),
+                        r.get(TRACK_DANCE_STYLES.EFFECTIVE_BPM),
+                        r.get(TRACK_DANCE_STYLES.TEMPO_CATEGORY),
+                        1.0f)); // user-confirmed → verified badge
+                }
+            });
         dsl.select(TRACK_DANCE_STYLES.TRACK_ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACK_DANCE_STYLES.SUB_STYLE,
                 TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE)
             .from(TRACK_DANCE_STYLES)

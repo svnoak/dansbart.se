@@ -64,6 +64,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }, [isAuthenticated]);
   const isSearch = location.pathname === '/search';
   const isHome = location.pathname === '/';
+  const isDances = location.pathname.startsWith('/dance');
   const isPlaylists = location.pathname.startsWith('/playlists');
   const isAbout = location.pathname === '/about';
   const isTerms = location.pathname === '/terms';
@@ -101,6 +102,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         icon={<LibraryIcon className="h-5 w-5" aria-hidden />}
       >
         Bibliotek
+      </NavLink>
+      <NavLink
+        to="/dances"
+        active={isDances}
+        onClick={onNavigate}
+        icon={
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+          </svg>
+        }
+      >
+        Danser
       </NavLink>
       {isAuthenticated && (
         <NavLink

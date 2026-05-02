@@ -5,4 +5,7 @@
  * OpenAPI spec version: v0
  */
 
-export type GetAlbumTracks1200 = {[key: string]: { [key: string]: unknown }};
+export type GetPendingLinksParams = {
+limit?: number;
+offset?: number;
+};

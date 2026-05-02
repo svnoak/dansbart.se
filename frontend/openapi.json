@@ -6,6 +6,10 @@
   ],
   "tags": [
     {
+      "name": "Admin Dances",
+      "description": "Admin endpoints for managing the dance directory"
+    },
+    {
       "name": "Admin Rejections",
       "description": "Rejection and blocklist management endpoints"
     },
@@ -39,6 +43,7 @@
       "name": "Admin Analytics",
       "description": "Analytics dashboard and statistics endpoints"
     },
+    { "name": "Dances", "description": "Dance directory endpoints" },
     {
       "name": "Admin Folkwiki",
       "description": "Folkwiki tune matching review and confirmation"
@@ -577,6 +582,45 @@
         }
       }
     },
+    "/api/admin/folkwiki/tunes/{folkwikiTuneId}/style": {
+      "put": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Correct the style string stored on a folkwiki tune",
+        "operationId": "correctTuneStyle",
+        "parameters": [
+          {
+            "name": "folkwikiTuneId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/folkwiki/matches/{trackId}/{folkwikiTuneId}/reject": {
       "put": {
         "tags": ["Admin Folkwiki"],
@@ -655,6 +699,53 @@
             }
           }
         }
+      }
+    },
+    "/api/admin/dances/{id}": {
+      "put": {
+        "tags": ["Admin Dances"],
+        "summary": "Update a dance's fields",
+        "operationId": "updateDance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DanceImportItem" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Dance" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Admin Dances"],
+        "summary": "Delete a dance and all its track links",
+        "operationId": "deleteDance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/api/tracks/{id}/structure": {
@@ -1143,6 +1234,102 @@
             }
           }
         }
+      }
+    },
+    "/api/dances/{id}/tracks/{trackId}": {
+      "post": {
+        "tags": ["Dances"],
+        "summary": "Suggest a track for a dance (authenticated users)",
+        "operationId": "suggestTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dances/{id}/tracks/{trackId}/vote": {
+      "post": {
+        "tags": ["Dances"],
+        "summary": "Vote on a recommended track for a dance",
+        "operationId": "voteOnTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "X-Voter-ID",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DanceTrackVoteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "tags": ["Dances"],
+        "summary": "Remove a vote on a recommended track",
+        "operationId": "removeVote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "X-Voter-ID",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/api/analytics/track/interaction": {
@@ -2274,6 +2461,26 @@
         }
       }
     },
+    "/api/admin/folkwiki/backfill-bars": {
+      "post": {
+        "tags": ["Admin Folkwiki"],
+        "summary": "Dispatch bar correction tasks for all folkwiki-confirmed tracks",
+        "operationId": "backfillBars",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/danger/reset-crawl-data": {
       "post": {
         "tags": ["Admin Maintenance"],
@@ -2287,6 +2494,98 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dances/{danceId}/tracks/{trackId}": {
+      "post": {
+        "tags": ["Admin Dances"],
+        "summary": "Add a track to a dance directly as confirmed (admin shortcut)",
+        "operationId": "addTrack_1",
+        "parameters": [
+          {
+            "name": "danceId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "tags": ["Admin Dances"],
+        "summary": "Remove a track-dance link (confirmed or pending)",
+        "operationId": "removeTrack_1",
+        "parameters": [
+          {
+            "name": "danceId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/admin/dances/track-links/{linkId}/confirm": {
+      "post": {
+        "tags": ["Admin Dances"],
+        "summary": "Confirm a track-dance suggestion",
+        "operationId": "confirmLink",
+        "parameters": [
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/admin/dances/import": {
+      "post": {
+        "tags": ["Admin Dances"],
+        "summary": "Import dances from JSON (upsert by slug), auto-links matching tracks",
+        "operationId": "importDances",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/DanceImportItem" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
                 }
               }
             }
@@ -3262,6 +3561,169 @@
         }
       }
     },
+    "/api/dances": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "List dances with optional search, style filter, and pagination",
+        "operationId": "getDances",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "danceType",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 20 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponseDance" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dances/{id}": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "Get dance by ID",
+        "operationId": "getDance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Dance" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dances/{id}/tracks": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "Get confirmed tracks for a dance",
+        "operationId": "getDanceTracks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TrackListDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dances/{id}/recommendations": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "Get track recommendations for a dance based on the same dance style",
+        "operationId": "getRecommendations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 5 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseTrackListDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dances/{id}/matching": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "Get community-upvoted tracks for a dance",
+        "operationId": "getMatchingTracks",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TrackListDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/config/auth": {
       "get": {
         "tags": ["auth-config-controller"],
@@ -3833,8 +4295,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
                 }
               }
             }
@@ -3861,8 +4326,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
                 }
               }
             }
@@ -4203,6 +4671,70 @@
                     "format": "int32"
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dances/pending": {
+      "get": {
+        "tags": ["Admin Dances"],
+        "summary": "List unconfirmed track suggestions",
+        "operationId": "getPendingLinks",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseDanceTrack"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dances/invalid-styles": {
+      "get": {
+        "tags": ["Admin Dances"],
+        "summary": "List dances whose danceType is not found in dance_style_config",
+        "operationId": "getInvalidStyles",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponseDance" }
               }
             }
           }
@@ -5081,6 +5613,55 @@
           "isActive": { "type": "boolean" }
         }
       },
+      "DanceImportItem": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "danceDescriptionUrl": { "type": "string" },
+          "danceType": { "type": "string" },
+          "music": { "type": "string" }
+        }
+      },
+      "Dance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the dance",
+            "example": "Hambo"
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-safe slug derived from the name",
+            "example": "hambo"
+          },
+          "danceDescriptionUrl": {
+            "type": "string",
+            "description": "Link to the external dance description page"
+          },
+          "danceType": {
+            "type": "string",
+            "description": "Dance category from (e.g. Hambo, Vals, Polka)",
+            "example": "Hambo"
+          },
+          "music": {
+            "type": "string",
+            "description": "Tune/track name description (e.g. Lugn hambo)",
+            "example": "Lugn hambo"
+          },
+          "confirmedTrackCount": {
+            "type": "integer",
+            "description": "Number of confirmed tracks linked to this dance",
+            "format": "int64"
+          }
+        },
+        "description": "Dance entry with link to description and track count"
+      },
       "StructureRequest": {
         "type": "object",
         "properties": {
@@ -5165,6 +5746,10 @@
           "userId": { "type": "string", "format": "uuid" },
           "permission": { "type": "string" }
         }
+      },
+      "DanceTrackVoteRequest": {
+        "type": "object",
+        "properties": { "vote": { "type": "string" } }
       },
       "RecordInteractionRequest": {
         "type": "object",
@@ -5559,6 +6144,19 @@
           "trackCount": { "type": "integer", "format": "int64" }
         }
       },
+      "PageResponseDance": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Dance" }
+          },
+          "total": { "type": "integer", "format": "int64" },
+          "page": { "type": "integer", "format": "int32" },
+          "size": { "type": "integer", "format": "int32" },
+          "hasMore": { "type": "boolean" }
+        }
+      },
       "Artist": {
         "type": "object",
         "properties": {
@@ -5679,6 +6277,35 @@
           "items": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/AdminTrackDto" }
+          },
+          "total": { "type": "integer", "format": "int64" },
+          "page": { "type": "integer", "format": "int32" },
+          "size": { "type": "integer", "format": "int32" },
+          "hasMore": { "type": "boolean" }
+        }
+      },
+      "DanceTrack": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "danceId": { "type": "string", "format": "uuid" },
+          "trackId": { "type": "string", "format": "uuid" },
+          "addedBy": { "type": "string", "format": "uuid" },
+          "addedAt": { "type": "string", "format": "date-time" },
+          "confirmedBy": { "type": "string", "format": "uuid" },
+          "confirmedAt": { "type": "string", "format": "date-time" },
+          "danceName": { "type": "string" },
+          "trackTitle": { "type": "string" },
+          "trackArtistName": { "type": "string" },
+          "confirmed": { "type": "boolean" }
+        }
+      },
+      "PageResponseDanceTrack": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DanceTrack" }
           },
           "total": { "type": "integer", "format": "int64" },
           "page": { "type": "integer", "format": "int32" },
