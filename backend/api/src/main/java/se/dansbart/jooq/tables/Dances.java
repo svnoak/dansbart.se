@@ -33,6 +33,7 @@ import org.jooq.impl.TableImpl;
 
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.DanceTrackVotes.DanceTrackVotesPath;
 import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 
@@ -168,6 +169,19 @@ public class Dances extends TableImpl<Record> {
     @Override
     public List<UniqueKey<Record>> getUniqueKeys() {
         return Arrays.asList(Keys.DANCES_SLUG_KEY);
+    }
+
+    private transient DanceTrackVotesPath _danceTrackVotes;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_track_votes</code> table
+     */
+    public DanceTrackVotesPath danceTrackVotes() {
+        if (_danceTrackVotes == null)
+            _danceTrackVotes = new DanceTrackVotesPath(this, null, Keys.DANCE_TRACK_VOTES__DANCE_TRACK_VOTES_DANCE_ID_FKEY.getInverseKey());
+
+        return _danceTrackVotes;
     }
 
     private transient DanceTracksPath _danceTracks;

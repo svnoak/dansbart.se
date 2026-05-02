@@ -3,19 +3,24 @@ package se.dansbart.domain.dance;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.track.TrackFeedbackService;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.dto.DanceDto;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.request.DanceImportItem;
 
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,11 +29,15 @@ public class DanceService {
 
     private final DanceJooqRepository danceJooqRepository;
     private final TrackJooqRepository trackJooqRepository;
+    private final DanceTrackVoteRepository voteRepository;
+    private final TrackFeedbackService trackFeedbackService;
 
-    public Page<DanceDto> getDances(String search, Pageable pageable) {
-        Page<Dance> page = danceJooqRepository.findAll(search, pageable);
+    public Page<DanceDto> getDances(String search, String danstyp, Pageable pageable) {
+        Page<Dance> page = danceJooqRepository.findAll(search, danstyp, pageable);
+        List<UUID> ids = page.getContent().stream().map(Dance::getId).toList();
+        Map<UUID, Integer> counts = danceJooqRepository.countConfirmedByDanceIds(ids);
         List<DanceDto> dtos = page.getContent().stream()
-                .map(d -> toDto(d, danceJooqRepository.countConfirmedTracksByDanceId(d.getId())))
+                .map(d -> toDto(d, counts.getOrDefault(d.getId(), 0)))
                 .toList();
         return new PageImpl<>(dtos, pageable, page.getTotalElements());
     }
@@ -117,6 +126,56 @@ public class DanceService {
         danceJooqRepository.addTrackConfirmed(danceId, trackId, adminId);
     }
 
+    public Page<TrackListDto> getRecommendations(UUID danceId, int limit, int offset) {
+        Optional<Dance> danceOpt = danceJooqRepository.findById(danceId);
+        if (danceOpt.isEmpty()) return Page.empty();
+        Dance dance = danceOpt.get();
+        if (dance.getDanstyp() == null || dance.getDanstyp().isBlank()) return Page.empty();
+
+        String danstyp = dance.getDanstyp();
+        String danceName = dance.getName() != null ? dance.getName().toLowerCase() : "";
+        String musik = dance.getMusik() != null ? extractMusikFragment(dance.getMusik()).toLowerCase() : null;
+
+        // Exclude upvoted tracks (shown in Passande musik) and downvote-suppressed tracks
+        List<UUID> excluded = new ArrayList<>();
+        excluded.addAll(voteRepository.findPassandeTrackIds(danceId));
+        excluded.addAll(voteRepository.findSuppressedTrackIds(danceId));
+
+        List<UUID> ids = danceJooqRepository.findRecommendedTrackIds(danceId, danstyp, danceName, musik, limit, offset, excluded);
+        long total = danceJooqRepository.countRecommendedTracks(danceId, danstyp, danceName, musik, excluded);
+        List<TrackListDto> dtos = trackJooqRepository.findTrackListDtosByIds(ids);
+
+        int pageNum = limit > 0 ? offset / limit : 0;
+        Pageable pageable = PageRequest.of(pageNum, limit > 0 ? limit : 5);
+        return new PageImpl<>(dtos, pageable, total);
+    }
+
+    public List<TrackListDto> getPassandeTracks(UUID danceId) {
+        Set<UUID> confirmedIds = danceJooqRepository.findConfirmedTracksByDanceId(danceId)
+                .stream().map(DanceTrack::getTrackId).collect(Collectors.toSet());
+        List<UUID> passandeIds = voteRepository.findPassandeTrackIds(danceId)
+                .stream().filter(id -> !confirmedIds.contains(id)).toList();
+        return trackJooqRepository.findTrackListDtosByIds(passandeIds);
+    }
+
+    @Transactional
+    public void voteOnTrack(UUID danceId, UUID trackId, String voterId, int vote) {
+        voteRepository.upsertVote(danceId, trackId, voterId, vote);
+        if (vote == 1) {
+            danceJooqRepository.addTrackConfirmed(danceId, trackId, null);
+            danceJooqRepository.findById(danceId).ifPresent(dance -> {
+                if (dance.getDanstyp() != null && !dance.getDanstyp().isBlank()) {
+                    trackFeedbackService.submitStyleFeedback(trackId, voterId, dance.getDanstyp(), null);
+                }
+            });
+        }
+    }
+
+    @Transactional
+    public void removeVote(UUID danceId, UUID trackId, String voterId) {
+        voteRepository.deleteVote(danceId, trackId, voterId);
+    }
+
     public Page<DanceDto> getDancesWithInvalidStyle(Pageable pageable) {
         List<Dance> items = danceJooqRepository.findDancesWithInvalidStyle(pageable);
         long total = danceJooqRepository.countDancesWithInvalidStyle();
@@ -124,6 +183,25 @@ public class DanceService {
                 .map(d -> toDto(d, danceJooqRepository.countConfirmedTracksByDanceId(d.getId())))
                 .toList();
         return new PageImpl<>(dtos, pageable, total);
+    }
+
+    // Extracts the most useful tune-name fragment from the musik field for recommendation matching.
+    // "Lugn Hambo (Ex Horgalåten)" → "Horgalåten"  (parenthetical with "Ex" = "for example")
+    // "(Horgalåten)" → "Horgalåten"
+    // "Horgalåten, arr. Svensson" → "Horgalåten"  (falls back to stripArtistSuffix)
+    private static String extractMusikFragment(String musik) {
+        if (musik == null) return "";
+        String stripped = musik.strip();
+        int parenOpen = stripped.lastIndexOf('(');
+        int parenClose = stripped.lastIndexOf(')');
+        if (parenOpen >= 0 && parenClose > parenOpen) {
+            String inner = stripped.substring(parenOpen + 1, parenClose).strip();
+            if (inner.toLowerCase().startsWith("ex ")) {
+                inner = inner.substring(3).strip();
+            }
+            if (!inner.isBlank()) return inner;
+        }
+        return stripArtistSuffix(stripped);
     }
 
     private static String stripArtistSuffix(String musik) {

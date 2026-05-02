@@ -14,6 +14,7 @@ import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
+import se.dansbart.jooq.tables.DanceTrackVotes;
 import se.dansbart.jooq.tables.DanceTracks;
 import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
@@ -73,6 +74,8 @@ public class Indexes {
     public static final Index IX_ARTISTS_NAME_TRGM = Internal.createIndex(DSL.name("ix_artists_name_trgm"), Artists.ARTISTS, new OrderField[] { Artists.ARTISTS.NAME }, false);
     public static final Index IX_DANCE_MOVEMENT_FEEDBACK_DANCE_STYLE = Internal.createIndex(DSL.name("ix_dance_movement_feedback_dance_style"), DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK, new OrderField[] { DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK.DANCE_STYLE }, false);
     public static final Index IX_DANCE_MOVEMENT_FEEDBACK_MOVEMENT_TAG = Internal.createIndex(DSL.name("ix_dance_movement_feedback_movement_tag"), DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK, new OrderField[] { DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK.MOVEMENT_TAG }, false);
+    public static final Index IX_DANCE_TRACK_VOTES_DANCE_ID = Internal.createIndex(DSL.name("ix_dance_track_votes_dance_id"), DanceTrackVotes.DANCE_TRACK_VOTES, new OrderField[] { DanceTrackVotes.DANCE_TRACK_VOTES.DANCE_ID }, false);
+    public static final Index IX_DANCE_TRACK_VOTES_TRACK_ID = Internal.createIndex(DSL.name("ix_dance_track_votes_track_id"), DanceTrackVotes.DANCE_TRACK_VOTES, new OrderField[] { DanceTrackVotes.DANCE_TRACK_VOTES.TRACK_ID }, false);
     public static final Index IX_GENRE_PROFILES_GENRE_NAME = Internal.createIndex(DSL.name("ix_genre_profiles_genre_name"), GenreProfiles.GENRE_PROFILES, new OrderField[] { GenreProfiles.GENRE_PROFILES.GENRE_NAME }, true);
     public static final Index IX_PENDING_ARTIST_APPROVALS_SPOTIFY_ID = Internal.createIndex(DSL.name("ix_pending_artist_approvals_spotify_id"), PendingArtistApprovals.PENDING_ARTIST_APPROVALS, new OrderField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.SPOTIFY_ID }, false);
     public static final Index IX_PENDING_ARTIST_APPROVALS_STATUS = Internal.createIndex(DSL.name("ix_pending_artist_approvals_status"), PendingArtistApprovals.PENDING_ARTIST_APPROVALS, new OrderField[] { PendingArtistApprovals.PENDING_ARTIST_APPROVALS.STATUS }, false);

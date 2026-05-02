@@ -1,7 +1,10 @@
 package se.dansbart.domain.dance;
 
+import org.jooq.Condition;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.Record;
+import org.jooq.impl.DSL;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,10 +30,14 @@ public class DanceJooqRepository {
         this.dsl = dsl;
     }
 
-    public Page<Dance> findAll(String search, Pageable pageable) {
-        var condition = (search != null && !search.isBlank())
-                ? DANCES.NAME.lower().like("%" + search.toLowerCase() + "%")
-                : org.jooq.impl.DSL.trueCondition();
+    public Page<Dance> findAll(String search, String danstyp, Pageable pageable) {
+        Condition condition = DSL.trueCondition();
+        if (search != null && !search.isBlank()) {
+            condition = condition.and(DANCES.NAME.lower().like("%" + search.toLowerCase() + "%"));
+        }
+        if (danstyp != null && !danstyp.isBlank()) {
+            condition = condition.and(DANCES.DANSTYP.equalIgnoreCase(danstyp));
+        }
 
         List<Dance> items = dsl.selectFrom(DANCES)
                 .where(condition)
@@ -62,6 +70,16 @@ public class DanceJooqRepository {
                         .where(DANCE_TRACKS.DANCE_ID.eq(danceId))
                         .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
         );
+    }
+
+    public Map<UUID, Integer> countConfirmedByDanceIds(List<UUID> danceIds) {
+        if (danceIds.isEmpty()) return Map.of();
+        return dsl.select(DANCE_TRACKS.DANCE_ID, count())
+                .from(DANCE_TRACKS)
+                .where(DANCE_TRACKS.DANCE_ID.in(danceIds))
+                .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
+                .groupBy(DANCE_TRACKS.DANCE_ID)
+                .fetchMap(DANCE_TRACKS.DANCE_ID, count());
     }
 
     public List<DanceTrack> findConfirmedTracksByDanceId(UUID danceId) {
@@ -219,6 +237,69 @@ public class DanceJooqRepository {
                 .where(org.jooq.impl.DSL.lower(TRACKS.TITLE).like("%" + fragment.toLowerCase() + "%"))
                 .limit(5)
                 .fetch(TRACKS.ID);
+    }
+
+    public List<UUID> findRecommendedTrackIds(UUID danceId, String danstyp, String danceName, String musik,
+                                               int limit, int offset, List<UUID> exclude) {
+        var confirmed = dsl.select(DANCE_TRACKS.TRACK_ID)
+                .from(DANCE_TRACKS)
+                .where(DANCE_TRACKS.DANCE_ID.eq(danceId))
+                .and(DANCE_TRACKS.IS_CONFIRMED.isTrue());
+
+        // Name/musik matches bypass the style filter — explicit human curation trumps ML classification.
+        Condition nameMatch = danceName.isBlank() ? DSL.falseCondition()
+                : DSL.lower(TRACKS.TITLE).like("%" + danceName.toLowerCase() + "%");
+        Condition musikMatch = (musik == null || musik.isBlank()) ? DSL.falseCondition()
+                : DSL.lower(TRACKS.TITLE).like("%" + musik.toLowerCase() + "%");
+        Condition styleMatch = DSL.exists(
+                dsl.selectOne().from(TRACK_DANCE_STYLES)
+                        .where(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
+                        .and(TRACK_DANCE_STYLES.IS_PRIMARY.isTrue())
+                        .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danstyp)));
+
+        Field<Integer> priority = DSL.case_()
+                .when(nameMatch, 1)
+                .when(musikMatch, 2)
+                .otherwise(3);
+
+        Condition excludeCondition = exclude.isEmpty() ? DSL.trueCondition() : TRACKS.ID.notIn(exclude);
+
+        return dsl.select(TRACKS.ID)
+                .from(TRACKS)
+                .where(nameMatch.or(musikMatch).or(styleMatch))
+                .and(TRACKS.ID.notIn(confirmed))
+                .and(excludeCondition)
+                .orderBy(priority.asc(), TRACKS.TITLE.asc())
+                .limit(limit)
+                .offset(offset)
+                .fetch(TRACKS.ID);
+    }
+
+    public long countRecommendedTracks(UUID danceId, String danstyp, String danceName, String musik,
+                                        List<UUID> exclude) {
+        var confirmed = dsl.select(DANCE_TRACKS.TRACK_ID)
+                .from(DANCE_TRACKS)
+                .where(DANCE_TRACKS.DANCE_ID.eq(danceId))
+                .and(DANCE_TRACKS.IS_CONFIRMED.isTrue());
+
+        Condition nameMatch = danceName.isBlank() ? DSL.falseCondition()
+                : DSL.lower(TRACKS.TITLE).like("%" + danceName.toLowerCase() + "%");
+        Condition musikMatch = (musik == null || musik.isBlank()) ? DSL.falseCondition()
+                : DSL.lower(TRACKS.TITLE).like("%" + musik.toLowerCase() + "%");
+        Condition styleMatch = DSL.exists(
+                dsl.selectOne().from(TRACK_DANCE_STYLES)
+                        .where(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
+                        .and(TRACK_DANCE_STYLES.IS_PRIMARY.isTrue())
+                        .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danstyp)));
+
+        Condition excludeCondition = exclude.isEmpty() ? DSL.trueCondition() : TRACKS.ID.notIn(exclude);
+
+        return dsl.fetchCount(
+                dsl.select(TRACKS.ID).from(TRACKS)
+                        .where(nameMatch.or(musikMatch).or(styleMatch))
+                        .and(TRACKS.ID.notIn(confirmed))
+                        .and(excludeCondition)
+        );
     }
 
     /**

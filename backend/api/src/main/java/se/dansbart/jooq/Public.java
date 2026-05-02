@@ -17,6 +17,7 @@ import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
+import se.dansbart.jooq.tables.DanceTrackVotes;
 import se.dansbart.jooq.tables.DanceTracks;
 import se.dansbart.jooq.tables.Dances;
 import se.dansbart.jooq.tables.FolkwikiTunes;
@@ -85,6 +86,11 @@ public class Public extends SchemaImpl {
      * The table <code>public.dance_style_config</code>.
      */
     public final DanceStyleConfig DANCE_STYLE_CONFIG = DanceStyleConfig.DANCE_STYLE_CONFIG;
+
+    /**
+     * The table <code>public.dance_track_votes</code>.
+     */
+    public final DanceTrackVotes DANCE_TRACK_VOTES = DanceTrackVotes.DANCE_TRACK_VOTES;
 
     /**
      * The table <code>public.dance_tracks</code>.
@@ -228,6 +234,7 @@ public class Public extends SchemaImpl {
             Artists.ARTISTS,
             DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK,
             DanceStyleConfig.DANCE_STYLE_CONFIG,
+            DanceTrackVotes.DANCE_TRACK_VOTES,
             DanceTracks.DANCE_TRACKS,
             Dances.DANCES,
             FolkwikiTunes.FOLKWIKI_TUNES,

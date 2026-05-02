@@ -40,6 +40,7 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Albums.AlbumsPath;
 import se.dansbart.jooq.tables.AnalysisSources.AnalysisSourcesPath;
 import se.dansbart.jooq.tables.Artists.ArtistsPath;
+import se.dansbart.jooq.tables.DanceTrackVotes.DanceTrackVotesPath;
 import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.Dances.DancesPath;
 import se.dansbart.jooq.tables.FolkwikiTunes.FolkwikiTunesPath;
@@ -295,6 +296,36 @@ public class Tracks extends TableImpl<Record> {
      */
     public final TableField<Record, JSONB> LILT_PATTERN = createField(DSL.name("lilt_pattern"), SQLDataType.JSONB, this, "");
 
+    /**
+     * The column <code>public.tracks.r_direction_consistency</code>.
+     */
+    public final TableField<Record, Double> R_DIRECTION_CONSISTENCY = createField(DSL.name("r_direction_consistency"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.r_asymmetry_magnitude</code>.
+     */
+    public final TableField<Record, Double> R_ASYMMETRY_MAGNITUDE = createField(DSL.name("r_asymmetry_magnitude"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.umap_x</code>.
+     */
+    public final TableField<Record, Double> UMAP_X = createField(DSL.name("umap_x"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.umap_y</code>.
+     */
+    public final TableField<Record, Double> UMAP_Y = createField(DSL.name("umap_y"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.umap_rhythm_x</code>.
+     */
+    public final TableField<Record, Double> UMAP_RHYTHM_X = createField(DSL.name("umap_rhythm_x"), SQLDataType.DOUBLE, this, "");
+
+    /**
+     * The column <code>public.tracks.umap_rhythm_y</code>.
+     */
+    public final TableField<Record, Double> UMAP_RHYTHM_Y = createField(DSL.name("umap_rhythm_y"), SQLDataType.DOUBLE, this, "");
+
     private Tracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -400,6 +431,19 @@ public class Tracks extends TableImpl<Record> {
             _analysisSources = new AnalysisSourcesPath(this, null, Keys.ANALYSIS_SOURCES__ANALYSIS_SOURCES_TRACK_ID_FKEY.getInverseKey());
 
         return _analysisSources;
+    }
+
+    private transient DanceTrackVotesPath _danceTrackVotes;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_track_votes</code> table
+     */
+    public DanceTrackVotesPath danceTrackVotes() {
+        if (_danceTrackVotes == null)
+            _danceTrackVotes = new DanceTrackVotesPath(this, null, Keys.DANCE_TRACK_VOTES__DANCE_TRACK_VOTES_TRACK_ID_FKEY.getInverseKey());
+
+        return _danceTrackVotes;
     }
 
     private transient DanceTracksPath _danceTracks;
