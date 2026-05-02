@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -30,6 +31,7 @@ import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
+import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
@@ -146,6 +148,11 @@ public class PlaybackLinks extends TableImpl<Record> {
     @Override
     public Schema getSchema() {
         return aliased() ? null : Public.PUBLIC;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.IX_PLAYBACK_LINKS_TRACK_PLATFORM_WORKING);
     }
 
     @Override

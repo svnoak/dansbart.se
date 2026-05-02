@@ -177,7 +177,7 @@ public class Users extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_USERS_DISCOURSE_ID, Indexes.IX_USERS_USERNAME);
+        return Arrays.asList(Indexes.IDX_USERS_DISCOURSE_ID);
     }
 
     @Override
