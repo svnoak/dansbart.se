@@ -8,8 +8,8 @@ interface DanceItem {
   name: string;
   slug: string;
   danceDescriptionUrl: string | null;
-  danstyp: string | null;
-  musik: string | null;
+  danceType: string | null;
+  music: string | null;
   confirmedTrackCount: number;
 }
 
@@ -161,8 +161,8 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
   {
     "name": "Polska",
     "danceDescriptionUrl": "https://www.acla.se/...",
-    "danstyp": "Tretur",
-    "musik": "3/4"
+    "danceType": "Tretur",
+    "music": "3/4"
   }
 ]`}</pre>
 
@@ -284,8 +284,8 @@ function PendingTab() {
 interface EditForm {
   name: string;
   danceDescriptionUrl: string;
-  danstyp: string;
-  musik: string;
+  danceType: string;
+  music: string;
 }
 
 async function updateDance(id: string, form: EditForm) {
@@ -295,8 +295,8 @@ async function updateDance(id: string, form: EditForm) {
     body: JSON.stringify({
       name: form.name,
       danceDescriptionUrl: form.danceDescriptionUrl || null,
-      danstyp: form.danstyp || null,
-      musik: form.musik || null,
+      danceType: form.danceType || null,
+      music: form.music || null,
     }),
   });
   if (!res.ok) throw new Error('Kunde inte uppdatera dansen');
@@ -316,7 +316,7 @@ function DancesTab() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: '', danceDescriptionUrl: '', danstyp: '', musik: '' });
+  const [editForm, setEditForm] = useState<EditForm>({ name: '', danceDescriptionUrl: '', danceType: '', music: '' });
   const [saving, setSaving] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const limit = 50;
@@ -350,8 +350,8 @@ function DancesTab() {
     setEditForm({
       name: dance.name,
       danceDescriptionUrl: dance.danceDescriptionUrl ?? '',
-      danstyp: dance.danstyp ?? '',
-      musik: dance.musik ?? '',
+      danceType: dance.danceType ?? '',
+      music: dance.music ?? '',
     });
   };
 
@@ -424,14 +424,14 @@ function DancesTab() {
                   <input
                     className={inputClass}
                     placeholder="Danstyp"
-                    value={editForm.danstyp}
-                    onChange={(e) => setEditForm((f) => ({ ...f, danstyp: e.target.value }))}
+                    value={editForm.danceType}
+                    onChange={(e) => setEditForm((f) => ({ ...f, danceType: e.target.value }))}
                   />
                   <input
                     className={inputClass}
                     placeholder="Musik"
-                    value={editForm.musik}
-                    onChange={(e) => setEditForm((f) => ({ ...f, musik: e.target.value }))}
+                    value={editForm.music}
+                    onChange={(e) => setEditForm((f) => ({ ...f, music: e.target.value }))}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -454,7 +454,7 @@ function DancesTab() {
                       {dance.name}
                     </p>
                     <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                      {[dance.danstyp, dance.musik].filter(Boolean).join(' · ')}
+                      {[dance.danceType, dance.music].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                   <span className="text-xs text-[rgb(var(--color-text-muted))] shrink-0">
@@ -722,13 +722,13 @@ function InvalidStylesTab() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[rgb(var(--color-text))]">{dance.name}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {dance.danstyp && (
+                {dance.danceType && (
                   <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                    {dance.danstyp}
+                    {dance.danceType}
                   </span>
                 )}
-                {dance.musik && (
-                  <span className="text-xs text-[rgb(var(--color-text-muted))]">{dance.musik}</span>
+                {dance.music && (
+                  <span className="text-xs text-[rgb(var(--color-text-muted))]">{dance.music}</span>
                 )}
               </div>
             </div>
