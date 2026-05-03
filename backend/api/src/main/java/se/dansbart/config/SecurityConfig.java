@@ -52,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/artists/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/albums/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/styles/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/dances/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/discovery/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
@@ -67,6 +68,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")
                 // Authenticated user endpoints
+                .requestMatchers(HttpMethod.POST, "/api/dances/**").authenticated()
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()

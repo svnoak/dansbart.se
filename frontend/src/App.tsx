@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { FaroRoutes } from '@grafana/faro-react';
 
 import { ConsentProvider } from '@/consent/ConsentContext';
 import { CookieBanner } from '@/consent/CookieBanner';
@@ -38,13 +39,16 @@ import { AdminMaintenancePage } from '@/admin/pages/AdminMaintenancePage';
 import { AdminStyleConfigPage } from '@/admin/pages/AdminStyleConfigPage';
 import { AdminFolkwikiPage } from '@/admin/pages/AdminFolkwikiPage';
 import { AdminUsersPage } from '@/admin/pages/AdminUsersPage';
+import { AdminDancesPage } from '@/admin/pages/AdminDancesPage';
+import { DancesPage } from '@/pages/DancesPage';
+import { DancePage } from '@/pages/DancePage';
 
 export function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <Routes>
+          <FaroRoutes>
             {/* Public routes */}
             <Route
               path="/*"
@@ -57,6 +61,8 @@ export function App() {
                         <Route path="/" element={<HomePage />} />
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/classify" element={<ClassifyPage />} />
+                        <Route path="/dances" element={<DancesPage />} />
+                        <Route path="/dance/:id" element={<DancePage />} />
                         <Route path="/artists" element={<ArtistsPage />} />
                         <Route path="/albums" element={<AlbumsPage />} />
                         <Route path="/artist/:id" element={<ArtistPage />} />
@@ -120,6 +126,7 @@ export function App() {
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />
                       <Route path="folkwiki" element={<AdminFolkwikiPage />} />
                       <Route path="users" element={<AdminUsersPage />} />
+                      <Route path="dances" element={<AdminDancesPage />} />
                       <Route path="maintenance" element={<AdminMaintenancePage />} />
                       <Route path="*" element={<Navigate to="/admin/library" replace />} />
                         </Routes>
@@ -129,7 +136,7 @@ export function App() {
                 </ConsentProvider>
               }
             />
-          </Routes>
+          </FaroRoutes>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

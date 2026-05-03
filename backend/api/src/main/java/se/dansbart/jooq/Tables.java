@@ -10,6 +10,9 @@ import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
+import se.dansbart.jooq.tables.DanceTrackVotes;
+import se.dansbart.jooq.tables.DanceTracks;
+import se.dansbart.jooq.tables.Dances;
 import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.PathCounts;
@@ -69,6 +72,21 @@ public class Tables {
      * The table <code>public.dance_style_config</code>.
      */
     public static final DanceStyleConfig DANCE_STYLE_CONFIG = DanceStyleConfig.DANCE_STYLE_CONFIG;
+
+    /**
+     * The table <code>public.dance_track_votes</code>.
+     */
+    public static final DanceTrackVotes DANCE_TRACK_VOTES = DanceTrackVotes.DANCE_TRACK_VOTES;
+
+    /**
+     * The table <code>public.dance_tracks</code>.
+     */
+    public static final DanceTracks DANCE_TRACKS = DanceTracks.DANCE_TRACKS;
+
+    /**
+     * The table <code>public.dances</code>.
+     */
+    public static final Dances DANCES = Dances.DANCES;
 
     /**
      * The table <code>public.folkwiki_tunes</code>.
