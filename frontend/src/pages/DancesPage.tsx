@@ -99,7 +99,7 @@ export function DancesPage() {
         limit: PAGE_SIZE,
         offset,
         ...(q ? { search: q } : {}),
-        ...(style ? { danstyp: style } : {}),
+        ...(style ? { danceType: style } : {}),
       },
       { signal: controller.signal },
     )
