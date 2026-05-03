@@ -46,6 +46,20 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=
 
+      - name: Compute frontend build args
+        id: build-args
+        run: |
+          if [ "${{ matrix.service }}" = "frontend" ]; then
+            echo "args<<EOF" >> $GITHUB_OUTPUT
+            echo "FARO_API_KEY=${{ secrets.FARO_API_KEY }}" >> $GITHUB_OUTPUT
+            echo "FARO_UPLOAD_ENDPOINT=${{ secrets.FARO_UPLOAD_ENDPOINT }}" >> $GITHUB_OUTPUT
+            echo "FARO_APP_ID=${{ secrets.FARO_APP_ID }}" >> $GITHUB_OUTPUT
+            echo "FARO_STACK_ID=${{ secrets.FARO_STACK_ID }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "args=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -54,6 +68,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ steps.build-args.outputs.args }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache,mode=max
           platforms: linux/amd64

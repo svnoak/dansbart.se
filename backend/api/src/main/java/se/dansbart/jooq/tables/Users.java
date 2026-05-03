@@ -36,6 +36,7 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
@@ -187,6 +188,34 @@ public class Users extends TableImpl<Record> {
     @Override
     public List<UniqueKey<Record>> getUniqueKeys() {
         return Arrays.asList(Keys.USERS_DISCOURSE_ID_KEY);
+    }
+
+    private transient DanceTracksPath _danceTracksAddedByFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_tracks</code> table, via the
+     * <code>dance_tracks_added_by_fkey</code> key
+     */
+    public DanceTracksPath danceTracksAddedByFkey() {
+        if (_danceTracksAddedByFkey == null)
+            _danceTracksAddedByFkey = new DanceTracksPath(this, null, Keys.DANCE_TRACKS__DANCE_TRACKS_ADDED_BY_FKEY.getInverseKey());
+
+        return _danceTracksAddedByFkey;
+    }
+
+    private transient DanceTracksPath _danceTracksConfirmedByFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_tracks</code> table, via the
+     * <code>dance_tracks_confirmed_by_fkey</code> key
+     */
+    public DanceTracksPath danceTracksConfirmedByFkey() {
+        if (_danceTracksConfirmedByFkey == null)
+            _danceTracksConfirmedByFkey = new DanceTracksPath(this, null, Keys.DANCE_TRACKS__DANCE_TRACKS_CONFIRMED_BY_FKEY.getInverseKey());
+
+        return _danceTracksConfirmedByFkey;
     }
 
     private transient PlaylistCollaboratorsPath _playlistCollaboratorsInvitedByFkey;

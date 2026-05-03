@@ -40,6 +40,9 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Albums.AlbumsPath;
 import se.dansbart.jooq.tables.AnalysisSources.AnalysisSourcesPath;
 import se.dansbart.jooq.tables.Artists.ArtistsPath;
+import se.dansbart.jooq.tables.DanceTrackVotes.DanceTrackVotesPath;
+import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
+import se.dansbart.jooq.tables.Dances.DancesPath;
 import se.dansbart.jooq.tables.FolkwikiTunes.FolkwikiTunesPath;
 import se.dansbart.jooq.tables.PlaybackLinks.PlaybackLinksPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
@@ -340,6 +343,32 @@ public class Tracks extends TableImpl<Record> {
         return _analysisSources;
     }
 
+    private transient DanceTrackVotesPath _danceTrackVotes;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_track_votes</code> table
+     */
+    public DanceTrackVotesPath danceTrackVotes() {
+        if (_danceTrackVotes == null)
+            _danceTrackVotes = new DanceTrackVotesPath(this, null, Keys.DANCE_TRACK_VOTES__DANCE_TRACK_VOTES_TRACK_ID_FKEY.getInverseKey());
+
+        return _danceTrackVotes;
+    }
+
+    private transient DanceTracksPath _danceTracks;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_tracks</code> table
+     */
+    public DanceTracksPath danceTracks() {
+        if (_danceTracks == null)
+            _danceTracks = new DanceTracksPath(this, null, Keys.DANCE_TRACKS__DANCE_TRACKS_TRACK_ID_FKEY.getInverseKey());
+
+        return _danceTracks;
+    }
+
     private transient PlaybackLinksPath _playbackLinks;
 
     /**
@@ -481,6 +510,14 @@ public class Tracks extends TableImpl<Record> {
             _userInteractions = new UserInteractionsPath(this, null, Keys.USER_INTERACTIONS__USER_INTERACTIONS_TRACK_ID_FKEY.getInverseKey());
 
         return _userInteractions;
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>public.dances</code>
+     * table
+     */
+    public DancesPath dances() {
+        return danceTracks().dances();
     }
 
     /**

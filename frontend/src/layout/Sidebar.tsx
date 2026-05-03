@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
-import { Button } from '@/ui';
+import { Button, Pill } from '@/ui';
 import { LibraryIcon, PlaylistIcon } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 
@@ -10,12 +10,14 @@ function NavLink({
   to,
   active,
   icon,
+  new: isNew = false,
   badge,
   onClick,
   children,
 }: {
   to: string;
   active: boolean;
+  new?: boolean;
   icon?: React.ReactNode | null;
   badge?: number;
   onClick?: () => void;
@@ -39,6 +41,7 @@ function NavLink({
         </span>
       )}
       <span className="flex-1">{children}</span>
+      {isNew && <Pill>Ny</Pill>}
       {badge != null && badge > 0 && (
         <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1 text-[10px] font-bold text-white">
           {badge}
@@ -64,6 +67,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }, [isAuthenticated]);
   const isSearch = location.pathname === '/search';
   const isHome = location.pathname === '/';
+  const isDances = location.pathname.startsWith('/dance');
   const isPlaylists = location.pathname.startsWith('/playlists');
   const isAbout = location.pathname === '/about';
   const isTerms = location.pathname === '/terms';
@@ -102,11 +106,24 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       >
         Bibliotek
       </NavLink>
+      <NavLink
+        to="/dances"
+        active={isDances}
+        onClick={onNavigate}
+        icon={
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+          </svg>
+        }
+      >
+        Danser
+      </NavLink>
       {isAuthenticated && (
         <NavLink
           to="/playlists"
           active={isPlaylists}
           onClick={onNavigate}
+          new
           icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
           badge={invitationCount}
         >

@@ -77,7 +77,7 @@ export function AdminIngestPage() {
         const result = await getArtistAlbums1(parsed.id);
         const albums = Array.isArray(result) ? result : Object.values(result);
         setPreview(
-          albums.map((a: Record<string, unknown>) => ({
+          (albums as Record<string, unknown>[]).map((a) => ({
             name: (a.name as string) ?? 'Okänt album',
             id: (a.id as string) ?? '',
             trackCount: (a.totalTracks as number) ?? 0,
@@ -87,7 +87,7 @@ export function AdminIngestPage() {
         const result = await getAlbumTracks1(parsed.id);
         const tracks = Array.isArray(result) ? result : Object.values(result);
         setPreview(
-          tracks.map((t: Record<string, unknown>) => ({
+          (tracks as Record<string, unknown>[]).map((t) => ({
             name: (t.name as string) ?? 'Okänd låt',
             id: (t.id as string) ?? '',
           })),
