@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
-import { Button } from '@/ui';
+import { Button, Pill } from '@/ui';
 import { LibraryIcon, PlaylistIcon } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 
@@ -10,12 +10,14 @@ function NavLink({
   to,
   active,
   icon,
+  new: isNew = false,
   badge,
   onClick,
   children,
 }: {
   to: string;
   active: boolean;
+  new?: boolean;
   icon?: React.ReactNode | null;
   badge?: number;
   onClick?: () => void;
@@ -39,6 +41,7 @@ function NavLink({
         </span>
       )}
       <span className="flex-1">{children}</span>
+      {isNew && <Pill>Ny</Pill>}
       {badge != null && badge > 0 && (
         <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1 text-[10px] font-bold text-white">
           {badge}
@@ -120,6 +123,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           to="/playlists"
           active={isPlaylists}
           onClick={onNavigate}
+          new
           icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
           badge={invitationCount}
         >
