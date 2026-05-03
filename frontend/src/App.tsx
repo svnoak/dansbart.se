@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { FaroRoutes } from '@grafana/faro-react';
 
 import { ConsentProvider } from '@/consent/ConsentContext';
 import { CookieBanner } from '@/consent/CookieBanner';
@@ -47,7 +48,7 @@ export function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <Routes>
+          <FaroRoutes>
             {/* Public routes */}
             <Route
               path="/*"
@@ -135,7 +136,7 @@ export function App() {
                 </ConsentProvider>
               }
             />
-          </Routes>
+          </FaroRoutes>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
