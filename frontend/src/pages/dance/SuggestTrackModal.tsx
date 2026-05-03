@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { searchTracks } from '@/api/generated/tracks/tracks';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { Button } from '@/ui';
@@ -24,6 +25,12 @@ export function SuggestTrackModal({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const search = useCallback((q: string) => {
     clearTimeout(debounceRef.current);
@@ -62,13 +69,14 @@ export function SuggestTrackModal({
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      onClick={(e) => { if (e.currentTarget === e.target) onClose(); }}
     >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="w-full max-w-md rounded-xl bg-[rgb(var(--color-surface))] p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-lg font-semibold text-[rgb(var(--color-text))]">
@@ -81,7 +89,7 @@ export function SuggestTrackModal({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Sök låt..."
-          className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
+          className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
         />
 
         <div className="mt-3 max-h-72 overflow-y-auto">
@@ -131,6 +139,7 @@ export function SuggestTrackModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
