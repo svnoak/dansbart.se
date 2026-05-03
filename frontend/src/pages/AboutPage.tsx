@@ -1,7 +1,47 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StaticPageLayout } from './StaticPageLayout';
 
+interface DiscourseTopic {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  created_at: string;
+}
+
+function useNyheter() {
+  const [topics, setTopics] = useState<DiscourseTopic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetch('https://folkhub.se/tags/c/dansbart-se/5/nyhet.json', {
+      headers: { Accept: 'application/json' },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((data) => setTopics(data.topic_list?.topics ?? []))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { topics, loading, error };
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('sv-SE', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 export function AboutPage() {
+  const { topics, loading, error } = useNyheter();
+
   return (
     <StaticPageLayout title="Om oss">
       <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 mb-6">
@@ -16,6 +56,55 @@ export function AboutPage() {
           </Link>
         </p>
       </div>
+
+      <section className="mb-8">
+        <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Nyheter</h2>
+        {loading && (
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">Hämtar nyheter...</p>
+        )}
+        {error && (
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            Kunde inte hämta nyheter.{' '}
+            <a
+              href="https://folkhub.se/c/dansbart-se/5"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[rgb(var(--color-accent))] hover:underline"
+            >
+              Besök forumet
+            </a>{' '}
+            för senaste uppdateringar.
+          </p>
+        )}
+        {!loading && !error && topics.length === 0 && (
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga nyheter just nu.</p>
+        )}
+        {!loading && !error && topics.length > 0 && (
+          <ul className="space-y-4">
+            {topics.map((topic) => (
+              <li
+                key={topic.id}
+                className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4"
+              >
+                <a
+                  href={`https://folkhub.se/t/${topic.slug}/${topic.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[rgb(var(--color-accent))] hover:underline"
+                >
+                  {topic.title}
+                </a>
+                <p className="mt-1 text-xs text-[rgb(var(--color-text-muted))]">
+                  {formatDate(topic.created_at)}
+                </p>
+                {topic.excerpt && (
+                  <p className="mt-2 text-sm text-[rgb(var(--color-text))]">{topic.excerpt}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Om Dansbart.se</h2>
