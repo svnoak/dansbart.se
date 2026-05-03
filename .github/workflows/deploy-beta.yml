@@ -61,7 +61,7 @@ jobs:
           fi
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.service == 'api' && './backend/api' || './frontend' }}
           file: ${{ matrix.service == 'api' && './backend/api/Dockerfile' || './frontend/Dockerfile' }}
@@ -105,7 +105,7 @@ jobs:
             type=sha,prefix=
 
       - name: Build and push feature-worker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/workers/feature
           file: ./backend/workers/feature/Dockerfile
