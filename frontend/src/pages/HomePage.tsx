@@ -104,12 +104,9 @@ export function HomePage() {
         {loadingStyles ? (
           <p className="text-[rgb(var(--color-text-muted))]">Laddar stilar…</p>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:flex lg:gap-3">
+          <div className="flex flex-wrap gap-2">
             {styles.map((s) => (
-              <div
-                key={s.style ?? ''}
-                className="lg:flex-1"
-              >
+              <div key={s.style ?? ''} className="w-36">
                 <StyleShortcutCard style={s} />
               </div>
             ))}
