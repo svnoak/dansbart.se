@@ -129,6 +129,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       >
         Spellistor
       </NavLink>
+      <NavLink
+        to="/favorites"
+        active={isFavorites}
+        onClick={onNavigate}
+        icon={<HeartIcon className="h-5 w-5" aria-hidden />}
+      >
+        Favoriter
+      </NavLink>
 
       <div className="mt-4">
         <button
