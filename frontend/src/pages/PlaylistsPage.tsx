@@ -10,9 +10,10 @@ import {
 import type { Playlist } from '@/api/models/playlist';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
-import { toast } from '@/ui';
+import { Button, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
+import { useAuth } from '@/auth/useAuth';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -26,6 +27,7 @@ export function PlaylistsPage() {
   useAnalyticsFlag('playlists');
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [invitations, setInvitations] = useState<InvitationDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,26 @@ export function PlaylistsPage() {
     } finally {
       setCreating(false);
     }
+  }
+
+  if (authLoading) {
+    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <PlaylistIcon className="mb-4 h-12 w-12 text-[rgb(var(--color-text-muted))]" aria-hidden />
+        <h1 className="text-xl font-bold text-[rgb(var(--color-text))]">Spellistor</h1>
+        <p className="mt-2 max-w-sm text-sm text-[rgb(var(--color-text-muted))]">
+          Du behöver ett konto för att skapa egna spellistor.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <Button onClick={login}>Logga in</Button>
+          <Button variant="secondary" onClick={login}>Registrera</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
