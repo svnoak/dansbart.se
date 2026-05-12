@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, IconButton, toast } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
+import { useAuth } from '@/auth/useAuth';
+import { useFavorites } from '@/favorites/FavoritesContext';
 import {
   PauseIcon,
   PlayIcon,
@@ -9,10 +11,13 @@ import {
   SparklesIcon,
   SpotifyIcon,
   YouTubeIcon,
+  HeartIcon,
+  HeartFilledIcon,
 } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { formatDurationMs } from '@/utils/formatDuration';
 import { FlagTrackModal } from './FlagTrackModal';
+import { LoginRequiredModal } from './LoginRequiredModal';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -34,9 +39,13 @@ interface TrackCardProps {
 
 export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCardProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
+  const { isAuthenticated } = useAuth();
+  const { isFavorited, toggleFavorite } = useFavorites();
   const [menuOpen, setMenuOpen] = useState(false);
   const [flagModalOpen, setFlagModalOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const isCurrent = currentTrack?.id === track.id;
+  const favorited = track.id != null && isFavorited(track.id);
 
   const hasValidStyle =
     typeof track.danceStyle === 'string' && track.danceStyle.length > 0;
@@ -189,8 +198,24 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
         </div>
       </div>
 
-      {/* Right: Menu (vertically centered) */}
-      <div className="shrink-0">
+      {/* Right: Heart + Menu (vertically centered) */}
+      <div className="flex shrink-0 items-center gap-1">
+        <IconButton
+          aria-label={favorited ? 'Sluta favoritmarkera' : 'Favoritmarkera'}
+          onClick={() => {
+            if (!isAuthenticated) {
+              setLoginModalOpen(true);
+            } else if (track.id != null) {
+              toggleFavorite(track.id);
+            }
+          }}
+        >
+          {favorited ? (
+            <HeartFilledIcon className="h-5 w-5 text-red-500" aria-hidden />
+          ) : (
+            <HeartIcon className="h-5 w-5" aria-hidden />
+          )}
+        </IconButton>
         <div className="relative">
           <IconButton
             aria-label="Mer"
@@ -287,6 +312,11 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
         open={flagModalOpen}
         onClose={() => setFlagModalOpen(false)}
         track={track}
+      />
+      <LoginRequiredModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        message="Du behöver skapa ett konto eller logga in för att favoritmarkera en låt."
       />
     </Card>
   );
