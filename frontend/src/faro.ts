@@ -10,6 +10,7 @@ import {
   getWebInstrumentations,
   ReactIntegration,
   createReactRouterV7Options,
+  setReactRouterV7SSRDependencies,
 } from '@grafana/faro-react';
 import { TracingInstrumentation } from '@grafana/faro-web-tracing';
 
@@ -23,6 +24,9 @@ declare global {
 }
 
 export function initFaro() {
+  // FaroRoutes requires Routes to be registered even when Faro is disabled
+  setReactRouterV7SSRDependencies({ Routes });
+
   const url = window.__ENV__?.FARO_COLLECTOR_URL;
   if (!url) return;
 

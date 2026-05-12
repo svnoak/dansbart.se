@@ -118,18 +118,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       >
         Danser
       </NavLink>
-      {isAuthenticated && (
-        <NavLink
-          to="/playlists"
-          active={isPlaylists}
-          onClick={onNavigate}
-          new
-          icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
-          badge={invitationCount}
-        >
-          Spellistor
-        </NavLink>
-      )}
+      <NavLink
+        to="/playlists"
+        active={isPlaylists}
+        onClick={onNavigate}
+        new
+        icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
+        badge={invitationCount}
+      >
+        Spellistor
+      </NavLink>
 
       <div className="mt-4">
         <button

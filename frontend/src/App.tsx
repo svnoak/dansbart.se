@@ -67,14 +67,7 @@ export function App() {
                         <Route path="/albums" element={<AlbumsPage />} />
                         <Route path="/artist/:id" element={<ArtistPage />} />
                         <Route path="/album/:id" element={<AlbumPage />} />
-                        <Route
-                          path="/playlists"
-                          element={
-                            <ProtectedRoute>
-                              <PlaylistsPage />
-                            </ProtectedRoute>
-                          }
-                        />
+                        <Route path="/playlists" element={<PlaylistsPage />} />
                         <Route
                           path="/playlists/:id"
                           element={

@@ -151,8 +151,9 @@
                 att förbättra Tjänsten
               </li>
               <li>
-                <strong>Ingen tredjepartsanalys:</strong> Vi använder INTE Google Analytics,
-                Facebook Pixel eller andra externa analytics-tjänster
+                <strong>Ingen beteendeanalys via tredje part:</strong> Vi använder INTE Google Analytics,
+                Facebook Pixel eller liknande tjänster för att spåra användarbeteende. Vi använder
+                dock ett externt verktyg för teknisk prestandaövervakning — se avsnitt 4 nedan
               </li>
               <li>
                 <strong>Inget användar-ID i analytics:</strong> Analytics-data kopplas aldrig till
@@ -167,7 +168,57 @@
             kommer ett nytt sessions-ID att genereras.
           </p>
 
-          <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">4. Tredjepartscookies</h3>
+          <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">
+            4. Teknisk prestandaövervakning
+          </h3>
+          <p class="text-gray-700 mb-3">
+            Vi använder ett externt verktyg för teknisk övervakning av webbgränssnittets prestanda
+            och stabilitet. Följande data samlas in och skickas till tjänstens servrar:
+          </p>
+          <ul class="list-disc pl-6 text-gray-700 mb-4 space-y-2">
+            <li>
+              <strong>Webb-vitals:</strong> Sidladdningstider och prestandamått (t.ex. TTFB, LCP,
+              FCP, CLS)
+            </li>
+            <li>
+              <strong>JavaScript-fel:</strong> Felmeddelanden och stackspår för felsökning
+            </li>
+            <li>
+              <strong>Navigations- och resurstider:</strong> Hur lång tid olika delar av sidan tar
+              att ladda
+            </li>
+            <li>
+              <strong>Webbläsarinformation:</strong> User-agent (webbläsare och operativsystem)
+            </li>
+          </ul>
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <p class="text-gray-800 font-semibold mb-2">Viktigt om prestandaövervakning:</p>
+            <ul class="list-disc pl-6 text-gray-700 text-sm space-y-1">
+              <li>
+                <strong>Tekniskt syfte:</strong> Data används uteslutande för att identifiera och
+                åtgärda prestandaproblem och fel — inte för att analysera användarbeteende
+              </li>
+              <li>
+                <strong>Extern tjänst:</strong> Data skickas till en extern tjänsteleverantör. Din
+                IP-adress exponeras för deras insamlingsserver som en del av HTTP-anslutningen, på
+                samma sätt som vid alla externa nätverksanrop från din webbläsare
+              </li>
+              <li>
+                <strong>Ingen profilering:</strong> Ingen koppling görs till din identitet, ditt
+                sessions-ID eller ditt konto
+              </li>
+            </ul>
+            <a
+              href="https://grafana.com/legal/privacy-policy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-yellow-700 hover:text-yellow-900 hover:underline text-sm font-medium mt-2 inline-block"
+            >
+              Läs tjänstens integritetspolicy →
+            </a>
+          </div>
+
+          <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">5. Tredjepartscookies</h3>
           <p class="text-gray-700 mb-3">
             När du ger samtycke och spelar musik använder vi följande tredjepartstjänster:
           </p>
@@ -307,12 +358,18 @@
             <li>
               <strong>folkhub.se (Discourse):</strong> Inloggningsfunktionen delar din e-post och ditt användarnamn med dansbart.se via DiscourseConnect (SSO). Se <a href="https://folkhub.se" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 hover:underline">folkhub.se</a> för deras integritetspolicy.
             </li>
+            <li>
+              <strong>Teknisk prestandaövervakningstjänst:</strong> Anonyma prestandamätvärden och
+              felrapporter skickas till en extern tjänsteleverantör för teknisk driftsövervakning —
+              se avsnittet <em>Vilken data vi samlar in, punkt 4</em> ovan
+            </li>
           </ul>
           <p class="text-gray-700 mb-4">
-            Vi använder ett <strong>egenbyggt analytics-system</strong> som lagrar all data på vår
-            egen server. Vi använder <strong>INTE</strong> externa analystjänster som Google
-            Analytics, Facebook Pixel, eller liknande tredjepartsverktyg. All analytics-data förblir
-            hos oss och delas aldrig med externa parter.
+            Vi använder ett <strong>egenbyggt analytics-system</strong> för användningsstatistik,
+            som lagrar all data på vår egen server. Vi använder <strong>INTE</strong> externa
+            beteendeanalystjänster som Google Analytics, Facebook Pixel, eller liknande
+            tredjepartsverktyg. För teknisk prestandaövervakning av webbgränssnittet använder vi
+            dock en extern tjänst — se punkt 4 ovan.
           </p>
         </section>
 
