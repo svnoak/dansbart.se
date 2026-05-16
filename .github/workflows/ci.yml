@@ -306,7 +306,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build API image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/api
           file: ./backend/api/Dockerfile
@@ -329,7 +329,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Feature Worker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/workers/feature
           file: ./backend/workers/feature/Dockerfile
@@ -352,7 +352,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Audio Worker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/workers/audio
           file: ./backend/workers/audio/Dockerfile
@@ -376,7 +376,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Frontend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: false
