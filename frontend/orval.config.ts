@@ -33,6 +33,7 @@ export default defineConfig({
           'Admin: Users',
           'Dances',
           'Admin Dances',
+          'Favorites',
         ],
       },
     },

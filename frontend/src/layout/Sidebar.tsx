@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
 import { Button, Pill } from '@/ui';
-import { LibraryIcon, PlaylistIcon } from '@/icons';
+import { LibraryIcon, PlaylistIcon, HeartIcon } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 
 function NavLink({
@@ -69,6 +69,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isHome = location.pathname === '/';
   const isDances = location.pathname.startsWith('/dance');
   const isPlaylists = location.pathname.startsWith('/playlists');
+  const isFavorites = location.pathname === '/favorites';
   const isAbout = location.pathname === '/about';
   const isTerms = location.pathname === '/terms';
   const isPrivacy = location.pathname === '/privacy';
@@ -127,6 +128,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         badge={invitationCount}
       >
         Spellistor
+      </NavLink>
+      <NavLink
+        to="/favorites"
+        active={isFavorites}
+        onClick={onNavigate}
+        icon={<HeartIcon className="h-5 w-5" aria-hidden />}
+      >
+        Favoriter
       </NavLink>
 
       <div className="mt-4">
