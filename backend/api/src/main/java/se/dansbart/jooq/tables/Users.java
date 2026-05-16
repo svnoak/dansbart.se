@@ -40,6 +40,7 @@ import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
+import se.dansbart.jooq.tables.UserTrackFavorites.UserTrackFavoritesPath;
 
 
 /**
@@ -270,6 +271,19 @@ public class Users extends TableImpl<Record> {
             _tracks = new TracksPath(this, null, Keys.TRACKS__TRACKS_UPLOADER_ID_FKEY.getInverseKey());
 
         return _tracks;
+    }
+
+    private transient UserTrackFavoritesPath _userTrackFavorites;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.user_track_favorites</code> table
+     */
+    public UserTrackFavoritesPath userTrackFavorites() {
+        if (_userTrackFavorites == null)
+            _userTrackFavorites = new UserTrackFavoritesPath(this, null, Keys.USER_TRACK_FAVORITES__FK_FAVORITES_USER.getInverseKey());
+
+        return _userTrackFavorites;
     }
 
     @Override

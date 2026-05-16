@@ -203,6 +203,7 @@ export * from './submitMovementVote200';
 export * from './submitStructureProposal200';
 export * from './submitStructureProposalParams';
 export * from './suggestTrack200';
+export * from './toggleFavorite200';
 export * from './track';
 export * from './trackListDto';
 export * from './trackPlayback';
