@@ -2,11 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { httpClient } from '@/api/http-client';
+import {
+  getPrimaryTrack,
+  setPrimaryTrack,
+  clearPrimaryTrack,
+} from '@/api/generated/dances/dances';
 import { getVoterId } from '@/utils/voter';
 import { useAuth } from '@/auth/useAuth';
 import { usePlayer } from '@/player/usePlayer';
 import { IconButton, SectionTitle, Button } from '@/ui';
-import { BackArrowIcon } from '@/icons';
+import { BackArrowIcon, StarIcon, StarFilledIcon } from '@/icons';
 import { TrackRow } from '@/components/TrackRow';
 import { PlayButton } from '@/components/TrackRow/PlayButton';
 import { getStyleColor } from '@/styles/danceStyleColors';
@@ -76,6 +81,7 @@ export function DancePage() {
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestedIds, setSuggestedIds] = useState<Set<string>>(new Set());
   const [votes, setVotes] = useState<Record<string, 'up' | 'down'>>({});
+  const [primaryTrackId, setPrimaryTrackId] = useState<string | null>(null);
 
   if (prevId !== id) {
     setPrevId(id);
@@ -87,6 +93,7 @@ export function DancePage() {
     setRecTotal(0);
     setRecOffset(0);
     setVotes({});
+    setPrimaryTrackId(null);
   }
 
   useEffect(() => {
@@ -98,14 +105,16 @@ export function DancePage() {
       getConfirmedTracks(id),
       getMatchingDanceTracks(id),
       getRecommendations(id, { limit: REC_PAGE_SIZE, offset: 0 }),
+      getPrimaryTrack(id).then((track) => track.id ?? null).catch(() => null),
     ])
-      .then(([danceData, confirmedData, matchingData, recsData]) => {
+      .then(([danceData, confirmedData, matchingData, recsData, primaryId]) => {
         if (!cancelled) {
           setDance(danceData ?? null);
           setConfirmedTracks(confirmedData ?? []);
           setMatchingTracks(matchingData ?? []);
           setRecommendations(recsData?.items ?? []);
           setRecTotal(recsData?.total ?? 0);
+          setPrimaryTrackId(primaryId);
         }
       })
       .catch((err) => {
@@ -161,6 +170,22 @@ export function DancePage() {
     },
     [dance?.id, votes],
   );
+
+  async function handleSetPrimary(trackId: string) {
+    if (!dance?.id) return;
+    if (primaryTrackId === trackId) {
+      setPrimaryTrackId(null);
+      clearPrimaryTrack(dance.id).catch(() => {
+        setPrimaryTrackId(trackId);
+      });
+    } else {
+      const prev = primaryTrackId;
+      setPrimaryTrackId(trackId);
+      setPrimaryTrack(dance.id, { trackId }).catch(() => {
+        setPrimaryTrackId(prev);
+      });
+    }
+  }
 
   const handleSuggest = async (trackId: string) => {
     if (!id) return;
@@ -232,8 +257,24 @@ export function DancePage() {
         ) : (
           <ul className="mt-2 divide-y divide-[rgb(var(--color-border))]">
             {allTracks.map((track) => (
-              <li key={track.id}>
-                <TrackRow track={track} />
+              <li key={track.id} className="flex items-center">
+                <div className="flex-1 min-w-0">
+                  <TrackRow track={track} contextTracks={allTracks} />
+                </div>
+                {isAuthenticated && (
+                  <button
+                    type="button"
+                    aria-label={primaryTrackId === track.id ? 'Ta bort som primär låt' : 'Sätt som primär låt'}
+                    onClick={() => track.id && handleSetPrimary(track.id)}
+                    className="shrink-0 px-2 py-2.5 transition-colors hover:text-yellow-400"
+                  >
+                    {primaryTrackId === track.id ? (
+                      <StarFilledIcon className="h-4 w-4 text-yellow-400" aria-hidden />
+                    ) : (
+                      <StarIcon className="h-4 w-4 text-[rgb(var(--color-text-muted))]" aria-hidden />
+                    )}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

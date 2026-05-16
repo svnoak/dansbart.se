@@ -36,6 +36,8 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.DanceTrackVotes.DanceTrackVotesPath;
 import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
+import se.dansbart.jooq.tables.UserDancePrimaryTracks.UserDancePrimaryTracksPath;
+import se.dansbart.jooq.tables.Users.UsersPath;
 
 
 /**
@@ -197,12 +199,33 @@ public class Dances extends TableImpl<Record> {
         return _danceTracks;
     }
 
+    private transient UserDancePrimaryTracksPath _userDancePrimaryTracks;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.user_dance_primary_tracks</code> table
+     */
+    public UserDancePrimaryTracksPath userDancePrimaryTracks() {
+        if (_userDancePrimaryTracks == null)
+            _userDancePrimaryTracks = new UserDancePrimaryTracksPath(this, null, Keys.USER_DANCE_PRIMARY_TRACKS__FK_UDPT_DANCE.getInverseKey());
+
+        return _userDancePrimaryTracks;
+    }
+
     /**
      * Get the implicit many-to-many join path to the <code>public.tracks</code>
      * table
      */
     public TracksPath tracks() {
         return danceTracks().tracks();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>public.users</code>
+     * table
+     */
+    public UsersPath users() {
+        return userDancePrimaryTracks().users();
     }
 
     @Override

@@ -11,11 +11,83 @@ import type {
   GetRecommendationsParams,
   PageResponseDance,
   PageResponseTrackListDto,
+  SetPrimaryTrackRequest,
   SuggestTrack200,
   TrackListDto
 } from '../../models';
 
 import { httpClient } from '../../http-client';
+
+/**
+ * @summary Get the current user's primary track for a dance
+ */
+export const getGetPrimaryTrackUrl = (id: string,) => {
+
+
+  
+
+  return `/api/dances/${id}/primary-track`
+}
+
+export const getPrimaryTrack = async (id: string, options?: RequestInit): Promise<TrackListDto> => {
+  
+  return httpClient<TrackListDto>(getGetPrimaryTrackUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Set the current user's primary track for a dance
+ */
+export const getSetPrimaryTrackUrl = (id: string,) => {
+
+
+  
+
+  return `/api/dances/${id}/primary-track`
+}
+
+export const setPrimaryTrack = async (id: string,
+    setPrimaryTrackRequest: SetPrimaryTrackRequest, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getSetPrimaryTrackUrl(id),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      setPrimaryTrackRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Clear the current user's primary track for a dance
+ */
+export const getClearPrimaryTrackUrl = (id: string,) => {
+
+
+  
+
+  return `/api/dances/${id}/primary-track`
+}
+
+export const clearPrimaryTrack = async (id: string, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getClearPrimaryTrackUrl(id),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+  
 
 /**
  * @summary Suggest a track for a dance (authenticated users)

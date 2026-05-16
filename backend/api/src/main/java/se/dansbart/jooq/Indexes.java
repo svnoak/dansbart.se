@@ -32,6 +32,7 @@ import se.dansbart.jooq.tables.TrackFolkwikiMatches;
 import se.dansbart.jooq.tables.TrackPlaybacks;
 import se.dansbart.jooq.tables.TrackStyleVotes;
 import se.dansbart.jooq.tables.Tracks;
+import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
 import se.dansbart.jooq.tables.UserTrackFavorites;
 import se.dansbart.jooq.tables.Users;
@@ -61,6 +62,7 @@ public class Indexes {
     public static final Index IDX_TRACK_FOLKWIKI_MATCHES_STATUS = Internal.createIndex(DSL.name("idx_track_folkwiki_matches_status"), TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES, new OrderField[] { TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES.MATCH_STATUS }, false);
     public static final Index IDX_TRACKS_ISRC_NON_UNIQUE = Internal.createIndex(DSL.name("idx_tracks_isrc_non_unique"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.ISRC }, false);
     public static final Index IDX_TRACKS_PROCESSING_STATUS = Internal.createIndex(DSL.name("idx_tracks_processing_status"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.PROCESSING_STATUS }, false);
+    public static final Index IDX_UDPT_USER = Internal.createIndex(DSL.name("idx_udpt_user"), UserDancePrimaryTracks.USER_DANCE_PRIMARY_TRACKS, new OrderField[] { UserDancePrimaryTracks.USER_DANCE_PRIMARY_TRACKS.USER_ID }, false);
     public static final Index IDX_USER_TRACK_FAVORITES_USER_ID = Internal.createIndex(DSL.name("idx_user_track_favorites_user_id"), UserTrackFavorites.USER_TRACK_FAVORITES, new OrderField[] { UserTrackFavorites.USER_TRACK_FAVORITES.USER_ID }, false);
     public static final Index IDX_USERS_DISCOURSE_ID = Internal.createIndex(DSL.name("idx_users_discourse_id"), Users.USERS, new OrderField[] { Users.USERS.DISCOURSE_ID }, false);
     public static final Index IX_ALBUMS_SPOTIFY_ID = Internal.createIndex(DSL.name("ix_albums_spotify_id"), Albums.ALBUMS, new OrderField[] { Albums.ALBUMS.SPOTIFY_ID }, true);

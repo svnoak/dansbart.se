@@ -55,6 +55,7 @@ import se.dansbart.jooq.tables.TrackFolkwikiMatches.TrackFolkwikiMatchesPath;
 import se.dansbart.jooq.tables.TrackPlaybacks.TrackPlaybacksPath;
 import se.dansbart.jooq.tables.TrackStructureVersions.TrackStructureVersionsPath;
 import se.dansbart.jooq.tables.TrackStyleVotes.TrackStyleVotesPath;
+import se.dansbart.jooq.tables.UserDancePrimaryTracks.UserDancePrimaryTracksPath;
 import se.dansbart.jooq.tables.UserInteractions.UserInteractionsPath;
 import se.dansbart.jooq.tables.UserTrackFavorites.UserTrackFavoritesPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
@@ -498,6 +499,19 @@ public class Tracks extends TableImpl<Record> {
             _trackStyleVotes = new TrackStyleVotesPath(this, null, Keys.TRACK_STYLE_VOTES__TRACK_STYLE_VOTES_TRACK_ID_FKEY.getInverseKey());
 
         return _trackStyleVotes;
+    }
+
+    private transient UserDancePrimaryTracksPath _userDancePrimaryTracks;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.user_dance_primary_tracks</code> table
+     */
+    public UserDancePrimaryTracksPath userDancePrimaryTracks() {
+        if (_userDancePrimaryTracks == null)
+            _userDancePrimaryTracks = new UserDancePrimaryTracksPath(this, null, Keys.USER_DANCE_PRIMARY_TRACKS__FK_UDPT_TRACK.getInverseKey());
+
+        return _userDancePrimaryTracks;
     }
 
     private transient UserInteractionsPath _userInteractions;
