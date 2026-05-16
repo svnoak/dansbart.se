@@ -52,9 +52,9 @@ jobs:
           if [ "${{ matrix.service }}" = "frontend" ]; then
             echo "args<<EOF" >> $GITHUB_OUTPUT
             echo "FARO_API_KEY=${{ secrets.FARO_API_KEY }}" >> $GITHUB_OUTPUT
-            echo "FARO_UPLOAD_ENDPOINT=${{ secrets.FARO_UPLOAD_ENDPOINT }}" >> $GITHUB_OUTPUT
-            echo "FARO_APP_ID=${{ secrets.FARO_APP_ID }}" >> $GITHUB_OUTPUT
-            echo "FARO_STACK_ID=${{ secrets.FARO_STACK_ID }}" >> $GITHUB_OUTPUT
+            echo "FARO_UPLOAD_ENDPOINT=${{ vars.FARO_UPLOAD_ENDPOINT }}" >> $GITHUB_OUTPUT
+            echo "FARO_APP_ID=${{ vars.FARO_APP_ID }}" >> $GITHUB_OUTPUT
+            echo "FARO_STACK_ID=${{ vars.FARO_STACK_ID }}" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "args=" >> $GITHUB_OUTPUT

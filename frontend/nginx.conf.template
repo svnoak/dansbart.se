@@ -1,0 +1,82 @@
+server {
+    listen 80;
+    server_name localhost;
+
+    absolute_redirect off;
+
+    # NOTE: nginx does not inherit add_header directives from parent blocks into
+    # child blocks that define their own add_header. Security headers must be
+    # repeated in each location block that already uses add_header.
+
+    # 1. Serve Static Files (Your HTML/JS)
+    # Never cache the app shell so normal refresh always loads the current app (not cached Vue).
+    location = /index.html {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        # CSP: tighten script-src by removing 'unsafe-inline' once confirmed not needed.
+        # If album art is loaded from external CDNs, add those origins to img-src.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://open.spotify.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' ${FARO_COLLECTOR_URL}; media-src 'self' https:; frame-src https://www.youtube.com https://open.spotify.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+        etag off;
+    }
+
+    # Hashed assets (Vite adds content hash to filenames) - cache aggressively
+    location /assets/ {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+    }
+
+    # Everything else - no cache to ensure fresh content
+    location / {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://open.spotify.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' ${FARO_COLLECTOR_URL}; media-src 'self' https:; frame-src https://www.youtube.com https://open.spotify.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+        try_files $uri $uri/ =404;
+    }
+
+    error_page 404 /index.html;
+
+    # 2. Reverse Proxy to Spring Boot backend
+
+    location /api/ {
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 10m;
+    }
+
+    # BFF: DiscourseConnect SSO (/sso/initiate and /sso/callback)
+    location /sso/ {
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # BFF: Session logout
+    location /logout {
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

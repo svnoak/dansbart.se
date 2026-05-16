@@ -8,4 +8,8 @@ window.__ENV__ = {
 };
 EOF
 
+envsubst '${FARO_COLLECTOR_URL}' \
+  < /etc/nginx/conf.d/default.conf.template \
+  > /etc/nginx/conf.d/default.conf
+
 exec "$@"

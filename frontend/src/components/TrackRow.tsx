@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
+import { useFavorites } from '@/favorites/FavoritesContext';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 import { FlagTrackModal } from './FlagTrackModal';
+import { LoginRequiredModal } from './LoginRequiredModal';
 import { PlayButton } from './TrackRow/PlayButton';
 import { StyleBadge } from './TrackRow/StyleBadge';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
+import { IconButton } from '@/ui';
+import { HeartIcon, HeartFilledIcon } from '@/icons';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -39,9 +43,12 @@ export function TrackRow({
 }: TrackRowProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
   const { isAuthenticated } = useAuth();
+  const { isFavorited, toggleFavorite } = useFavorites();
   const [menuOpen, setMenuOpen] = useState(false);
   const [flagModalOpen, setFlagModalOpen] = useState(false);
   const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const favorited = track.id != null && isFavorited(track.id);
 
   const isCurrent = currentTrack?.id === track.id;
   const styleColor = getStyleColor(track.danceStyle);
@@ -82,16 +89,32 @@ export function TrackRow({
             {track.title ?? 'Okänd låt'}
           </p>
 
-          {/* Bottom line: Artist + duration */}
-          <div className="flex items-center gap-1 text-xs text-[rgb(var(--color-text-muted))]">
-            <span className="truncate">{track.artistName ?? 'Okänd artist'}</span>
-            {hasDuration && (
-              <span className="ml-auto shrink-0 font-mono">{formatDurationMs(track.durationMs!)}</span>
-            )}
-          </div>
+          {/* Bottom line: Artist */}
+          <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">
+            {track.artistName ?? 'Okänd artist'}
+          </p>
         </div>
 
-        {/* Right: Menu */}
+        {/* Right: Duration + Heart + Menu */}
+        <div className="flex shrink-0 items-center gap-0.5">
+        {hasDuration && (
+          <span className="shrink-0 font-mono text-xs text-[rgb(var(--color-text-muted))]">
+            {formatDurationMs(track.durationMs!)}
+          </span>
+        )}
+        <IconButton
+          aria-label={favorited ? 'Sluta favoritmarkera' : 'Favoritmarkera'}
+          onClick={() => {
+            if (!isAuthenticated) setLoginModalOpen(true);
+            else if (track.id != null) toggleFavorite(track.id);
+          }}
+        >
+          {favorited ? (
+            <HeartFilledIcon className="h-5 w-5 text-red-500" aria-hidden />
+          ) : (
+            <HeartIcon className="h-5 w-5" aria-hidden />
+          )}
+        </IconButton>
         <TrackRowMenu
           track={track}
           open={menuOpen}
@@ -101,6 +124,7 @@ export function TrackRow({
           onFlag={() => setFlagModalOpen(true)}
           onAddToPlaylist={isAuthenticated ? () => setAddToPlaylistOpen(true) : undefined}
         />
+        </div>
       </div>
 
       <FlagTrackModal
@@ -112,6 +136,11 @@ export function TrackRow({
         open={addToPlaylistOpen}
         onClose={() => setAddToPlaylistOpen(false)}
         track={track}
+      />
+      <LoginRequiredModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        message="Du behöver skapa ett konto eller logga in för att favoritmarkera en låt."
       />
     </>
   );

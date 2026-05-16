@@ -13,6 +13,7 @@ import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
 import { toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
+import { useAuth } from '@/auth/useAuth';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -26,6 +27,7 @@ export function PlaylistsPage() {
   useAnalyticsFlag('playlists');
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [invitations, setInvitations] = useState<InvitationDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,28 @@ export function PlaylistsPage() {
     } finally {
       setCreating(false);
     }
+  }
+
+  if (authLoading) {
+    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <PlaylistIcon className="h-12 w-12 text-[rgb(var(--color-text-muted))]" aria-hidden />
+        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Spellistor</h1>
+        <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
+          Skapa ett konto eller logga in för att skapa och hantera dina egna spellistor.
+        </p>
+        <Link
+          to="/login"
+          className="mt-2 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+        >
+          Logga in
+        </Link>
+      </div>
+    );
   }
 
   return (

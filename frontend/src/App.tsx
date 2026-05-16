@@ -21,6 +21,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 
 import { AuthProvider } from '@/auth/AuthContext';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
+import { FavoritesProvider } from '@/favorites/FavoritesContext';
+import { FavoritesPage } from '@/pages/FavoritesPage';
 import { PlaylistsPage } from '@/pages/PlaylistsPage';
 import { PlaylistPage } from '@/pages/PlaylistPage';
 import { PlaylistSettingsPage } from '@/pages/PlaylistSettingsPage';
@@ -48,6 +50,7 @@ export function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
+          <FavoritesProvider>
           <FaroRoutes>
             {/* Public routes */}
             <Route
@@ -67,14 +70,7 @@ export function App() {
                         <Route path="/albums" element={<AlbumsPage />} />
                         <Route path="/artist/:id" element={<ArtistPage />} />
                         <Route path="/album/:id" element={<AlbumPage />} />
-                        <Route
-                          path="/playlists"
-                          element={
-                            <ProtectedRoute>
-                              <PlaylistsPage />
-                            </ProtectedRoute>
-                          }
-                        />
+                        <Route path="/playlists" element={<PlaylistsPage />} />
                         <Route
                           path="/playlists/:id"
                           element={
@@ -92,6 +88,7 @@ export function App() {
                           }
                         />
                         <Route path="/shared/:token" element={<SharedPlaylistPage />} />
+                        <Route path="/favorites" element={<FavoritesPage />} />
                         <Route path="/about" element={<AboutPage />} />
                         <Route path="/feedback" element={<FeedbackPage />} />
                         <Route path="/terms" element={<TermsPage />} />
@@ -137,6 +134,7 @@ export function App() {
               }
             />
           </FaroRoutes>
+          </FavoritesProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
