@@ -80,7 +80,7 @@ jobs:
           pytest tests/ -v --tb=short -m "integration" || echo "Integration tests may need database setup"
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           file: backend/coverage.xml
           flags: backend
@@ -232,7 +232,7 @@ jobs:
           pytest tests/ -v --tb=short -m "not integration and not requires_audio" --cov=app --cov-report=xml || echo "Some tests may fail without full deps"
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           file: backend/workers/audio/coverage.xml
           flags: audio-worker
