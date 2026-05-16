@@ -40,3 +40,4 @@ export { MusicNoteIcon } from './MusicNoteIcon';
 export { CalendarIcon } from './CalendarIcon';
 export { BadgeCheckIcon } from './BadgeCheckIcon';
 export { SettingsIcon } from './SettingsIcon';
+export { HeartIcon, HeartFilledIcon } from './HeartIcon';

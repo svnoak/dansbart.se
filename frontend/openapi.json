@@ -89,6 +89,7 @@
       "description": "Admin album management endpoints"
     },
     { "name": "Admin", "description": "Administrative task management" },
+    { "name": "Favorites", "description": "User track favorites" },
     {
       "name": "Admin Pending",
       "description": "Pending artist and album approval endpoints"
@@ -1229,6 +1230,34 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PlaylistCollaborator"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/favorites/{trackId}": {
+      "post": {
+        "tags": ["Favorites"],
+        "summary": "Toggle favorite status for a track",
+        "operationId": "toggleFavorite",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "boolean" }
                 }
               }
             }
@@ -3341,6 +3370,46 @@
                 "schema": {
                   "type": "array",
                   "items": { "$ref": "#/components/schemas/InvitationDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/favorites": {
+      "get": {
+        "tags": ["Favorites"],
+        "summary": "Get all favorited track IDs for current user",
+        "operationId": "getFavoriteIds",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/favorites/tracks": {
+      "get": {
+        "tags": ["Favorites"],
+        "summary": "Get full track data for all favorited tracks",
+        "operationId": "getFavoriteTracks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TrackListDto" }
                 }
               }
             }
