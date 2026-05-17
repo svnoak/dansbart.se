@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react';
 import type { TrackListDto } from '@/api/models/trackListDto';
+import { pushPlayerEvent, pushPlayerError } from '@/player/playerObservability';
+
+const SPOTIFY_API_TIMEOUT_MS = 15_000;
+const SPOTIFY_CONTROLLER_TIMEOUT_MS = 10_000;
 
 interface SpotifyPlaybackUpdate {
   data: {
@@ -75,6 +79,9 @@ export function SpotifyMiniPlayer({
   useEffect(() => {
     if (!trackId) return;
 
+    let controllerTimer: ReturnType<typeof setTimeout> | null = null;
+    let apiTimer: ReturnType<typeof setTimeout> | null = null;
+
     function createOrLoadController() {
       const container = containerRef.current;
       if (!container || !window.SpotifyIframeApi) return;
@@ -89,6 +96,10 @@ export function SpotifyMiniPlayer({
         controllerRef.current = null;
       }
 
+      controllerTimer = setTimeout(() => {
+        pushPlayerEvent('spotify_controller_init_timeout', { trackId: trackId ?? '' });
+      }, SPOTIFY_CONTROLLER_TIMEOUT_MS);
+
       window.SpotifyIframeApi.createController(
         container,
         {
@@ -97,12 +108,20 @@ export function SpotifyMiniPlayer({
           height: '100%',
         },
         (controller) => {
+          if (controllerTimer) clearTimeout(controllerTimer);
           controllerRef.current = controller;
           // Sync initial play state
-          if (isPlaying) {
-            controller.resume();
-          } else {
-            controller.pause();
+          try {
+            if (isPlaying) {
+              controller.resume();
+            } else {
+              controller.pause();
+            }
+          } catch (err) {
+            pushPlayerError(err instanceof Error ? err : new Error(String(err)), {
+              phase: 'spotify_initial_sync',
+              trackId: trackId ?? '',
+            });
           }
         }
       );
@@ -110,7 +129,9 @@ export function SpotifyMiniPlayer({
 
     if (window.SpotifyIframeApi) {
       createOrLoadController();
-      return;
+      return () => {
+        if (controllerTimer) clearTimeout(controllerTimer);
+      };
     }
 
     // Load script if not already loading
@@ -122,13 +143,20 @@ export function SpotifyMiniPlayer({
       document.body.appendChild(script);
     }
 
+    apiTimer = setTimeout(() => {
+      pushPlayerEvent('spotify_api_load_timeout', { trackId: trackId ?? '' });
+    }, SPOTIFY_API_TIMEOUT_MS);
+
     const prevCallback = window.onSpotifyIframeApiReady;
     window.onSpotifyIframeApiReady = () => {
+      if (apiTimer) clearTimeout(apiTimer);
       prevCallback?.();
       createOrLoadController();
     };
 
     return () => {
+      if (apiTimer) clearTimeout(apiTimer);
+      if (controllerTimer) clearTimeout(controllerTimer);
       window.onSpotifyIframeApiReady = prevCallback;
     };
   }, [trackId, isPlaying]);

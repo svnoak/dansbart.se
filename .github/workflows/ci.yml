@@ -80,7 +80,7 @@ jobs:
           pytest tests/ -v --tb=short -m "integration" || echo "Integration tests may need database setup"
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           file: backend/coverage.xml
           flags: backend
@@ -97,7 +97,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -232,7 +232,7 @@ jobs:
           pytest tests/ -v --tb=short -m "not integration and not requires_audio" --cov=app --cov-report=xml || echo "Some tests may fail without full deps"
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           file: backend/workers/audio/coverage.xml
           flags: audio-worker
@@ -306,7 +306,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build API image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/api
           file: ./backend/api/Dockerfile
@@ -329,7 +329,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Feature Worker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/workers/feature
           file: ./backend/workers/feature/Dockerfile
@@ -352,7 +352,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Audio Worker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/workers/audio
           file: ./backend/workers/audio/Dockerfile
@@ -376,7 +376,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Frontend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: false

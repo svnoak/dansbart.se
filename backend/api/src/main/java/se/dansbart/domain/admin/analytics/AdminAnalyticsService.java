@@ -57,7 +57,9 @@ public class AdminAnalyticsService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getVisitorStats(int days) {
-        OffsetDateTime since = OffsetDateTime.now().minusDays(days);
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime since = now.minusDays(days);
+        OffsetDateTime prevSince = now.minusDays((long) days * 2);
 
         long totalVisitors = visitorRepository.countUniqueSessionsSince(since);
         Long pageViews = visitorRepository.sumPageViewsSince(since);
@@ -66,6 +68,11 @@ public class AdminAnalyticsService {
         long mobileVisitors = visitorRepository.countMobileSessionsSince(since);
         long desktopVisitors = visitorRepository.countDesktopSessionsSince(since);
 
+        long prevTotalVisitors = visitorRepository.countUniqueSessionsBetween(prevSince, since);
+        Long prevPageViews = visitorRepository.sumPageViewsBetween(prevSince, since);
+        long prevAuthenticated = visitorRepository.countAuthenticatedSessionsBetween(prevSince, since);
+        long prevAnonymous = visitorRepository.countAnonymousSessionsBetween(prevSince, since);
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalVisitors", totalVisitors);
         stats.put("totalPageViews", pageViews != null ? pageViews : 0);
@@ -73,6 +80,10 @@ public class AdminAnalyticsService {
         stats.put("anonymousVisitors", anonymousVisitors);
         stats.put("mobileVisitors", mobileVisitors);
         stats.put("desktopVisitors", desktopVisitors);
+        stats.put("prevTotalVisitors", prevTotalVisitors);
+        stats.put("prevTotalPageViews", prevPageViews != null ? prevPageViews : 0);
+        stats.put("prevAuthenticatedVisitors", prevAuthenticated);
+        stats.put("prevAnonymousVisitors", prevAnonymous);
         stats.put("days", days);
         return stats;
     }
@@ -87,7 +98,7 @@ public class AdminAnalyticsService {
             Map<String, Object> entry = new HashMap<>();
             entry.put("hour", ((Number) row[0]).intValue());
             entry.put("total", ((Number) row[1]).longValue());
-            entry.put("loggedIn", ((Number) row[2]).longValue());
+            entry.put("authenticated", ((Number) row[2]).longValue());
             entry.put("anonymous", ((Number) row[3]).longValue());
             byHour.add(entry);
         }
@@ -108,7 +119,7 @@ public class AdminAnalyticsService {
             Map<String, Object> entry = new HashMap<>();
             entry.put("date", row[0].toString());
             entry.put("total", ((Number) row[1]).longValue());
-            entry.put("loggedIn", ((Number) row[2]).longValue());
+            entry.put("authenticated", ((Number) row[2]).longValue());
             entry.put("anonymous", ((Number) row[3]).longValue());
             byDate.add(entry);
         }

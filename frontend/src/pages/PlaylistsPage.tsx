@@ -37,6 +37,11 @@ export function PlaylistsPage() {
   const [respondingId, setRespondingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     Promise.all([
       getMyPlaylists1({ signal: controller.signal }),
@@ -53,7 +58,7 @@ export function PlaylistsPage() {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
@@ -92,40 +97,20 @@ export function PlaylistsPage() {
     }
   }
 
-  if (authLoading) {
-    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-        <PlaylistIcon className="h-12 w-12 text-[rgb(var(--color-text-muted))]" aria-hidden />
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Spellistor</h1>
-        <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-          Skapa ett konto eller logga in för att skapa och hantera dina egna spellistor.
-        </p>
-        <Link
-          to="/login"
-          className="mt-2 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
-        >
-          Logga in
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Spellistor</h1>
-        <button
-          type="button"
-          onClick={() => setShowForm((s) => !s)}
-          className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-        >
-          <PlusIcon className="h-4 w-4" aria-hidden />
-          Ny spellista
-        </button>
+        {isAuthenticated && (
+          <button
+            type="button"
+            onClick={() => setShowForm((s) => !s)}
+            className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            <PlusIcon className="h-4 w-4" aria-hidden />
+            Ny spellista
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -210,7 +195,22 @@ export function PlaylistsPage() {
         </div>
       )}
 
-      {!loading && playlists.length === 0 && (
+      {!loading && !isAuthenticated && (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <PlaylistIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
+          <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
+            Logga in för att skapa och hantera dina egna spellistor.
+          </p>
+          <Link
+            to="/login"
+            className="mt-1 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Logga in
+          </Link>
+        </div>
+      )}
+
+      {!loading && isAuthenticated && playlists.length === 0 && (
         <p className="text-[rgb(var(--color-text-muted))]">Du har inga spellistor ännu.</p>
       )}
 

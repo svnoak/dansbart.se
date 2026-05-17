@@ -1,4 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { getStats } from '@/api/generated/stats/stats';
 import {
   getDashboard,
@@ -7,6 +15,12 @@ import {
   getMostPlayedTracks,
   getPlatformStats,
   getListenTime,
+  getNudgeStats,
+  getClassifyStats,
+  getSessionDuration,
+  getBehavioralFlags,
+  getTopPaths,
+  getSearchStats,
 } from '@/api/generated/admin-analytics/admin-analytics';
 import { StatCard } from '@/admin/components/StatCard';
 import { Select } from '@/admin/components/forms/Select';
@@ -26,6 +40,15 @@ interface HourData {
 }
 
 interface BehavioralFlags {
+  usedSearch: number;
+  usedPlaylists: number;
+  usedLibrary: number;
+  usedDiscovery: number;
+}
+
+interface DeviceFeatureRow {
+  deviceType: string | null;
+  total: number;
   usedSearch: number;
   usedPlaylists: number;
   usedLibrary: number;
@@ -85,7 +108,8 @@ export function AdminStatsPage() {
   const [nudgeEvents, setNudgeEvents] = useState<NudgeEvents>({});
   const [classifyEvents, setClassifyEvents] = useState<ClassifyEvents>({});
   const [sessionDuration, setSessionDuration] = useState<Record<string, unknown> | null>(null);
-  const [behavioralFlags, setBehavioralFlags] = useState<{ totals: BehavioralFlags } | null>(null);
+  const [behavioralFlags, setBehavioralFlags] = useState<{ totals: BehavioralFlags; byDeviceType?: DeviceFeatureRow[] } | null>(null);
+  const [prevVisitors, setPrevVisitors] = useState<{ totalVisitors: number; totalPageViews: number; authenticatedVisitors: number; anonymousVisitors: number } | null>(null);
   const [topPaths, setTopPaths] = useState<TopPath[]>([]);
   const [searchStats, setSearchStats] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,24 +126,12 @@ export function AdminStatsPage() {
           getMostPlayedTracks({ days, limit: 10 }).catch(() => null),
           getPlatformStats({ days }).catch(() => null),
           getListenTime({ days }).catch(() => null),
-          fetch(`/api/admin/analytics/nudge?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/classify?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/session-duration?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/behavioral-flags?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/top-paths?days=${days}&limit=15`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/search-stats?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
+          getNudgeStats({ days }).catch(() => null),
+          getClassifyStats({ days }).catch(() => null),
+          getSessionDuration({ days }).catch(() => null),
+          getBehavioralFlags({ days }).catch(() => null),
+          getTopPaths({ days, limit: 15 }).catch(() => null),
+          getSearchStats({ days }).catch(() => null),
         ]);
 
       setLibraryStats(statsRes as Record<string, unknown> | null);
@@ -190,9 +202,19 @@ export function AdminStatsPage() {
       setNudgeEvents((nudgeRes as any)?.events ?? {});
       setClassifyEvents((classifyRes as any)?.events ?? {});
       setSessionDuration(durationRes as Record<string, unknown> | null);
-      setBehavioralFlags((flagsRes as any)?.totals ? flagsRes : null);
-      setTopPaths(Array.isArray(pathsRes) ? pathsRes : []);
+      setBehavioralFlags((flagsRes as any)?.totals ? (flagsRes as any) : null);
+      setTopPaths(Array.isArray(pathsRes) ? (pathsRes as any[]) : []);
       setSearchStats(searchRes as Record<string, unknown> | null);
+
+      const visitors = (dashRes as any)?.visitors ?? {};
+      if (visitors.prevTotalVisitors !== undefined) {
+        setPrevVisitors({
+          totalVisitors: Number(visitors.prevTotalVisitors ?? 0),
+          totalPageViews: Number(visitors.prevTotalPageViews ?? 0),
+          authenticatedVisitors: Number(visitors.prevAuthenticatedVisitors ?? 0),
+          anonymousVisitors: Number(visitors.prevAnonymousVisitors ?? 0),
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -236,9 +258,11 @@ export function AdminStatsPage() {
   const totalHours = (listenTime?.totalHours as number) ?? (dashboard as any)?.listenTime?.totalHours ?? 0;
   const totalMinutesListened = (listenTime?.totalMinutes as number) ?? (dashboard as any)?.listenTime?.totalMinutes ?? 0;
 
-  const maxDaily = Math.max(1, ...daily.map((d) => d.total));
-  const maxHourly = Math.max(1, ...hourly.map((h) => h.total));
   const showHourly = days === 1;
+
+  const chartData = showHourly
+    ? hourly.map((h) => ({ key: String(h.hour), authenticated: h.authenticated, anonymous: h.anonymous }))
+    : daily.map((d) => ({ key: d.date, authenticated: d.authenticated, anonymous: d.anonymous }));
 
   // SmartNudge funnel
   const nudgeShown = nudgeEvents.nudge_shown ?? 0;
@@ -292,12 +316,12 @@ export function AdminStatsPage() {
       <div>
         <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Besökare — senaste {days} dagar</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          <StatCard label="Unika besökare" value={totalVisitors} />
-          <StatCard label="Inloggade" value={authenticatedVisitors} />
-          <StatCard label="Anonyma" value={anonymousVisitors} />
+          <StatCard label="Unika besökare" value={totalVisitors} delta={prevVisitors ? totalVisitors - prevVisitors.totalVisitors : undefined} />
+          <StatCard label="Inloggade" value={authenticatedVisitors} delta={prevVisitors ? authenticatedVisitors - prevVisitors.authenticatedVisitors : undefined} />
+          <StatCard label="Anonyma" value={anonymousVisitors} delta={prevVisitors ? anonymousVisitors - prevVisitors.anonymousVisitors : undefined} />
           <StatCard label="Mobila besökare" value={mobileVisitors} />
           <StatCard label="Datorbesökare" value={desktopVisitors} />
-          <StatCard label="Sidvisningar" value={totalPageViews} />
+          <StatCard label="Sidvisningar" value={totalPageViews} delta={prevVisitors ? totalPageViews - prevVisitors.totalPageViews : undefined} />
           <StatCard label="Snitt sessionslängd" value={avgDurationSeconds > 0 ? avgDurationFormatted : '–'} />
           <StatCard label="Registrerade användare" value={totalUsers} />
         </div>
@@ -364,75 +388,59 @@ export function AdminStatsPage() {
           </h2>
           <div className="flex items-center gap-3 text-[10px] text-[rgb(var(--color-text-muted))]">
             <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]" />
+              <span className="inline-block h-2 w-3 rounded-sm" style={{ background: 'rgb(var(--color-accent))' }} />
               Autentiserade
             </span>
             <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]/30" />
+              <span className="inline-block h-2 w-3 rounded-sm" style={{ background: 'rgb(var(--color-accent))', opacity: 0.3 }} />
               Anonyma
             </span>
           </div>
         </div>
 
-        {showHourly ? (
-          <>
-            <div className="flex items-end gap-[3px] h-40">
-              {hourly.map((h) => (
-                <div key={h.hour} className="group relative flex-1 h-full flex items-end">
-                  <div
-                    className="relative w-full rounded-t overflow-hidden"
-                    style={{ height: `${(h.total / maxHourly) * 100}%`, minHeight: h.total > 0 ? '2px' : '0' }}
-                  >
-                    {/* loggedIn on top, anonymous on bottom — flex-col fills proportionally */}
-                    <div className="h-full w-full flex flex-col">
-                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: h.authenticated }} />
-                      <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: h.anonymous }} />
-                    </div>
-                    {h.total > 0 && (
-                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
-                        {String(h.hour).padStart(2, '0')}:00 · {h.total} ({h.authenticated} inloggade / {h.anonymous} anonyma)
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>23:00</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-end gap-[2px] h-40">
-              {daily.map((d) => (
-                <div key={d.date} className="group relative flex-1 h-full flex items-end">
-                  <div
-                    className="relative w-full rounded-t overflow-hidden"
-                    style={{ height: `${(d.total / maxDaily) * 100}%`, minHeight: d.total > 0 ? '2px' : '0' }}
-                  >
-                    <div className="h-full w-full flex flex-col">
-                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: d.authenticated }} />
-                      <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: d.anonymous }} />
-                    </div>
-                    {d.total > 0 && (
-                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
-                        {d.date} · {d.total} ({d.authenticated} inloggade / {d.anonymous} anonyma)
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
-              <span>{daily[0]?.date ?? ''}</span>
-              <span>{daily[daily.length - 1]?.date ?? ''}</span>
-            </div>
-          </>
-        )}
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 4, right: 4, bottom: 4, left: 0 }}
+            barCategoryGap="20%"
+          >
+            <XAxis
+              dataKey="key"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 10, fill: 'rgb(var(--color-text-muted))' }}
+              tickFormatter={
+                showHourly
+                  ? (v: string) => `${v.padStart(2, '0')}:00`
+                  : (v: string) => v.slice(5)
+              }
+              interval={showHourly ? 5 : days <= 7 ? 0 : days <= 30 ? 4 : 14}
+            />
+            <YAxis
+              width={32}
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 10, fill: 'rgb(var(--color-text-muted))' }}
+              allowDecimals={false}
+            />
+            <Tooltip
+              contentStyle={{
+                background: 'rgb(var(--color-bg))',
+                border: '1px solid rgb(var(--color-border))',
+                borderRadius: '6px',
+                fontSize: '12px',
+                color: 'rgb(var(--color-text))',
+              }}
+              cursor={{ fill: 'rgb(var(--color-border))', opacity: 0.5 }}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              labelFormatter={(label: any) =>
+                showHourly ? `${String(label).padStart(2, '0')}:00` : String(label)
+              }
+            />
+            <Bar dataKey="anonymous" name="Anonyma" stackId="a" fill="rgb(var(--color-accent))" fillOpacity={0.3} />
+            <Bar dataKey="authenticated" name="Autentiserade" stackId="a" fill="rgb(var(--color-accent))" radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* SmartNudge funnel */}
@@ -510,6 +518,39 @@ export function AdminStatsPage() {
               </div>
             ))}
           </div>
+          {(() => {
+            const byDevice = behavioralFlags?.byDeviceType ?? [];
+            const mobile = byDevice.find((r) => r.deviceType === 'mobile');
+            const desktop = byDevice.find((r) => r.deviceType === 'desktop');
+            if (!mobile && !desktop) return null;
+            const rows = [
+              { label: 'Mobil', row: mobile },
+              { label: 'Dator', row: desktop },
+            ].filter((r): r is { label: string; row: DeviceFeatureRow } => r.row !== undefined);
+            return (
+              <div className="mt-4 border-t border-[rgb(var(--color-border))] pt-3">
+                <p className="mb-2 text-xs font-medium text-[rgb(var(--color-text-muted))]">Per enhet</p>
+                <div className="space-y-2">
+                  {rows.map(({ label, row }) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <span className="w-12 shrink-0 text-xs text-[rgb(var(--color-text-muted))]">{label}</span>
+                      <span className="w-12 shrink-0 text-xs text-[rgb(var(--color-text))]">{row.total} sessioner</span>
+                      {([
+                        { key: 'usedLibrary', label: 'Bibliotek' },
+                        { key: 'usedSearch', label: 'Sök' },
+                        { key: 'usedPlaylists', label: 'Spellistor' },
+                        { key: 'usedDiscovery', label: 'Klassificering' },
+                      ] as const).map(({ key, label: feat }) => (
+                        <span key={key} className="text-xs text-[rgb(var(--color-text-muted))]">
+                          {feat} {row.total > 0 ? Math.round((row[key] / row.total) * 100) : 0}%
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
