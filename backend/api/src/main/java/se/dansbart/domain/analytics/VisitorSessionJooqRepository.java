@@ -161,6 +161,40 @@ public class VisitorSessionJooqRepository {
             .fetchOne(0, Long.class);
     }
 
+    public long countUniqueSessionsBetween(OffsetDateTime from, OffsetDateTime until) {
+        return dsl.select(countDistinct(VISITOR_SESSIONS.SESSION_ID))
+            .from(VISITOR_SESSIONS)
+            .where(VISITOR_SESSIONS.FIRST_SEEN.ge(from))
+            .and(VISITOR_SESSIONS.FIRST_SEEN.lt(until))
+            .fetchOne(0, Long.class);
+    }
+
+    public Long sumPageViewsBetween(OffsetDateTime from, OffsetDateTime until) {
+        return dsl.select(DSL.sum(VISITOR_SESSIONS.PAGE_VIEWS))
+            .from(VISITOR_SESSIONS)
+            .where(VISITOR_SESSIONS.FIRST_SEEN.ge(from))
+            .and(VISITOR_SESSIONS.FIRST_SEEN.lt(until))
+            .fetchOne(0, Long.class);
+    }
+
+    public long countAuthenticatedSessionsBetween(OffsetDateTime from, OffsetDateTime until) {
+        return dsl.select(countDistinct(VISITOR_SESSIONS.SESSION_ID))
+            .from(VISITOR_SESSIONS)
+            .where(VISITOR_SESSIONS.FIRST_SEEN.ge(from))
+            .and(VISITOR_SESSIONS.FIRST_SEEN.lt(until))
+            .and(IS_AUTHENTICATED_FIELD.isTrue())
+            .fetchOne(0, Long.class);
+    }
+
+    public long countAnonymousSessionsBetween(OffsetDateTime from, OffsetDateTime until) {
+        return dsl.select(countDistinct(VISITOR_SESSIONS.SESSION_ID))
+            .from(VISITOR_SESSIONS)
+            .where(VISITOR_SESSIONS.FIRST_SEEN.ge(from))
+            .and(VISITOR_SESSIONS.FIRST_SEEN.lt(until))
+            .and(IS_AUTHENTICATED_FIELD.isFalse())
+            .fetchOne(0, Long.class);
+    }
+
     // --- Session duration ---
 
     /** Average session duration in seconds over the given time window.

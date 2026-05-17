@@ -19,6 +19,7 @@ import { ArtistsPage } from '@/pages/ArtistsPage';
 import { AlbumsPage } from '@/pages/AlbumsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
+import { PageTracker } from '@/analytics/PageTracker';
 import { AuthProvider } from '@/auth/AuthContext';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { FavoritesProvider } from '@/favorites/FavoritesContext';
@@ -49,6 +50,7 @@ export function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
+        <PageTracker />
         <AuthProvider>
           <FavoritesProvider>
           <FaroRoutes>

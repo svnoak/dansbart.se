@@ -8,11 +8,25 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService {
+
+    private static final Set<String> BOT_UA_FRAGMENTS = Set.of(
+        "bot", "crawler", "spider", "scraper", "headless",
+        "pingdom", "uptime", "statuscake", "freshping", "hetrixtools",
+        "python-requests", "python-urllib", "go-http-client",
+        "curl/", "wget/"
+    );
+
+    private boolean isBot(String userAgent) {
+        if (userAgent == null || userAgent.isBlank()) return false;
+        String lower = userAgent.toLowerCase();
+        return BOT_UA_FRAGMENTS.stream().anyMatch(lower::contains);
+    }
 
     private final TrackPlaybackJooqRepository trackPlaybackJooqRepository;
     private final UserInteractionJooqRepository userInteractionJooqRepository;
@@ -45,11 +59,13 @@ public class AnalyticsService {
     @Transactional
     public VisitorSession createOrUpdateSession(
             String sessionId, String userAgent, Boolean isAuthenticated, String deviceType) {
+        final String normalizedUserAgent = Objects.equals(userAgent, "null") ? null : userAgent;
+        if (isBot(normalizedUserAgent)) return new VisitorSession();
+
         // Be defensive against missing/blank session IDs coming from older clients/tests.
         final String normalizedSessionId = (sessionId == null || sessionId.isBlank())
             ? UUID.randomUUID().toString()
             : sessionId;
-        final String normalizedUserAgent = Objects.equals(userAgent, "null") ? null : userAgent;
 
         return visitorSessionJooqRepository.findBySessionId(normalizedSessionId)
             .map(session -> {

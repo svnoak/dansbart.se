@@ -7,6 +7,12 @@ import {
   getMostPlayedTracks,
   getPlatformStats,
   getListenTime,
+  getNudgeStats,
+  getClassifyStats,
+  getSessionDuration,
+  getBehavioralFlags,
+  getTopPaths,
+  getSearchStats,
 } from '@/api/generated/admin-analytics/admin-analytics';
 import { StatCard } from '@/admin/components/StatCard';
 import { Select } from '@/admin/components/forms/Select';
@@ -26,6 +32,15 @@ interface HourData {
 }
 
 interface BehavioralFlags {
+  usedSearch: number;
+  usedPlaylists: number;
+  usedLibrary: number;
+  usedDiscovery: number;
+}
+
+interface DeviceFeatureRow {
+  deviceType: string | null;
+  total: number;
   usedSearch: number;
   usedPlaylists: number;
   usedLibrary: number;
@@ -85,7 +100,8 @@ export function AdminStatsPage() {
   const [nudgeEvents, setNudgeEvents] = useState<NudgeEvents>({});
   const [classifyEvents, setClassifyEvents] = useState<ClassifyEvents>({});
   const [sessionDuration, setSessionDuration] = useState<Record<string, unknown> | null>(null);
-  const [behavioralFlags, setBehavioralFlags] = useState<{ totals: BehavioralFlags } | null>(null);
+  const [behavioralFlags, setBehavioralFlags] = useState<{ totals: BehavioralFlags; byDeviceType?: DeviceFeatureRow[] } | null>(null);
+  const [prevVisitors, setPrevVisitors] = useState<{ totalVisitors: number; totalPageViews: number; authenticatedVisitors: number; anonymousVisitors: number } | null>(null);
   const [topPaths, setTopPaths] = useState<TopPath[]>([]);
   const [searchStats, setSearchStats] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,24 +118,12 @@ export function AdminStatsPage() {
           getMostPlayedTracks({ days, limit: 10 }).catch(() => null),
           getPlatformStats({ days }).catch(() => null),
           getListenTime({ days }).catch(() => null),
-          fetch(`/api/admin/analytics/nudge?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/classify?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/session-duration?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/behavioral-flags?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/top-paths?days=${days}&limit=15`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-          fetch(`/api/admin/analytics/search-stats?days=${days}`, { credentials: 'include' })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
+          getNudgeStats({ days }).catch(() => null),
+          getClassifyStats({ days }).catch(() => null),
+          getSessionDuration({ days }).catch(() => null),
+          getBehavioralFlags({ days }).catch(() => null),
+          getTopPaths({ days, limit: 15 }).catch(() => null),
+          getSearchStats({ days }).catch(() => null),
         ]);
 
       setLibraryStats(statsRes as Record<string, unknown> | null);
@@ -190,9 +194,19 @@ export function AdminStatsPage() {
       setNudgeEvents((nudgeRes as any)?.events ?? {});
       setClassifyEvents((classifyRes as any)?.events ?? {});
       setSessionDuration(durationRes as Record<string, unknown> | null);
-      setBehavioralFlags((flagsRes as any)?.totals ? flagsRes : null);
-      setTopPaths(Array.isArray(pathsRes) ? pathsRes : []);
+      setBehavioralFlags((flagsRes as any)?.totals ? (flagsRes as any) : null);
+      setTopPaths(Array.isArray(pathsRes) ? (pathsRes as any[]) : []);
       setSearchStats(searchRes as Record<string, unknown> | null);
+
+      const visitors = (dashRes as any)?.visitors ?? {};
+      if (visitors.prevTotalVisitors !== undefined) {
+        setPrevVisitors({
+          totalVisitors: Number(visitors.prevTotalVisitors ?? 0),
+          totalPageViews: Number(visitors.prevTotalPageViews ?? 0),
+          authenticatedVisitors: Number(visitors.prevAuthenticatedVisitors ?? 0),
+          anonymousVisitors: Number(visitors.prevAnonymousVisitors ?? 0),
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -292,12 +306,12 @@ export function AdminStatsPage() {
       <div>
         <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Besökare — senaste {days} dagar</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          <StatCard label="Unika besökare" value={totalVisitors} />
-          <StatCard label="Inloggade" value={authenticatedVisitors} />
-          <StatCard label="Anonyma" value={anonymousVisitors} />
+          <StatCard label="Unika besökare" value={totalVisitors} delta={prevVisitors ? totalVisitors - prevVisitors.totalVisitors : undefined} />
+          <StatCard label="Inloggade" value={authenticatedVisitors} delta={prevVisitors ? authenticatedVisitors - prevVisitors.authenticatedVisitors : undefined} />
+          <StatCard label="Anonyma" value={anonymousVisitors} delta={prevVisitors ? anonymousVisitors - prevVisitors.anonymousVisitors : undefined} />
           <StatCard label="Mobila besökare" value={mobileVisitors} />
           <StatCard label="Datorbesökare" value={desktopVisitors} />
-          <StatCard label="Sidvisningar" value={totalPageViews} />
+          <StatCard label="Sidvisningar" value={totalPageViews} delta={prevVisitors ? totalPageViews - prevVisitors.totalPageViews : undefined} />
           <StatCard label="Snitt sessionslängd" value={avgDurationSeconds > 0 ? avgDurationFormatted : '–'} />
           <StatCard label="Registrerade användare" value={totalUsers} />
         </div>
@@ -510,6 +524,39 @@ export function AdminStatsPage() {
               </div>
             ))}
           </div>
+          {(() => {
+            const byDevice = behavioralFlags?.byDeviceType ?? [];
+            const mobile = byDevice.find((r) => r.deviceType === 'mobile');
+            const desktop = byDevice.find((r) => r.deviceType === 'desktop');
+            if (!mobile && !desktop) return null;
+            const rows = [
+              { label: 'Mobil', row: mobile },
+              { label: 'Dator', row: desktop },
+            ].filter((r): r is { label: string; row: DeviceFeatureRow } => r.row !== undefined);
+            return (
+              <div className="mt-4 border-t border-[rgb(var(--color-border))] pt-3">
+                <p className="mb-2 text-xs font-medium text-[rgb(var(--color-text-muted))]">Per enhet</p>
+                <div className="space-y-2">
+                  {rows.map(({ label, row }) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <span className="w-12 shrink-0 text-xs text-[rgb(var(--color-text-muted))]">{label}</span>
+                      <span className="w-12 shrink-0 text-xs text-[rgb(var(--color-text))]">{row.total} sessioner</span>
+                      {([
+                        { key: 'usedLibrary', label: 'Bibliotek' },
+                        { key: 'usedSearch', label: 'Sök' },
+                        { key: 'usedPlaylists', label: 'Spellistor' },
+                        { key: 'usedDiscovery', label: 'Klassificering' },
+                      ] as const).map(({ key, label: feat }) => (
+                        <span key={key} className="text-xs text-[rgb(var(--color-text-muted))]">
+                          {feat} {row.total > 0 ? Math.round((row[key] / row.total) * 100) : 0}%
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
