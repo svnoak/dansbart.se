@@ -365,6 +365,69 @@
         }
       }
     },
+    "/api/dances/{id}/primary-track": {
+      "get": {
+        "tags": ["Dances"],
+        "summary": "Get the current user's primary track for a dance",
+        "operationId": "getPrimaryTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TrackListDto" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Dances"],
+        "summary": "Set the current user's primary track for a dance",
+        "operationId": "setPrimaryTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPrimaryTrackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "tags": ["Dances"],
+        "summary": "Clear the current user's primary track for a dance",
+        "operationId": "clearPrimaryTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/admin/tracks/{trackId}/dance-style": {
       "put": {
         "tags": ["Admin - Tracks"],
@@ -5655,6 +5718,10 @@
       "RespondToInvitationRequest": {
         "type": "object",
         "properties": { "accept": { "type": "boolean" } }
+      },
+      "SetPrimaryTrackRequest": {
+        "type": "object",
+        "properties": { "trackId": { "type": "string", "format": "uuid" } }
       },
       "UpdateDanceStyleRequest": {
         "type": "object",

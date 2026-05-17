@@ -12,6 +12,7 @@ import se.dansbart.dto.DanceDto;
 import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.request.DanceTrackVoteRequest;
+import se.dansbart.dto.request.SetPrimaryTrackRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import java.util.LinkedHashMap;
 public class DanceController {
 
     private final DanceService danceService;
+    private final DancePrimaryTrackService dancePrimaryTrackService;
 
     @GetMapping
     @Operation(summary = "List dances with optional search, style filter, and pagination")
@@ -93,6 +95,38 @@ public class DanceController {
         if (voterId == null || voterId.isBlank()) return ResponseEntity.badRequest().build();
         danceService.removeVote(id, trackId, voterId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/primary-track")
+    @Operation(summary = "Get the current user's primary track for a dance")
+    public ResponseEntity<TrackListDto> getPrimaryTrack(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId) {
+        if (userId == null) return ResponseEntity.notFound().build();
+        return dancePrimaryTrackService.get(userId, id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/primary-track")
+    @Operation(summary = "Set the current user's primary track for a dance")
+    public ResponseEntity<Void> setPrimaryTrack(
+            @PathVariable UUID id,
+            @RequestBody SetPrimaryTrackRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        if (userId == null) return ResponseEntity.status(401).build();
+        dancePrimaryTrackService.set(userId, id, request.trackId());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/primary-track")
+    @Operation(summary = "Clear the current user's primary track for a dance")
+    public ResponseEntity<Void> clearPrimaryTrack(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId) {
+        if (userId == null) return ResponseEntity.status(401).build();
+        dancePrimaryTrackService.clear(userId, id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/tracks/{trackId}")

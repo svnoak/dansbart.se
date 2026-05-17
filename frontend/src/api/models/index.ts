@@ -189,6 +189,7 @@ export * from './searchUsersParams';
 export * from './secondaryStyleRequest';
 export * from './sessionFlagRequest';
 export * from './sessionRequest';
+export * from './setPrimaryTrackRequest';
 export * from './statsDto';
 export * from './structureRequest';
 export * from './styleConfigRequest';

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { httpClient } from '@/api/http-client';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
+import { getPrimaryTrack, getDanceTracks } from '@/api/generated/dances/dances';
 
 type DanceDto = {
   id?: string;
@@ -25,18 +26,21 @@ function getDances(
   });
   return httpClient(`/api/dances?${q}`, opts);
 }
-import { IconButton } from '@/ui';
-import { BackArrowIcon } from '@/icons';
+import { IconButton, toast } from '@/ui';
+import { BackArrowIcon, PlayIcon } from '@/icons';
+import { usePlayer } from '@/player/usePlayer';
 
 const PAGE_SIZE = 20;
 
 export function DancesPage() {
   const navigate = useNavigate();
+  const { play } = usePlayer();
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
   const style = searchParams.get('style') ?? '';
   const offset = Number(searchParams.get('offset') ?? '0');
 
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const [dances, setDances] = useState<DanceDto[]>([]);
   const [total, setTotal] = useState(0);
   const [styles, setStyles] = useState<string[]>([]);
@@ -157,6 +161,30 @@ export function DancesPage() {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
+  async function handlePlayDance(danceId: string) {
+    if (playingId === danceId) return;
+    setPlayingId(danceId);
+    try {
+      try {
+        const track = await getPrimaryTrack(danceId);
+        play(track);
+        return;
+      } catch {
+        // No primary track set — fall back to first confirmed track
+      }
+      const tracks = await getDanceTracks(danceId);
+      if (tracks.length > 0) {
+        play(tracks[0]);
+      } else {
+        toast('Inga låtar länkade till denna dans', 'error');
+      }
+    } catch {
+      toast('Kunde inte spela', 'error');
+    } finally {
+      setPlayingId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
@@ -204,8 +232,17 @@ export function DancesPage() {
 
       <ul className="space-y-1">
         {dances.map((dance) => (
-          <li key={dance.id}>
-            <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-[rgb(var(--color-border))]/30 transition-colors">
+          <li key={dance.id} className="flex items-stretch gap-2">
+            <button
+              type="button"
+              aria-label={`Spela ${dance.name}`}
+              disabled={playingId === dance.id}
+              onClick={() => dance.id && handlePlayDance(dance.id)}
+              className="flex shrink-0 items-center justify-center rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors disabled:opacity-50"
+            >
+              <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
+            </button>
+            <div className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-[rgb(var(--color-border))]/30 transition-colors">
               <Link
                 to={`/dance/${dance.id}`}
                 className="flex-1 text-sm font-medium text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]"
