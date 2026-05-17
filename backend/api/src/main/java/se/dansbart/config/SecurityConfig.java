@@ -69,6 +69,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")
                 // Authenticated user endpoints
                 .requestMatchers(HttpMethod.POST, "/api/dances/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/dances/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/dances/**").authenticated()
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()

@@ -204,7 +204,11 @@ export function DancePage() {
     );
   }
 
-  const allTracks = [...confirmedTracks, ...matchingTracks];
+  const allTracks = [...confirmedTracks, ...matchingTracks].sort((a, b) => {
+    if (a.id === primaryTrackId) return -1;
+    if (b.id === primaryTrackId) return 1;
+    return 0;
+  });
   const hasMoreRecs = recommendations.length < recTotal;
 
   return (
