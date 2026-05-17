@@ -1,4 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { getStats } from '@/api/generated/stats/stats';
 import {
   getDashboard,
@@ -250,9 +258,11 @@ export function AdminStatsPage() {
   const totalHours = (listenTime?.totalHours as number) ?? (dashboard as any)?.listenTime?.totalHours ?? 0;
   const totalMinutesListened = (listenTime?.totalMinutes as number) ?? (dashboard as any)?.listenTime?.totalMinutes ?? 0;
 
-  const maxDaily = Math.max(1, ...daily.map((d) => d.total));
-  const maxHourly = Math.max(1, ...hourly.map((h) => h.total));
   const showHourly = days === 1;
+
+  const chartData = showHourly
+    ? hourly.map((h) => ({ key: String(h.hour), authenticated: h.authenticated, anonymous: h.anonymous }))
+    : daily.map((d) => ({ key: d.date, authenticated: d.authenticated, anonymous: d.anonymous }));
 
   // SmartNudge funnel
   const nudgeShown = nudgeEvents.nudge_shown ?? 0;
@@ -378,75 +388,59 @@ export function AdminStatsPage() {
           </h2>
           <div className="flex items-center gap-3 text-[10px] text-[rgb(var(--color-text-muted))]">
             <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]" />
+              <span className="inline-block h-2 w-3 rounded-sm" style={{ background: 'rgb(var(--color-accent))' }} />
               Autentiserade
             </span>
             <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-3 rounded-sm bg-[rgb(var(--color-accent))]/30" />
+              <span className="inline-block h-2 w-3 rounded-sm" style={{ background: 'rgb(var(--color-accent))', opacity: 0.3 }} />
               Anonyma
             </span>
           </div>
         </div>
 
-        {showHourly ? (
-          <>
-            <div className="flex items-end gap-[3px] h-40">
-              {hourly.map((h) => (
-                <div key={h.hour} className="group relative flex-1 h-full flex items-end">
-                  <div
-                    className="relative w-full rounded-t overflow-hidden"
-                    style={{ height: `${(h.total / maxHourly) * 100}%`, minHeight: h.total > 0 ? '2px' : '0' }}
-                  >
-                    {/* loggedIn on top, anonymous on bottom — flex-col fills proportionally */}
-                    <div className="h-full w-full flex flex-col">
-                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: h.authenticated }} />
-                      <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: h.anonymous }} />
-                    </div>
-                    {h.total > 0 && (
-                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
-                        {String(h.hour).padStart(2, '0')}:00 · {h.total} ({h.authenticated} inloggade / {h.anonymous} anonyma)
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>23:00</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-end gap-[2px] h-40">
-              {daily.map((d) => (
-                <div key={d.date} className="group relative flex-1 h-full flex items-end">
-                  <div
-                    className="relative w-full rounded-t overflow-hidden"
-                    style={{ height: `${(d.total / maxDaily) * 100}%`, minHeight: d.total > 0 ? '2px' : '0' }}
-                  >
-                    <div className="h-full w-full flex flex-col">
-                      <div className="bg-[rgb(var(--color-accent))]" style={{ flex: d.authenticated }} />
-                      <div className="bg-[rgb(var(--color-accent))]/30" style={{ flex: d.anonymous }} />
-                    </div>
-                    {d.total > 0 && (
-                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-[rgb(var(--color-bg))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text))] opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow">
-                        {d.date} · {d.total} ({d.authenticated} inloggade / {d.anonymous} anonyma)
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-1 flex justify-between text-[10px] text-[rgb(var(--color-text-muted))]">
-              <span>{daily[0]?.date ?? ''}</span>
-              <span>{daily[daily.length - 1]?.date ?? ''}</span>
-            </div>
-          </>
-        )}
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 4, right: 4, bottom: 4, left: 0 }}
+            barCategoryGap="20%"
+          >
+            <XAxis
+              dataKey="key"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 10, fill: 'rgb(var(--color-text-muted))' }}
+              tickFormatter={
+                showHourly
+                  ? (v: string) => `${v.padStart(2, '0')}:00`
+                  : (v: string) => v.slice(5)
+              }
+              interval={showHourly ? 5 : days <= 7 ? 0 : days <= 30 ? 4 : 14}
+            />
+            <YAxis
+              width={32}
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 10, fill: 'rgb(var(--color-text-muted))' }}
+              allowDecimals={false}
+            />
+            <Tooltip
+              contentStyle={{
+                background: 'rgb(var(--color-bg))',
+                border: '1px solid rgb(var(--color-border))',
+                borderRadius: '6px',
+                fontSize: '12px',
+                color: 'rgb(var(--color-text))',
+              }}
+              cursor={{ fill: 'rgb(var(--color-border))', opacity: 0.5 }}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              labelFormatter={(label: any) =>
+                showHourly ? `${String(label).padStart(2, '0')}:00` : String(label)
+              }
+            />
+            <Bar dataKey="anonymous" name="Anonyma" stackId="a" fill="rgb(var(--color-accent))" fillOpacity={0.3} />
+            <Bar dataKey="authenticated" name="Autentiserade" stackId="a" fill="rgb(var(--color-accent))" radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* SmartNudge funnel */}
