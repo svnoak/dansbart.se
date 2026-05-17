@@ -7,6 +7,8 @@ import { Layout } from '@/layout/Layout';
 import { PlayerProvider } from '@/player/PlayerContext';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { AboutPage } from '@/pages/AboutPage';
+import { HelpPage } from '@/pages/HelpPage';
+import { HelpTopicPage } from '@/pages/HelpTopicPage';
 import { FeedbackPage } from '@/pages/FeedbackPage';
 import { AlbumPage } from '@/pages/AlbumPage';
 import { ArtistPage } from '@/pages/ArtistPage';
@@ -91,6 +93,8 @@ export function App() {
                         />
                         <Route path="/shared/:token" element={<SharedPlaylistPage />} />
                         <Route path="/favorites" element={<FavoritesPage />} />
+                        <Route path="/help" element={<HelpPage />} />
+                        <Route path="/help/topic/:slug/:id" element={<HelpTopicPage />} />
                         <Route path="/about" element={<AboutPage />} />
                         <Route path="/feedback" element={<FeedbackPage />} />
                         <Route path="/terms" element={<TermsPage />} />

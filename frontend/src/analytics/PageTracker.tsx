@@ -6,7 +6,7 @@ export function PageTracker() {
   const location = useLocation();
 
   useEffect(() => {
-    faro.api.pushLog(['page_view'], {
+    faro.api?.pushLog(['page_view'], {
       level: LogLevel.INFO,
       context: { page: location.pathname },
     });

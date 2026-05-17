@@ -3,19 +3,22 @@ import { Link } from 'react-router-dom';
 interface StaticPageLayoutProps {
   title: string;
   lastUpdated?: string;
+  showHeaderBack?: boolean;
   children: React.ReactNode;
 }
 
-export function StaticPageLayout({ title, lastUpdated, children }: StaticPageLayoutProps) {
+export function StaticPageLayout({ title, lastUpdated, showHeaderBack = true, children }: StaticPageLayoutProps) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <header className="mb-8">
-        <Link
-          to="/"
-          className="mb-4 inline-flex items-center text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
-        >
-          ← Tillbaka till dansbart.se
-        </Link>
+        {showHeaderBack && (
+          <Link
+            to="/"
+            className="mb-4 inline-flex items-center text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+          >
+            ← Tillbaka till dansbart.se
+          </Link>
+        )}
         <h1 className="mb-2 text-4xl font-bold text-[rgb(var(--color-text))]">{title}</h1>
         {lastUpdated && (
           <p className="text-[rgb(var(--color-text-muted))]">Senast uppdaterad: {lastUpdated}</p>
@@ -38,6 +41,10 @@ export function StaticPageLayout({ title, lastUpdated, children }: StaticPageLay
           <span className="text-[rgb(var(--color-border))]">·</span>
           <Link to="/terms" className="text-[rgb(var(--color-accent))] hover:underline">
             Användarvillkor
+          </Link>
+          <span className="text-[rgb(var(--color-border))]">·</span>
+          <Link to="/help" className="text-[rgb(var(--color-accent))] hover:underline">
+            Hjälp & Nyheter
           </Link>
           <span className="text-[rgb(var(--color-border))]">·</span>
           <Link to="/about" className="text-[rgb(var(--color-accent))] hover:underline">
