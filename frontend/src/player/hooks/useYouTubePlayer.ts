@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import type { PlaybackSource } from '@/player/embedUrl';
+import { pushPlayerEvent } from '@/player/playerObservability';
+
+const YT_READY_TIMEOUT_MS = 15_000;
+const YT_PLAYER_READY_TIMEOUT_MS = 10_000;
+
+const YT_ERROR_LABELS: Record<number, string> = {
+  2: 'invalid_parameter',
+  5: 'html5_error',
+  100: 'video_not_found',
+  101: 'embedding_not_allowed',
+  150: 'embedding_not_allowed',
+};
 
 export const YT_PLAYER_CONTAINER_ID = 'global-yt-player-container';
 
@@ -37,11 +49,17 @@ export function useYouTubePlayer({
   useEffect(() => {
     if (!youtubeVideoId || consentStatus !== 'granted' || typeof window === 'undefined') return;
 
+    let playerReadyTimer: ReturnType<typeof setTimeout> | null = null;
+
     const createPlayer = () => {
       const YT = window.YT;
       if (!YT?.Player) return;
       const container = document.getElementById(YT_PLAYER_CONTAINER_ID);
       if (!container || ytPlayerRef.current) return;
+
+      playerReadyTimer = setTimeout(() => {
+        pushPlayerEvent('youtube_player_init_timeout', { videoId: youtubeVideoId ?? '' });
+      }, YT_PLAYER_READY_TIMEOUT_MS);
 
       new YT.Player(YT_PLAYER_CONTAINER_ID, {
         height: '100%',
@@ -49,12 +67,20 @@ export function useYouTubePlayer({
         playerVars: { autoplay: 1, enablejsapi: 1 },
         events: {
           onReady: (e: { target: YTPlayerInstance }) => {
+            if (playerReadyTimer) clearTimeout(playerReadyTimer);
             ytPlayerRef.current = e.target;
             if (youtubeVideoId) e.target.loadVideoById(youtubeVideoId);
             setYtPlayerReady(true);
           },
           onStateChange: (e: { data: number }) => {
             if (e.data === window.YT!.PlayerState.ENDED) onEnded();
+          },
+          onError: (e: { data: number }) => {
+            pushPlayerEvent('youtube_player_error', {
+              videoId: youtubeVideoId ?? '',
+              errorCode: String(e.data),
+              errorLabel: YT_ERROR_LABELS[e.data] ?? 'unknown',
+            });
           },
         },
       });
@@ -63,7 +89,15 @@ export function useYouTubePlayer({
     if (window.YT?.Player) {
       createPlayer();
     } else {
-      window.onYouTubeIframeAPIReady = createPlayer;
+      const apiReadyTimer = setTimeout(() => {
+        pushPlayerEvent('youtube_api_load_timeout', { videoId: youtubeVideoId ?? '' });
+      }, YT_READY_TIMEOUT_MS);
+
+      window.onYouTubeIframeAPIReady = () => {
+        clearTimeout(apiReadyTimer);
+        createPlayer();
+      };
+
       if (!document.getElementById('yt-iframe-api-script')) {
         const script = document.createElement('script');
         script.id = 'yt-iframe-api-script';
@@ -73,6 +107,7 @@ export function useYouTubePlayer({
     }
 
     return () => {
+      if (playerReadyTimer) clearTimeout(playerReadyTimer);
       setYtPlayerReady(false);
       if (ytPlayerRef.current?.destroy) {
         try {
