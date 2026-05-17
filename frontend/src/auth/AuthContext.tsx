@@ -10,19 +10,11 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match.split('=')[1]) : null;
 }
 
-function hasSessionCookie(): boolean {
-  return document.cookie.split('; ').some((row) => row.startsWith('SESSION='));
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!hasSessionCookie()) {
-      setIsLoading(false);
-      return;
-    }
     fetch('/api/users/me', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
