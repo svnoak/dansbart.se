@@ -27,15 +27,23 @@ public class TrackStyleVoteJooqRepository {
     }
 
     public Optional<TrackStyleVote> findByTrackIdAndVoterId(UUID trackId, String voterId) {
+        // Ordered + limited defensively: a UNIQUE(track_id, voter_id) constraint (V18) now
+        // enforces at most one row per pair, but this keeps the read side safe even against
+        // a stale replica or a pre-V18 row that somehow survived the dedup migration.
         return dsl.selectFrom(TRACK_STYLE_VOTES)
             .where(TRACK_STYLE_VOTES.TRACK_ID.eq(trackId)
                 .and(TRACK_STYLE_VOTES.VOTER_ID.eq(voterId)))
+            .orderBy(TRACK_STYLE_VOTES.CREATED_AT.desc())
+            .limit(1)
             .fetchOptional(this::toVote);
     }
 
     public long countByTrackIdAndSuggestedStyle(UUID trackId, String suggestedStyle) {
+        // COUNT(DISTINCT voter_id), not a row count: the confirmation threshold is meant to
+        // require N distinct people agreeing, not N rows (which a bug previously conflated).
         return dsl.fetchCount(
-            dsl.selectFrom(TRACK_STYLE_VOTES)
+            dsl.selectDistinct(TRACK_STYLE_VOTES.VOTER_ID)
+                .from(TRACK_STYLE_VOTES)
                 .where(TRACK_STYLE_VOTES.TRACK_ID.eq(trackId)
                     .and(TRACK_STYLE_VOTES.SUGGESTED_STYLE.eq(suggestedStyle)))
         );

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.DanceStyleDto;
 import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.TrackListDto;
+import se.dansbart.dto.TrackStyleVoteDto;
 
 import java.util.HashMap;
 import java.util.List;
@@ -84,7 +85,7 @@ public class TrackController {
 
     @PostMapping("/{id}/feedback")
     @Operation(summary = "Submit style correction feedback for a track")
-    public ResponseEntity<TrackStyleVote> submitFeedback(
+    public ResponseEntity<TrackStyleVoteDto> submitFeedback(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
@@ -94,6 +95,7 @@ public class TrackController {
             return ResponseEntity.badRequest().build();
         }
         return feedbackService.submitStyleFeedback(id, voterId, request.suggestedStyle(), request.tempoCorrection())
+            .map(TrackController::toVoteDto)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
@@ -108,8 +110,11 @@ public class TrackController {
     @Operation(summary = "Confirm a secondary dance style without affecting primary election")
     public ResponseEntity<Map<String, Object>> confirmSecondaryStyle(
             @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId,
+            @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
             @RequestBody SecondaryStyleRequest request) {
-        return feedbackService.confirmSecondaryStyle(id, request.style())
+        String voterId = userId != null ? userId.toString() : voterHeader;
+        return feedbackService.confirmSecondaryStyle(id, request.style(), voterId)
             .map(result -> {
                 result.put("status", "success");
                 result.put("message", "Secondary style confirmed.");
@@ -206,6 +211,16 @@ public class TrackController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    private static TrackStyleVoteDto toVoteDto(TrackStyleVote vote) {
+        return TrackStyleVoteDto.builder()
+            .id(vote.getId())
+            .trackId(vote.getTrackId())
+            .suggestedStyle(vote.getSuggestedStyle())
+            .tempoCorrection(vote.getTempoCorrection())
+            .createdAt(vote.getCreatedAt())
+            .build();
     }
 
     // Request DTOs
