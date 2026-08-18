@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.DanceStyleDto;
 import se.dansbart.dto.PageResponse;
@@ -87,17 +86,13 @@ public class TrackController {
     @Operation(summary = "Submit style correction feedback for a track")
     public ResponseEntity<TrackStyleVoteDto> submitFeedback(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UUID userId,
-            @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
             @RequestBody FeedbackRequest request) {
-        String voterId = userId != null ? userId.toString() : voterHeader;
-        if (voterId == null || voterId.isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        return feedbackService.submitStyleFeedback(id, voterId, request.suggestedStyle(), request.tempoCorrection())
+        // Voter identity comes from VoterContext (auth principal or X-Voter-ID, resolved
+        // once per request by VoterContextInterceptor) rather than being parsed here.
+        return feedbackService.submitStyleFeedback(id, request.suggestedStyle(), request.tempoCorrection())
             .map(TrackController::toVoteDto)
             .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+            .orElse(ResponseEntity.badRequest().build());
     }
 
     @GetMapping("/{id}/secondary-styles")
@@ -110,11 +105,8 @@ public class TrackController {
     @Operation(summary = "Confirm a secondary dance style without affecting primary election")
     public ResponseEntity<Map<String, Object>> confirmSecondaryStyle(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UUID userId,
-            @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
             @RequestBody SecondaryStyleRequest request) {
-        String voterId = userId != null ? userId.toString() : voterHeader;
-        return feedbackService.confirmSecondaryStyle(id, request.style(), voterId)
+        return feedbackService.confirmSecondaryStyle(id, request.style())
             .map(result -> {
                 result.put("status", "success");
                 result.put("message", "Secondary style confirmed.");
