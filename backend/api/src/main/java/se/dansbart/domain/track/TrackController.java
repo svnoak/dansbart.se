@@ -11,6 +11,7 @@ import se.dansbart.dto.DanceStyleDto;
 import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.TrackStyleVoteDto;
+import se.dansbart.voter.VoterContext;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +27,7 @@ public class TrackController {
 
     private final TrackService trackService;
     private final TrackFeedbackService feedbackService;
+    private final VoterContext voterContext;
 
     @GetMapping
     @Operation(summary = "Get playable tracks with optional filters")
@@ -80,6 +82,18 @@ public class TrackController {
             @RequestParam String q,
             Pageable pageable) {
         return ResponseEntity.ok(PageResponse.from(trackService.searchByTitleAsListDtos(q, pageable)));
+    }
+
+    @GetMapping("/classify-queue")
+    @Operation(summary = "Personalized fast-classification queue: unconfirmed tracks this "
+        + "voter hasn't already voted on, lowest-confidence-first")
+    public ResponseEntity<List<TrackListDto>> getClassifyQueue(
+            @RequestParam(defaultValue = "20") int limit) {
+        UUID voterId = voterContext.getVoterId();
+        if (voterId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(trackService.getClassifyQueue(voterId, Math.min(limit, 100)));
     }
 
     @PostMapping("/{id}/feedback")
