@@ -10,6 +10,8 @@ import { usePlayer } from '@/player/usePlayer';
 import { getVoterId } from '@/utils/voter';
 import { getTempoLabel } from '@/utils/tempoLabel';
 import { FlagTrackModal } from '@/components/FlagTrackModal';
+import { SuggestNewTrackModal } from '@/components/SuggestNewTrackModal';
+import { SuggestDanceStyleModal } from '@/components/SuggestDanceStyleModal';
 import { FlagIcon, PlayIcon, PauseIcon } from '@/icons';
 
 const TEMPO_BUTTONS = [
@@ -44,6 +46,8 @@ export function ClassifyPage() {
   const [awaitingTempo, setAwaitingTempo] = useState<string | null>(null); // style pending a tempo pick
   const [classifiedCount, setClassifiedCount] = useState(0);
   const [showFlagModal, setShowFlagModal] = useState(false);
+  const [showSuggestTrackModal, setShowSuggestTrackModal] = useState(false);
+  const [showSuggestStyleModal, setShowSuggestStyleModal] = useState(false);
   const [allStyles, setAllStyles] = useState<string[]>([]);
   const [queueExhausted, setQueueExhausted] = useState(false);
 
@@ -392,6 +396,30 @@ export function ClassifyPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Secondary entry points: suggesting new content is a deliberate action, not part
+          of the classify flow itself, so these stay low-emphasis and out of the way. */}
+      <div className="mt-6 mx-4 flex flex-col sm:flex-row gap-2 text-xs">
+        <button
+          onClick={() => setShowSuggestTrackModal(true)}
+          className="flex-1 py-2 px-3 rounded-lg border border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] hover:border-[rgb(var(--color-accent))]/50 transition-colors"
+        >
+          Föreslå en ny låt
+        </button>
+        <button
+          onClick={() => setShowSuggestStyleModal(true)}
+          className="flex-1 py-2 px-3 rounded-lg border border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] hover:border-[rgb(var(--color-accent))]/50 transition-colors"
+        >
+          Föreslå en ny dansstil
+        </button>
+      </div>
+
+      {showSuggestTrackModal && (
+        <SuggestNewTrackModal onClose={() => setShowSuggestTrackModal(false)} />
+      )}
+      {showSuggestStyleModal && (
+        <SuggestDanceStyleModal onClose={() => setShowSuggestStyleModal(false)} />
       )}
 
       {/* Flag modal */}
