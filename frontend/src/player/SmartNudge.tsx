@@ -449,7 +449,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {step === 'verify' && (
             <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Stammer detta?</p>
+                <p className="opacity-80">Stämmer detta?</p>
                 <p className="font-bold text-base md:text-sm">
                   {track?.danceStyle}
                   {track?.subStyle && track.subStyle !== track.danceStyle && (
@@ -480,7 +480,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {step === 'verify-style-only' && (
             <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Ar detta en</p>
+                <p className="opacity-80">Är detta en</p>
                 <p className="font-bold text-base md:text-sm">
                   {track?.danceStyle}
                   {track?.subStyle && track.subStyle !== track.danceStyle && (
@@ -511,7 +511,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {step === 'confirm-secondary' && pendingSecondary && (
             <div className="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Kan man aven dansa</p>
+                <p className="opacity-80">Kan man även dansa</p>
                 <p className="font-bold text-base md:text-sm">
                   {pendingSecondary.danceStyle}
                   {pendingSecondary.subStyle &&
@@ -608,7 +608,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
             <div className="bg-purple-700 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
               <div className="flex justify-between items-center mb-3 md:mb-2">
                 <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold">
-                  Hur snabb ar {correction.style}n?
+                  Hur snabb är {correction.style}n?
                 </p>
                 <button
                   onClick={() => {
@@ -652,7 +652,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                 &larr; Tillbaka
               </button>
               <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
-                {mode === 'addition' ? 'Lagg till stil' : 'Korrekt dansstil'}
+                {mode === 'addition' ? 'Lägg till stil' : 'Korrekt dansstil'}
               </p>
               {renderDropdown(
                 correction.main || 'Välj kategori...',
@@ -702,7 +702,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
             >
               <div className="flex justify-between items-center mb-3 md:mb-2">
                 <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold">
-                  Ar {correction.style || 'dansen'} {tempoLabel}?
+                  Är {correction.style || 'dansen'} {tempoLabel}?
                 </p>
                 <button
                   onClick={() =>
@@ -767,7 +767,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   onClick={startAddition}
                   className="bg-teal-600 hover:bg-teal-700 text-white text-sm md:text-xs font-bold py-3 md:py-2 rounded flex flex-col items-center"
                 >
-                  <span>Lagg till Alt.</span>
+                  <span>Lägg till Alt.</span>
                   <span className="text-xs md:text-[9px] opacity-75 font-normal">
                     Detta är också...
                   </span>
