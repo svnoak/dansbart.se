@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 /**
  * Regression guard for a non-obvious cross-feature coupling: an upvote on a dance's
  * track recommendation (DanceService.voteOnTrack) also feeds the same style-consensus
- * tally used by the anonymous classification surfaces (musikdomaren / SmartNudge), via
+ * tally used by the anonymous classification surfaces (ClassifyPage / SmartNudge), via
  * TrackFeedbackService.submitStyleFeedback. This locks in that existing behavior so any
  * future change to the shared vote/threshold logic has to touch this test deliberately
  * rather than silently changing both surfaces at once.
