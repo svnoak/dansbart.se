@@ -104,7 +104,7 @@ public class TrackController {
         // Voter identity comes from VoterContext (auth principal or X-Voter-ID, resolved
         // once per request by VoterContextInterceptor) rather than being parsed here.
         return feedbackService.submitStyleFeedback(id, request.suggestedStyle(), request.tempoCorrection())
-            .map(TrackController::toVoteDto)
+            .map(result -> toVoteDto(result.vote(), result.styleJustConfirmed()))
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.badRequest().build());
     }
@@ -219,13 +219,14 @@ public class TrackController {
         return ResponseEntity.notFound().build();
     }
 
-    private static TrackStyleVoteDto toVoteDto(TrackStyleVote vote) {
+    private static TrackStyleVoteDto toVoteDto(TrackStyleVote vote, boolean styleJustConfirmed) {
         return TrackStyleVoteDto.builder()
             .id(vote.getId())
             .trackId(vote.getTrackId())
             .suggestedStyle(vote.getSuggestedStyle())
             .tempoCorrection(vote.getTempoCorrection())
             .createdAt(vote.getCreatedAt())
+            .styleJustConfirmed(styleJustConfirmed)
             .build();
     }
 

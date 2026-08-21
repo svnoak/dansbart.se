@@ -20,4 +20,9 @@ public class TrackStyleVoteDto {
     private String suggestedStyle;
     private String tempoCorrection;
     private OffsetDateTime createdAt;
+
+    /** True if this specific vote was the one that newly confirmed the style (crossed
+     *  VoterReputationService.CONFIRMATION_THRESHOLD for the first time), so the client
+     *  can show concrete-impact feedback instead of a generic "thanks." */
+    private boolean styleJustConfirmed;
 }

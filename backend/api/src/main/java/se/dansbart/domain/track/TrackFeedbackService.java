@@ -33,11 +33,16 @@ public class TrackFeedbackService {
     private final VoterReputationService reputationService;
     private final VoterContext voterContext;
 
+    /** Result of a style/tempo vote: the saved vote row, plus whether this specific vote
+     *  was the one that crossed CONFIRMATION_THRESHOLD (false when suggestedStyle was
+     *  null, or the style was already confirmed before this vote). */
+    public record StyleFeedbackResult(TrackStyleVote vote, boolean styleJustConfirmed) {}
+
     /** Voter identity now comes from VoterContext (populated per-request by
      *  VoterContextInterceptor from the auth principal or X-Voter-ID) rather than being
      *  passed in by each caller — keeps every caller consistent without re-deriving it. */
     @Transactional
-    public Optional<TrackStyleVote> submitStyleFeedback(
+    public Optional<StyleFeedbackResult> submitStyleFeedback(
             UUID trackId,
             String suggestedStyle,
             String tempoCorrection) {
@@ -72,23 +77,27 @@ public class TrackFeedbackService {
 
         TrackStyleVote saved = voteRepository.save(vote);
 
-        if (suggestedStyle != null) {
-            applyVoteThresholds(trackId, suggestedStyle, sumBefore);
-        }
+        boolean styleJustConfirmed = suggestedStyle != null
+            && applyVoteThresholds(trackId, suggestedStyle, sumBefore);
 
-        return Optional.of(saved);
+        return Optional.of(new StyleFeedbackResult(saved, styleJustConfirmed));
     }
 
     /**
      * CONFIRMATION_THRESHOLD (equal to a single anonymous vote's weight) confirms the
      * style for display. RETRAINING_THRESHOLD is a deliberately higher bar reserved for
      * anything that would otherwise feed back into the ML model.
+     *
+     * @return true if this vote was the one that newly confirmed the style (i.e. the
+     *         style was not yet confirmed before this call, and confirmStyleIfNeeded
+     *         just flipped it — not merely a re-check of an already-confirmed style).
      */
-    private void applyVoteThresholds(UUID trackId, String style, BigDecimal sumBefore) {
+    private boolean applyVoteThresholds(UUID trackId, String style, BigDecimal sumBefore) {
         BigDecimal sumAfter = voteRepository.weightedSumByTrackIdAndSuggestedStyle(trackId, style);
 
+        boolean styleJustConfirmed = false;
         if (sumAfter.compareTo(VoterReputationService.CONFIRMATION_THRESHOLD) >= 0) {
-            confirmStyleIfNeeded(trackId, style);
+            styleJustConfirmed = confirmStyleIfNeeded(trackId, style);
         }
 
         boolean crossedRetrainThreshold =
@@ -104,12 +113,17 @@ public class TrackFeedbackService {
             // (MaintenanceService.triggerRetrain) once there's a meaningful batch of new
             // confirmations.
         }
+
+        return styleJustConfirmed;
     }
 
-    private void confirmStyleIfNeeded(UUID trackId, String style) {
+    /** @return true if this call actually flipped the style to confirmed; false if it
+     *          was already confirmed (no-op) — the idempotency guard doubles as the
+     *          "did this call just confirm it" signal. */
+    private boolean confirmStyleIfNeeded(UUID trackId, String style) {
         Optional<TrackDanceStyle> existing = danceStyleRepository.findByTrackIdAndDanceStyle(trackId, style);
         if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getIsUserConfirmed())) {
-            return;
+            return false;
         }
 
         if (existing.isPresent()) {
@@ -129,6 +143,7 @@ public class TrackFeedbackService {
         }
 
         log.info("Style confirmed via vote: track={}, style={}", trackId, style);
+        return true;
     }
 
     @Transactional(readOnly = true)
