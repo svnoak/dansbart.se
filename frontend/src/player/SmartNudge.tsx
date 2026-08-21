@@ -52,6 +52,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   const [mode, setMode] = useState<Mode>('correction');
   const [correction, setCorrection] = useState({ main: '', style: '', tempo: 'ok' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [styleTree, setStyleTree] = useState<StyleTree>({});
   const [pendingSecondary, setPendingSecondary] = useState<{
@@ -119,6 +120,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
       setMode('correction');
       setCorrection({ main: '', style: track?.danceStyle ?? '', tempo: 'ok' });
       setDropdownOpen(false);
+      // Only ever attached to the one appearance that set it — a later track's nudge
+      // shouldn't inherit it just because this instance stays mounted across tracks.
+      setShowFirstTimeHint(false);
     }
   }, [track?.id, track?.danceStyle, clearTimers]);
 
@@ -157,6 +161,13 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           has_tempo: trackHasTempo,
           mobilePlayerOpen: mobilePlayerOpen ?? false,
         });
+
+        // One-time explainer, marked seen immediately so it only ever shows once per
+        // browser regardless of how quickly this first appearance gets dismissed.
+        if (!localStorage.getItem('smartnudge_explainer_seen')) {
+          localStorage.setItem('smartnudge_explainer_seen', 'true');
+          setShowFirstTimeHint(true);
+        }
 
         if (!trackHasStyle && !trackHasTempo) {
           setMode('correction');
@@ -457,6 +468,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   )}
                   {' '}&bull; {tempoLabel}
                 </p>
+                {showFirstTimeHint && (
+                  <p className="text-[10px] md:text-[9px] opacity-70 mt-1">
+                    Din bekräftelse hjälper andra hitta låten.
+                  </p>
+                )}
               </div>
               <div className="flex gap-3 md:gap-2">
                 <button
@@ -488,6 +504,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   )}
                   ?
                 </p>
+                {showFirstTimeHint && (
+                  <p className="text-[10px] md:text-[9px] opacity-70 mt-1">
+                    Din bekräftelse hjälper andra hitta låten.
+                  </p>
+                )}
               </div>
               <div className="flex gap-3 md:gap-2">
                 <button
@@ -547,6 +568,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
                 Vad kan man dansa?
               </p>
+              {showFirstTimeHint && (
+                <p className="text-[10px] md:text-[9px] opacity-70 -mt-2 mb-3 md:mb-2">
+                  Din bekräftelse hjälper andra hitta låten.
+                </p>
+              )}
               {renderDropdown(
                 correction.main || 'Välj kategori...',
                 mainCategories.map((c) => ({ label: c, value: c })),

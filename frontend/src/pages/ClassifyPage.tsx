@@ -50,6 +50,14 @@ export function ClassifyPage() {
   const [showSuggestStyleModal, setShowSuggestStyleModal] = useState(false);
   const [allStyles, setAllStyles] = useState<string[]>([]);
   const [queueExhausted, setQueueExhausted] = useState(false);
+  const [showExplainer, setShowExplainer] = useState(
+    () => !localStorage.getItem('classify_explainer_seen'),
+  );
+
+  const dismissExplainer = () => {
+    localStorage.setItem('classify_explainer_seen', 'true');
+    setShowExplainer(false);
+  };
 
   const isFetchingRef = useRef(false);
 
@@ -249,6 +257,21 @@ export function ClassifyPage() {
               ? `${classifiedCount} låtar klassificerade den här sessionen`
               : 'Varje val hjälper till direkt — inget granskas i efterhand'}
           </p>
+          {showExplainer && (
+            <p className="text-xs text-[rgb(var(--color-text-muted))] mt-1 flex items-start gap-1.5">
+              <span>
+                Din röst räknas direkt — räcker det med tillräckligt många som är överens
+                visas låten i sökningar.
+              </span>
+              <button
+                onClick={dismissExplainer}
+                className="shrink-0 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] font-bold leading-none"
+                aria-label="Stäng"
+              >
+                &times;
+              </button>
+            </p>
+          )}
         </div>
         {history.length > 0 && (
           <button
