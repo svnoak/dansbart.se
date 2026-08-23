@@ -9,6 +9,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import se.dansbart.domain.admin.style.AdminStyleKeywordController;
 import se.dansbart.domain.admin.style.AdminStyleKeywordService;
+import se.dansbart.voter.VoterContext;
 
 import java.util.*;
 
@@ -26,6 +27,10 @@ class AdminStyleKeywordControllerTest {
 
     @MockBean
     private AdminStyleKeywordService keywordService;
+
+    // Satisfies WebMvcConfig's transitive VoterContext dependency in this slice.
+    @MockBean
+    private VoterContext voterContext;
 
     @Test
     @WithMockUser(roles = "ADMIN")
