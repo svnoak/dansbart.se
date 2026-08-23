@@ -50,8 +50,10 @@ export function ClassifyPage() {
   const [showSuggestStyleModal, setShowSuggestStyleModal] = useState(false);
   const [allStyles, setAllStyles] = useState<string[]>([]);
   const [queueExhausted, setQueueExhausted] = useState(false);
+  const [lastConfirmed, setLastConfirmed] = useState<string | null>(null);
 
   const isFetchingRef = useRef(false);
+  const lastConfirmedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeTrack = tracks[0] ?? null;
   const isCurrentTrack = player.currentTrack?.id === activeTrack?.id;
@@ -113,6 +115,12 @@ export function ClassifyPage() {
     [player, fetchTracks],
   );
 
+  useEffect(() => {
+    return () => {
+      if (lastConfirmedTimerRef.current) clearTimeout(lastConfirmedTimerRef.current);
+    };
+  }, []);
+
   const submitVote = useCallback(
     (style: string | null, tempoCorrection: string) => {
       if (!activeTrack?.id) return;
@@ -126,7 +134,15 @@ export function ClassifyPage() {
         current.id,
         { suggestedStyle: style ?? undefined, tempoCorrection },
         { headers: { 'X-Voter-ID': getVoterId() } },
-      ).catch(() => {});
+      )
+        .then((res) => {
+          if (res.styleJustConfirmed) {
+            if (lastConfirmedTimerRef.current) clearTimeout(lastConfirmedTimerRef.current);
+            setLastConfirmed(current.title ?? null);
+            lastConfirmedTimerRef.current = setTimeout(() => setLastConfirmed(null), 4000);
+          }
+        })
+        .catch(() => {});
 
       recordInteraction1({
         trackId: current.id,
@@ -245,9 +261,11 @@ export function ClassifyPage() {
             Snabbklassificering
           </h2>
           <p className="text-xs text-[rgb(var(--color-text-muted))] mt-1">
-            {classifiedCount > 0
-              ? `${classifiedCount} låtar klassificerade den här sessionen`
-              : 'Varje val hjälper till direkt — inget granskas i efterhand'}
+            {lastConfirmed
+              ? `${lastConfirmed} är nu bekräftad och syns i sökningar`
+              : classifiedCount > 0
+                ? `${classifiedCount} låtar klassificerade den här sessionen`
+                : 'Varje val hjälper till direkt — inget granskas i efterhand'}
           </p>
         </div>
         {history.length > 0 && (

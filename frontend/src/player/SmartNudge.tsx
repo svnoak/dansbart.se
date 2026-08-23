@@ -58,6 +58,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   const [mode, setMode] = useState<Mode>('correction');
   const [correction, setCorrection] = useState({ main: '', style: '', tempo: 'ok' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [justConfirmed, setJustConfirmed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [styleTree, setStyleTree] = useState<StyleTree>({});
   const [pendingSecondary, setPendingSecondary] = useState<{
@@ -235,7 +236,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
       clearTimers();
       setIsSubmitting(true);
       try {
-        await submitFeedback(
+        const res = await submitFeedback(
           track.id,
           { suggestedStyle, tempoCorrection },
           { headers: { 'X-Voter-ID': getVoterId() } },
@@ -245,6 +246,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           setStep('bonus');
         } else if (nextStep === 'success') {
           trackAnalytics('nudge_completed', track.id, { step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
+          setJustConfirmed(!!res.styleJustConfirmed);
           setStep('success');
           setTimeout(() => setStep('hidden'), 2500);
         }
@@ -253,6 +255,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
         // Treat as confirmed even if API fails - avoid hiding the nudge
         localStorage.setItem(`fb_${track.id}`, 'true');
         if (nextStep === 'success') {
+          setJustConfirmed(false);
           setStep('success');
           setTimeout(() => setStep('hidden'), 2500);
         }
@@ -300,6 +303,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
         { headers: { 'X-Voter-ID': getVoterId() } },
       );
       trackAnalytics('nudge_completed', track.id, { step: 'confirm-secondary', mobilePlayerOpen: mobilePlayerOpen ?? false });
+      // Secondary-style confirmation is a separate mechanic (confirmationCount), never the
+      // "just confirmed, now searchable" message, whatever justConfirmed was last set to.
+      setJustConfirmed(false);
       setStep('success');
       setTimeout(() => setStep('hidden'), 2500);
     } catch {
@@ -330,6 +336,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
         setStep('bonus');
       }
     } else {
+      setJustConfirmed(false);
       setStep('success');
       setTimeout(() => setStep('hidden'), 2500);
     }
@@ -828,7 +835,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Tack för hjälpen!
+                {justConfirmed ? 'Låten är nu bekräftad och syns i sökningar!' : 'Tack för hjälpen!'}
               </div>
             </div>
           )}
