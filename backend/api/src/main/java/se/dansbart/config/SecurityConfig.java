@@ -43,7 +43,8 @@ public class SecurityConfig {
                 .ignoringRequestMatchers("/api/analytics/**")
                 .ignoringRequestMatchers(
                     new AntPathRequestMatcher("/api/tracks/**", "POST"),
-                    new AntPathRequestMatcher("/api/tracks/**", "PATCH")))
+                    new AntPathRequestMatcher("/api/tracks/**", "PATCH"),
+                    new AntPathRequestMatcher("/api/suggestions/**", "POST")))
             .authorizeHttpRequests(auth -> auth
                 // SSO endpoints — must be accessible before authentication
                 .requestMatchers("/sso/**").permitAll()
@@ -56,10 +57,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/discovery/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
-                // Anonymous community contributions (feedback, flagging, links, analytics)
+                // Anonymous community contributions (feedback, flagging, links, analytics, suggestions)
                 .requestMatchers(HttpMethod.POST, "/api/analytics/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/tracks/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
                 .requestMatchers("/api/config/auth").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()

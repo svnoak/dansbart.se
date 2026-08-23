@@ -49,6 +49,17 @@ public class TrackDanceStyleJooqRepository {
             .execute();
     }
 
+    /** Count of distinct tracks currently classified under a given main style — used to show
+     *  an admin how many tracks a dance-style-config activation would affect (bar re-derivation
+     *  runs against every track in that style once beats_per_bar changes). */
+    public long countDistinctTracksByDanceStyle(String danceStyle) {
+        return dsl.fetchCount(
+            dsl.selectDistinct(TRACK_DANCE_STYLES.TRACK_ID)
+                .from(TRACK_DANCE_STYLES)
+                .where(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danceStyle))
+        );
+    }
+
     public List<String> findAllDistinctDanceStyles() {
         return dsl.selectDistinct(TRACK_DANCE_STYLES.DANCE_STYLE)
             .from(TRACK_DANCE_STYLES)

@@ -14,4 +14,7 @@ export interface TrackStyleVote {
   suggestedStyle?: string;
   tempoCorrection?: string;
   createdAt?: string;
+  /** True if this vote just confirmed the style (backend field added manually —
+   *  api:update couldn't run in this environment; hand-edited like getClassifyQueue.ts). */
+  styleJustConfirmed?: boolean;
 }

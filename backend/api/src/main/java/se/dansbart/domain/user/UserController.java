@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.domain.playlist.Playlist;
 import se.dansbart.domain.playlist.PlaylistService;
+import se.dansbart.domain.track.TrackStyleVoteJooqRepository;
 import se.dansbart.dto.UserSummaryDto;
 import se.dansbart.mapper.UserMapper;
 
@@ -24,11 +25,16 @@ public class UserController {
     private final UserService userService;
     private final PlaylistService playlistService;
     private final UserMapper userMapper;
+    private final TrackStyleVoteJooqRepository trackStyleVoteRepository;
 
     @GetMapping("/me")
     @Operation(summary = "Get current user profile")
     public ResponseEntity<User> getCurrentUser(@AuthenticationPrincipal UUID userId) {
         return userService.findById(userId)
+            .map(user -> {
+                user.setConfirmedTrackCount(trackStyleVoteRepository.countConfirmedTracksByVoterId(userId));
+                return user;
+            })
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }

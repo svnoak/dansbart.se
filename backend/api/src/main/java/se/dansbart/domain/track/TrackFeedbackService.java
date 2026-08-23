@@ -6,10 +6,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.DanceMovementFeedback;
 import se.dansbart.domain.admin.DanceMovementFeedbackJooqRepository;
-import se.dansbart.worker.TaskDispatcher;
+import se.dansbart.domain.reputation.VoterReputationService;
+import se.dansbart.voter.VoterContext;
 
 import se.dansbart.dto.DanceStyleDto;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -22,30 +24,47 @@ import java.util.UUID;
 @Slf4j
 public class TrackFeedbackService {
 
-    private static final int CONFIRMATION_THRESHOLD = 2;
-
     private final TrackStyleVoteJooqRepository voteRepository;
     private final TrackJooqRepository trackJooqRepository;
     private final TrackDanceStyleJooqRepository danceStyleRepository;
     private final TrackStructureVersionJooqRepository structureVersionRepository;
     private final DanceMovementFeedbackJooqRepository movementFeedbackRepository;
-    private final TaskDispatcher taskDispatcher;
+    private final TrackSecondaryStyleConfirmationRepository secondaryConfirmationRepository;
+    private final VoterReputationService reputationService;
+    private final VoterContext voterContext;
 
+    /** Result of a style/tempo vote: the saved vote row, plus whether this specific vote
+     *  was the one that crossed CONFIRMATION_THRESHOLD (false when suggestedStyle was
+     *  null, or the style was already confirmed before this vote). */
+    public record StyleFeedbackResult(TrackStyleVote vote, boolean styleJustConfirmed) {}
+
+    /** Voter identity now comes from VoterContext (populated per-request by
+     *  VoterContextInterceptor from the auth principal or X-Voter-ID) rather than being
+     *  passed in by each caller — keeps every caller consistent without re-deriving it. */
     @Transactional
-    public Optional<TrackStyleVote> submitStyleFeedback(
+    public Optional<StyleFeedbackResult> submitStyleFeedback(
             UUID trackId,
-            String voterId,
             String suggestedStyle,
             String tempoCorrection) {
 
+        UUID voterId = voterContext.getVoterId();
+        if (voterId == null) {
+            return Optional.empty();
+        }
         if (!trackJooqRepository.existsById(trackId)) {
             return Optional.empty();
         }
+
+        BigDecimal weight = reputationService.getWeightForCurrentVoter();
+        BigDecimal sumBefore = suggestedStyle != null
+            ? voteRepository.weightedSumByTrackIdAndSuggestedStyle(trackId, suggestedStyle)
+            : BigDecimal.ZERO;
 
         TrackStyleVote vote = voteRepository.findByTrackIdAndVoterId(trackId, voterId)
             .map(existing -> {
                 if (suggestedStyle != null) existing.setSuggestedStyle(suggestedStyle);
                 if (tempoCorrection != null) existing.setTempoCorrection(tempoCorrection);
+                existing.setWeight(weight);
                 return existing;
             })
             .orElseGet(() -> TrackStyleVote.builder()
@@ -53,28 +72,58 @@ public class TrackFeedbackService {
                 .voterId(voterId)
                 .suggestedStyle(suggestedStyle)
                 .tempoCorrection(tempoCorrection)
+                .weight(weight)
                 .build());
 
         TrackStyleVote saved = voteRepository.save(vote);
 
-        // Tally votes: if 2+ distinct users voted the same style, confirm it
-        if (suggestedStyle != null) {
-            tallyVotesForStyle(trackId, suggestedStyle);
-        }
+        boolean styleJustConfirmed = suggestedStyle != null
+            && applyVoteThresholds(trackId, suggestedStyle, sumBefore);
 
-        return Optional.of(saved);
+        return Optional.of(new StyleFeedbackResult(saved, styleJustConfirmed));
     }
 
-    private void tallyVotesForStyle(UUID trackId, String style) {
-        long distinctVoters = voteRepository.countByTrackIdAndSuggestedStyle(trackId, style);
-        if (distinctVoters < CONFIRMATION_THRESHOLD) {
-            return;
+    /**
+     * CONFIRMATION_THRESHOLD (equal to a single anonymous vote's weight) confirms the
+     * style for display. RETRAINING_THRESHOLD is a deliberately higher bar reserved for
+     * anything that would otherwise feed back into the ML model.
+     *
+     * @return true if this vote was the one that newly confirmed the style (i.e. the
+     *         style was not yet confirmed before this call, and confirmStyleIfNeeded
+     *         just flipped it — not merely a re-check of an already-confirmed style).
+     */
+    private boolean applyVoteThresholds(UUID trackId, String style, BigDecimal sumBefore) {
+        BigDecimal sumAfter = voteRepository.weightedSumByTrackIdAndSuggestedStyle(trackId, style);
+
+        boolean styleJustConfirmed = false;
+        if (sumAfter.compareTo(VoterReputationService.CONFIRMATION_THRESHOLD) >= 0) {
+            styleJustConfirmed = confirmStyleIfNeeded(trackId, style);
         }
 
-        // Check if already confirmed
+        boolean crossedRetrainThreshold =
+            sumAfter.compareTo(VoterReputationService.RETRAINING_THRESHOLD) >= 0
+                && sumBefore.compareTo(VoterReputationService.RETRAINING_THRESHOLD) < 0;
+        if (crossedRetrainThreshold) {
+            log.info("Retraining threshold crossed: track={}, style={}, sum={}", trackId, style, sumAfter);
+            reputationService.rewardCurrentVoter();
+            // No automatic retrain dispatch here even at this higher-trust threshold: the
+            // classifier isn't considered reliable enough right now to warrant continuous
+            // retraining during a classification push. Retraining is a deliberate manual
+            // action via POST /api/admin/maintenance/retrain-model
+            // (MaintenanceService.triggerRetrain) once there's a meaningful batch of new
+            // confirmations.
+        }
+
+        return styleJustConfirmed;
+    }
+
+    /** @return true if this call actually flipped the style to confirmed; false if it
+     *          was already confirmed (no-op) — the idempotency guard doubles as the
+     *          "did this call just confirm it" signal. */
+    private boolean confirmStyleIfNeeded(UUID trackId, String style) {
         Optional<TrackDanceStyle> existing = danceStyleRepository.findByTrackIdAndDanceStyle(trackId, style);
         if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getIsUserConfirmed())) {
-            return;
+            return false;
         }
 
         if (existing.isPresent()) {
@@ -93,10 +142,8 @@ public class TrackFeedbackService {
             danceStyleRepository.save(newStyle);
         }
 
-        log.info("Style confirmed via vote tally: track={}, style={}, voters={}", trackId, style, distinctVoters);
-
-        // Dispatch debounced retrain
-        taskDispatcher.dispatchRetrainModelDebounced(false);
+        log.info("Style confirmed via vote: track={}, style={}", trackId, style);
+        return true;
     }
 
     @Transactional(readOnly = true)
@@ -106,6 +153,9 @@ public class TrackFeedbackService {
 
     /**
      * Confirm a secondary dance style for a track without affecting the primary style.
+     * Voter identity comes from VoterContext; a missing voter (e.g. malformed/absent
+     * X-Voter-ID) falls back to the pre-dedup unconditional increment rather than
+     * rejecting the request outright.
      */
     @Transactional
     public Optional<Map<String, Object>> confirmSecondaryStyle(UUID trackId, String style) {
@@ -120,8 +170,14 @@ public class TrackFeedbackService {
         }
 
         TrackDanceStyle danceStyle = styleOpt.get();
-        danceStyle.setConfirmationCount(danceStyle.getConfirmationCount() + 1);
-        danceStyleRepository.save(danceStyle);
+        UUID voterId = voterContext.getVoterId();
+        boolean shouldIncrement = voterId == null
+            || secondaryConfirmationRepository.recordConfirmation(trackId, danceStyle.getId(), voterId.toString());
+
+        if (shouldIncrement) {
+            danceStyle.setConfirmationCount(danceStyle.getConfirmationCount() + 1);
+            danceStyleRepository.save(danceStyle);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("style", style);

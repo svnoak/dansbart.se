@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.jooq.impl.DSL.lower;
@@ -93,6 +94,15 @@ public class UserJooqRepository {
             .set(USERS.ROLE, role)
             .where(USERS.ID.eq(id))
             .execute();
+    }
+
+    /** Filters a list of ids down to those that are real user accounts (vs. anonymous voter ids). */
+    public Set<UUID> findExistingIds(List<UUID> ids) {
+        if (ids.isEmpty()) return Set.of();
+        return dsl.select(USERS.ID)
+            .from(USERS)
+            .where(USERS.ID.in(ids))
+            .fetchSet(USERS.ID);
     }
 
     public long countAll() {

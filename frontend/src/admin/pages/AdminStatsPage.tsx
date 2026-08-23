@@ -139,8 +139,9 @@ export function AdminStatsPage() {
 
       // Daily visits: backend now returns { byDate: [{date, total, loggedIn, anonymous}], days }
       // Fill in missing days so the chart always covers the full selected range.
-      const byDateArray: any[] = (dailyRes as any)?.byDate ?? [];
-      const dateMap = new Map(byDateArray.map((d: any) => [String(d.date ?? ''), d]));
+      const byDateArray =
+        ((dailyRes as Record<string, unknown> | null)?.byDate as Record<string, unknown>[] | undefined) ?? [];
+      const dateMap = new Map(byDateArray.map((d) => [String(d.date ?? ''), d]));
       const dailyFilled: DayData[] = [];
       for (let i = days - 1; i >= 0; i--) {
         const d = new Date();
@@ -158,8 +159,9 @@ export function AdminStatsPage() {
 
       // Hourly visits: backend now returns { byHour: [{hour, total, loggedIn, anonymous}], days }
       // Always show all 24 hours.
-      const byHourArray: any[] = (hourlyRes as any)?.byHour ?? [];
-      const hourMap = new Map(byHourArray.map((h: any) => [Number(h.hour), h]));
+      const byHourArray =
+        ((hourlyRes as Record<string, unknown> | null)?.byHour as Record<string, unknown>[] | undefined) ?? [];
+      const hourMap = new Map(byHourArray.map((h) => [Number(h.hour), h]));
       setHourly(
         Array.from({ length: 24 }, (_, h) => {
           const entry = hourMap.get(h);
@@ -173,10 +175,10 @@ export function AdminStatsPage() {
       );
 
       // Most played tracks
-      const tracksData = mostPlayedRes ?? (dashRes as any)?.mostPlayedTracks ?? [];
+      const tracksData = mostPlayedRes ?? (dashRes as Record<string, unknown> | null)?.mostPlayedTracks ?? [];
       setMostPlayed(
         Array.isArray(tracksData)
-          ? tracksData.map((t: any) => ({
+          ? tracksData.map((t) => ({
               trackId: String(t.trackId ?? ''),
               title: String(t.title ?? 'Okänd'),
               playCount: Number(t.playCount ?? 0),
@@ -187,10 +189,14 @@ export function AdminStatsPage() {
       );
 
       // Platform stats
-      const platformData = (platformRes as any)?.platforms ?? (dashRes as any)?.platformStats?.platforms ?? [];
+      const dashPlatformStats = (dashRes as Record<string, unknown> | null)?.platformStats as
+        | Record<string, unknown>
+        | undefined;
+      const platformData =
+        (platformRes as Record<string, unknown> | null)?.platforms ?? dashPlatformStats?.platforms ?? [];
       setPlatforms(
         Array.isArray(platformData)
-          ? platformData.map((p: any) => ({
+          ? platformData.map((p) => ({
               platform: String(p.platform ?? ''),
               playCount: Number(p.playCount ?? 0),
               totalDuration: Number(p.totalDuration ?? 0),
@@ -199,14 +205,18 @@ export function AdminStatsPage() {
       );
 
       setListenTime(listenRes as Record<string, unknown> | null);
-      setNudgeEvents((nudgeRes as any)?.events ?? {});
-      setClassifyEvents((classifyRes as any)?.events ?? {});
+      setNudgeEvents(((nudgeRes as Record<string, unknown> | null)?.events as NudgeEvents | undefined) ?? {});
+      setClassifyEvents(
+        ((classifyRes as Record<string, unknown> | null)?.events as ClassifyEvents | undefined) ?? {},
+      );
       setSessionDuration(durationRes as Record<string, unknown> | null);
-      setBehavioralFlags((flagsRes as any)?.totals ? (flagsRes as any) : null);
-      setTopPaths(Array.isArray(pathsRes) ? (pathsRes as any[]) : []);
+      const flags = flagsRes as { totals: BehavioralFlags; byDeviceType?: DeviceFeatureRow[] } | null;
+      setBehavioralFlags(flags?.totals ? flags : null);
+      setTopPaths(Array.isArray(pathsRes) ? (pathsRes as unknown as TopPath[]) : []);
       setSearchStats(searchRes as Record<string, unknown> | null);
 
-      const visitors = (dashRes as any)?.visitors ?? {};
+      const visitors =
+        ((dashRes as Record<string, unknown> | null)?.visitors as Record<string, unknown> | undefined) ?? {};
       if (visitors.prevTotalVisitors !== undefined) {
         setPrevVisitors({
           totalVisitors: Number(visitors.prevTotalVisitors ?? 0),
@@ -255,8 +265,10 @@ export function AdminStatsPage() {
   const totalPlaylists = (dashboard?.totalPlaylists as number) ?? 0;
 
   // Listen time
-  const totalHours = (listenTime?.totalHours as number) ?? (dashboard as any)?.listenTime?.totalHours ?? 0;
-  const totalMinutesListened = (listenTime?.totalMinutes as number) ?? (dashboard as any)?.listenTime?.totalMinutes ?? 0;
+  const dashListenTime = dashboard?.listenTime as Record<string, unknown> | undefined;
+  const totalHours = (listenTime?.totalHours as number) ?? (dashListenTime?.totalHours as number) ?? 0;
+  const totalMinutesListened =
+    (listenTime?.totalMinutes as number) ?? (dashListenTime?.totalMinutes as number) ?? 0;
 
   const showHourly = days === 1;
 
@@ -649,7 +661,7 @@ export function AdminStatsPage() {
       {classifyStart > 0 && (
         <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
           <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-            Musikdomaren — senaste {days} dagar
+            Snabbklassificering — senaste {days} dagar
           </h2>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">

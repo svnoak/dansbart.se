@@ -32,6 +32,17 @@ public class TrackService {
         return results.isEmpty() ? Optional.empty() : Optional.ofNullable(results.get(0));
     }
 
+    /**
+     * The fast classification queue for a given voter: tracks with no confirmed style yet
+     * that this voter hasn't already voted on, lowest-confidence-first. See
+     * TrackJooqRepository.findClassifyQueueTrackIds for why this is a dedicated query
+     * rather than findPlayableTracksAsListDtos(styleConfirmed=false).
+     */
+    public List<TrackListDto> getClassifyQueue(UUID voterId, int limit) {
+        List<UUID> ids = trackJooqRepository.findClassifyQueueTrackIds(voterId, limit);
+        return trackJooqRepository.findTrackListDtosByIds(ids);
+    }
+
     public Page<Track> findPlayableTracks(
             String mainStyle,
             String subStyle,

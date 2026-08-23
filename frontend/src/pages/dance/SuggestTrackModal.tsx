@@ -6,7 +6,6 @@ import { Button } from '@/ui';
 import { toast } from '@/ui';
 
 interface SuggestTrackModalProps {
-  danceId: string;
   danceName: string;
   alreadySuggestedTrackIds: Set<string>;
   onSuggest: (trackId: string) => Promise<void>;
@@ -14,7 +13,6 @@ interface SuggestTrackModalProps {
 }
 
 export function SuggestTrackModal({
-  danceId: _danceId,
   danceName,
   alreadySuggestedTrackIds,
   onSuggest,
