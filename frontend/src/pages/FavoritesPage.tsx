@@ -56,10 +56,7 @@ export function FavoritesPage() {
   const [filterYouTube, setFilterYouTube] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setLoading(false);
-      return;
-    }
+    if (!isAuthenticated) return;
     const controller = new AbortController();
     getFavoriteTracks({ signal: controller.signal })
       .then(setTracks)

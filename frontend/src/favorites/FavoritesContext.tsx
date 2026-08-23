@@ -1,23 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/auth/useAuth';
 import { getFavoriteIds, toggleFavorite as apiToggle } from '@/api/generated/favorites/favorites';
-
-interface FavoritesContextValue {
-  isFavorited: (trackId: string) => boolean;
-  toggleFavorite: (trackId: string) => Promise<void>;
-}
-
-const FavoritesContext = createContext<FavoritesContextValue | null>(null);
+import { FavoritesContext } from './context';
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setFavoriteIds(new Set());
-      return;
-    }
+    if (!isAuthenticated) return;
     let cancelled = false;
     getFavoriteIds()
       .then((ids) => { if (!cancelled) setFavoriteIds(new Set(ids)); })
@@ -25,7 +16,10 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [isAuthenticated]);
 
-  const isFavorited = useCallback((trackId: string) => favoriteIds.has(trackId), [favoriteIds]);
+  const isFavorited = useCallback(
+    (trackId: string) => isAuthenticated && favoriteIds.has(trackId),
+    [favoriteIds, isAuthenticated],
+  );
 
   const toggleFavorite = useCallback(async (trackId: string) => {
     setFavoriteIds((prev) => {
@@ -54,10 +48,4 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       {children}
     </FavoritesContext.Provider>
   );
-}
-
-export function useFavorites(): FavoritesContextValue {
-  const ctx = useContext(FavoritesContext);
-  if (!ctx) throw new Error('useFavorites must be used within FavoritesProvider');
-  return ctx;
 }

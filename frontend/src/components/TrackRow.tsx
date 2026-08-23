@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
-import { useFavorites } from '@/favorites/FavoritesContext';
+import { useFavorites } from '@/favorites/useFavorites';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
