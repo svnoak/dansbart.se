@@ -36,6 +36,15 @@ function UserMenu() {
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-48 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg z-50">
+          {!!user?.confirmedTrackCount && (
+            <>
+              <p className="px-4 py-2 text-xs text-[rgb(var(--color-text-muted))]">
+                Du har hjälpt bekräfta {user.confirmedTrackCount}{' '}
+                {user.confirmedTrackCount === 1 ? 'låt' : 'låtar'}
+              </p>
+              <hr className="my-1 border-[rgb(var(--color-border))]" />
+            </>
+          )}
           {user?.role === 'ADMIN' && (
             <Link
               to="/admin/library"
