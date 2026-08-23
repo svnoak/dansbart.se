@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.DanceMovementFeedback;
 import se.dansbart.domain.admin.DanceMovementFeedbackJooqRepository;
-import se.dansbart.worker.TaskDispatcher;
 
 import se.dansbart.dto.DanceStyleDto;
 
@@ -29,7 +28,7 @@ public class TrackFeedbackService {
     private final TrackDanceStyleJooqRepository danceStyleRepository;
     private final TrackStructureVersionJooqRepository structureVersionRepository;
     private final DanceMovementFeedbackJooqRepository movementFeedbackRepository;
-    private final TaskDispatcher taskDispatcher;
+    private final TrackSecondaryStyleConfirmationRepository secondaryConfirmationRepository;
 
     @Transactional
     public Optional<TrackStyleVote> submitStyleFeedback(
@@ -95,8 +94,11 @@ public class TrackFeedbackService {
 
         log.info("Style confirmed via vote tally: track={}, style={}, voters={}", trackId, style, distinctVoters);
 
-        // Dispatch debounced retrain
-        taskDispatcher.dispatchRetrainModelDebounced(false);
+        // No automatic retrain dispatch here: the classifier isn't considered reliable
+        // enough right now to warrant continuous retraining on crowd-confirmed data during
+        // a classification push. Retraining is a deliberate manual action via
+        // POST /api/admin/maintenance/retrain-model (MaintenanceService.triggerRetrain)
+        // once there's a meaningful batch of new confirmations.
     }
 
     @Transactional(readOnly = true)
@@ -106,9 +108,15 @@ public class TrackFeedbackService {
 
     /**
      * Confirm a secondary dance style for a track without affecting the primary style.
+     *
+     * @param voterId identifies the confirming voter for dedup (one confirmation per voter
+     *                per style, via track_secondary_style_confirmations). May be null/blank
+     *                for a stale client build predating the X-Voter-ID header on this
+     *                endpoint — in that case the confirmation is counted unconditionally
+     *                (the pre-existing behavior) rather than rejected.
      */
     @Transactional
-    public Optional<Map<String, Object>> confirmSecondaryStyle(UUID trackId, String style) {
+    public Optional<Map<String, Object>> confirmSecondaryStyle(UUID trackId, String style, String voterId) {
         Optional<Track> trackOpt = trackJooqRepository.findById(trackId);
         if (trackOpt.isEmpty()) {
             return Optional.empty();
@@ -120,8 +128,13 @@ public class TrackFeedbackService {
         }
 
         TrackDanceStyle danceStyle = styleOpt.get();
-        danceStyle.setConfirmationCount(danceStyle.getConfirmationCount() + 1);
-        danceStyleRepository.save(danceStyle);
+        boolean shouldIncrement = voterId == null || voterId.isBlank()
+            || secondaryConfirmationRepository.recordConfirmation(trackId, danceStyle.getId(), voterId);
+
+        if (shouldIncrement) {
+            danceStyle.setConfirmationCount(danceStyle.getConfirmationCount() + 1);
+            danceStyleRepository.save(danceStyle);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("style", style);
