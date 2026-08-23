@@ -9,6 +9,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import se.dansbart.domain.admin.artist.AdminArtistController;
 import se.dansbart.domain.admin.artist.AdminArtistService;
+import se.dansbart.voter.VoterContext;
 
 import java.util.*;
 
@@ -26,6 +27,10 @@ class AdminArtistControllerTest {
 
     @MockBean
     private AdminArtistService artistService;
+
+    // Satisfies WebMvcConfig's transitive VoterContext dependency in this slice.
+    @MockBean
+    private VoterContext voterContext;
 
     @Test
     @WithMockUser(roles = "ADMIN")
