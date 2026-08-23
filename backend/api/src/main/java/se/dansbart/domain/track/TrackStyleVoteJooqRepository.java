@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static se.dansbart.jooq.Tables.TRACK_DANCE_STYLES;
 import static se.dansbart.jooq.Tables.TRACK_STYLE_VOTES;
 
 /**
@@ -79,6 +80,23 @@ public class TrackStyleVoteJooqRepository {
 
     public long count() {
         return dsl.fetchCount(TRACK_STYLE_VOTES);
+    }
+
+    /** Count of distinct tracks where this voter's suggested style is the one that's
+     *  now confirmed (is_user_confirmed = true) — the basis for a private "you've
+     *  helped confirm N tracks" counter. Only meaningful for authenticated voters
+     *  (voterId == userId in that case); an anonymous voter's client-generated id
+     *  isn't durable enough to make this count meaningful across sessions. */
+    public long countConfirmedTracksByVoterId(UUID voterId) {
+        return dsl.fetchCount(
+            dsl.selectDistinct(TRACK_STYLE_VOTES.TRACK_ID)
+                .from(TRACK_STYLE_VOTES)
+                .join(TRACK_DANCE_STYLES)
+                    .on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACK_STYLE_VOTES.TRACK_ID)
+                        .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(TRACK_STYLE_VOTES.SUGGESTED_STYLE)))
+                .where(COL_VOTER_ID.eq(voterId)
+                    .and(TRACK_DANCE_STYLES.IS_USER_CONFIRMED.eq(true)))
+        );
     }
 
     public List<TrackStyleVote> findAll() {

@@ -99,6 +99,15 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    to: '/admin/suggestions',
+    label: 'Förslag',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <path d="M10 2a6 6 0 00-3.815 10.631C6.833 13.169 7 13.633 7 14.03V15a1 1 0 001 1h4a1 1 0 001-1v-.97c0-.397.167-.861.815-1.399A6 6 0 0010 2zM8.5 17a.5.5 0 000 1h3a.5.5 0 000-1h-3z" />
+      </svg>
+    ),
+  },
+  {
     to: '/admin/duplicates',
     label: 'Dubbletter',
     icon: (

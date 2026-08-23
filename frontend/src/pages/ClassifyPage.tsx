@@ -10,7 +10,13 @@ import { usePlayer } from '@/player/usePlayer';
 import { getVoterId } from '@/utils/voter';
 import { getTempoLabel } from '@/utils/tempoLabel';
 import { FlagTrackModal } from '@/components/FlagTrackModal';
+import { SuggestNewTrackModal } from '@/components/SuggestNewTrackModal';
+import { SuggestDanceStyleModal } from '@/components/SuggestDanceStyleModal';
+import { LoginRequiredModal } from '@/components/LoginRequiredModal';
+import { useAuth } from '@/auth/useAuth';
 import { FlagIcon, PlayIcon, PauseIcon } from '@/icons';
+
+const LOGIN_NUDGE_VOTE_THRESHOLD = 3;
 
 const TEMPO_BUTTONS = [
   { key: 'Slow', label: 'Långsamt' },
@@ -37,6 +43,7 @@ interface HistoryEntry {
 export function ClassifyPage() {
   useAnalyticsFlag('discovery');
   const player = usePlayer();
+  const { isAuthenticated } = useAuth();
 
   const [tracks, setTracks] = useState<TrackListDto[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -44,10 +51,23 @@ export function ClassifyPage() {
   const [awaitingTempo, setAwaitingTempo] = useState<string | null>(null); // style pending a tempo pick
   const [classifiedCount, setClassifiedCount] = useState(0);
   const [showFlagModal, setShowFlagModal] = useState(false);
+  const [showSuggestTrackModal, setShowSuggestTrackModal] = useState(false);
+  const [showSuggestStyleModal, setShowSuggestStyleModal] = useState(false);
   const [allStyles, setAllStyles] = useState<string[]>([]);
   const [queueExhausted, setQueueExhausted] = useState(false);
+  const [lastConfirmed, setLastConfirmed] = useState<string | null>(null);
+  const [showExplainer, setShowExplainer] = useState(
+    () => !localStorage.getItem('classify_explainer_seen'),
+  );
+
+  const dismissExplainer = () => {
+    localStorage.setItem('classify_explainer_seen', 'true');
+    setShowExplainer(false);
+  };
+  const [showLoginNudge, setShowLoginNudge] = useState(false);
 
   const isFetchingRef = useRef(false);
+  const lastConfirmedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeTrack = tracks[0] ?? null;
   const isCurrentTrack = player.currentTrack?.id === activeTrack?.id;
@@ -109,6 +129,12 @@ export function ClassifyPage() {
     [player, fetchTracks],
   );
 
+  useEffect(() => {
+    return () => {
+      if (lastConfirmedTimerRef.current) clearTimeout(lastConfirmedTimerRef.current);
+    };
+  }, []);
+
   const submitVote = useCallback(
     (style: string | null, tempoCorrection: string) => {
       if (!activeTrack?.id) return;
@@ -122,7 +148,15 @@ export function ClassifyPage() {
         current.id,
         { suggestedStyle: style ?? undefined, tempoCorrection },
         { headers: { 'X-Voter-ID': getVoterId() } },
-      ).catch(() => {});
+      )
+        .then((res) => {
+          if (res.styleJustConfirmed) {
+            if (lastConfirmedTimerRef.current) clearTimeout(lastConfirmedTimerRef.current);
+            setLastConfirmed(current.title ?? null);
+            lastConfirmedTimerRef.current = setTimeout(() => setLastConfirmed(null), 4000);
+          }
+        })
+        .catch(() => {});
 
       recordInteraction1({
         trackId: current.id,
@@ -191,6 +225,26 @@ export function ClassifyPage() {
     fetchTracks();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Soft, one-time login nudge after a few anonymous votes — never blocks continued
+  // classifying, and never repeats once shown (dismissed or not). Anonymous votes
+  // already count on their own (CONFIRMATION_THRESHOLD is tuned for that); this is
+  // purely to surface that a logged-in vote counts for more, at a point where that's
+  // actually relevant rather than up front before the first tap.
+  useEffect(() => {
+    if (
+      classifiedCount >= LOGIN_NUDGE_VOTE_THRESHOLD &&
+      !isAuthenticated &&
+      !localStorage.getItem('login_nudge_shown')
+    ) {
+      setShowLoginNudge(true);
+    }
+  }, [classifiedCount, isAuthenticated]);
+
+  const dismissLoginNudge = () => {
+    localStorage.setItem('login_nudge_shown', 'true');
+    setShowLoginNudge(false);
+  };
+
   // Analytics: session start and abandon (mirrors the previous page's events, minus the
   // rank/streak fields that no longer exist)
   const classifiedCountRef = useRef(0);
@@ -241,10 +295,27 @@ export function ClassifyPage() {
             Snabbklassificering
           </h2>
           <p className="text-xs text-[rgb(var(--color-text-muted))] mt-1">
-            {classifiedCount > 0
-              ? `${classifiedCount} låtar klassificerade den här sessionen`
-              : 'Varje val hjälper till direkt — inget granskas i efterhand'}
+            {lastConfirmed
+              ? `${lastConfirmed} är nu bekräftad och syns i sökningar`
+              : classifiedCount > 0
+                ? `${classifiedCount} låtar klassificerade den här sessionen`
+                : 'Varje val hjälper till direkt — inget granskas i efterhand'}
           </p>
+          {showExplainer && (
+            <p className="text-xs text-[rgb(var(--color-text-muted))] mt-1 flex items-start gap-1.5">
+              <span>
+                Din röst räknas direkt — räcker det med tillräckligt många som är överens
+                visas låten i sökningar.
+              </span>
+              <button
+                onClick={dismissExplainer}
+                className="shrink-0 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] font-bold leading-none"
+                aria-label="Stäng"
+              >
+                &times;
+              </button>
+            </p>
+          )}
         </div>
         {history.length > 0 && (
           <button
@@ -394,6 +465,30 @@ export function ClassifyPage() {
         </div>
       )}
 
+      {/* Secondary entry points: suggesting new content is a deliberate action, not part
+          of the classify flow itself, so these stay low-emphasis and out of the way. */}
+      <div className="mt-6 mx-4 flex flex-col sm:flex-row gap-2 text-xs">
+        <button
+          onClick={() => setShowSuggestTrackModal(true)}
+          className="flex-1 py-2 px-3 rounded-lg border border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] hover:border-[rgb(var(--color-accent))]/50 transition-colors"
+        >
+          Föreslå en ny låt
+        </button>
+        <button
+          onClick={() => setShowSuggestStyleModal(true)}
+          className="flex-1 py-2 px-3 rounded-lg border border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] hover:border-[rgb(var(--color-accent))]/50 transition-colors"
+        >
+          Föreslå en ny dansstil
+        </button>
+      </div>
+
+      {showSuggestTrackModal && (
+        <SuggestNewTrackModal onClose={() => setShowSuggestTrackModal(false)} />
+      )}
+      {showSuggestStyleModal && (
+        <SuggestDanceStyleModal onClose={() => setShowSuggestStyleModal(false)} />
+      )}
+
       {/* Flag modal */}
       {activeTrack && (
         <FlagTrackModal
@@ -403,6 +498,13 @@ export function ClassifyPage() {
           onRefresh={skip}
         />
       )}
+
+      {/* Soft login nudge — never blocks classifying, shown at most once */}
+      <LoginRequiredModal
+        open={showLoginNudge}
+        onClose={dismissLoginNudge}
+        message="Du klassificerar anonymt just nu. Logga in så räknas din röst dubbelt så mycket."
+      />
     </div>
   );
 }

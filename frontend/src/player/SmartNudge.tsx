@@ -58,6 +58,8 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   const [mode, setMode] = useState<Mode>('correction');
   const [correction, setCorrection] = useState({ main: '', style: '', tempo: 'ok' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [justConfirmed, setJustConfirmed] = useState(false);
+  const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [styleTree, setStyleTree] = useState<StyleTree>({});
   const [pendingSecondary, setPendingSecondary] = useState<{
@@ -131,6 +133,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
       setMode('correction');
       setCorrection({ main: '', style: track?.danceStyle ?? '', tempo: 'ok' });
       setDropdownOpen(false);
+      // Only ever attached to the one appearance that set it — a later track's nudge
+      // shouldn't inherit it just because this instance stays mounted across tracks.
+      setShowFirstTimeHint(false);
     }
   }, [track?.id, track?.danceStyle, clearTimers]);
 
@@ -180,6 +185,13 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           has_tempo: trackHasTempo,
           mobilePlayerOpen: mobilePlayerOpen ?? false,
         });
+
+        // One-time explainer, marked seen immediately so it only ever shows once per
+        // browser regardless of how quickly this first appearance gets dismissed.
+        if (!localStorage.getItem('smartnudge_explainer_seen')) {
+          localStorage.setItem('smartnudge_explainer_seen', 'true');
+          setShowFirstTimeHint(true);
+        }
 
         if (!trackHasStyle && !trackHasTempo) {
           setMode('correction');
@@ -235,7 +247,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
       clearTimers();
       setIsSubmitting(true);
       try {
-        await submitFeedback(
+        const res = await submitFeedback(
           track.id,
           { suggestedStyle, tempoCorrection },
           { headers: { 'X-Voter-ID': getVoterId() } },
@@ -245,6 +257,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           setStep('bonus');
         } else if (nextStep === 'success') {
           trackAnalytics('nudge_completed', track.id, { step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
+          setJustConfirmed(!!res.styleJustConfirmed);
           setStep('success');
           setTimeout(() => setStep('hidden'), 2500);
         }
@@ -253,6 +266,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
         // Treat as confirmed even if API fails - avoid hiding the nudge
         localStorage.setItem(`fb_${track.id}`, 'true');
         if (nextStep === 'success') {
+          setJustConfirmed(false);
           setStep('success');
           setTimeout(() => setStep('hidden'), 2500);
         }
@@ -300,6 +314,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
         { headers: { 'X-Voter-ID': getVoterId() } },
       );
       trackAnalytics('nudge_completed', track.id, { step: 'confirm-secondary', mobilePlayerOpen: mobilePlayerOpen ?? false });
+      // Secondary-style confirmation is a separate mechanic (confirmationCount), never the
+      // "just confirmed, now searchable" message, whatever justConfirmed was last set to.
+      setJustConfirmed(false);
       setStep('success');
       setTimeout(() => setStep('hidden'), 2500);
     } catch {
@@ -330,6 +347,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
         setStep('bonus');
       }
     } else {
+      setJustConfirmed(false);
       setStep('success');
       setTimeout(() => setStep('hidden'), 2500);
     }
@@ -483,7 +501,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {step === 'verify' && (
             <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Stammer detta?</p>
+                <p className="opacity-80">Stämmer detta?</p>
                 <p className="font-bold text-base md:text-sm">
                   {track?.danceStyle}
                   {track?.subStyle && track.subStyle !== track.danceStyle && (
@@ -491,6 +509,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   )}
                   {' '}&bull; {tempoLabel}
                 </p>
+                {showFirstTimeHint && (
+                  <p className="text-[10px] md:text-[9px] opacity-70 mt-1">
+                    Din bekräftelse hjälper andra hitta låten.
+                  </p>
+                )}
               </div>
               <div className="flex gap-3 md:gap-2">
                 <button
@@ -514,7 +537,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {step === 'verify-style-only' && (
             <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Ar detta en</p>
+                <p className="opacity-80">Är detta en</p>
                 <p className="font-bold text-base md:text-sm">
                   {track?.danceStyle}
                   {track?.subStyle && track.subStyle !== track.danceStyle && (
@@ -522,6 +545,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   )}
                   ?
                 </p>
+                {showFirstTimeHint && (
+                  <p className="text-[10px] md:text-[9px] opacity-70 mt-1">
+                    Din bekräftelse hjälper andra hitta låten.
+                  </p>
+                )}
               </div>
               <div className="flex gap-3 md:gap-2">
                 <button
@@ -545,7 +573,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {step === 'confirm-secondary' && pendingSecondary && (
             <div className="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
               <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Kan man aven dansa</p>
+                <p className="opacity-80">Kan man även dansa</p>
                 <p className="font-bold text-base md:text-sm">
                   {pendingSecondary.danceStyle}
                   {pendingSecondary.subStyle &&
@@ -581,6 +609,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
                 Vad kan man dansa?
               </p>
+              {showFirstTimeHint && (
+                <p className="text-[10px] md:text-[9px] opacity-70 -mt-2 mb-3 md:mb-2">
+                  Din bekräftelse hjälper andra hitta låten.
+                </p>
+              )}
               {renderDropdown(
                 correction.main || 'Välj kategori...',
                 mainCategories.map((c) => ({ label: c, value: c })),
@@ -643,7 +676,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
             <div className="bg-purple-700 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
               <div className="flex justify-between items-center mb-3 md:mb-2">
                 <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold">
-                  Hur snabb ar {correction.style}n?
+                  Hur snabb är {correction.style}n?
                 </p>
                 <button
                   onClick={() => {
@@ -687,7 +720,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                 &larr; Tillbaka
               </button>
               <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
-                {mode === 'addition' ? 'Lagg till stil' : 'Korrekt dansstil'}
+                {mode === 'addition' ? 'Lägg till stil' : 'Korrekt dansstil'}
               </p>
               {renderDropdown(
                 correction.main || 'Välj kategori...',
@@ -737,7 +770,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
             >
               <div className="flex justify-between items-center mb-3 md:mb-2">
                 <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold">
-                  Ar {correction.style || 'dansen'} {tempoLabel}?
+                  Är {correction.style || 'dansen'} {tempoLabel}?
                 </p>
                 <button
                   onClick={() =>
@@ -802,7 +835,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   onClick={startAddition}
                   className="bg-teal-600 hover:bg-teal-700 text-white text-sm md:text-xs font-bold py-3 md:py-2 rounded flex flex-col items-center"
                 >
-                  <span>Lagg till Alt.</span>
+                  <span>Lägg till Alt.</span>
                   <span className="text-xs md:text-[9px] opacity-75 font-normal">
                     Detta är också...
                   </span>
@@ -828,7 +861,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Tack för hjälpen!
+                {justConfirmed ? 'Låten är nu bekräftad och syns i sökningar!' : 'Tack för hjälpen!'}
               </div>
             </div>
           )}
