@@ -11,6 +11,7 @@ import se.dansbart.dto.DanceStyleDto;
 import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.TrackStyleVoteDto;
+import se.dansbart.voter.VoterContext;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +27,7 @@ public class TrackController {
 
     private final TrackService trackService;
     private final TrackFeedbackService feedbackService;
+    private final VoterContext voterContext;
 
     @GetMapping
     @Operation(summary = "Get playable tracks with optional filters")
@@ -82,6 +84,18 @@ public class TrackController {
         return ResponseEntity.ok(PageResponse.from(trackService.searchByTitleAsListDtos(q, pageable)));
     }
 
+    @GetMapping("/classify-queue")
+    @Operation(summary = "Personalized fast-classification queue: unconfirmed tracks this "
+        + "voter hasn't already voted on, lowest-confidence-first")
+    public ResponseEntity<List<TrackListDto>> getClassifyQueue(
+            @RequestParam(defaultValue = "20") int limit) {
+        UUID voterId = voterContext.getVoterId();
+        if (voterId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(trackService.getClassifyQueue(voterId, Math.min(limit, 100)));
+    }
+
     @PostMapping("/{id}/feedback")
     @Operation(summary = "Submit style correction feedback for a track")
     public ResponseEntity<TrackStyleVoteDto> submitFeedback(
@@ -90,7 +104,7 @@ public class TrackController {
         // Voter identity comes from VoterContext (auth principal or X-Voter-ID, resolved
         // once per request by VoterContextInterceptor) rather than being parsed here.
         return feedbackService.submitStyleFeedback(id, request.suggestedStyle(), request.tempoCorrection())
-            .map(TrackController::toVoteDto)
+            .map(result -> toVoteDto(result.vote(), result.styleJustConfirmed()))
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.badRequest().build());
     }
@@ -205,13 +219,14 @@ public class TrackController {
         return ResponseEntity.notFound().build();
     }
 
-    private static TrackStyleVoteDto toVoteDto(TrackStyleVote vote) {
+    private static TrackStyleVoteDto toVoteDto(TrackStyleVote vote, boolean styleJustConfirmed) {
         return TrackStyleVoteDto.builder()
             .id(vote.getId())
             .trackId(vote.getTrackId())
             .suggestedStyle(vote.getSuggestedStyle())
             .tempoCorrection(vote.getTempoCorrection())
             .createdAt(vote.getCreatedAt())
+            .styleJustConfirmed(styleJustConfirmed)
             .build();
     }
 

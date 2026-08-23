@@ -18,7 +18,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch('/api/users/me', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) setUser({ id: data.id, username: data.username, role: data.role ?? 'USER' });
+        if (data) {
+          setUser({
+            id: data.id,
+            username: data.username,
+            role: data.role ?? 'USER',
+            confirmedTrackCount: data.confirmedTrackCount ?? 0,
+          });
+        }
       })
       .finally(() => setIsLoading(false));
   }, []);

@@ -215,13 +215,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="m-4">
         <div className="rounded-xl border border-[rgb(var(--color-accent))]/30 bg-[rgb(var(--color-accent-muted))]/30 p-4">
-          <p className="text-sm font-medium text-[rgb(var(--color-text))]">Veckans utmaning</p>
+          <p className="text-sm font-medium text-[rgb(var(--color-text))]">Hjälp klassificera</p>
           <p className="mt-1 text-xs text-[rgb(var(--color-text-muted))]">
-            Hjälp till att förbättra klassificeringen av dansstilar.
+            Din klassificering används direkt — inget granskas i efterhand.
           </p>
           <Link to="/classify" className="mt-3 block" onClick={onNavigate}>
             <Button variant="primary" size="sm" className="w-full">
-              Musikdomaren
+              Snabbklassificera
             </Button>
           </Link>
         </div>

@@ -661,7 +661,7 @@ export function AdminStatsPage() {
       {classifyStart > 0 && (
         <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
           <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-            Musikdomaren — senaste {days} dagar
+            Snabbklassificering — senaste {days} dagar
           </h2>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">

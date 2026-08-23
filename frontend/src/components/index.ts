@@ -6,4 +6,3 @@ export { SearchBar } from './SearchBar';
 export { StyleShortcutCard } from './StyleShortcutCard';
 export { TrackCard } from './TrackCard';
 export { TrackRow } from './TrackRow';
-export { WeeklyChallengeCard } from './WeeklyChallengeCard';
