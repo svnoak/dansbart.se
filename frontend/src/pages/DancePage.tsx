@@ -168,7 +168,7 @@ export function DancePage() {
         postVote(dance.id!, track.id, newVote).catch(() => {});
       }
     },
-    [dance?.id, votes],
+    [dance, votes],
   );
 
   async function handleSetPrimary(trackId: string) {
@@ -327,7 +327,6 @@ export function DancePage() {
 
       {showSuggest && dance.id && (
         <SuggestTrackModal
-          danceId={dance.id}
           danceName={dance.name ?? ''}
           alreadySuggestedTrackIds={new Set([
             ...allTracks.map((t) => t.id ?? '').filter(Boolean),

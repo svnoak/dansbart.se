@@ -39,6 +39,7 @@ import { AdminStatsPage } from '@/admin/pages/AdminStatsPage';
 import { AdminKeywordsPage } from '@/admin/pages/AdminKeywordsPage';
 import { AdminIngestPage } from '@/admin/pages/AdminIngestPage';
 import { AdminPendingPage } from '@/admin/pages/AdminPendingPage';
+import { AdminSuggestionsPage } from '@/admin/pages/AdminSuggestionsPage';
 import { AdminDuplicatesPage } from '@/admin/pages/AdminDuplicatesPage';
 import { AdminMaintenancePage } from '@/admin/pages/AdminMaintenancePage';
 import { AdminStyleConfigPage } from '@/admin/pages/AdminStyleConfigPage';
@@ -126,6 +127,7 @@ export function App() {
                       <Route path="style-config" element={<AdminStyleConfigPage />} />
                       <Route path="ingest" element={<AdminIngestPage />} />
                       <Route path="pending" element={<AdminPendingPage />} />
+                      <Route path="suggestions" element={<AdminSuggestionsPage />} />
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />
                       <Route path="folkwiki" element={<AdminFolkwikiPage />} />
                       <Route path="users" element={<AdminUsersPage />} />

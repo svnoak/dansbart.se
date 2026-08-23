@@ -337,6 +337,52 @@ public class TrackJooqRepository {
             .toList();
     }
 
+    /**
+     * Track IDs eligible for the fast classification queue, lowest-confidence-first,
+     * excluding:
+     *  - tracks that already have a user-confirmed style (findPlayableTracksWithFilters's
+     *    styleConfirmed=false param does NOT do this — it only filters/sorts by the raw ML
+     *    confidence score, not track_dance_styles.is_user_confirmed, so a track a single
+     *    vote already confirmed would otherwise keep reappearing indefinitely since nothing
+     *    changes its confidence score);
+     *  - tracks this specific voter has already voted on, so no one is asked about the same
+     *    track twice regardless of whether their vote reached the confirmation threshold.
+     *
+     * voter_id on track_style_votes is compared via a dynamic UUID field override rather
+     * than the generated (stale, still-String-typed) TRACK_STYLE_VOTES.VOTER_ID binding —
+     * see TrackStyleVoteJooqRepository's class doc for why.
+     */
+    public List<UUID> findClassifyQueueTrackIds(UUID voterId, int limit) {
+        var voterIdCol = DSL.field(DSL.name("track_style_votes", "voter_id"), UUID.class);
+
+        Condition alreadyConfirmed = DSL.exists(
+            DSL.selectOne().from(TRACK_DANCE_STYLES)
+                .where(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID)
+                    .and(TRACK_DANCE_STYLES.IS_USER_CONFIRMED.eq(true)))
+        );
+        Condition alreadyVotedByThisVoter = DSL.exists(
+            DSL.selectOne().from(TRACK_STYLE_VOTES)
+                .where(TRACK_STYLE_VOTES.TRACK_ID.eq(TRACKS.ID)
+                    .and(voterIdCol.eq(voterId)))
+        );
+
+        Condition where = TRACKS.IS_FLAGGED.eq(false)
+            .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
+            .and(PLAYBACK_LINKS.IS_WORKING.eq(true))
+            .andNot(alreadyConfirmed)
+            .andNot(alreadyVotedByThisVoter);
+
+        return dsl.select(TRACKS.ID)
+            .from(TRACKS)
+            .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
+            .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
+            .where(where)
+            .groupBy(TRACKS.ID)
+            .orderBy(DSL.max(TRACK_DANCE_STYLES.CONFIDENCE).asc().nullsFirst())
+            .limit(limit)
+            .fetch(TRACKS.ID);
+    }
+
     public long countPlayableTracksWithFilters(
         String mainStyle,
         String subStyle,

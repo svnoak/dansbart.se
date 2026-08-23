@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, IconButton, toast } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
-import { useFavorites } from '@/favorites/FavoritesContext';
+import { useFavorites } from '@/favorites/useFavorites';
 import {
   PauseIcon,
   PlayIcon,

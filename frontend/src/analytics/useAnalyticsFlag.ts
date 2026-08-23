@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { getVoterId } from '@/utils/voter';
 
 type SiteArea = 'search' | 'playlists' | 'library' | 'discovery';
@@ -9,13 +9,13 @@ type SiteArea = 'search' | 'playlists' | 'library' | 'discovery';
  */
 export function useAnalyticsFlag(area: SiteArea) {
   const fired = useRef(false);
-  if (!fired.current) {
+  useEffect(() => {
+    if (fired.current) return;
     fired.current = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fetch('/api/analytics/session/flag', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: getVoterId(), area }),
     }).catch(() => {});
-  }
+  }, [area]);
 }

@@ -26,9 +26,8 @@ export function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     const deviceType = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    createOrUpdateSession({ sessionId: getVoterId(), userAgent: navigator.userAgent, isAuthenticated: user != null, deviceType } as any).catch(() => {});
-    recordPathView({ path: location.pathname } as any).catch(() => {});
+    createOrUpdateSession({ sessionId: getVoterId(), userAgent: navigator.userAgent, isAuthenticated: user != null, deviceType }).catch(() => {});
+    recordPathView({ path: location.pathname }).catch(() => {});
   }, [location.pathname, user]);
 
   return (

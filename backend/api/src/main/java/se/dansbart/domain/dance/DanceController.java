@@ -73,14 +73,14 @@ public class DanceController {
     public ResponseEntity<Void> voteOnTrack(
             @PathVariable UUID id,
             @PathVariable UUID trackId,
-            @AuthenticationPrincipal UUID userId,
-            @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader,
             @RequestBody DanceTrackVoteRequest request) {
-        String voterId = userId != null ? userId.toString() : voterHeader;
-        if (voterId == null || voterId.isBlank()) return ResponseEntity.badRequest().build();
         int voteValue = "up".equals(request.vote()) ? 1 : "down".equals(request.vote()) ? -1 : 0;
         if (voteValue == 0) return ResponseEntity.badRequest().build();
-        danceService.voteOnTrack(id, trackId, voterId, voteValue);
+        try {
+            danceService.voteOnTrack(id, trackId, voteValue);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -88,12 +88,12 @@ public class DanceController {
     @Operation(summary = "Remove a vote on a recommended track")
     public ResponseEntity<Void> removeVote(
             @PathVariable UUID id,
-            @PathVariable UUID trackId,
-            @AuthenticationPrincipal UUID userId,
-            @RequestHeader(value = "X-Voter-ID", required = false) String voterHeader) {
-        String voterId = userId != null ? userId.toString() : voterHeader;
-        if (voterId == null || voterId.isBlank()) return ResponseEntity.badRequest().build();
-        danceService.removeVote(id, trackId, voterId);
+            @PathVariable UUID trackId) {
+        try {
+            danceService.removeVote(id, trackId);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
+        }
         return ResponseEntity.ok().build();
     }
 

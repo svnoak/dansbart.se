@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -64,11 +63,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [queueOpen, setQueueOpen] = useState(false);
   const toggleQueue = useCallback(() => setQueueOpen((v) => !v), []);
   const closeQueue = useCallback(() => setQueueOpen(false), []);
-
-  // Auto-close queue panel when queue becomes empty
-  useEffect(() => {
-    if (state.queue.length === 0) setQueueOpen(false);
-  }, [state.queue.length]);
+  // Never actually "open" once the queue is empty — computed, not synced via effect.
+  const effectiveQueueOpen = queueOpen && state.queue.length > 0;
 
   const play = useCallback(
     (track: TrackListDto, contextTracks?: TrackListDto[]) => {
@@ -223,7 +219,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       reorderQueue,
       next,
       prev,
-      queueOpen,
+      queueOpen: effectiveQueueOpen,
       toggleQueue,
       closeQueue,
     }),
@@ -239,7 +235,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       reorderQueue,
       next,
       prev,
-      queueOpen,
+      effectiveQueueOpen,
       toggleQueue,
       closeQueue,
     ]
