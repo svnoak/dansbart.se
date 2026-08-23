@@ -39,9 +39,15 @@ interface SmartNudgeProps {
   mobilePlayerOpen?: boolean;
 }
 
+// A track already classified with at least this much confidence isn't worth nudging
+// about — verifying something the model is already confident in wastes an interaction
+// for no real gain. Unclassified tracks (no confidence yet) always remain eligible.
+const HIGH_CONFIDENCE_THRESHOLD = 0.8;
+
 function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<string, unknown>) {
   recordInteraction1({
     trackId,
+    sessionId: getVoterId(),
     eventType,
     eventData: eventData as Record<string, Record<string, unknown>> | undefined,
   }).catch(() => {});
@@ -96,6 +102,12 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
     return () => document.removeEventListener('click', handler);
   }, [dropdownOpen]);
 
+  // Records a passive dismissal (no feedback submitted) so this track isn't re-nudged for
+  // 24h, without permanently suppressing it the way an actual submission does (`fb_<id>`).
+  const markSeen = (trackId: string) => {
+    localStorage.setItem(`fb_seen_${trackId}`, String(Date.now()));
+  };
+
   // --- Timer helpers ---
   const clearTimers = useCallback(() => {
     if (showDelayTimer.current) {
@@ -137,6 +149,12 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
       return;
     }
 
+    const seenAt = localStorage.getItem(`fb_seen_${track.id}`);
+    if (seenAt && Date.now() - Number(seenAt) < 24 * 60 * 60 * 1000) {
+      if (currentStep !== 'hidden') setStep('hidden');
+      return;
+    }
+
     if (isPlaying && !playbackStartTime.current) {
       playbackStartTime.current = Date.now();
       clearTimers();
@@ -151,6 +169,11 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           track.danceStyle !== 'Unclassified';
         const trackHasTempo =
           trackHasStyle && !!track?.effectiveBpm && track.effectiveBpm > 0;
+
+        // A track the model is already confident about isn't worth verifying again.
+        if (trackHasStyle && (track?.confidence ?? 0) >= HIGH_CONFIDENCE_THRESHOLD) {
+          return;
+        }
 
         trackAnalytics('nudge_shown', track?.id, {
           has_style: trackHasStyle,
@@ -172,6 +195,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           const s = stepRef.current;
           if (s === 'verify' || s === 'verify-style-only') {
             trackAnalytics('nudge_dismissed', track?.id, { reason: 'auto_timeout', step: s, mobilePlayerOpen: mobilePlayerOpen ?? false });
+            if (track?.id) markSeen(track.id);
             setStep('hidden');
           }
         }, 20000);
@@ -270,7 +294,12 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
     if (!track?.id || !pendingSecondary) return;
     setIsSubmitting(true);
     try {
-      await confirmSecondaryStyle(track.id, { style: pendingSecondary.danceStyle });
+      await confirmSecondaryStyle(
+        track.id,
+        { style: pendingSecondary.danceStyle },
+        { headers: { 'X-Voter-ID': getVoterId() } },
+      );
+      trackAnalytics('nudge_completed', track.id, { step: 'confirm-secondary', mobilePlayerOpen: mobilePlayerOpen ?? false });
       setStep('success');
       setTimeout(() => setStep('hidden'), 2500);
     } catch {
@@ -281,6 +310,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   };
 
   const rejectSecondary = () => {
+    trackAnalytics('nudge_dismissed', track?.id, { reason: 'secondary_no', step: 'confirm-secondary', mobilePlayerOpen: mobilePlayerOpen ?? false });
     setPendingSecondary(null);
     setStep('bonus');
   };
@@ -290,6 +320,10 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
     const specificStyle = track?.subStyle || track?.danceStyle || '';
     const ok = await submit(specificStyle, 'ok', null);
     if (ok) {
+      // nextStep=null above skips submit()'s own success-analytics branch, since this
+      // continues into the secondary-style ask rather than ending the flow — but the
+      // confirmation itself still happened and should be counted.
+      trackAnalytics('nudge_completed', track?.id, { step: 'verify', mobilePlayerOpen: mobilePlayerOpen ?? false });
       try {
         await showSecondaryConfirm();
       } catch {
@@ -558,6 +592,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                 <button
                   onClick={() => {
                     trackAnalytics('nudge_dismissed', track?.id, { reason: 'vet_ej', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
+                    if (track?.id) markSeen(track.id);
                     setStep('hidden');
                     setDropdownOpen(false);
                   }}
@@ -747,7 +782,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <div className="flex justify-between items-center mb-3 md:mb-2">
                 <p className="text-sm md:text-xs font-bold text-gray-400 uppercase">Redigera</p>
                 <button
-                  onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'close', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false }); setStep('hidden'); }}
+                  onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'close', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false }); if (track?.id) markSeen(track.id); setStep('hidden'); }}
                   className="text-gray-400 hover:text-white text-sm md:text-xs"
                 >
                   Stäng
