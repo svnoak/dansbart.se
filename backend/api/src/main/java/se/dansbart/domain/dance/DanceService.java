@@ -7,12 +7,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.reputation.VoterReputationService;
 import se.dansbart.domain.track.TrackFeedbackService;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.dto.DanceDto;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.request.DanceImportItem;
+import se.dansbart.voter.VoterContext;
 
+import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +34,8 @@ public class DanceService {
     private final TrackJooqRepository trackJooqRepository;
     private final DanceTrackVoteRepository voteRepository;
     private final TrackFeedbackService trackFeedbackService;
+    private final VoterReputationService reputationService;
+    private final VoterContext voterContext;
 
     public Page<DanceDto> getDances(String search, String danceType, Pageable pageable) {
         Page<Dance> page = danceJooqRepository.findAll(search, danceType, pageable);
@@ -159,20 +164,45 @@ public class DanceService {
     }
 
     @Transactional
-    public void voteOnTrack(UUID danceId, UUID trackId, String voterId, int vote) {
-        voteRepository.upsertVote(danceId, trackId, voterId, vote);
+    public void voteOnTrack(UUID danceId, UUID trackId, int vote) {
+        UUID voterId = voterContext.getVoterId();
+        if (voterId == null) {
+            throw new IllegalStateException("No voter identity");
+        }
+
+        BigDecimal weight = reputationService.getWeightForCurrentVoter();
+        BigDecimal sumBefore = vote == 1
+            ? voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId)
+            : BigDecimal.ZERO;
+
+        voteRepository.upsertVote(danceId, trackId, voterId, vote, weight);
+
         if (vote == 1) {
             danceJooqRepository.addTrackConfirmed(danceId, trackId, null);
             danceJooqRepository.findById(danceId).ifPresent(dance -> {
                 if (dance.getDanceType() != null && !dance.getDanceType().isBlank()) {
-                    trackFeedbackService.submitStyleFeedback(trackId, voterId, dance.getDanceType(), null);
+                    trackFeedbackService.submitStyleFeedback(trackId, dance.getDanceType(), null);
                 }
             });
+
+            BigDecimal sumAfter = voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId);
+            boolean crossedRetrainThreshold =
+                sumAfter.compareTo(VoterReputationService.RETRAINING_THRESHOLD) >= 0
+                    && sumBefore.compareTo(VoterReputationService.RETRAINING_THRESHOLD) < 0;
+            if (crossedRetrainThreshold) {
+                reputationService.rewardUpvoters(voteRepository.findUpvoterIdsByDanceAndTrack(danceId, trackId));
+                // No automatic retrain dispatch here either — see the matching comment in
+                // TrackFeedbackService.applyVoteThresholds for why.
+            }
         }
     }
 
     @Transactional
-    public void removeVote(UUID danceId, UUID trackId, String voterId) {
+    public void removeVote(UUID danceId, UUID trackId) {
+        UUID voterId = voterContext.getVoterId();
+        if (voterId == null) {
+            throw new IllegalStateException("No voter identity");
+        }
         voteRepository.deleteVote(danceId, trackId, voterId);
     }
 

@@ -2,6 +2,7 @@ package se.dansbart.domain.track;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -18,11 +19,14 @@ public class TrackStyleVote {
 
     private Track track;
 
-    private String voterId;
+    private UUID voterId;
 
     private String suggestedStyle;
 
     private String tempoCorrection;
+
+    @Builder.Default
+    private BigDecimal weight = BigDecimal.ONE;
 
     private OffsetDateTime createdAt;
 }
