@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { CloseIcon, FlagIcon, ChevronDownIcon } from '@/icons';
 import { getStyleTree } from '@/api/generated/styles/styles';
 import { flagTrack, submitFeedback } from '@/api/generated/tracks/tracks';
+import { getVoterId } from '@/utils/voter';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
 
@@ -169,10 +170,14 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
     if (!track.id) return;
     setIsSubmitting(true);
     try {
-      await submitFeedback(track.id, {
-        suggestedStyle: correctionStyle,
-        tempoCorrection: tempoOverride ?? correctionTempo,
-      });
+      await submitFeedback(
+        track.id,
+        {
+          suggestedStyle: correctionStyle,
+          tempoCorrection: tempoOverride ?? correctionTempo,
+        },
+        { headers: { 'X-Voter-ID': getVoterId() } },
+      );
       finish('Tack f\u00f6r att du bidrar till att g\u00f6ra sidan b\u00e4ttre!');
     } catch {
       setError('Kunde inte skicka');

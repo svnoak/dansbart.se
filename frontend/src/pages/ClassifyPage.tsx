@@ -125,7 +125,7 @@ export function ClassifyPage() {
     (style: string | null, tempoCorrection: string) => {
       if (!activeTrack?.id) return;
       const [current, ...rest] = tracks;
-      if (!current) return;
+      if (!current?.id) return;
 
       setHistory((h) => [...h.slice(-9), { track: current }]); // keep last 10 for undo
       setClassifiedCount((c) => c + 1);
@@ -139,7 +139,7 @@ export function ClassifyPage() {
       recordInteraction1({
         trackId: current.id,
         eventType: 'classify_vote',
-        eventData: { style, tempo: tempoCorrection } as Record<string, unknown>,
+        eventData: { style, tempo: tempoCorrection } as unknown as Record<string, Record<string, unknown>>,
         sessionId: getVoterId(),
       }).catch(() => {});
 
@@ -216,7 +216,7 @@ export function ClassifyPage() {
       if (classifiedCountRef.current > 0) {
         recordInteraction1({
           eventType: 'classify_abandon',
-          eventData: { votes: classifiedCountRef.current } as Record<string, unknown>,
+          eventData: { votes: classifiedCountRef.current } as unknown as Record<string, Record<string, unknown>>,
           sessionId: getVoterId(),
         }).catch(() => {});
       }
