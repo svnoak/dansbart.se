@@ -1,5 +1,5 @@
 import { useState, type MutableRefObject } from 'react';
-import { CloseIcon, QueueListIcon } from '@/icons';
+import { CloseIcon, QueueListIcon, PlusIcon } from '@/icons';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { PlaybackSource } from '@/player/embedUrl';
@@ -50,6 +50,8 @@ interface MobilePlayerOverlayProps {
   onRemoveFromQueue: (index: number) => void;
   onClearQueue: () => void;
   onReorderQueue: (fromIndex: number, toIndex: number) => void;
+  onSuggestTrack: () => void;
+  onSuggestStyle: () => void;
 }
 
 export function MobilePlayerOverlay({
@@ -91,6 +93,8 @@ export function MobilePlayerOverlay({
   onRemoveFromQueue,
   onClearQueue,
   onReorderQueue,
+  onSuggestTrack,
+  onSuggestStyle,
 }: MobilePlayerOverlayProps) {
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const currentBarIndex = useCurrentBarIndex(bars, playbackPositionMs);
@@ -107,13 +111,28 @@ export function MobilePlayerOverlay({
         >
           <CloseIcon className="w-8 h-8" />
         </button>
-        <SourceSwitcher
-          hasYt={hasYt}
-          hasSpot={hasSpot}
-          activeSource={activeSource}
-          onSourceChange={onSourceChange}
-          variant="mobile"
-        />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onSuggestTrack}
+            aria-label="Föreslå en ny låt"
+            className="text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] transition-colors"
+          >
+            <PlusIcon className="w-6 h-6" />
+          </button>
+          <button
+            onClick={onSuggestStyle}
+            className="text-[10px] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] transition-colors"
+          >
+            + stil
+          </button>
+          <SourceSwitcher
+            hasYt={hasYt}
+            hasSpot={hasSpot}
+            activeSource={activeSource}
+            onSourceChange={onSourceChange}
+            variant="mobile"
+          />
+        </div>
       </div>
 
       {/* Scrollable top section: embed + track info */}

@@ -12,6 +12,9 @@ import {
   type PlaybackSource,
 } from '@/player/embedUrl';
 import { SmartNudge } from '@/player/SmartNudge';
+import { SuggestNewTrackModal } from '@/components/SuggestNewTrackModal';
+import { SuggestDanceStyleModal } from '@/components/SuggestDanceStyleModal';
+import { PlusIcon } from '@/icons';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import { usePlaybackPosition } from './hooks/usePlaybackPosition';
 import { useWindowWidth } from './hooks/useWindowWidth';
@@ -49,6 +52,8 @@ export function GlobalPlayerShell() {
   const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all' | 'stop'>('none');
   const [activeSource, setActiveSource] = useState<PlaybackSource>('youtube');
   const [structureMode, setStructureMode] = useState<'none' | 'bars'>('none');
+  const [showSuggestTrackModal, setShowSuggestTrackModal] = useState(false);
+  const [showSuggestStyleModal, setShowSuggestStyleModal] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const isDraggingRef = useRef(false);
@@ -350,6 +355,8 @@ export function GlobalPlayerShell() {
           onRemoveFromQueue={removeFromQueue}
           onClearQueue={clearQueue}
           onReorderQueue={reorderQueue}
+          onSuggestTrack={() => setShowSuggestTrackModal(true)}
+          onSuggestStyle={() => setShowSuggestStyleModal(true)}
         />
       )}
 
@@ -451,11 +458,26 @@ export function GlobalPlayerShell() {
             fullMode={fullMode}
           />
 
-          {/* Right: source switcher */}
+          {/* Right: source switcher + low-emphasis suggest-content entry point */}
           <div
-            className="hidden md:flex w-1/3 justify-end items-center gap-2"
+            className="hidden md:flex w-1/3 justify-end items-center gap-3"
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              onClick={() => setShowSuggestTrackModal(true)}
+              title="Saknar du en låt? Föreslå den"
+              aria-label="Föreslå en ny låt"
+              className="text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] transition-colors"
+            >
+              <PlusIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setShowSuggestStyleModal(true)}
+              title="Föreslå en ny dansstil"
+              className="text-[10px] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] transition-colors"
+            >
+              + stil
+            </button>
             <SourceSwitcher
               hasYt={hasYt}
               hasSpot={hasSpot}
@@ -467,6 +489,13 @@ export function GlobalPlayerShell() {
         </div>
 
       </div>
+
+      {showSuggestTrackModal && (
+        <SuggestNewTrackModal onClose={() => setShowSuggestTrackModal(false)} />
+      )}
+      {showSuggestStyleModal && (
+        <SuggestDanceStyleModal onClose={() => setShowSuggestStyleModal(false)} />
+      )}
     </>
   );
 }
