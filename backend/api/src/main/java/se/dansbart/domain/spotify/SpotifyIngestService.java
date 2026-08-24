@@ -1,4 +1,4 @@
-package se.dansbart.domain.admin.spotify;
+package se.dansbart.domain.spotify;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,11 +11,15 @@ import java.util.*;
  * Service for Spotify preview and ingestion operations.
  * Previews fetch data directly from the Spotify API synchronously.
  * Ingestions queue tracks for background processing via Celery workers.
+ *
+ * Not admin-specific — used by both the admin ingest UI and, once wired up, a
+ * self-serve authenticated-user ingest endpoint. Moved out of the `domain.admin`
+ * package for that reason (previously `AdminSpotifyService`).
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AdminSpotifyService {
+public class SpotifyIngestService {
 
     private final TaskDispatcher taskDispatcher;
     private final SpotifyHttpClient spotifyHttpClient;

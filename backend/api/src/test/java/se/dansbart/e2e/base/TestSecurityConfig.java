@@ -36,6 +36,7 @@ public class TestSecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
+                .requestMatchers("/api/admin/spotify/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
