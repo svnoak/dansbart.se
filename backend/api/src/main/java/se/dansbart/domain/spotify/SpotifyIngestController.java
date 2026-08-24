@@ -11,23 +11,13 @@ import java.util.Map;
 import org.springframework.http.MediaType;
 
 /**
- * Spotify preview and ingest endpoints, open to any authenticated user (see
- * SecurityConfig's specific rule for this path) — not admin-specific logic.
- *
- * URL path AND OpenAPI tag are kept exactly as before (`/api/admin/spotify`,
- * "Admin Spotify" — previously `AdminSpotifyController`) rather than renamed,
- * because renaming either would change the generated frontend client's folder/
- * import path (`@/api/generated/admin-spotify/...`), which requires regenerating
- * against a live backend — not available when this was split out. The admin
- * panel's existing generated client keeps working completely unchanged; a future
- * self-serve authenticated add-content page can import the same generated
- * functions. Renaming the URL/tag together with updating the frontend import is a
- * reasonable follow-up once someone can run `npm run api:update`.
+ * Spotify preview and ingest endpoints. Open to any authenticated user — see
+ * SecurityConfig's rule for this path — since nothing here is admin-specific.
  */
 @RestController
-@RequestMapping(value = "/api/admin/spotify", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/spotify", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
-@Tag(name = "Admin Spotify", description = "Spotify preview and ingest endpoints (authenticated, not admin-only — see class javadoc)")
+@Tag(name = "Spotify Ingest", description = "Spotify preview and ingest endpoints, authenticated users only")
 public class SpotifyIngestController {
 
     private final SpotifyIngestService spotifyIngestService;

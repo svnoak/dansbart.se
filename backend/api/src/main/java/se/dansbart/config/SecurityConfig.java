@@ -66,11 +66,6 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
-                // Spotify ingest: any authenticated user, not admin-only — evaluated before
-                // the /api/admin/** catch-all below since Spring Security's matcher list is
-                // first-match-wins. URL still lives under /api/admin/spotify for now; see
-                // SpotifyIngestController's javadoc for why the path wasn't renamed yet.
-                .requestMatchers("/api/admin/spotify/**").authenticated()
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")
@@ -81,6 +76,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()
+                .requestMatchers("/api/spotify/**").authenticated()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
