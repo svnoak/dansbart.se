@@ -3,14 +3,19 @@
 set -e
 cd /app
 
+# Flyway/jOOQ codegen (bound to generate-sources, runs on every compile) target this JDBC
+# URL — its pom.xml default is localhost:5432 for host-machine mvnw runs, which doesn't
+# resolve inside this container; Postgres is reachable at the `db` compose service instead.
+JOOQ_JDBC_URL_OVERRIDE="-Djooq.codegen.jdbc.url=jdbc:postgresql://db:5432/dansbart"
+
 # Initial compile so the app can start
-./mvnw compile -q -DskipTests || true
+./mvnw compile -q -DskipTests $JOOQ_JDBC_URL_OVERRIDE || true
 
 # In the background: recompile every few seconds so changed files are picked up
 # (DevTools will restart the app when classpath changes)
 ( while true; do
     sleep 3
-    ./mvnw compile -q -DskipTests 2>/dev/null || true
+    ./mvnw compile -q -DskipTests $JOOQ_JDBC_URL_OVERRIDE 2>/dev/null || true
   done ) &
 
-exec ./mvnw spring-boot:run -DskipTests
+exec ./mvnw spring-boot:run -DskipTests $JOOQ_JDBC_URL_OVERRIDE
