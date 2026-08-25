@@ -3,15 +3,11 @@
 set -e
 cd /app
 
-# Flyway/jOOQ codegen (bound to generate-sources, runs on every compile) target this JDBC
-# URL — its pom.xml default is localhost:5432 for host-machine mvnw runs, which doesn't
-# resolve inside this container; Postgres is reachable at the `db` compose service instead.
+# pom.xml's jOOQ codegen JDBC URL defaults to localhost, unreachable in-container.
 JOOQ_JDBC_URL_OVERRIDE="-Djooq.codegen.jdbc.url=jdbc:postgresql://db:5432/dansbart"
 
-# JAVA_TOOL_OPTIONS carries the JDWP debug-agent flag (binds port 5005) for every mvnw
-# invocation in this container. Only the long-running spring-boot:run process below should
-# hold that port — clearing it for the compile calls avoids a bind race between a
-# still-running background compile and spring-boot:run starting up.
+# Forward JDWP only to the forked app JVM, not mvn's own process (which would hog the port).
+DEBUG_AGENT_OPTS="$JAVA_TOOL_OPTIONS"
 
 # Initial compile so the app can start
 JAVA_TOOL_OPTIONS= ./mvnw compile -q -DskipTests $JOOQ_JDBC_URL_OVERRIDE || true
@@ -23,4 +19,5 @@ JAVA_TOOL_OPTIONS= ./mvnw compile -q -DskipTests $JOOQ_JDBC_URL_OVERRIDE || true
     JAVA_TOOL_OPTIONS= ./mvnw compile -q -DskipTests $JOOQ_JDBC_URL_OVERRIDE 2>/dev/null || true
   done ) &
 
-exec ./mvnw spring-boot:run -DskipTests $JOOQ_JDBC_URL_OVERRIDE
+exec env JAVA_TOOL_OPTIONS= ./mvnw spring-boot:run -DskipTests $JOOQ_JDBC_URL_OVERRIDE \
+    "-Dspring-boot.run.jvmArguments=$DEBUG_AGENT_OPTS"
