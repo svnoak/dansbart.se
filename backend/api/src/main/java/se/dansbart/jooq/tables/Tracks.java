@@ -53,6 +53,7 @@ import se.dansbart.jooq.tables.TrackDanceStyles.TrackDanceStylesPath;
 import se.dansbart.jooq.tables.TrackFeelVotes.TrackFeelVotesPath;
 import se.dansbart.jooq.tables.TrackFolkwikiMatches.TrackFolkwikiMatchesPath;
 import se.dansbart.jooq.tables.TrackPlaybacks.TrackPlaybacksPath;
+import se.dansbart.jooq.tables.TrackSecondaryStyleConfirmations.TrackSecondaryStyleConfirmationsPath;
 import se.dansbart.jooq.tables.TrackStructureVersions.TrackStructureVersionsPath;
 import se.dansbart.jooq.tables.TrackStyleVotes.TrackStyleVotesPath;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks.UserDancePrimaryTracksPath;
@@ -473,6 +474,19 @@ public class Tracks extends TableImpl<Record> {
             _trackPlaybacks = new TrackPlaybacksPath(this, null, Keys.TRACK_PLAYBACKS__TRACK_PLAYBACKS_TRACK_ID_FKEY.getInverseKey());
 
         return _trackPlaybacks;
+    }
+
+    private transient TrackSecondaryStyleConfirmationsPath _trackSecondaryStyleConfirmations;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.track_secondary_style_confirmations</code> table
+     */
+    public TrackSecondaryStyleConfirmationsPath trackSecondaryStyleConfirmations() {
+        if (_trackSecondaryStyleConfirmations == null)
+            _trackSecondaryStyleConfirmations = new TrackSecondaryStyleConfirmationsPath(this, null, Keys.TRACK_SECONDARY_STYLE_CONFIRMATIONS__FK_TSSC_TRACK.getInverseKey());
+
+        return _trackSecondaryStyleConfirmations;
     }
 
     private transient TrackStructureVersionsPath _trackStructureVersions;

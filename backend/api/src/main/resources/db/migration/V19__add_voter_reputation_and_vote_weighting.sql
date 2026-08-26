@@ -7,11 +7,20 @@ CREATE TABLE voter_reputation (
     updated_at TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
--- Migrate voter_id from VARCHAR to UUID in both vote tables. All existing values are
+-- Migrate voter_id from VARCHAR to UUID in both vote tables. Existing values are
 -- UUID-shaped strings (crypto.randomUUID() for anonymous voters, an authenticated user's
--- id otherwise), so the cast is safe. Existing constraints/indexes on these columns
--- (track_style_votes' UNIQUE(track_id, voter_id) from V18, dance_track_votes'
--- UNIQUE(dance_id, track_id, voter_id) from V15) carry over across the type change.
+-- id otherwise) except for a small number of non-UUID placeholder ids from early manual
+-- testing (e.g. voter_id = '1') — those are normalized to a fresh random UUID first so
+-- the type change doesn't fail, and so each such row keeps counting as its own distinct
+-- vote rather than colliding with any other row on the UNIQUE constraints below.
+UPDATE track_style_votes SET voter_id = gen_random_uuid()::text
+    WHERE voter_id !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+UPDATE dance_track_votes SET voter_id = gen_random_uuid()::text
+    WHERE voter_id !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+
+-- Existing constraints/indexes on these columns (track_style_votes' UNIQUE(track_id,
+-- voter_id) from V18, dance_track_votes' UNIQUE(dance_id, track_id, voter_id) from V15)
+-- carry over across the type change.
 ALTER TABLE track_style_votes ALTER COLUMN voter_id TYPE UUID USING voter_id::UUID;
 ALTER TABLE dance_track_votes ALTER COLUMN voter_id TYPE UUID USING voter_id::UUID;
 

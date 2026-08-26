@@ -36,6 +36,7 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.TrackSecondaryStyleConfirmations.TrackSecondaryStyleConfirmationsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 
 
@@ -212,6 +213,19 @@ public class TrackDanceStyles extends TableImpl<Record> {
             _tracks = new TracksPath(this, Keys.TRACK_DANCE_STYLES__TRACK_DANCE_STYLES_TRACK_ID_FKEY, null);
 
         return _tracks;
+    }
+
+    private transient TrackSecondaryStyleConfirmationsPath _trackSecondaryStyleConfirmations;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.track_secondary_style_confirmations</code> table
+     */
+    public TrackSecondaryStyleConfirmationsPath trackSecondaryStyleConfirmations() {
+        if (_trackSecondaryStyleConfirmations == null)
+            _trackSecondaryStyleConfirmations = new TrackSecondaryStyleConfirmationsPath(this, null, Keys.TRACK_SECONDARY_STYLE_CONFIRMATIONS__FK_TSSC_DANCE_STYLE.getInverseKey());
+
+        return _trackSecondaryStyleConfirmations;
     }
 
     @Override

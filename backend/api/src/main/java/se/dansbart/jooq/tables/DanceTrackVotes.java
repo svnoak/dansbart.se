@@ -4,6 +4,7 @@
 package se.dansbart.jooq.tables;
 
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
@@ -80,7 +81,7 @@ public class DanceTrackVotes extends TableImpl<Record> {
     /**
      * The column <code>public.dance_track_votes.voter_id</code>.
      */
-    public final TableField<Record, String> VOTER_ID = createField(DSL.name("voter_id"), SQLDataType.VARCHAR(36).nullable(false), this, "");
+    public final TableField<Record, UUID> VOTER_ID = createField(DSL.name("voter_id"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>public.dance_track_votes.vote</code>.
@@ -91,6 +92,11 @@ public class DanceTrackVotes extends TableImpl<Record> {
      * The column <code>public.dance_track_votes.created_at</code>.
      */
     public final TableField<Record, OffsetDateTime> CREATED_AT = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
+
+    /**
+     * The column <code>public.dance_track_votes.weight</code>.
+     */
+    public final TableField<Record, BigDecimal> WEIGHT = createField(DSL.name("weight"), SQLDataType.NUMERIC(5, 2).nullable(false).defaultValue(DSL.field(DSL.raw("1.0"), SQLDataType.NUMERIC)), this, "");
 
     private DanceTrackVotes(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -161,7 +167,7 @@ public class DanceTrackVotes extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_DANCE_TRACK_VOTES_DANCE_ID, Indexes.IX_DANCE_TRACK_VOTES_TRACK_ID);
+        return Arrays.asList(Indexes.IX_DANCE_TRACK_VOTES_DANCE_ID, Indexes.IX_DANCE_TRACK_VOTES_DANCE_TRACK, Indexes.IX_DANCE_TRACK_VOTES_TRACK_ID);
     }
 
     @Override
