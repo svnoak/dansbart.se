@@ -76,6 +76,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()
+                .requestMatchers("/api/spotify/**").authenticated()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
