@@ -15,6 +15,7 @@ import se.dansbart.jooq.tables.Albums;
 import se.dansbart.jooq.tables.AnalysisSources;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
+import se.dansbart.jooq.tables.CommunitySuggestions;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.DanceTrackVotes;
@@ -36,6 +37,7 @@ import se.dansbart.jooq.tables.TrackDanceStyles;
 import se.dansbart.jooq.tables.TrackFeelVotes;
 import se.dansbart.jooq.tables.TrackFolkwikiMatches;
 import se.dansbart.jooq.tables.TrackPlaybacks;
+import se.dansbart.jooq.tables.TrackSecondaryStyleConfirmations;
 import se.dansbart.jooq.tables.TrackStructureVersions;
 import se.dansbart.jooq.tables.TrackStyleVotes;
 import se.dansbart.jooq.tables.Tracks;
@@ -44,6 +46,7 @@ import se.dansbart.jooq.tables.UserInteractions;
 import se.dansbart.jooq.tables.UserTrackFavorites;
 import se.dansbart.jooq.tables.Users;
 import se.dansbart.jooq.tables.VisitorSessions;
+import se.dansbart.jooq.tables.VoterReputation;
 
 
 /**
@@ -78,6 +81,11 @@ public class Public extends SchemaImpl {
      * The table <code>public.artists</code>.
      */
     public final Artists ARTISTS = Artists.ARTISTS;
+
+    /**
+     * The table <code>public.community_suggestions</code>.
+     */
+    public final CommunitySuggestions COMMUNITY_SUGGESTIONS = CommunitySuggestions.COMMUNITY_SUGGESTIONS;
 
     /**
      * The table <code>public.dance_movement_feedback</code>.
@@ -185,6 +193,11 @@ public class Public extends SchemaImpl {
     public final TrackPlaybacks TRACK_PLAYBACKS = TrackPlaybacks.TRACK_PLAYBACKS;
 
     /**
+     * The table <code>public.track_secondary_style_confirmations</code>.
+     */
+    public final TrackSecondaryStyleConfirmations TRACK_SECONDARY_STYLE_CONFIRMATIONS = TrackSecondaryStyleConfirmations.TRACK_SECONDARY_STYLE_CONFIRMATIONS;
+
+    /**
      * The table <code>public.track_structure_versions</code>.
      */
     public final TrackStructureVersions TRACK_STRUCTURE_VERSIONS = TrackStructureVersions.TRACK_STRUCTURE_VERSIONS;
@@ -225,6 +238,11 @@ public class Public extends SchemaImpl {
     public final VisitorSessions VISITOR_SESSIONS = VisitorSessions.VISITOR_SESSIONS;
 
     /**
+     * The table <code>public.voter_reputation</code>.
+     */
+    public final VoterReputation VOTER_REPUTATION = VoterReputation.VOTER_REPUTATION;
+
+    /**
      * No further instances allowed
      */
     private Public() {
@@ -244,6 +262,7 @@ public class Public extends SchemaImpl {
             AnalysisSources.ANALYSIS_SOURCES,
             ArtistCrawlLogs.ARTIST_CRAWL_LOGS,
             Artists.ARTISTS,
+            CommunitySuggestions.COMMUNITY_SUGGESTIONS,
             DanceMovementFeedback.DANCE_MOVEMENT_FEEDBACK,
             DanceStyleConfig.DANCE_STYLE_CONFIG,
             DanceTrackVotes.DANCE_TRACK_VOTES,
@@ -265,6 +284,7 @@ public class Public extends SchemaImpl {
             TrackFeelVotes.TRACK_FEEL_VOTES,
             TrackFolkwikiMatches.TRACK_FOLKWIKI_MATCHES,
             TrackPlaybacks.TRACK_PLAYBACKS,
+            TrackSecondaryStyleConfirmations.TRACK_SECONDARY_STYLE_CONFIRMATIONS,
             TrackStructureVersions.TRACK_STRUCTURE_VERSIONS,
             TrackStyleVotes.TRACK_STYLE_VOTES,
             Tracks.TRACKS,
@@ -272,7 +292,8 @@ public class Public extends SchemaImpl {
             UserInteractions.USER_INTERACTIONS,
             UserTrackFavorites.USER_TRACK_FAVORITES,
             Users.USERS,
-            VisitorSessions.VISITOR_SESSIONS
+            VisitorSessions.VISITOR_SESSIONS,
+            VoterReputation.VOTER_REPUTATION
         );
     }
 }
