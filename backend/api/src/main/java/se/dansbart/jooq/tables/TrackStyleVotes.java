@@ -4,6 +4,7 @@
 package se.dansbart.jooq.tables;
 
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
@@ -87,7 +88,12 @@ public class TrackStyleVotes extends TableImpl<Record> {
     /**
      * The column <code>public.track_style_votes.voter_id</code>.
      */
-    public final TableField<Record, String> VOTER_ID = createField(DSL.name("voter_id"), SQLDataType.VARCHAR.nullable(false), this, "");
+    public final TableField<Record, UUID> VOTER_ID = createField(DSL.name("voter_id"), SQLDataType.UUID.nullable(false), this, "");
+
+    /**
+     * The column <code>public.track_style_votes.weight</code>.
+     */
+    public final TableField<Record, BigDecimal> WEIGHT = createField(DSL.name("weight"), SQLDataType.NUMERIC(5, 2).nullable(false).defaultValue(DSL.field(DSL.raw("1.0"), SQLDataType.NUMERIC)), this, "");
 
     private TrackStyleVotes(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -158,12 +164,17 @@ public class TrackStyleVotes extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_TRACK_STYLE_VOTES_VOTER_ID);
+        return Arrays.asList(Indexes.IX_TRACK_STYLE_VOTES_TRACK_STYLE, Indexes.IX_TRACK_STYLE_VOTES_VOTER_ID);
     }
 
     @Override
     public UniqueKey<Record> getPrimaryKey() {
         return Keys.TRACK_STYLE_VOTES_PKEY;
+    }
+
+    @Override
+    public List<UniqueKey<Record>> getUniqueKeys() {
+        return Arrays.asList(Keys.UQ_TRACK_STYLE_VOTES_TRACK_VOTER);
     }
 
     @Override

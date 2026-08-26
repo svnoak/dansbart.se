@@ -8,6 +8,7 @@ import se.dansbart.jooq.tables.Albums;
 import se.dansbart.jooq.tables.AnalysisSources;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
+import se.dansbart.jooq.tables.CommunitySuggestions;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.DanceTrackVotes;
@@ -29,6 +30,7 @@ import se.dansbart.jooq.tables.TrackDanceStyles;
 import se.dansbart.jooq.tables.TrackFeelVotes;
 import se.dansbart.jooq.tables.TrackFolkwikiMatches;
 import se.dansbart.jooq.tables.TrackPlaybacks;
+import se.dansbart.jooq.tables.TrackSecondaryStyleConfirmations;
 import se.dansbart.jooq.tables.TrackStructureVersions;
 import se.dansbart.jooq.tables.TrackStyleVotes;
 import se.dansbart.jooq.tables.Tracks;
@@ -37,6 +39,7 @@ import se.dansbart.jooq.tables.UserInteractions;
 import se.dansbart.jooq.tables.UserTrackFavorites;
 import se.dansbart.jooq.tables.Users;
 import se.dansbart.jooq.tables.VisitorSessions;
+import se.dansbart.jooq.tables.VoterReputation;
 
 
 /**
@@ -64,6 +67,11 @@ public class Tables {
      * The table <code>public.artists</code>.
      */
     public static final Artists ARTISTS = Artists.ARTISTS;
+
+    /**
+     * The table <code>public.community_suggestions</code>.
+     */
+    public static final CommunitySuggestions COMMUNITY_SUGGESTIONS = CommunitySuggestions.COMMUNITY_SUGGESTIONS;
 
     /**
      * The table <code>public.dance_movement_feedback</code>.
@@ -171,6 +179,11 @@ public class Tables {
     public static final TrackPlaybacks TRACK_PLAYBACKS = TrackPlaybacks.TRACK_PLAYBACKS;
 
     /**
+     * The table <code>public.track_secondary_style_confirmations</code>.
+     */
+    public static final TrackSecondaryStyleConfirmations TRACK_SECONDARY_STYLE_CONFIRMATIONS = TrackSecondaryStyleConfirmations.TRACK_SECONDARY_STYLE_CONFIRMATIONS;
+
+    /**
      * The table <code>public.track_structure_versions</code>.
      */
     public static final TrackStructureVersions TRACK_STRUCTURE_VERSIONS = TrackStructureVersions.TRACK_STRUCTURE_VERSIONS;
@@ -209,4 +222,9 @@ public class Tables {
      * The table <code>public.visitor_sessions</code>.
      */
     public static final VisitorSessions VISITOR_SESSIONS = VisitorSessions.VISITOR_SESSIONS;
+
+    /**
+     * The table <code>public.voter_reputation</code>.
+     */
+    public static final VoterReputation VOTER_REPUTATION = VoterReputation.VOTER_REPUTATION;
 }
