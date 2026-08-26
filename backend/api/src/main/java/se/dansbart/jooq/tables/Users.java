@@ -36,6 +36,7 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.CommunitySuggestions.CommunitySuggestionsPath;
 import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.Dances.DancesPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
@@ -43,6 +44,7 @@ import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks.UserDancePrimaryTracksPath;
 import se.dansbart.jooq.tables.UserTrackFavorites.UserTrackFavoritesPath;
+import se.dansbart.jooq.tables.VoterReputation.VoterReputationPath;
 
 
 /**
@@ -193,6 +195,19 @@ public class Users extends TableImpl<Record> {
         return Arrays.asList(Keys.USERS_DISCOURSE_ID_KEY);
     }
 
+    private transient CommunitySuggestionsPath _communitySuggestions;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.community_suggestions</code> table
+     */
+    public CommunitySuggestionsPath communitySuggestions() {
+        if (_communitySuggestions == null)
+            _communitySuggestions = new CommunitySuggestionsPath(this, null, Keys.COMMUNITY_SUGGESTIONS__COMMUNITY_SUGGESTIONS_REVIEWED_BY_FKEY.getInverseKey());
+
+        return _communitySuggestions;
+    }
+
     private transient DanceTracksPath _danceTracksAddedByFkey;
 
     /**
@@ -299,6 +314,19 @@ public class Users extends TableImpl<Record> {
             _userTrackFavorites = new UserTrackFavoritesPath(this, null, Keys.USER_TRACK_FAVORITES__FK_FAVORITES_USER.getInverseKey());
 
         return _userTrackFavorites;
+    }
+
+    private transient VoterReputationPath _voterReputation;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.voter_reputation</code> table
+     */
+    public VoterReputationPath voterReputation() {
+        if (_voterReputation == null)
+            _voterReputation = new VoterReputationPath(this, null, Keys.VOTER_REPUTATION__VOTER_REPUTATION_VOTER_ID_FKEY.getInverseKey());
+
+        return _voterReputation;
     }
 
     /**
