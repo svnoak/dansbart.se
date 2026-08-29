@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.ArtistCrawlLogJooqRepository;
 import se.dansbart.domain.admin.RejectionLogJooqRepository;
 import se.dansbart.domain.track.Track;
+import se.dansbart.domain.track.TrackDanceStyleJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.worker.TaskDispatcher;
 
@@ -20,6 +21,7 @@ import java.util.*;
 public class MaintenanceService {
 
     private final TrackJooqRepository trackJooqRepository;
+    private final TrackDanceStyleJooqRepository danceStyleRepository;
     private final ArtistCrawlLogJooqRepository crawlLogRepository;
     private final RejectionLogJooqRepository rejectionLogJooqRepository;
     private final StringRedisTemplate redisTemplate;
@@ -316,6 +318,21 @@ public class MaintenanceService {
         result.put("taskId", taskId);
         result.put("limit", limit);
         result.put("message", "ISRC backfill task queued for up to " + limit + " tracks");
+        return result;
+    }
+
+    /**
+     * Recompute bpm_multiplier/effective_bpm for track_dance_styles rows left at
+     * effective_bpm=0 despite the track having a known raw tempo. Runs synchronously —
+     * pure Java/jOOQ, no worker involved.
+     */
+    @Transactional
+    public Map<String, Object> backfillEffectiveBpm() {
+        int updated = danceStyleRepository.backfillEffectiveBpm();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "done");
+        result.put("updated", updated);
         return result;
     }
 }
