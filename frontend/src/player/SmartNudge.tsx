@@ -44,6 +44,16 @@ interface SmartNudgeProps {
 // for no real gain. Unclassified tracks (no confidence yet) always remain eligible.
 const HIGH_CONFIDENCE_THRESHOLD = 0.8;
 
+// Keys match ClassifyPage.tsx/FlagTrackModal.tsx's tempo_correction vocabulary —
+// the backend expects one of these five, not a Swedish label.
+const TEMPO_OPTIONS = [
+  { key: 'Slow', label: 'Långsamt' },
+  { key: 'SlowMed', label: 'Lugnt' },
+  { key: 'Medium', label: 'Lagom' },
+  { key: 'Fast', label: 'Snabbt' },
+  { key: 'Turbo', label: 'V. snabbt' },
+] as const;
+
 function trackAnalytics(eventType: string, trackId?: string, eventData?: Record<string, unknown>) {
   recordInteraction1({
     trackId,
@@ -693,17 +703,15 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                 </button>
               </div>
               <div className="grid grid-cols-5 gap-2 md:gap-1">
-                {(['Långsamt', 'Lugnt', 'Lagom', 'Snabbt', 'V. snabbt'] as const).map(
-                  (label) => (
-                    <button
-                      key={label}
-                      onClick={() => submitTempoSelection(label === 'V. snabbt' ? 'Väldigt snabbt' : label)}
-                      className="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded"
-                    >
-                      {label}
-                    </button>
-                  ),
-                )}
+                {TEMPO_OPTIONS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => submitTempoSelection(key)}
+                    className="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded"
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           )}

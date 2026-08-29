@@ -4,5 +4,5 @@ export function getTempoLabel(bpm: number | undefined): string {
   if (bpm < 110) return 'lugn';
   if (bpm < 135) return 'lagom';
   if (bpm < 165) return 'snabb';
-  return 'väldigt snabbv';
+  return 'väldigt snabbt';
 }

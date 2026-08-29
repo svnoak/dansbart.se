@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import static org.jooq.impl.DSL.countDistinct;
 import static se.dansbart.jooq.Tables.TRACK_DANCE_STYLES;
+import static se.dansbart.jooq.Tables.TRACKS;
 
 @Repository
 public class TrackDanceStyleJooqRepository {
@@ -39,14 +40,6 @@ public class TrackDanceStyleJooqRepository {
             .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
                 .and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true)))
             .fetchOptional(this::toDanceStyle);
-    }
-
-    public void setUserConfirmed(UUID trackId, String danceStyle, boolean confirmed) {
-        dsl.update(TRACK_DANCE_STYLES)
-            .set(TRACK_DANCE_STYLES.IS_USER_CONFIRMED, confirmed)
-            .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
-                .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danceStyle)))
-            .execute();
     }
 
     /** Count of distinct tracks currently classified under a given main style — used to show
@@ -115,6 +108,40 @@ public class TrackDanceStyleJooqRepository {
                 .execute();
         }
         return style;
+    }
+
+    /** One-off backfill for rows stuck at effective_bpm=0 despite a known track tempo.
+     *  Safe to re-run — only rows still at effective_bpm=0 are touched.
+     *  @return number of rows updated */
+    public int backfillEffectiveBpm() {
+        var candidates = dsl
+            .select(TRACK_DANCE_STYLES.ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACKS.TEMPO_BPM)
+            .from(TRACK_DANCE_STYLES)
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_DANCE_STYLES.TRACK_ID))
+            .where(TRACK_DANCE_STYLES.EFFECTIVE_BPM.eq(0))
+            .and(TRACKS.TEMPO_BPM.isNotNull())
+            .and(TRACKS.TEMPO_BPM.ne(0.0))
+            .fetch();
+
+        int updated = 0;
+        for (var r : candidates) {
+            UUID id = r.get(TRACK_DANCE_STYLES.ID);
+            String style = r.get(TRACK_DANCE_STYLES.DANCE_STYLE);
+            Float rawBpm = r.get(TRACKS.TEMPO_BPM) != null ? r.get(TRACKS.TEMPO_BPM).floatValue() : null;
+
+            BpmMultiplierResolver.Result bpm = BpmMultiplierResolver.resolve(style, rawBpm);
+            if (bpm.effectiveBpm() == 0) {
+                continue;
+            }
+
+            dsl.update(TRACK_DANCE_STYLES)
+                .set(TRACK_DANCE_STYLES.BPM_MULTIPLIER, (double) bpm.multiplier())
+                .set(TRACK_DANCE_STYLES.EFFECTIVE_BPM, bpm.effectiveBpm())
+                .where(TRACK_DANCE_STYLES.ID.eq(id))
+                .execute();
+            updated++;
+        }
+        return updated;
     }
 
     private TrackDanceStyle toDanceStyle(Record r) {
