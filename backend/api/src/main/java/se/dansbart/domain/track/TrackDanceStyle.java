@@ -34,6 +34,11 @@ public class TrackDanceStyle {
 
     private Integer effectiveBpm;
 
+    /** Where this classification came from: 'metadata' (keyword match), 'ml' (groove-
+     *  fingerprint prediction), or 'heuristic' (math/structure guess). Null for rows
+     *  predating this column. */
+    private String source;
+
     @Builder.Default
     private Integer confirmationCount = 0;
 

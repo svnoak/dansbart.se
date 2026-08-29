@@ -120,7 +120,8 @@ public class TrackJooqRepository {
         // User-confirmed styles take priority over ML primary — query them first ordered
         // so primary-confirmed beats secondary-confirmed, then fall back to ML primary below.
         dsl.select(TRACK_DANCE_STYLES.TRACK_ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACK_DANCE_STYLES.SUB_STYLE,
-                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE)
+                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE,
+                TRACK_DANCE_STYLES.SOURCE)
             .from(TRACK_DANCE_STYLES)
             .where(TRACK_DANCE_STYLES.TRACK_ID.in(trackIds).and(TRACK_DANCE_STYLES.IS_USER_CONFIRMED.eq(true)))
             .orderBy(TRACK_DANCE_STYLES.IS_PRIMARY.desc())
@@ -132,11 +133,13 @@ public class TrackJooqRepository {
                         r.get(TRACK_DANCE_STYLES.SUB_STYLE),
                         r.get(TRACK_DANCE_STYLES.EFFECTIVE_BPM),
                         r.get(TRACK_DANCE_STYLES.TEMPO_CATEGORY),
-                        1.0f)); // user-confirmed → verified badge
+                        1.0f, // user-confirmed → verified badge
+                        r.get(TRACK_DANCE_STYLES.SOURCE)));
                 }
             });
         dsl.select(TRACK_DANCE_STYLES.TRACK_ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACK_DANCE_STYLES.SUB_STYLE,
-                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE)
+                TRACK_DANCE_STYLES.EFFECTIVE_BPM, TRACK_DANCE_STYLES.TEMPO_CATEGORY, TRACK_DANCE_STYLES.CONFIDENCE,
+                TRACK_DANCE_STYLES.SOURCE)
             .from(TRACK_DANCE_STYLES)
             .where(TRACK_DANCE_STYLES.TRACK_ID.in(trackIds).and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true)))
             .forEach(r -> {
@@ -148,7 +151,8 @@ public class TrackJooqRepository {
                         r.get(TRACK_DANCE_STYLES.SUB_STYLE),
                         r.get(TRACK_DANCE_STYLES.EFFECTIVE_BPM),
                         r.get(TRACK_DANCE_STYLES.TEMPO_CATEGORY),
-                        c != null ? c.floatValue() : null));
+                        c != null ? c.floatValue() : null,
+                        r.get(TRACK_DANCE_STYLES.SOURCE)));
                 }
             });
         Map<UUID, List<PlaybackLinkDto>> playbackByTrack = new LinkedHashMap<>();
@@ -202,6 +206,7 @@ public class TrackJooqRepository {
                 dto.setEffectiveBpm(style.effectiveBpm);
                 dto.setTempoCategory(style.tempoCategory);
                 dto.setConfidence(style.confidence);
+                dto.setSource(style.source);
             }
             List<PlaybackLinkDto> links = playbackByTrack.get(id);
             if (links != null && !links.isEmpty()) {
@@ -219,7 +224,7 @@ public class TrackJooqRepository {
         return ordered;
     }
 
-    private record StyleInfo(String danceStyle, String subStyle, Integer effectiveBpm, String tempoCategory, Float confidence) {}
+    private record StyleInfo(String danceStyle, String subStyle, Integer effectiveBpm, String tempoCategory, Float confidence, String source) {}
 
     public Page<Track> searchByTitle(String query, Pageable pageable) {
         String pattern = "%" + (query == null ? "" : query).toLowerCase() + "%";
