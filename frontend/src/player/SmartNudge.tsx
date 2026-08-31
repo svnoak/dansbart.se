@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { DanceStyleDto } from '@/api/models/danceStyleDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import type { StyleNode } from '@/api/models/styleNode';
-import { getStyleTree } from '@/api/generated/styles/styles';
 import {
-  submitFeedback,
   confirmSecondaryStyle,
   getSecondaryStyles,
 } from '@/api/generated/tracks/tracks';
 import { recordInteraction1 } from '@/api/generated/analytics/analytics';
 import { getVoterId } from '@/utils/voter';
 import { getTempoLabel } from '@/utils/tempoLabel';
+import { useStyleVote } from '@/hooks/useStyleVote';
+import { StylePicker } from '@/components/StylePicker';
+import { TEMPO_OPTIONS } from '@/utils/tempoOptions';
 
 type Step =
   | 'hidden'
@@ -28,8 +28,6 @@ type Step =
   | 'success';
 
 type Mode = 'correction' | 'addition';
-
-type StyleTree = Record<string, string[]>;
 
 interface SmartNudgeProps {
   track: TrackListDto | null;
@@ -60,8 +58,6 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justConfirmed, setJustConfirmed] = useState(false);
   const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [styleTree, setStyleTree] = useState<StyleTree>({});
   const [pendingSecondary, setPendingSecondary] = useState<{
     danceStyle: string;
     subStyle?: string;
@@ -75,34 +71,10 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   stepRef.current = step;
   const prevStepRef = useRef<Step>('hidden');
 
-  const mainCategories = Object.keys(styleTree).sort();
-  const currentSubStyles = correction.main ? styleTree[correction.main] ?? [] : [];
+  const styleVote = useStyleVote(track?.id);
+  const currentSubStyles = styleVote.subStylesFor(correction.main);
 
   const tempoLabel = getTempoLabel(track?.effectiveBpm);
-
-  // --- Load styles on mount ---
-  useEffect(() => {
-    getStyleTree()
-      .then((nodes: StyleNode[]) => {
-        const tree: StyleTree = {};
-        for (const node of nodes) {
-          if (node.name) tree[node.name] = node.subStyles ?? [];
-        }
-        setStyleTree(tree);
-      })
-      .catch(() => {});
-  }, []);
-
-  // --- Close dropdown on outside click ---
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownOpen && !(e.target as Element).closest('.smart-nudge-dropdown')) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, [dropdownOpen]);
 
   // Records a passive dismissal (no feedback submitted) so this track isn't re-nudged for
   // 24h, without permanently suppressing it the way an actual submission does (`fb_<id>`).
@@ -132,7 +104,6 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
       playbackStartTime.current = null;
       setMode('correction');
       setCorrection({ main: '', style: track?.danceStyle ?? '', tempo: 'ok' });
-      setDropdownOpen(false);
       // Only ever attached to the one appearance that set it — a later track's nudge
       // shouldn't inherit it just because this instance stays mounted across tracks.
       setShowFirstTimeHint(false);
@@ -247,24 +218,20 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
       clearTimers();
       setIsSubmitting(true);
       try {
-        const res = await submitFeedback(
-          track.id,
-          { suggestedStyle, tempoCorrection },
-          { headers: { 'X-Voter-ID': getVoterId() } },
-        );
+        const { success, styleJustConfirmed } = await styleVote.submit(suggestedStyle, tempoCorrection);
         localStorage.setItem(`fb_${track.id}`, 'true');
-        if (nextStep === 'bonus') {
-          setStep('bonus');
-        } else if (nextStep === 'success') {
-          trackAnalytics('nudge_completed', track.id, { step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
-          setJustConfirmed(!!res.styleJustConfirmed);
-          setStep('success');
-          setTimeout(() => setStep('hidden'), 2500);
+        if (success) {
+          if (nextStep === 'bonus') {
+            setStep('bonus');
+          } else if (nextStep === 'success') {
+            trackAnalytics('nudge_completed', track.id, { step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
+            setJustConfirmed(styleJustConfirmed);
+            setStep('success');
+            setTimeout(() => setStep('hidden'), 2500);
+          }
+          return true;
         }
-        return true;
-      } catch {
         // Treat as confirmed even if API fails - avoid hiding the nudge
-        localStorage.setItem(`fb_${track.id}`, 'true');
         if (nextStep === 'success') {
           setJustConfirmed(false);
           setStep('success');
@@ -275,7 +242,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
         setIsSubmitting(false);
       }
     },
-    [track?.id, clearTimers],
+    [track?.id, clearTimers, styleVote],
   );
 
   // --- Secondary style helpers ---
@@ -372,10 +339,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   };
 
   const selectMain = (mainStyle: string) => {
-    setDropdownOpen(false);
-    const subs = styleTree[mainStyle];
+    const subs = styleVote.subStylesFor(mainStyle);
 
-    if (!subs || subs.length === 0) {
+    if (subs.length === 0) {
       setCorrection((c) => ({ ...c, main: mainStyle, style: mainStyle }));
       setStep((prev) =>
         mode === 'addition' || prev.startsWith('fix') ? 'fix-tempo' : 'ask-tempo',
@@ -389,7 +355,6 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   };
 
   const selectSub = (subStyle: string) => {
-    setDropdownOpen(false);
     setCorrection((c) => ({ ...c, style: subStyle }));
     setStep((prev) =>
       mode === 'addition' || prev.startsWith('fix') ? 'fix-tempo' : 'ask-tempo',
@@ -440,54 +405,23 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           textLight: 'text-indigo-300',
         };
 
-  // --- Dropdown button + list (reusable) ---
-  const renderDropdown = (
+  // --- Compact style/tempo picker (native <select>, reusable) ---
+  const renderStylePicker = (
     placeholder: string,
     items: { label: string; value: string; bold?: boolean }[],
-    bgClass: string,
-    borderClass: string,
-    dropdownBorder: string,
+    compactClassName: string,
   ) => (
-    <div className="smart-nudge-dropdown relative mb-3 md:mb-2">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setDropdownOpen((o) => !o);
+    <div className="mb-3 md:mb-2">
+      <StylePicker
+        presentation="compact"
+        placeholder={placeholder}
+        options={items.map((i) => ({ value: i.value, label: i.label, bold: i.bold }))}
+        onSelect={(value) => {
+          if (step === 'ask-main' || step === 'fix-main') selectMain(value);
+          else selectSub(value);
         }}
-        className={`w-full ${bgClass} border ${borderClass} text-white text-left px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium flex justify-between items-center`}
-      >
-        <span>{placeholder}</span>
-        <svg
-          className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {dropdownOpen && (
-        <div
-          className={`absolute z-[200] w-full bottom-full mb-1 bg-white rounded-lg shadow-xl border ${dropdownBorder} max-h-60 overflow-y-auto`}
-        >
-          {items.map((item) => (
-            <button
-              key={item.value}
-              onClick={() => {
-                if (step === 'ask-main' || step === 'fix-main') selectMain(item.value);
-                else selectSub(item.value);
-              }}
-              className={`w-full text-left px-4 py-2.5 md:py-2 text-sm md:text-xs transition-colors ${
-                item.bold
-                  ? 'text-indigo-900 bg-indigo-50 hover:bg-indigo-100 font-bold border-b border-indigo-100'
-                  : 'text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+        compactClassName={compactClassName}
+      />
     </div>
   );
 
@@ -614,12 +548,10 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   Din bekräftelse hjälper andra hitta låten.
                 </p>
               )}
-              {renderDropdown(
+              {renderStylePicker(
                 correction.main || 'Välj kategori...',
-                mainCategories.map((c) => ({ label: c, value: c })),
-                'bg-purple-700 hover:bg-purple-800',
-                'border-purple-500',
-                'border-purple-200',
+                styleVote.mainCategories.map((c) => ({ label: c, value: c })),
+                'bg-purple-700 border-purple-500 text-white',
               )}
               <div className="flex justify-end gap-2">
                 <button
@@ -627,7 +559,6 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                     trackAnalytics('nudge_dismissed', track?.id, { reason: 'vet_ej', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false });
                     if (track?.id) markSeen(track.id);
                     setStep('hidden');
-                    setDropdownOpen(false);
                   }}
                   className="bg-purple-800 hover:bg-purple-900 text-sm md:text-[10px] font-bold px-4 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
                 >
@@ -654,7 +585,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   &larr; Ändra
                 </button>
               </div>
-              {renderDropdown(
+              {renderStylePicker(
                 'Välj variant...',
                 [
                   {
@@ -664,9 +595,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   },
                   ...currentSubStyles.map((s) => ({ label: s, value: s })),
                 ],
-                'bg-purple-700 hover:bg-purple-800',
-                'border-purple-500',
-                'border-purple-200',
+                'bg-purple-700 border-purple-500 text-white',
               )}
             </div>
           )}
@@ -692,19 +621,13 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   &larr; Tillbaka
                 </button>
               </div>
-              <div className="grid grid-cols-5 gap-2 md:gap-1">
-                {(['Långsamt', 'Lugnt', 'Lagom', 'Snabbt', 'V. snabbt'] as const).map(
-                  (label) => (
-                    <button
-                      key={label}
-                      onClick={() => submitTempoSelection(label === 'V. snabbt' ? 'Väldigt snabbt' : label)}
-                      className="bg-purple-800 hover:bg-purple-900 border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded"
-                    >
-                      {label}
-                    </button>
-                  ),
-                )}
-              </div>
+              <StylePicker
+                presentation="compact"
+                placeholder="Välj tempo..."
+                options={TEMPO_OPTIONS.map((t) => ({ value: t.key, label: t.label }))}
+                onSelect={(key) => submitTempoSelection(key)}
+                compactClassName="w-full bg-purple-800 border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs"
+              />
             </div>
           )}
 
@@ -722,12 +645,10 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
                 {mode === 'addition' ? 'Lägg till stil' : 'Korrekt dansstil'}
               </p>
-              {renderDropdown(
+              {renderStylePicker(
                 correction.main || 'Välj kategori...',
-                mainCategories.map((c) => ({ label: c, value: c })),
-                `${colorClasses.btn}`,
-                'border-white/20',
-                'border-gray-200',
+                styleVote.mainCategories.map((c) => ({ label: c, value: c })),
+                `w-full ${colorClasses.btn} border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs`,
               )}
             </div>
           )}
@@ -746,7 +667,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
                 Vilken typ av {correction.main}?
               </p>
-              {renderDropdown(
+              {renderStylePicker(
                 'Välj variant...',
                 [
                   {
@@ -756,9 +677,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   },
                   ...currentSubStyles.map((s) => ({ label: s, value: s })),
                 ],
-                `${colorClasses.btn}`,
-                'border-white/20',
-                'border-gray-200',
+                `w-full ${colorClasses.btn} border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs`,
               )}
             </div>
           )}
