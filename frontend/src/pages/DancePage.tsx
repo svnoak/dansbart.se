@@ -10,7 +10,7 @@ import {
 import { getVoterId } from '@/utils/voter';
 import { useAuth } from '@/auth/useAuth';
 import { usePlayer } from '@/player/usePlayer';
-import { IconButton, SectionTitle, Button } from '@/ui';
+import { IconButton, SectionTitle, Button, toast } from '@/ui';
 import { BackArrowIcon, StarIcon, StarFilledIcon } from '@/icons';
 import { TrackRow } from '@/components/TrackRow';
 import { PlayButton } from '@/components/TrackRow/PlayButton';
@@ -157,7 +157,15 @@ export function DancePage() {
           setMatchingTracks((prev) => prev.filter((t) => t.id !== track.id));
           setRecommendations((prev) => [track, ...prev]);
         }
-        deleteVote(dance.id!, track.id).catch(() => {});
+        deleteVote(dance.id!, track.id).catch(() => {
+          // Revert: the vote was not actually removed
+          setVotes((prev) => ({ ...prev, [track.id!]: newVote }));
+          if (newVote === 'up') {
+            setRecommendations((prev) => prev.filter((t) => t.id !== track.id));
+            setMatchingTracks((prev) => [track, ...prev]);
+          }
+          toast('Kunde inte ta bort rösten', 'error');
+        });
       } else {
         setVotes((prev) => ({ ...prev, [track.id!]: newVote }));
         if (newVote === 'up') {
@@ -165,7 +173,20 @@ export function DancePage() {
           setRecommendations((prev) => prev.filter((t) => t.id !== track.id));
           setMatchingTracks((prev) => [track, ...prev]);
         }
-        postVote(dance.id!, track.id, newVote).catch(() => {});
+        postVote(dance.id!, track.id, newVote).catch(() => {
+          // Revert: the vote was not actually saved
+          setVotes((prev) => {
+            const n = { ...prev };
+            if (currentVote === undefined) delete n[track.id!];
+            else n[track.id!] = currentVote;
+            return n;
+          });
+          if (newVote === 'up') {
+            setMatchingTracks((prev) => prev.filter((t) => t.id !== track.id));
+            setRecommendations((prev) => [track, ...prev]);
+          }
+          toast('Kunde inte spara rösten', 'error');
+        });
       }
     },
     [dance, votes],
