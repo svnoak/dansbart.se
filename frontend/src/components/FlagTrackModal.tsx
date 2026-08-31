@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon, FlagIcon, ChevronDownIcon } from '@/icons';
-import { getStyleTree } from '@/api/generated/styles/styles';
-import { flagTrack, submitFeedback } from '@/api/generated/tracks/tracks';
-import { getVoterId } from '@/utils/voter';
+import { CloseIcon, FlagIcon } from '@/icons';
+import { flagTrack } from '@/api/generated/tracks/tracks';
+import { useStyleVote } from '@/hooks/useStyleVote';
+import { StylePicker } from '@/components/StylePicker';
+import { TEMPO_OPTIONS } from '@/utils/tempoOptions';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import type { StyleNode } from '@/api/models/styleNode';
 
 type View =
   | 'menu'
@@ -28,14 +28,6 @@ interface FlagTrackModalProps {
   onRefresh?: () => void;
 }
 
-const TEMPO_BUTTONS: { key: string; label: string }[] = [
-  { key: 'Slow', label: 'L\u00e5ngsamt' },
-  { key: 'SlowMed', label: 'Lugnt' },
-  { key: 'Medium', label: 'Lagom' },
-  { key: 'Fast', label: 'Snabbt' },
-  { key: 'Turbo', label: 'V. snabbt' },
-];
-
 export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackModalProps) {
   const [view, setView] = useState<View>('menu');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,8 +38,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
   const [correctionStyle, setCorrectionStyle] = useState('');
   const [correctionTempo, setCorrectionTempo] = useState('ok');
 
-  const [styleTree, setStyleTree] = useState<Record<string, string[]>>({});
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const styleVote = useStyleVote(track.id);
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,8 +60,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       l.deepLink?.includes('youtu.be'),
   );
 
-  const mainCategories = Object.keys(styleTree).sort();
-  const currentSubStyles = correctionMain ? styleTree[correctionMain] ?? [] : [];
+  const currentSubStyles = styleVote.subStylesFor(correctionMain);
 
   const resetCorrection = useCallback(() => {
     setCorrectionMain(track.danceStyle ?? '');
@@ -84,7 +74,6 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
     setError(null);
     setIsSubmitting(false);
     setSuccessMessage('');
-    setDropdownOpen(false);
     resetCorrection();
   }
   if (prevOpen !== open) {
@@ -96,19 +85,6 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!open || Object.keys(styleTree).length > 0) return;
-    getStyleTree()
-      .then((nodes: StyleNode[]) => {
-        const tree: Record<string, string[]> = {};
-        for (const node of nodes) {
-          if (node.name) tree[node.name] = node.subStyles ?? [];
-        }
-        setStyleTree(tree);
-      })
-      .catch(() => {});
-  }, [open, styleTree]);
 
   useEffect(() => {
     if (!open) return;
@@ -169,17 +145,10 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
     }
     if (!track.id) return;
     setIsSubmitting(true);
-    try {
-      await submitFeedback(
-        track.id,
-        {
-          suggestedStyle: correctionStyle,
-          tempoCorrection: tempoOverride ?? correctionTempo,
-        },
-        { headers: { 'X-Voter-ID': getVoterId() } },
-      );
+    const { success } = await styleVote.submit(correctionStyle, tempoOverride ?? correctionTempo);
+    if (success) {
       finish('Tack f\u00f6r att du bidrar till att g\u00f6ra sidan b\u00e4ttre!');
-    } catch {
+    } else {
       setError('Kunde inte skicka');
       setIsSubmitting(false);
     }
@@ -187,9 +156,8 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
 
   function selectMain(cat: string, flowType: 'ask' | 'fix') {
     setCorrectionMain(cat);
-    setDropdownOpen(false);
-    const subs = styleTree[cat];
-    if (!subs || subs.length === 0) {
+    const subs = styleVote.subStylesFor(cat);
+    if (subs.length === 0) {
       setCorrectionStyle(cat);
       setView(flowType === 'fix' ? 'fix_tempo' : 'ask_tempo');
     } else {
@@ -199,63 +167,28 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
 
   function selectSub(sub: string, flowType: 'ask' | 'fix') {
     setCorrectionStyle(sub);
-    setDropdownOpen(false);
     setView(flowType === 'fix' ? 'fix_tempo' : 'ask_tempo');
   }
 
   if (!open) return null;
 
-  function renderDropdown(flowType: 'ask' | 'fix', showSubs: boolean) {
-    const items = showSubs ? currentSubStyles : mainCategories;
+  function renderStylePicker(flowType: 'ask' | 'fix', showSubs: boolean) {
+    const items = showSubs
+      ? [
+          { value: correctionMain, label: `Vet ej / Allm\u00e4n ${correctionMain}`, bold: true },
+          ...currentSubStyles.map((s) => ({ value: s, label: s })),
+        ]
+      : styleVote.mainCategories.map((c) => ({ value: c, label: c }));
 
     return (
-      <div className="relative mb-6">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDropdownOpen((o) => !o);
-          }}
-          className="flex w-full items-center justify-between rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-3 text-left text-sm font-medium text-[rgb(var(--color-text))] hover:border-[rgb(var(--color-accent))]"
-        >
-          <span>
-            {showSubs
-              ? 'V\u00e4lj variant...'
-              : correctionMain || 'V\u00e4lj kategori...'}
-          </span>
-          <ChevronDownIcon
-            className={`h-5 w-5 text-[rgb(var(--color-text-muted))] transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-            aria-hidden
-          />
-        </button>
-        {dropdownOpen && (
-          <div className="absolute z-[200] mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-xl">
-            {showSubs && (
-              <button
-                type="button"
-                onClick={() => selectSub(correctionMain, flowType)}
-                className="w-full border-b border-[rgb(var(--color-border))] px-4 py-3 text-left text-sm font-bold text-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent))]/10"
-              >
-                Vet ej / Allm\u00e4n {correctionMain}
-              </button>
-            )}
-            {items.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() =>
-                  showSubs
-                    ? selectSub(item, flowType)
-                    : selectMain(item, flowType)
-                }
-                className="w-full px-4 py-3 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent))]/10"
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <StylePicker
+        presentation="full"
+        options={items}
+        placeholder={showSubs ? 'V\u00e4lj variant...' : 'V\u00e4lj kategori...'}
+        onSelect={(value) =>
+          showSubs ? selectSub(value, flowType) : selectMain(value, flowType)
+        }
+      />
     );
   }
 
@@ -430,14 +363,11 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
           <div>
             <p className="mb-1 text-sm font-bold text-[rgb(var(--color-text))]">Vad kan man dansa?</p>
             <p className="mb-4 text-xs text-[rgb(var(--color-text-muted))]">V{'\u00e4'}lj huvudkategori</p>
-            {renderDropdown('ask', false)}
+            {renderStylePicker('ask', false)}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setView('menu');
-                  setDropdownOpen(false);
-                }}
+                onClick={() => setView('menu')}
                 className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]"
               >
                 Tillbaka
@@ -462,7 +392,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 {'\u00c4'}ndra
               </button>
             </div>
-            {renderDropdown('ask', true)}
+            {renderStylePicker('ask', true)}
           </div>
         );
 
@@ -482,18 +412,13 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 Tillbaka
               </button>
             </div>
-            <div className="mb-6 grid grid-cols-5 gap-2">
-              {TEMPO_BUTTONS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleSubmitStyleTempo(key)}
-                  disabled={isSubmitting}
-                  className="rounded bg-[rgb(var(--color-accent))] py-4 text-xs font-bold text-white disabled:opacity-50"
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="mb-6">
+              <StylePicker
+                presentation="full"
+                options={TEMPO_OPTIONS.map((t) => ({ value: t.key, label: t.label }))}
+                placeholder="Välj tempo..."
+                onSelect={(key) => handleSubmitStyleTempo(key)}
+              />
             </div>
           </div>
         );
@@ -503,14 +428,11 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
           <div>
             <p className="mb-1 text-sm font-bold text-[rgb(var(--color-text))]">Korrekt dansstil</p>
             <p className="mb-4 text-xs text-[rgb(var(--color-text-muted))]">V{'\u00e4'}lj huvudkategori</p>
-            {renderDropdown('fix', false)}
+            {renderStylePicker('fix', false)}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setView('menu');
-                  setDropdownOpen(false);
-                }}
+                onClick={() => setView('menu')}
                 className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]"
               >
                 Tillbaka
@@ -535,7 +457,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 {'\u00c4'}ndra
               </button>
             </div>
-            {renderDropdown('fix', true)}
+            {renderStylePicker('fix', true)}
           </div>
         );
 
