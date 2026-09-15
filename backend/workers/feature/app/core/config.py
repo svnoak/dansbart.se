@@ -1,4 +1,5 @@
 """Configuration settings for the feature worker."""
+
 from pydantic_settings import BaseSettings
 
 

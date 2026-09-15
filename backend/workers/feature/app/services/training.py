@@ -4,10 +4,12 @@ Model training service for the dance style classifier.
 Gathers training data from user-confirmed and high-confidence tracks,
 then retrains the ClassificationHead using neckenml's TrainingService.
 """
+
 import structlog
+from neckenml.core import ClassificationHead, compute_derived_features
 from sqlalchemy.orm import Session
-from app.core.models import Track, AnalysisSource, TrackDanceStyle
-from neckenml.core import compute_derived_features, ClassificationHead
+
+from app.core.models import AnalysisSource, TrackDanceStyle
 
 log = structlog.get_logger()
 
@@ -38,9 +40,7 @@ class ModelTrainingService:
 
         # Source 1: User-confirmed styles
         confirmed_styles = (
-            self.db.query(TrackDanceStyle)
-            .filter(TrackDanceStyle.is_user_confirmed == True)
-            .all()
+            self.db.query(TrackDanceStyle).filter(TrackDanceStyle.is_user_confirmed.is_(True)).all()
         )
 
         confirmed_count = self._collect_training_data(
@@ -53,7 +53,7 @@ class ModelTrainingService:
             self.db.query(TrackDanceStyle)
             .filter(
                 TrackDanceStyle.confidence >= HIGH_CONFIDENCE_THRESHOLD,
-                TrackDanceStyle.is_user_confirmed == False,
+                TrackDanceStyle.is_user_confirmed.is_(False),
             )
             .all()
         )
@@ -114,9 +114,7 @@ class ModelTrainingService:
                 self.db.query(AnalysisSource)
                 .filter(
                     AnalysisSource.track_id == style.track_id,
-                    AnalysisSource.source_type.in_(
-                        ["neckenml_analyzer", "hybrid_ml_v2"]
-                    ),
+                    AnalysisSource.source_type.in_(["neckenml_analyzer", "hybrid_ml_v2"]),
                 )
                 .first()
             )

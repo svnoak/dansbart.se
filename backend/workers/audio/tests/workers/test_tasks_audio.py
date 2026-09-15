@@ -6,9 +6,10 @@ Tests cover:
 - Resource management
 - Error handling and retries
 """
+
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
-import uuid
 
 
 class TestAnalyzeTrackTask:
@@ -17,7 +18,7 @@ class TestAnalyzeTrackTask:
     @pytest.fixture
     def mock_session_local(self):
         """Mock the SessionLocal for database access."""
-        with patch('app.workers.tasks_audio.SessionLocal') as MockSession:
+        with patch("app.workers.tasks_audio.SessionLocal") as MockSession:
             session = MagicMock()
             MockSession.return_value = session
             yield session
@@ -25,20 +26,19 @@ class TestAnalyzeTrackTask:
     @pytest.fixture
     def mock_analysis_service(self):
         """Mock the AnalysisService."""
-        with patch('app.workers.tasks_audio.AnalysisService') as MockService:
+        with patch("app.workers.tasks_audio.AnalysisService") as MockService:
             service = MagicMock()
             MockService.return_value = service
             yield service
 
     def test_get_analysis_service_singleton(self):
         """Test that analysis service is created as singleton."""
-        from app.workers.tasks_audio import get_analysis_service, _worker_analysis_service
-
         # Reset global state
         import app.workers.tasks_audio as tasks_module
+
         tasks_module._worker_analysis_service = None
 
-        with patch.object(tasks_module, 'AnalysisService') as MockService:
+        with patch.object(tasks_module, "AnalysisService") as MockService:
             service1 = tasks_module.get_analysis_service()
             service2 = tasks_module.get_analysis_service()
 
@@ -48,10 +48,11 @@ class TestAnalyzeTrackTask:
 
     def test_cleanup_resources_runs_gc(self):
         """Test that cleanup_resources runs garbage collection."""
-        with patch('app.workers.tasks_audio.gc') as mock_gc:
+        with patch("app.workers.tasks_audio.gc") as mock_gc:
             mock_gc.collect.return_value = 10
 
             from app.workers.tasks_audio import cleanup_resources
+
             cleanup_resources()
 
             mock_gc.collect.assert_called_once()
@@ -79,7 +80,7 @@ class TestTaskConfiguration:
         from app.workers.tasks_audio import analyze_track_task
 
         # Check task configuration
-        assert analyze_track_task.queue == 'audio'
+        assert analyze_track_task.queue == "audio"
 
     def test_task_retry_configuration(self):
         """Test that task has correct retry settings."""
@@ -95,8 +96,8 @@ class TestTaskIntegration:
     @pytest.mark.integration
     def test_imports_work(self):
         """Test that all imports work correctly."""
-        from app.workers.tasks_audio import analyze_track_task, get_analysis_service
         from app.services.analysis import AnalysisService
+        from app.workers.tasks_audio import analyze_track_task, get_analysis_service
 
         assert analyze_track_task is not None
         assert get_analysis_service is not None

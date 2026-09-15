@@ -6,9 +6,11 @@ Optimized for read-heavy, write-rare access patterns.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
-import structlog
+
 import time
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, List, Optional, Tuple
+
+import structlog
 from sqlalchemy.orm import Session
 
 log = structlog.get_logger()
@@ -33,7 +35,6 @@ def get_keywords(db: Session, force_refresh: bool = False) -> Dict[str, Tuple[st
         Dict mapping keyword -> (main_style, sub_style)
         Keys are lowercase, sorted by length (longest first) for proper matching.
     """
-    global _keyword_cache, _cache_timestamp
 
     now = time.time()
     cache_expired = (now - _cache_timestamp) > CACHE_TTL_SECONDS
@@ -76,17 +77,12 @@ def _refresh_cache(db: Session) -> None:
 
     from app.core.models import StyleKeyword
 
-    keywords = db.query(StyleKeyword).filter(
-        StyleKeyword.is_active == True
-    ).all()
+    keywords = db.query(StyleKeyword).filter(StyleKeyword.is_active.is_(True)).all()
 
     # Sort by keyword length (longest first)
     sorted_keywords = sorted(keywords, key=lambda k: len(k.keyword), reverse=True)
 
-    _keyword_cache = {
-        kw.keyword.lower(): (kw.main_style, kw.sub_style)
-        for kw in sorted_keywords
-    }
+    _keyword_cache = {kw.keyword.lower(): (kw.main_style, kw.sub_style) for kw in sorted_keywords}
 
     _cache_timestamp = time.time()
     log.info("cache_refreshed", keyword_count=len(_keyword_cache))
@@ -96,7 +92,6 @@ def get_cache_info() -> dict:
     """
     Get cache statistics for debugging/admin.
     """
-    global _keyword_cache, _cache_timestamp
 
     now = time.time()
     age = now - _cache_timestamp if _cache_timestamp > 0 else -1
@@ -106,5 +101,5 @@ def get_cache_info() -> dict:
         "age_seconds": round(age, 1) if age >= 0 else None,
         "ttl_seconds": CACHE_TTL_SECONDS,
         "expires_in": round(CACHE_TTL_SECONDS - age, 1) if age >= 0 else None,
-        "is_valid": age >= 0 and age < CACHE_TTL_SECONDS
+        "is_valid": age >= 0 and age < CACHE_TTL_SECONDS,
     }

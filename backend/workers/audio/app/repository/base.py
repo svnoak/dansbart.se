@@ -5,13 +5,16 @@ Provides generic CRUD operations and query helpers.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
+
 import uuid
-from typing import TypeVar, Generic, Type, Optional, List, Dict, Any
-from sqlalchemy.orm import Session, Query
-from sqlalchemy import func, or_
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
+
+from sqlalchemy import func
+from sqlalchemy.orm import Query, Session
+
 from app.core.database import Base
 
-T = TypeVar('T', bound=Base)
+T = TypeVar("T", bound=Base)
 
 
 class BaseRepository(Generic[T]):
@@ -139,7 +142,7 @@ class BaseRepository(Generic[T]):
         filters: Dict[str, Any] = None,
         eager_load: List = None,
         order_by=None,
-        limit: int = None
+        limit: int = None,
     ) -> List[T]:
         """Find all entities matching filters."""
         query = self._build_base_query(eager_load=eager_load)

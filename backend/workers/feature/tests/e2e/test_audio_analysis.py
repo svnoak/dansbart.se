@@ -7,10 +7,11 @@ based on stored audio analysis artifacts from the audio-worker.
 Note: The actual ML audio analysis is performed by dansbart-audio-worker.
 These tests focus on the classification pipeline that runs in the feature worker.
 """
-import pytest
-from unittest.mock import patch, MagicMock
+
 import uuid
-import numpy as np
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestClassificationServiceBasics:
@@ -33,24 +34,23 @@ class TestClassificationServiceBasics:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': 'Slängpolska',
-                'type': 'Primary',
-                'confidence': 0.85,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": "Slängpolska",
+                "type": "Primary",
+                "confidence": 0.85,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             }
         ]
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
                 service.classify_track_immediately(
-                    mock_track,
-                    analysis_data=sample_analysis_result['features']
+                    mock_track, analysis_data=sample_analysis_result["features"]
                 )
 
         # Verify classifier was called
@@ -69,7 +69,7 @@ class TestClassificationServiceBasics:
         # Mock analysis source with artifacts
         mock_source = MagicMock()
         mock_source.source_type = "neckenml_analyzer"
-        mock_source.raw_data = sample_analysis_result['raw_artifacts']
+        mock_source.raw_data = sample_analysis_result["raw_artifacts"]
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -80,28 +80,30 @@ class TestClassificationServiceBasics:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': None,
-                'type': 'Primary',
-                'confidence': 0.75,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": None,
+                "type": "Primary",
+                "confidence": 0.75,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             }
         ]
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.classification.compute_derived_features') as mock_compute:
-                mock_compute.return_value = sample_analysis_result['features']
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.classification.compute_derived_features") as mock_compute:
+                mock_compute.return_value = sample_analysis_result["features"]
 
-                with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+                with patch(
+                    "app.services.style_keywords_cache.get_sorted_keywords", return_value=[]
+                ):
                     service = ClassificationService(mock_db_session)
                     service.classifier = mock_classifier
 
                     service.classify_track_immediately(mock_track)
 
         # Should have computed features from artifacts
-        mock_compute.assert_called_once_with(sample_analysis_result['raw_artifacts'])
+        mock_compute.assert_called_once_with(sample_analysis_result["raw_artifacts"])
 
     @pytest.mark.e2e
     def test_classification_skips_user_confirmed_tracks(
@@ -122,23 +124,20 @@ class TestClassificationServiceBasics:
 
         mock_classifier = MagicMock()
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
                 service.classify_track_immediately(
-                    mock_track,
-                    analysis_data=sample_analysis_result['features']
+                    mock_track, analysis_data=sample_analysis_result["features"]
                 )
 
         # Classifier should NOT be called
         mock_classifier.classify.assert_not_called()
 
     @pytest.mark.e2e
-    def test_classification_handles_no_analysis_data(
-        self, mock_db_session, e2e_env_vars
-    ):
+    def test_classification_handles_no_analysis_data(self, mock_db_session, e2e_env_vars):
         """Test: Classification handles missing analysis data gracefully."""
         from app.services.classification import ClassificationService
 
@@ -150,8 +149,8 @@ class TestClassificationServiceBasics:
 
         mock_classifier = MagicMock()
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
@@ -166,9 +165,7 @@ class TestClassificationPredictions:
     """Tests for classification prediction storage."""
 
     @pytest.mark.e2e
-    def test_primary_style_is_saved(
-        self, mock_db_session, sample_analysis_result, e2e_env_vars
-    ):
+    def test_primary_style_is_saved(self, mock_db_session, sample_analysis_result, e2e_env_vars):
         """Test: Primary dance style prediction is saved to database."""
         from app.services.classification import ClassificationService
 
@@ -181,24 +178,23 @@ class TestClassificationPredictions:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': 'Slängpolska',
-                'type': 'Primary',
-                'confidence': 0.90,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": "Slängpolska",
+                "type": "Primary",
+                "confidence": 0.90,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             }
         ]
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
                 service.classify_track_immediately(
-                    mock_track,
-                    analysis_data=sample_analysis_result['features']
+                    mock_track, analysis_data=sample_analysis_result["features"]
                 )
 
         # Verify TrackDanceStyle was added
@@ -206,9 +202,7 @@ class TestClassificationPredictions:
         assert len(add_calls) > 0
 
     @pytest.mark.e2e
-    def test_multiple_styles_are_saved(
-        self, mock_db_session, sample_analysis_result, e2e_env_vars
-    ):
+    def test_multiple_styles_are_saved(self, mock_db_session, sample_analysis_result, e2e_env_vars):
         """Test: Multiple dance style predictions are saved."""
         from app.services.classification import ClassificationService
 
@@ -221,33 +215,32 @@ class TestClassificationPredictions:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': None,
-                'type': 'Primary',
-                'confidence': 0.85,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": None,
+                "type": "Primary",
+                "confidence": 0.85,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             },
             {
-                'style': 'Hambo',
-                'sub_style': None,
-                'type': 'Secondary',
-                'confidence': 0.65,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
-            }
+                "style": "Hambo",
+                "sub_style": None,
+                "type": "Secondary",
+                "confidence": 0.65,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
+            },
         ]
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
                 service.classify_track_immediately(
-                    mock_track,
-                    analysis_data=sample_analysis_result['features']
+                    mock_track, analysis_data=sample_analysis_result["features"]
                 )
 
         # Both styles should be added
@@ -269,13 +262,13 @@ class TestClassificationPredictions:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Vals',
-                'sub_style': None,
-                'type': 'Primary',
-                'confidence': 0.80,
-                'dance_tempo': 'Fast',
-                'multiplier': 1.0,
-                'effective_bpm': 180
+                "style": "Vals",
+                "sub_style": None,
+                "type": "Primary",
+                "confidence": 0.80,
+                "dance_tempo": "Fast",
+                "multiplier": 1.0,
+                "effective_bpm": 180,
             }
         ]
 
@@ -283,14 +276,13 @@ class TestClassificationPredictions:
         mock_query = MagicMock()
         mock_db_session.query.return_value.filter.return_value = mock_query
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
                 service.classify_track_immediately(
-                    mock_track,
-                    analysis_data=sample_analysis_result['features']
+                    mock_track, analysis_data=sample_analysis_result["features"]
                 )
 
         # Old styles should be deleted
@@ -317,37 +309,41 @@ class TestReclassifyLibrary:
 
             source = MagicMock()
             source.source_type = "neckenml_analyzer"
-            source.raw_data = sample_analysis_result['raw_artifacts']
+            source.raw_data = sample_analysis_result["raw_artifacts"]
             track.analysis_sources = [source]
 
             mock_tracks.append(track)
 
-        mock_db_session.query.return_value.join.return_value.filter.return_value.all.return_value = mock_tracks
+        mock_db_session.query.return_value.join.return_value.filter.return_value.all.return_value = (
+            mock_tracks
+        )
 
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': None,
-                'type': 'Primary',
-                'confidence': 0.80,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": None,
+                "type": "Primary",
+                "confidence": 0.80,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             }
         ]
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('neckenml.core.compute_derived_features') as mock_compute:
-                mock_compute.return_value = sample_analysis_result['features']
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("neckenml.core.compute_derived_features") as mock_compute:
+                mock_compute.return_value = sample_analysis_result["features"]
 
-                with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+                with patch(
+                    "app.services.style_keywords_cache.get_sorted_keywords", return_value=[]
+                ):
                     service = ClassificationService(mock_db_session)
                     service.classifier = mock_classifier
 
                     result = service.reclassify_library()
 
-        assert result['updated'] == 3
+        assert result["updated"] == 3
         assert mock_classifier.classify.call_count == 3
 
     @pytest.mark.e2e
@@ -375,48 +371,48 @@ class TestReclassifyLibrary:
 
         source = MagicMock()
         source.source_type = "neckenml_analyzer"
-        source.raw_data = sample_analysis_result['raw_artifacts']
+        source.raw_data = sample_analysis_result["raw_artifacts"]
         unconfirmed_track.analysis_sources = [source]
 
         mock_db_session.query.return_value.join.return_value.filter.return_value.all.return_value = [
             confirmed_track,
-            unconfirmed_track
+            unconfirmed_track,
         ]
 
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': None,
-                'type': 'Primary',
-                'confidence': 0.80,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": None,
+                "type": "Primary",
+                "confidence": 0.80,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             }
         ]
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('neckenml.core.compute_derived_features') as mock_compute:
-                mock_compute.return_value = sample_analysis_result['features']
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("neckenml.core.compute_derived_features") as mock_compute:
+                mock_compute.return_value = sample_analysis_result["features"]
 
-                with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+                with patch(
+                    "app.services.style_keywords_cache.get_sorted_keywords", return_value=[]
+                ):
                     service = ClassificationService(mock_db_session)
                     service.classifier = mock_classifier
 
                     result = service.reclassify_library()
 
-        assert result['skipped'] == 1
-        assert result['updated'] == 1
+        assert result["skipped"] == 1
+        assert result["updated"] == 1
 
 
 class TestVocalsDetection:
     """Tests for vocals/instrumental detection."""
 
     @pytest.mark.e2e
-    def test_instrumental_track_sets_has_vocals_false(
-        self, mock_db_session, e2e_env_vars
-    ):
+    def test_instrumental_track_sets_has_vocals_false(self, mock_db_session, e2e_env_vars):
         """Test: Instrumental tracks have has_vocals set to False."""
         from app.services.classification import ClassificationService
 
@@ -427,17 +423,13 @@ class TestVocalsDetection:
         mock_track.analysis_sources = []
         mock_track.has_vocals = None
 
-        analysis_data = {
-            'is_likely_instrumental': True,
-            'voice_probability': 0.1,
-            'tempo_bpm': 120
-        }
+        analysis_data = {"is_likely_instrumental": True, "voice_probability": 0.1, "tempo_bpm": 120}
 
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = []
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
@@ -446,9 +438,7 @@ class TestVocalsDetection:
         assert mock_track.has_vocals is False
 
     @pytest.mark.e2e
-    def test_vocal_track_sets_has_vocals_true(
-        self, mock_db_session, e2e_env_vars
-    ):
+    def test_vocal_track_sets_has_vocals_true(self, mock_db_session, e2e_env_vars):
         """Test: Tracks with vocals have has_vocals set to True."""
         from app.services.classification import ClassificationService
 
@@ -460,16 +450,16 @@ class TestVocalsDetection:
         mock_track.has_vocals = None
 
         analysis_data = {
-            'is_likely_instrumental': False,
-            'voice_probability': 0.8,
-            'tempo_bpm': 120
+            "is_likely_instrumental": False,
+            "voice_probability": 0.8,
+            "tempo_bpm": 120,
         }
 
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = []
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
@@ -501,20 +491,20 @@ class TestCeleryTaskIntegration:
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = []
 
-        with patch('app.workers.tasks_feature.SessionLocal', return_value=mock_db_session):
-            with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-                with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("app.workers.tasks_feature.SessionLocal", return_value=mock_db_session):
+            with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+                with patch(
+                    "app.services.style_keywords_cache.get_sorted_keywords", return_value=[]
+                ):
                     result = classify_track_task.apply(
-                        args=[track_id, sample_analysis_result['features']]
+                        args=[track_id, sample_analysis_result["features"]]
                     ).get()
 
-        assert result['status'] == 'success'
-        assert result['track_id'] == track_id
+        assert result["status"] == "success"
+        assert result["track_id"] == track_id
 
     @pytest.mark.e2e
-    def test_classify_track_task_handles_missing_track(
-        self, mock_db_session, e2e_env_vars
-    ):
+    def test_classify_track_task_handles_missing_track(self, mock_db_session, e2e_env_vars):
         """Test: classify_track_task handles non-existent track."""
         from app.workers.tasks_feature import classify_track_task
 
@@ -525,12 +515,14 @@ class TestCeleryTaskIntegration:
 
         mock_classifier = MagicMock()
 
-        with patch('app.workers.tasks_feature.SessionLocal', return_value=mock_db_session):
-            with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-                with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("app.workers.tasks_feature.SessionLocal", return_value=mock_db_session):
+            with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+                with patch(
+                    "app.services.style_keywords_cache.get_sorted_keywords", return_value=[]
+                ):
                     result = classify_track_task.apply(args=[track_id]).get()
 
-        assert 'error' in result
+        assert "error" in result
 
     @pytest.mark.e2e
     def test_reclassify_library_task_returns_stats(
@@ -547,31 +539,35 @@ class TestCeleryTaskIntegration:
 
         source = MagicMock()
         source.source_type = "neckenml_analyzer"
-        source.raw_data = sample_analysis_result['raw_artifacts']
+        source.raw_data = sample_analysis_result["raw_artifacts"]
         mock_track.analysis_sources = [source]
 
-        mock_db_session.query.return_value.join.return_value.filter.return_value.all.return_value = [mock_track]
+        mock_db_session.query.return_value.join.return_value.filter.return_value.all.return_value = [
+            mock_track
+        ]
 
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': None,
-                'type': 'Primary',
-                'confidence': 0.80,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": None,
+                "type": "Primary",
+                "confidence": 0.80,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             }
         ]
 
-        with patch('app.workers.tasks_feature.SessionLocal', return_value=mock_db_session):
-            with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-                with patch('neckenml.core.compute_derived_features') as mock_compute:
-                    mock_compute.return_value = sample_analysis_result['features']
+        with patch("app.workers.tasks_feature.SessionLocal", return_value=mock_db_session):
+            with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+                with patch("neckenml.core.compute_derived_features") as mock_compute:
+                    mock_compute.return_value = sample_analysis_result["features"]
 
-                    with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+                    with patch(
+                        "app.services.style_keywords_cache.get_sorted_keywords", return_value=[]
+                    ):
                         result = reclassify_library_task.apply().get()
 
-        assert 'updated' in result
-        assert 'skipped' in result
+        assert "updated" in result
+        assert "skipped" in result

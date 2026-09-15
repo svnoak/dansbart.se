@@ -4,9 +4,11 @@ E2E tests for Spotify ingestion.
 Tests the SpotifyIngestor class which imports tracks from
 Spotify playlists, albums, and artist discographies.
 """
-import pytest
-from unittest.mock import patch, MagicMock
+
 import uuid
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Spotify track ID used for single-track ingest tests (matches conftest.TEST_SPOTIFY_TRACK_ID)
 TEST_SPOTIFY_TRACK_ID = "4uLU6hMCjMI75M1A2tKUQC"
@@ -31,15 +33,13 @@ class TestSpotifyTrackIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             # Inject the mock client
             ingestor.sp = mock_spotify_client
 
             # Ingest a single track via playlist
-            track_ids = ingestor.ingest_tracks_from_list([
-                mock_spotify_client.track.return_value
-            ])
+            track_ids = ingestor.ingest_tracks_from_list([mock_spotify_client.track.return_value])
 
         assert len(track_ids) == 1
         mock_repo.create_track.assert_called_once()
@@ -59,17 +59,15 @@ class TestSpotifyTrackIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
-            ingestor.ingest_tracks_from_list([
-                mock_spotify_client.track.return_value
-            ])
+            ingestor.ingest_tracks_from_list([mock_spotify_client.track.return_value])
 
         # Verify ISRC was used
         call_kwargs = mock_repo.create_track.call_args
-        assert call_kwargs.kwargs['isrc'] == 'TEST12345678'
+        assert call_kwargs.kwargs["isrc"] == "TEST12345678"
 
     @pytest.mark.e2e
     def test_ingest_track_without_isrc_generates_fallback(
@@ -80,9 +78,9 @@ class TestSpotifyTrackIngestion:
 
         # Track without ISRC
         track_response = mock_spotify_client.track.return_value.copy()
-        track_response['external_ids'] = {}
+        track_response["external_ids"] = {}
 
-        mock_spotify_client.tracks.return_value = {'tracks': [track_response]}
+        mock_spotify_client.tracks.return_value = {"tracks": [track_response]}
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
@@ -92,7 +90,7 @@ class TestSpotifyTrackIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
@@ -100,7 +98,7 @@ class TestSpotifyTrackIngestion:
 
         # Verify fallback ISRC was generated
         call_kwargs = mock_repo.create_track.call_args
-        assert call_kwargs.kwargs['isrc'].startswith('FALLBACK-')
+        assert call_kwargs.kwargs["isrc"].startswith("FALLBACK-")
 
     @pytest.mark.e2e
     def test_existing_track_not_duplicated(
@@ -118,13 +116,11 @@ class TestSpotifyTrackIngestion:
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = existing_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
-            track_ids = ingestor.ingest_tracks_from_list([
-                mock_spotify_client.track.return_value
-            ])
+            track_ids = ingestor.ingest_tracks_from_list([mock_spotify_client.track.return_value])
 
         # Should not create new track, and should skip (not in pending list)
         mock_repo.create_track.assert_not_called()
@@ -149,7 +145,7 @@ class TestSpotifyPlaylistIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
@@ -171,42 +167,42 @@ class TestSpotifyPlaylistIngestion:
         mock_client = MagicMock()
 
         page1 = {
-            'items': [
+            "items": [
                 {
-                    'track': {
-                        'id': f'track_{i}',
-                        'name': f'Track {i}',
-                        'duration_ms': 180000,
-                        'artists': [{'id': 'a1', 'name': 'Artist'}],
-                        'album': {'id': 'album1', 'name': 'Album', 'images': []},
-                        'external_ids': {'isrc': f'ISRC{i:04d}'}
+                    "track": {
+                        "id": f"track_{i}",
+                        "name": f"Track {i}",
+                        "duration_ms": 180000,
+                        "artists": [{"id": "a1", "name": "Artist"}],
+                        "album": {"id": "album1", "name": "Album", "images": []},
+                        "external_ids": {"isrc": f"ISRC{i:04d}"},
                     }
                 }
                 for i in range(3)
             ],
-            'next': 'page2_url'
+            "next": "page2_url",
         }
 
         page2 = {
-            'items': [
+            "items": [
                 {
-                    'track': {
-                        'id': f'track_{i}',
-                        'name': f'Track {i}',
-                        'duration_ms': 180000,
-                        'artists': [{'id': 'a1', 'name': 'Artist'}],
-                        'album': {'id': 'album1', 'name': 'Album', 'images': []},
-                        'external_ids': {'isrc': f'ISRC{i:04d}'}
+                    "track": {
+                        "id": f"track_{i}",
+                        "name": f"Track {i}",
+                        "duration_ms": 180000,
+                        "artists": [{"id": "a1", "name": "Artist"}],
+                        "album": {"id": "album1", "name": "Album", "images": []},
+                        "external_ids": {"isrc": f"ISRC{i:04d}"},
                     }
                 }
                 for i in range(3, 5)
             ],
-            'next': None
+            "next": None,
         }
 
         mock_client.playlist_tracks.return_value = page1
         mock_client.next.return_value = page2
-        mock_client.tracks.return_value = {'tracks': []}
+        mock_client.tracks.return_value = {"tracks": []}
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
@@ -216,9 +212,9 @@ class TestSpotifyPlaylistIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-            with patch('spotipy.Spotify', return_value=mock_client):
-                with patch('spotipy.oauth2.SpotifyClientCredentials'):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+            with patch("spotipy.Spotify", return_value=mock_client):
+                with patch("spotipy.oauth2.SpotifyClientCredentials"):
                     ingestor = SpotifyIngestor(mock_db_session)
                     ingestor.sp = mock_client
 
@@ -239,33 +235,33 @@ class TestSpotifyPlaylistIngestion:
 
         # Include a local track
         playlist_response = {
-            'items': [
+            "items": [
                 {
-                    'track': {
-                        'id': 'track_1',
-                        'name': 'Regular Track',
-                        'duration_ms': 180000,
-                        'artists': [{'id': 'a1', 'name': 'Artist'}],
-                        'album': {'id': 'album1', 'name': 'Album', 'images': []},
-                        'external_ids': {'isrc': 'ISRC0001'},
-                        'is_local': False
+                    "track": {
+                        "id": "track_1",
+                        "name": "Regular Track",
+                        "duration_ms": 180000,
+                        "artists": [{"id": "a1", "name": "Artist"}],
+                        "album": {"id": "album1", "name": "Album", "images": []},
+                        "external_ids": {"isrc": "ISRC0001"},
+                        "is_local": False,
                     }
                 },
                 {
-                    'track': {
-                        'id': None,  # Local tracks have no ID
-                        'name': 'Local Track',
-                        'duration_ms': 180000,
-                        'artists': [{'id': 'a1', 'name': 'Artist'}],
-                        'is_local': True
+                    "track": {
+                        "id": None,  # Local tracks have no ID
+                        "name": "Local Track",
+                        "duration_ms": 180000,
+                        "artists": [{"id": "a1", "name": "Artist"}],
+                        "is_local": True,
                     }
-                }
+                },
             ],
-            'next': None
+            "next": None,
         }
 
         mock_client.playlist_tracks.return_value = playlist_response
-        mock_client.tracks.return_value = {'tracks': [playlist_response['items'][0]['track']]}
+        mock_client.tracks.return_value = {"tracks": [playlist_response["items"][0]["track"]]}
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
@@ -275,9 +271,9 @@ class TestSpotifyPlaylistIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-            with patch('spotipy.Spotify', return_value=mock_client):
-                with patch('spotipy.oauth2.SpotifyClientCredentials'):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+            with patch("spotipy.Spotify", return_value=mock_client):
+                with patch("spotipy.oauth2.SpotifyClientCredentials"):
                     ingestor = SpotifyIngestor(mock_db_session)
                     ingestor.sp = mock_client
 
@@ -305,7 +301,7 @@ class TestSpotifyAlbumIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
@@ -331,7 +327,7 @@ class TestSpotifyAlbumIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
@@ -339,7 +335,7 @@ class TestSpotifyAlbumIngestion:
 
         # Check that album_data was passed to create_track
         call_kwargs = mock_repo.create_track.call_args
-        assert call_kwargs.kwargs['album_data']['name'] == 'Swedish Folk Music'
+        assert call_kwargs.kwargs["album_data"]["name"] == "Swedish Folk Music"
 
 
 class TestSpotifyArtistIngestion:
@@ -360,7 +356,7 @@ class TestSpotifyArtistIngestion:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
@@ -379,17 +375,17 @@ class TestSpotifyArtistIngestion:
 
         mock_client = MagicMock()
         mock_client.artist_albums.return_value = {
-            'items': [{'id': 'album1', 'name': 'Album 1'}],
-            'next': None
+            "items": [{"id": "album1", "name": "Album 1"}],
+            "next": None,
         }
         # Simulate API error on album_tracks
         mock_client.album_tracks.side_effect = Exception("API rate limit exceeded")
 
         mock_repo = MagicMock()
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-            with patch('spotipy.Spotify', return_value=mock_client):
-                with patch('spotipy.oauth2.SpotifyClientCredentials'):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+            with patch("spotipy.Spotify", return_value=mock_client):
+                with patch("spotipy.oauth2.SpotifyClientCredentials"):
                     ingestor = SpotifyIngestor(mock_db_session)
                     ingestor.sp = mock_client
 
@@ -417,18 +413,16 @@ class TestSpotifyPlaybackLinks:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
-            ingestor.ingest_tracks_from_list([
-                mock_spotify_client.track.return_value
-            ])
+            ingestor.ingest_tracks_from_list([mock_spotify_client.track.return_value])
 
         # Verify Spotify link was added
         mock_repo.add_playback_link.assert_called_once()
         call_args = mock_repo.add_playback_link.call_args
-        assert call_args.kwargs['platform'] == 'spotify'
+        assert call_args.kwargs["platform"] == "spotify"
 
 
 class TestSpotifyTaskIntegration:
@@ -449,16 +443,14 @@ class TestSpotifyTaskIntegration:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
-            with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-                with patch('spotipy.Spotify', return_value=mock_spotify_client):
-                    with patch('spotipy.oauth2.SpotifyClientCredentials'):
-                        result = ingest_playlist_task.apply(
-                            args=["test_playlist_id"]
-                        ).get()
+        with patch("app.workers.tasks_light.SessionLocal", return_value=mock_db_session):
+            with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+                with patch("spotipy.Spotify", return_value=mock_spotify_client):
+                    with patch("spotipy.oauth2.SpotifyClientCredentials"):
+                        result = ingest_playlist_task.apply(args=["test_playlist_id"]).get()
 
-        assert result['status'] == 'success'
-        assert 'tracks_queued' in result
+        assert result["status"] == "success"
+        assert "tracks_queued" in result
 
     @pytest.mark.e2e
     def test_ingest_album_task_calls_ingestor(
@@ -475,16 +467,14 @@ class TestSpotifyTaskIntegration:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
-            with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-                with patch('spotipy.Spotify', return_value=mock_spotify_client):
-                    with patch('spotipy.oauth2.SpotifyClientCredentials'):
-                        result = ingest_album_task.apply(
-                            args=["test_album_id"]
-                        ).get()
+        with patch("app.workers.tasks_light.SessionLocal", return_value=mock_db_session):
+            with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+                with patch("spotipy.Spotify", return_value=mock_spotify_client):
+                    with patch("spotipy.oauth2.SpotifyClientCredentials"):
+                        result = ingest_album_task.apply(args=["test_album_id"]).get()
 
-        assert result['status'] == 'success'
-        assert 'tracks_queued' in result
+        assert result["status"] == "success"
+        assert "tracks_queued" in result
 
 
 class TestSpotifyIngestTrackTask:
@@ -514,13 +504,13 @@ class TestSpotifyIngestTrackTask:
         mock_repo.create_track.return_value = mock_track
         mock_repo.add_playback_link.return_value = MagicMock()
 
-        with patch('app.workers.tasks_light._dispatch_audio_analysis') as mock_dispatch:
+        with patch("app.workers.tasks_light._dispatch_audio_analysis") as mock_dispatch:
             mock_dispatch.return_value = 1
 
-            with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
-                with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-                    with patch('spotipy.Spotify', return_value=mock_spotify_client):
-                        with patch('spotipy.oauth2.SpotifyClientCredentials'):
+            with patch("app.workers.tasks_light.SessionLocal", return_value=mock_db_session):
+                with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+                    with patch("spotipy.Spotify", return_value=mock_spotify_client):
+                        with patch("spotipy.oauth2.SpotifyClientCredentials"):
                             result = spotify_ingest_task.apply(
                                 args=["track", TEST_SPOTIFY_TRACK_ID]
                             ).get()
@@ -542,12 +532,10 @@ class TestSpotifyIngestTrackTask:
         mock_client = MagicMock()
         mock_client.track.return_value = None  # Track not found
 
-        with patch('app.workers.tasks_light.SessionLocal', return_value=mock_db_session):
-            with patch('spotipy.Spotify', return_value=mock_client):
-                with patch('spotipy.oauth2.SpotifyClientCredentials'):
-                    result = spotify_ingest_task.apply(
-                        args=["track", TEST_SPOTIFY_TRACK_ID]
-                    ).get()
+        with patch("app.workers.tasks_light.SessionLocal", return_value=mock_db_session):
+            with patch("spotipy.Spotify", return_value=mock_client):
+                with patch("spotipy.oauth2.SpotifyClientCredentials"):
+                    result = spotify_ingest_task.apply(args=["track", TEST_SPOTIFY_TRACK_ID]).get()
 
         assert result["status"] == "failed"
         assert "not found" in result["message"].lower() or "track" in result["message"].lower()
