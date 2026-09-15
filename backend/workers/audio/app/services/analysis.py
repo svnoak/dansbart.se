@@ -9,18 +9,21 @@ Orchestrates the full analysis pipeline:
 
 AGPL-3.0 License - See LICENSE file for details.
 """
-import structlog
-from sqlalchemy.orm import Session, joinedload, selectinload
-from app.core.models import Track, PlaybackLink, TrackStructureVersion, TrackArtist, TrackAlbum
-from app.repository.analysis import AnalysisRepository
-from app.workers.audio.fetcher import AudioFetcher
-from neckenml.analyzer import AudioAnalyzer
-from app.services.classification import ClassificationService
-from app.core.config import settings
-import time
-import os
+
 import gc
+import os
+import time
+
 import psutil
+import structlog
+from neckenml.analyzer import AudioAnalyzer
+from sqlalchemy.orm import Session, joinedload, selectinload
+
+from app.core.config import settings
+from app.core.models import PlaybackLink, Track, TrackAlbum, TrackArtist, TrackStructureVersion
+from app.repository.analysis import AnalysisRepository
+from app.services.classification import ClassificationService
+from app.workers.audio.fetcher import AudioFetcher
 
 log = structlog.get_logger()
 
@@ -40,7 +43,7 @@ class AnalysisService:
         self.classifier_service = ClassificationService(db) if db else None
 
         self._analyzer = None
-        self._model_dir = os.getenv('NECKENML_MODEL_DIR', settings.NECKENML_MODEL_DIR)
+        self._model_dir = os.getenv("NECKENML_MODEL_DIR", settings.NECKENML_MODEL_DIR)
 
     def _get_analyzer(self):
         """Get or create the cached AudioAnalyzer instance."""
@@ -83,11 +86,16 @@ class AnalysisService:
         self.repo.db = self.db
         self.classifier_service.db = self.db
 
-        track = self.db.query(Track).options(
-            joinedload(Track.playback_links),
-            selectinload(Track.album_links).joinedload(TrackAlbum.album),
-            joinedload(Track.artist_links).joinedload(TrackArtist.artist)
-        ).filter(Track.id == track_id).first()
+        track = (
+            self.db.query(Track)
+            .options(
+                joinedload(Track.playback_links),
+                selectinload(Track.album_links).joinedload(TrackAlbum.album),
+                joinedload(Track.artist_links).joinedload(TrackArtist.artist),
+            )
+            .filter(Track.id == track_id)
+            .first()
+        )
 
         if not track:
             return
@@ -101,7 +109,12 @@ class AnalysisService:
             track.processing_status = "PROCESSING"
             self.db.commit()
         else:
-            log.info("status_update", title=track.title, status="REANALYZING", message="Keeping REANALYZING status")
+            log.info(
+                "status_update",
+                title=track.title,
+                status="REANALYZING",
+                message="Keeping REANALYZING status",
+            )
 
         try:
             success = self._process_single_track(track)
@@ -113,7 +126,12 @@ class AnalysisService:
                 # If was REANALYZING, revert to DONE (old data is still valid)
                 if original_status == "REANALYZING":
                     track.processing_status = "DONE"
-                    log.warn("status_update", title=track.title, status="DONE", message="Reverted from REANALYZING")
+                    log.warn(
+                        "status_update",
+                        title=track.title,
+                        status="DONE",
+                        message="Reverted from REANALYZING",
+                    )
                 else:
                     track.processing_status = "FAILED"
                     log.warn("status_update", title=track.title, status="FAILED")
@@ -127,11 +145,16 @@ class AnalysisService:
                 # If was REANALYZING, revert to DONE instead of FAILED
                 if original_status == "REANALYZING":
                     track.processing_status = "DONE"
-                    log.warn("status_revert", title=track.title, status="DONE", message="Reverted from REANALYZING after error")
+                    log.warn(
+                        "status_revert",
+                        title=track.title,
+                        status="DONE",
+                        message="Reverted from REANALYZING after error",
+                    )
                 else:
                     track.processing_status = "FAILED"
                 self.db.commit()
-            except:
+            except Exception:
                 pass
 
         finally:
@@ -161,7 +184,7 @@ class AnalysisService:
 
         # Get artist info
         artist_name = ""
-        primary_link = next((l for l in track.artist_links if l.role == 'primary'), None)
+        primary_link = next((link for link in track.artist_links if link.role == "primary"), None)
         if primary_link:
             artist_name = primary_link.artist.name
         elif track.artist_links:
@@ -170,7 +193,14 @@ class AnalysisService:
         album_name = track.album.title if track.album else ""
 
         # Check for existing YouTube link
-        existing_link = next((l for l in track.playback_links if l.platform == 'youtube' and l.is_working), None)
+        existing_link = next(
+            (
+                link
+                for link in track.playback_links
+                if link.platform == "youtube" and link.is_working
+            ),
+            None,
+        )
 
         # Fetch audio
         if existing_link:
@@ -181,7 +211,7 @@ class AnalysisService:
                 expected_duration_ms=track.duration_ms,
                 track_title=track.title,
                 artist_name=artist_name,
-                direct_video_id=existing_link.deep_link
+                direct_video_id=existing_link.deep_link,
             )
         else:
             query = f"{artist_name} - {track.title}"
@@ -191,15 +221,15 @@ class AnalysisService:
                 query=query,
                 expected_duration_ms=track.duration_ms,
                 track_title=track.title,
-                artist_name=artist_name
+                artist_name=artist_name,
             )
 
         if not result:
             log.info("no_audio_found", message="Attempting title-based classification")
             return self._classify_from_title(track)
 
-        file_path = result['file_path']
-        youtube_id = result.get('youtube_id')
+        file_path = result["file_path"]
+        youtube_id = result.get("youtube_id")
 
         # Save YouTube link
         if youtube_id:
@@ -225,33 +255,31 @@ class AnalysisService:
 
             # Save raw artifacts
             self.repo.add_analysis(
-                track_id=track.id,
-                source_type="neckenml_analyzer",
-                raw_data=artifacts
+                track_id=track.id, source_type="neckenml_analyzer", raw_data=artifacts
             )
 
             # Update track with analysis results
-            track.tempo_bpm = data.get('tempo_bpm')
-            duration_s = artifacts.get('audio_stats', {}).get('duration_seconds', 0)
+            track.tempo_bpm = data.get("tempo_bpm")
+            duration_s = artifacts.get("audio_stats", {}).get("duration_seconds", 0)
             if duration_s > 0 and not track.duration_ms:
                 track.duration_ms = int(duration_s * 1000)
-            track.loudness = data.get('loudness_lufs')
-            track.is_instrumental = data.get('is_likely_instrumental', False)
+            track.loudness = data.get("loudness_lufs")
+            track.is_instrumental = data.get("is_likely_instrumental", False)
 
-            track.swing_ratio = data.get('swing_ratio')
-            track.articulation = data.get('articulation')
-            track.bounciness = data.get('bounciness')
-            track.punchiness = data.get('punchiness')
+            track.swing_ratio = data.get("swing_ratio")
+            track.articulation = data.get("articulation")
+            track.bounciness = data.get("bounciness")
+            track.punchiness = data.get("punchiness")
 
-            track.polska_score = data.get('polska_score')
-            track.hambo_score = data.get('hambo_score')
-            track.voice_probability = data.get('voice_probability')
-            track.bpm_stability = data.get('bpm_stability')
+            track.polska_score = data.get("polska_score")
+            track.hambo_score = data.get("hambo_score")
+            track.voice_probability = data.get("voice_probability")
+            track.bpm_stability = data.get("bpm_stability")
 
-            track.bars = data.get('bars')
-            track.sections = data.get('sections')
-            track.section_labels = data.get('section_labels')
-            track.embedding = data.get('embedding')
+            track.bars = data.get("bars")
+            track.sections = data.get("sections")
+            track.section_labels = data.get("section_labels")
+            track.embedding = data.get("embedding")
 
             # Create structure version
             ai_version = TrackStructureVersion(
@@ -259,13 +287,13 @@ class AnalysisService:
                 description="Original AI Analysis",
                 author_alias="AI",
                 structure_data={
-                    "bars": data.get('bars'),
-                    "sections": data.get('sections'),
-                    "labels": data.get('section_labels')
+                    "bars": data.get("bars"),
+                    "sections": data.get("sections"),
+                    "labels": data.get("section_labels"),
                 },
                 is_active=True,
                 vote_count=0,
-                is_hidden=False
+                is_hidden=False,
             )
             self.db.add(ai_version)
             self.db.add(track)
@@ -276,13 +304,11 @@ class AnalysisService:
 
             # Correct bars based on classified style's beats_per_bar
             from app.services.bar_correction import correct_track_bars
-            primary_style = next(
-                (ds for ds in track.dance_styles if ds.is_primary), None
-            )
+
+            primary_style = next((ds for ds in track.dance_styles if ds.is_primary), None)
             if primary_style:
                 correct_track_bars(
-                    self.db, track, artifacts,
-                    primary_style.dance_style, primary_style.sub_style
+                    self.db, track, artifacts, primary_style.dance_style, primary_style.sub_style
                 )
 
             # Cleanup
@@ -298,13 +324,12 @@ class AnalysisService:
 
     def _ensure_youtube_link(self, track, video_id):
         """Save YouTube link if not already present."""
-        exists = self.db.query(PlaybackLink).filter_by(track_id=track.id, deep_link=video_id).first()
+        exists = (
+            self.db.query(PlaybackLink).filter_by(track_id=track.id, deep_link=video_id).first()
+        )
         if not exists:
             link = PlaybackLink(
-                track_id=track.id,
-                platform="youtube",
-                deep_link=video_id,
-                is_working=True
+                track_id=track.id, platform="youtube", deep_link=video_id, is_working=True
             )
             self.db.add(link)
 
@@ -348,10 +373,13 @@ class AnalysisService:
 
         from app.core.models import TrackDanceStyle
 
-        existing = self.db.query(TrackDanceStyle).filter(
-            TrackDanceStyle.track_id == track.id,
-            TrackDanceStyle.dance_style == detected_style
-        ).first()
+        existing = (
+            self.db.query(TrackDanceStyle)
+            .filter(
+                TrackDanceStyle.track_id == track.id, TrackDanceStyle.dance_style == detected_style
+            )
+            .first()
+        )
 
         if not existing:
             style_row = TrackDanceStyle(
@@ -363,7 +391,7 @@ class AnalysisService:
                 tempo_category=None,
                 bpm_multiplier=1.0,
                 is_user_confirmed=False,
-                confirmation_count=0
+                confirmation_count=0,
             )
             self.db.add(style_row)
         else:

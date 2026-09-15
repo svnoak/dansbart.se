@@ -6,15 +6,18 @@ The audio worker writes to these tables; the main application reads from them.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
+
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Integer, Float, Boolean, ForeignKey, DateTime, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from app.core.database import Base
-from pgvector.sqlalchemy import Vector
 
 
 class Track(Base):
@@ -24,6 +27,7 @@ class Track(Base):
     The audio worker updates analysis fields (tempo_bpm, swing_ratio, etc.)
     after processing audio files.
     """
+
     __tablename__ = "tracks"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -31,8 +35,12 @@ class Track(Base):
     isrc: Mapped[str | None] = mapped_column(String, index=True)
 
     # Metadata Relationships
-    album_links: Mapped[List["TrackAlbum"]] = relationship("TrackAlbum", back_populates="track", cascade="all, delete-orphan")
-    artist_links: Mapped[List["TrackArtist"]] = relationship("TrackArtist", back_populates="track", cascade="all, delete-orphan")
+    album_links: Mapped[List["TrackAlbum"]] = relationship(
+        "TrackAlbum", back_populates="track", cascade="all, delete-orphan"
+    )
+    artist_links: Mapped[List["TrackArtist"]] = relationship(
+        "TrackArtist", back_populates="track", cascade="all, delete-orphan"
+    )
 
     # Audio Features (populated by analysis)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -58,19 +66,29 @@ class Track(Base):
     bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     sections: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
     section_labels: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
-    processing_status: Mapped[str] = mapped_column(String, default="PENDING", server_default="PENDING")
+    processing_status: Mapped[str] = mapped_column(
+        String, default="PENDING", server_default="PENDING"
+    )
 
     # Relationships
-    analysis_sources = relationship("AnalysisSource", back_populates="track", cascade="all, delete-orphan")
-    playback_links = relationship("PlaybackLink", back_populates="track", cascade="all, delete-orphan")
-    dance_styles = relationship("TrackDanceStyle", back_populates="track", cascade="all, delete-orphan")
-    structure_versions = relationship("TrackStructureVersion", back_populates="track", cascade="all, delete-orphan")
+    analysis_sources = relationship(
+        "AnalysisSource", back_populates="track", cascade="all, delete-orphan"
+    )
+    playback_links = relationship(
+        "PlaybackLink", back_populates="track", cascade="all, delete-orphan"
+    )
+    dance_styles = relationship(
+        "TrackDanceStyle", back_populates="track", cascade="all, delete-orphan"
+    )
+    structure_versions = relationship(
+        "TrackStructureVersion", back_populates="track", cascade="all, delete-orphan"
+    )
 
     @property
     def primary_artist(self) -> Optional["Artist"]:
         """Returns the first artist marked as primary."""
         for link in self.artist_links:
-            if link.role == 'primary':
+            if link.role == "primary":
                 return link.artist
         return self.artist_links[0].artist if self.artist_links else None
 
@@ -82,10 +100,9 @@ class Track(Base):
 
 class TrackArtist(Base):
     """Junction table for track-artist relationships."""
+
     __tablename__ = "track_artists"
-    __table_args__ = (
-        UniqueConstraint('track_id', 'artist_id', name='unique_track_artist'),
-    )
+    __table_args__ = (UniqueConstraint("track_id", "artist_id", name="unique_track_artist"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
@@ -97,10 +114,9 @@ class TrackArtist(Base):
 
 class TrackAlbum(Base):
     """Junction table for track-album relationships."""
+
     __tablename__ = "track_albums"
-    __table_args__ = (
-        UniqueConstraint('track_id', 'album_id', name='unique_track_album'),
-    )
+    __table_args__ = (UniqueConstraint("track_id", "album_id", name="unique_track_album"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id"))
@@ -112,6 +128,7 @@ class TrackAlbum(Base):
 
 class Artist(Base):
     """Artist metadata."""
+
     __tablename__ = "artists"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -120,11 +137,12 @@ class Artist(Base):
     spotify_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     track_links: Mapped[List["TrackArtist"]] = relationship("TrackArtist", back_populates="artist")
     albums: Mapped[List["Album"]] = relationship("Album", back_populates="artist")
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class Album(Base):
     """Album metadata."""
+
     __tablename__ = "albums"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -135,7 +153,9 @@ class Album(Base):
     artist_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("artists.id"), nullable=True)
 
     artist: Mapped["Artist"] = relationship("Artist", back_populates="albums")
-    track_links: Mapped[List["TrackAlbum"]] = relationship("TrackAlbum", back_populates="album", cascade="all, delete-orphan")
+    track_links: Mapped[List["TrackAlbum"]] = relationship(
+        "TrackAlbum", back_populates="album", cascade="all, delete-orphan"
+    )
 
 
 class AnalysisSource(Base):
@@ -144,6 +164,7 @@ class AnalysisSource(Base):
 
     This allows re-classification without re-analyzing audio files.
     """
+
     __tablename__ = "analysis_sources"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -151,7 +172,9 @@ class AnalysisSource(Base):
     source_type: Mapped[str] = mapped_column(String)  # 'neckenml_analyzer', 'hybrid_ml_v2'
     raw_data: Mapped[dict] = mapped_column(JSONB)
     confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
-    analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    analyzed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     track = relationship("Track", back_populates="analysis_sources")
 
@@ -162,6 +185,7 @@ class TrackDanceStyle(Base):
 
     Each track can have multiple dance styles (primary + alternatives).
     """
+
     __tablename__ = "track_dance_styles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -183,6 +207,7 @@ class TrackDanceStyle(Base):
 
 class PlaybackLink(Base):
     """Links to playback sources (YouTube, Spotify, etc.)."""
+
     __tablename__ = "playback_links"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -196,6 +221,7 @@ class PlaybackLink(Base):
 
 class TrackStructureVersion(Base):
     """Audio structure annotations (bars, sections)."""
+
     __tablename__ = "track_structure_versions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -216,6 +242,7 @@ class TrackStructureVersion(Base):
 
 class GenreProfile(Base):
     """Genre analysis profiles for comparison."""
+
     __tablename__ = "genre_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -232,10 +259,9 @@ class DanceMovementFeedback(Base):
     Global consensus on how dance styles feel.
     Used for movement-based recommendations.
     """
+
     __tablename__ = "dance_movement_feedback"
-    __table_args__ = (
-        UniqueConstraint('dance_style', 'movement_tag', name='_dance_move_uc'),
-    )
+    __table_args__ = (UniqueConstraint("dance_style", "movement_tag", name="_dance_move_uc"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     dance_style: Mapped[str] = mapped_column(String, index=True, nullable=False)
@@ -249,18 +275,19 @@ class StyleKeyword(Base):
     Maps keywords in track metadata to dance styles.
     Used for metadata-based classification.
     """
+
     __tablename__ = "style_keywords"
-    __table_args__ = (
-        UniqueConstraint('keyword', name='unique_keyword'),
-    )
+    __table_args__ = (UniqueConstraint("keyword", name="unique_keyword"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     keyword: Mapped[str] = mapped_column(String, nullable=False, index=True)
     main_style: Mapped[str] = mapped_column(String, nullable=False, index=True)
     sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class DanceStyleConfig(Base):
@@ -268,12 +295,15 @@ class DanceStyleConfig(Base):
     Configuration for dance styles, including beats_per_bar for bar correction.
     Used after classification to re-derive bar positions from beat timestamps.
     """
+
     __tablename__ = "dance_style_config"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     main_style: Mapped[str] = mapped_column(String, nullable=False, index=True)
     sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
     beats_per_bar: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

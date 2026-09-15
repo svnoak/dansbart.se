@@ -5,10 +5,12 @@ Uses neckenml's StyleClassifier to predict dance styles from audio features.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
+
 import structlog
-from sqlalchemy.orm import Session
-from app.core.models import Track, AnalysisSource, TrackDanceStyle
 from neckenml.core import StyleClassifier, compute_derived_features
+from sqlalchemy.orm import Session
+
+from app.core.models import AnalysisSource, Track, TrackDanceStyle
 from app.core.music_theory import categorize_tempo
 from app.services.style_keywords_cache import get_sorted_keywords
 
@@ -26,9 +28,7 @@ class ClassificationService:
         self.db = db
         if db:
             self.classifier = StyleClassifier(
-                db=db,
-                categorize_tempo_fn=categorize_tempo,
-                get_keywords_fn=get_sorted_keywords
+                db=db, categorize_tempo_fn=categorize_tempo, get_keywords_fn=get_sorted_keywords
             )
         else:
             self.classifier = None
@@ -42,7 +42,10 @@ class ClassificationService:
         - New format (neckenml_analyzer): raw_data contains artifacts
         """
         if source.source_type == "neckenml_analyzer":
-            log.info("computing_features_from_artifacts", message="Computing features from stored artifacts")
+            log.info(
+                "computing_features_from_artifacts",
+                message="Computing features from stored artifacts",
+            )
             return compute_derived_features(source.raw_data)
         else:
             return source.raw_data
@@ -52,10 +55,12 @@ class ClassificationService:
         try:
             confirmed_styles = {
                 row.dance_style
-                for row in self.db.query(TrackDanceStyle.dance_style).filter(
+                for row in self.db.query(TrackDanceStyle.dance_style)
+                .filter(
                     TrackDanceStyle.track_id == track.id,
                     TrackDanceStyle.is_user_confirmed.is_(True),
-                ).all()
+                )
+                .all()
             }
 
             # Remove existing styles, preserving user-confirmed rows
@@ -66,18 +71,18 @@ class ClassificationService:
 
             # Add new styles, skipping any style a user already confirmed
             for p in predictions:
-                if p['style'] in confirmed_styles:
+                if p["style"] in confirmed_styles:
                     continue
                 new_style = TrackDanceStyle(
                     track_id=track.id,
-                    dance_style=p['style'],
-                    sub_style=p.get('sub_style'),
-                    is_primary=(p['type'] == 'Primary'),
-                    confidence=p.get('confidence', 0.0),
-                    tempo_category=p.get('dance_tempo'),
-                    bpm_multiplier=p.get('multiplier', 1.0),
-                    effective_bpm=p.get('effective_bpm', 0),
-                    is_user_confirmed=False
+                    dance_style=p["style"],
+                    sub_style=p.get("sub_style"),
+                    is_primary=(p["type"] == "Primary"),
+                    confidence=p.get("confidence", 0.0),
+                    tempo_category=p.get("dance_tempo"),
+                    bpm_multiplier=p.get("multiplier", 1.0),
+                    effective_bpm=p.get("effective_bpm", 0),
+                    is_user_confirmed=False,
                 )
                 self.db.add(new_style)
 
@@ -98,10 +103,12 @@ class ClassificationService:
         """
         log.info("reclassify_library_started")
 
-        tracks = (self.db.query(Track)
-                  .join(AnalysisSource)
-                  .filter(AnalysisSource.source_type.in_(['neckenml_analyzer', 'hybrid_ml_v2']))
-                  .all())
+        tracks = (
+            self.db.query(Track)
+            .join(AnalysisSource)
+            .filter(AnalysisSource.source_type.in_(["neckenml_analyzer", "hybrid_ml_v2"]))
+            .all()
+        )
 
         updated_count = 0
         skipped_count = 0
@@ -114,8 +121,14 @@ class ClassificationService:
                 skipped_count += 1
                 continue
 
-            source = next((s for s in track.analysis_sources
-                          if s.source_type in ['neckenml_analyzer', 'hybrid_ml_v2']), None)
+            source = next(
+                (
+                    s
+                    for s in track.analysis_sources
+                    if s.source_type in ["neckenml_analyzer", "hybrid_ml_v2"]
+                ),
+                None,
+            )
             if not source:
                 continue
 
@@ -124,17 +137,17 @@ class ClassificationService:
             self._save_predictions(track, predictions)
 
             # Backfill bpm_stability if missing (was not saved before the bug fix)
-            if track.bpm_stability is None and features.get('bpm_stability') is not None:
-                track.bpm_stability = features['bpm_stability']
+            if track.bpm_stability is None and features.get("bpm_stability") is not None:
+                track.bpm_stability = features["bpm_stability"]
                 self.db.add(track)
 
             # Correct bars based on classified style
             if predictions and source.raw_data:
                 from app.services.bar_correction import correct_track_bars
+
                 primary = predictions[0]
                 correct_track_bars(
-                    self.db, track, source.raw_data,
-                    primary['style'], primary.get('sub_style')
+                    self.db, track, source.raw_data, primary["style"], primary.get("sub_style")
                 )
 
             updated_count += 1
@@ -160,8 +173,14 @@ class ClassificationService:
         features = analysis_data
 
         if not features:
-            source = next((s for s in track.analysis_sources
-                          if s.source_type in ['neckenml_analyzer', 'hybrid_ml_v2']), None)
+            source = next(
+                (
+                    s
+                    for s in track.analysis_sources
+                    if s.source_type in ["neckenml_analyzer", "hybrid_ml_v2"]
+                ),
+                None,
+            )
             if source:
                 features = self._get_features_from_source(source)
 
@@ -170,7 +189,7 @@ class ClassificationService:
             return
 
         # Update vocals flag
-        is_instrumental = features.get('is_likely_instrumental', True)
+        is_instrumental = features.get("is_likely_instrumental", True)
         track.has_vocals = not is_instrumental
         self.db.add(track)
 
@@ -182,16 +201,22 @@ class ClassificationService:
 
         if predictions:
             primary = predictions[0]
-            log.info("track_classified", style=primary['style'], dance_tempo=primary['dance_tempo'])
+            log.info("track_classified", style=primary["style"], dance_tempo=primary["dance_tempo"])
 
             # Correct bars based on classified style
-            source = next((s for s in track.analysis_sources
-                          if s.source_type in ['neckenml_analyzer', 'hybrid_ml_v2']), None)
+            source = next(
+                (
+                    s
+                    for s in track.analysis_sources
+                    if s.source_type in ["neckenml_analyzer", "hybrid_ml_v2"]
+                ),
+                None,
+            )
             if source and source.raw_data:
                 from app.services.bar_correction import correct_track_bars
+
                 correct_track_bars(
-                    self.db, track, source.raw_data,
-                    primary['style'], primary.get('sub_style')
+                    self.db, track, source.raw_data, primary["style"], primary.get("sub_style")
                 )
         else:
             log.warn("classification_empty", title=track.title)

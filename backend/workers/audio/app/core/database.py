@@ -3,14 +3,16 @@ Database connection and session management.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
 from app.core.config import settings
 
 # Create the Engine (connection pool)
 engine = create_engine(
     str(settings.SQLALCHEMY_DATABASE_URI),
-    pool_pre_ping=True  # Auto-reconnect if DB connection drops
+    pool_pre_ping=True,  # Auto-reconnect if DB connection drops
 )
 
 # Create the Session Factory

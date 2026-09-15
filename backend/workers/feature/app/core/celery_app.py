@@ -1,10 +1,11 @@
 """Celery application configuration."""
+
 import structlog
 from celery import Celery
-from celery.signals import task_prerun, task_postrun, task_failure
+from celery.signals import task_failure, task_postrun, task_prerun
 
 from app.core.config import settings
-from app.core.logging import setup_logging, init_canonical, emit_canonical
+from app.core.logging import emit_canonical, init_canonical, setup_logging
 
 setup_logging()
 
@@ -15,7 +16,7 @@ celery_app = Celery(
     include=[
         "app.workers.tasks_feature",
         "app.workers.tasks_light",
-    ]
+    ],
 )
 
 celery_app.conf.update(
@@ -41,8 +42,7 @@ celery_app.conf.task_routes = {
 
 
 @task_prerun.connect
-def on_task_start(sender=None, task_id=None, task=None, args=None,
-                  kwargs=None, **kw):
+def on_task_start(sender=None, task_id=None, task=None, args=None, kwargs=None, **kw):
     headers = getattr(task.request, "headers", None) or {}
     trace_id = headers.get("trace_id") or task_id
     structlog.contextvars.clear_contextvars()
@@ -53,14 +53,12 @@ def on_task_start(sender=None, task_id=None, task=None, args=None,
 
 
 @task_postrun.connect
-def on_task_end(sender=None, task_id=None, task=None, retval=None,
-                state=None, **kw):
+def on_task_end(sender=None, task_id=None, task=None, retval=None, state=None, **kw):
     emit_canonical(state)
     structlog.contextvars.clear_contextvars()
 
 
 @task_failure.connect
-def on_task_failure(sender=None, task_id=None, exception=None,
-                    traceback=None, **kw):
+def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, **kw):
     log = structlog.get_logger()
     log.error("task.failed", exception=str(exception), exc_info=True)

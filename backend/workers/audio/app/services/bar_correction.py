@@ -6,10 +6,13 @@ beats_per_bar for the classified dance style.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
-import structlog
+
 from typing import Optional
+
+import structlog
 from sqlalchemy.orm import Session
-from app.core.models import Track, AnalysisSource, TrackStructureVersion
+
+from app.core.models import Track
 from app.services.style_config_cache import get_beats_per_bar
 
 log = structlog.get_logger()
@@ -71,8 +74,12 @@ def correct_track_bars(
 
     # Skip if detection already matches the expected meter
     if detected_bpb == target_bpb:
-        log.debug("bar_correction_skipped", reason="meter_matches",
-                  title=track.title, beats_per_bar=target_bpb)
+        log.debug(
+            "bar_correction_skipped",
+            reason="meter_matches",
+            title=track.title,
+            beats_per_bar=target_bpb,
+        )
         return False
 
     corrected_bars = rederive_bars(beat_times, target_bpb)
@@ -81,16 +88,15 @@ def correct_track_bars(
     # Update active structure version if present
     for sv in track.structure_versions:
         if sv.is_active and sv.structure_data:
-            sv.structure_data = {
-                **sv.structure_data,
-                "bars": corrected_bars
-            }
+            sv.structure_data = {**sv.structure_data, "bars": corrected_bars}
 
-    log.info("bars_corrected",
-             title=track.title,
-             style=main_style,
-             detected_bpb=detected_bpb,
-             target_bpb=target_bpb,
-             bar_count=len(corrected_bars))
+    log.info(
+        "bars_corrected",
+        title=track.title,
+        style=main_style,
+        detected_bpb=detected_bpb,
+        target_bpb=target_bpb,
+        bar_count=len(corrected_bars),
+    )
 
     return True

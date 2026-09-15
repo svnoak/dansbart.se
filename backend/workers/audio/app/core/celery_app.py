@@ -5,13 +5,14 @@ This worker processes audio analysis tasks from the 'audio' queue.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
+
 import os
 
 import structlog
 from celery import Celery
-from celery.signals import task_prerun, task_postrun, task_failure
+from celery.signals import task_failure, task_postrun, task_prerun
 
-from app.core.logging import setup_logging, init_canonical, emit_canonical
+from app.core.logging import emit_canonical, init_canonical, setup_logging
 
 setup_logging()
 
@@ -22,7 +23,7 @@ celery_app = Celery(
     "dansbart_audio_worker",
     broker=BROKER_URL,
     backend=BROKER_URL,
-    include=["app.workers.tasks_audio"]
+    include=["app.workers.tasks_audio"],
 )
 
 celery_app.conf.update(
@@ -31,20 +32,17 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="Europe/Stockholm",
     enable_utc=True,
-
     # Task routing - all tasks go to audio queue
     task_routes={
-        'app.workers.tasks_audio.analyze_track_task': {'queue': 'audio'},
+        "app.workers.tasks_audio.analyze_track_task": {"queue": "audio"},
     },
-
     # Default queue
-    task_default_queue='audio',
+    task_default_queue="audio",
 )
 
 
 @task_prerun.connect
-def on_task_start(sender=None, task_id=None, task=None, args=None,
-                  kwargs=None, **kw):
+def on_task_start(sender=None, task_id=None, task=None, args=None, kwargs=None, **kw):
     headers = getattr(task.request, "headers", None) or {}
     trace_id = headers.get("trace_id") or task_id
     structlog.contextvars.clear_contextvars()
@@ -55,14 +53,12 @@ def on_task_start(sender=None, task_id=None, task=None, args=None,
 
 
 @task_postrun.connect
-def on_task_end(sender=None, task_id=None, task=None, retval=None,
-                state=None, **kw):
+def on_task_end(sender=None, task_id=None, task=None, retval=None, state=None, **kw):
     emit_canonical(state)
     structlog.contextvars.clear_contextvars()
 
 
 @task_failure.connect
-def on_task_failure(sender=None, task_id=None, exception=None,
-                    traceback=None, **kw):
+def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, **kw):
     log = structlog.get_logger()
     log.error("task.failed", exception=str(exception), exc_info=True)

@@ -6,9 +6,11 @@ from database. Used after classification to correct bar positions.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
-import structlog
+
 import time
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Tuple
+
+import structlog
 from sqlalchemy.orm import Session
 
 log = structlog.get_logger()
@@ -27,7 +29,6 @@ def get_config(db: Session, force_refresh: bool = False) -> Dict[Tuple[str, Opti
     Returns:
         Dict mapping (main_style, sub_style) -> beats_per_bar
     """
-    global _config_cache, _cache_timestamp
 
     now = time.time()
     cache_expired = (now - _cache_timestamp) > CACHE_TTL_SECONDS
@@ -78,14 +79,9 @@ def _refresh_cache(db: Session) -> None:
 
     from app.core.models import DanceStyleConfig
 
-    configs = db.query(DanceStyleConfig).filter(
-        DanceStyleConfig.is_active == True
-    ).all()
+    configs = db.query(DanceStyleConfig).filter(DanceStyleConfig.is_active.is_(True)).all()
 
-    _config_cache = {
-        (c.main_style, c.sub_style): c.beats_per_bar
-        for c in configs
-    }
+    _config_cache = {(c.main_style, c.sub_style): c.beats_per_bar for c in configs}
 
     _cache_timestamp = time.time()
     log.info("style_config_cache_refreshed", config_count=len(_config_cache))
@@ -93,7 +89,6 @@ def _refresh_cache(db: Session) -> None:
 
 def get_cache_info() -> dict:
     """Get cache statistics for debugging/admin."""
-    global _config_cache, _cache_timestamp
 
     now = time.time()
     age = now - _cache_timestamp if _cache_timestamp > 0 else -1
@@ -103,5 +98,5 @@ def get_cache_info() -> dict:
         "age_seconds": round(age, 1) if age >= 0 else None,
         "ttl_seconds": CACHE_TTL_SECONDS,
         "expires_in": round(CACHE_TTL_SECONDS - age, 1) if age >= 0 else None,
-        "is_valid": age >= 0 and age < CACHE_TTL_SECONDS
+        "is_valid": age >= 0 and age < CACHE_TTL_SECONDS,
     }

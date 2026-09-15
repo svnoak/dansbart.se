@@ -1,4 +1,5 @@
 """Structured logging configuration with canonical log support."""
+
 import logging
 import sys
 import time
@@ -6,9 +7,7 @@ from contextvars import ContextVar
 
 import structlog
 
-_canonical_fields: ContextVar[dict | None] = ContextVar(
-    "canonical_fields", default=None
-)
+_canonical_fields: ContextVar[dict | None] = ContextVar("canonical_fields", default=None)
 
 
 def setup_logging():
@@ -29,9 +28,7 @@ def setup_logging():
     )
 
     # Redirect stdlib logging through structlog
-    logging.basicConfig(
-        format="%(message)s", stream=sys.stdout, level=logging.INFO
-    )
+    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=logging.INFO)
 
 
 def canonical_bind(**kwargs):
@@ -43,12 +40,14 @@ def canonical_bind(**kwargs):
 
 def init_canonical(task_name, task_id, trace_id):
     """Initialize canonical log fields for a new task."""
-    _canonical_fields.set({
-        "task_name": task_name,
-        "task_id": task_id,
-        "trace_id": trace_id,
-        "start_time": time.monotonic(),
-    })
+    _canonical_fields.set(
+        {
+            "task_name": task_name,
+            "task_id": task_id,
+            "trace_id": trace_id,
+            "start_time": time.monotonic(),
+        }
+    )
 
 
 def emit_canonical(status):
