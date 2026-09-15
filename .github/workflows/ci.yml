@@ -2,16 +2,166 @@ name: CI
 
 on:
   push:
-    branches:
-      - '**'
+    branches: [main]
   pull_request:
-    branches:
-      - '**'
   workflow_dispatch:
 
+# A PR push previously triggered CI twice (once via push on '**', once via
+# pull_request). Pushes are now limited to main; everything else arrives as a PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  test-backend:
-    name: Backend Tests
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      feature-worker: ${{ steps.filter.outputs.feature-worker }}
+      audio-worker: ${{ steps.filter.outputs.audio-worker }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      migrations: ${{ steps.filter.outputs.migrations }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'backend/api/**'
+            feature-worker:
+              - 'backend/workers/feature/**'
+            audio-worker:
+              - 'backend/workers/audio/**'
+            frontend:
+              - 'frontend/**'
+            migrations:
+              - 'backend/api/src/main/resources/db/migration/**'
+
+  migrations:
+    name: Database Migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # Flyway records a checksum per applied migration. Editing a file that has
+      # already run against beta or production makes startup fail with a checksum
+      # mismatch, so existing migrations are append-only.
+      - name: Reject edits to already-committed migrations
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          merge_base=$(git merge-base "$BASE_SHA" HEAD)
+          edited=$(git diff --name-only --diff-filter=MDR "$merge_base" HEAD \
+            -- backend/api/src/main/resources/db/migration/)
+          if [ -n "$edited" ]; then
+            echo "::error::Existing migrations were modified, deleted or renamed. Add a new migration instead:"
+            echo "$edited"
+            exit 1
+          fi
+          echo "Migration history is append-only."
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # generate-sources runs the flyway-maven-plugin then jOOQ codegen, so this
+      # proves migrations apply to an empty database AND that the committed jOOQ
+      # sources still match the resulting schema.
+      - name: Apply all migrations to an empty database
+        working-directory: backend/api
+        run: |
+          mvn -B generate-sources \
+            -Djooq.codegen.jdbc.url=jdbc:postgresql://localhost:5432/test_db \
+            -Djooq.codegen.jdbc.user=test \
+            -Djooq.codegen.jdbc.password=test
+
+  test-java-api:
+    name: Java API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Java tests
+        working-directory: backend/api
+        run: mvn test -B -DskipDbBuild=true
+
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run linting
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run type check
+        working-directory: frontend
+        run: npm run type-check
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm run test:run
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  feature-worker:
+    name: Feature Worker
     runs-on: ubuntu-latest
 
     services:
@@ -43,10 +193,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Matches the 3.11 base image in backend/workers/feature/Dockerfile.
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/workers/feature/requirements.txt
+
+      - name: Install linters
+        run: pip install black flake8 isort
+
+      - name: Run black
+        working-directory: backend/workers/feature
+        run: black --check app tests
+
+      - name: Run isort
+        working-directory: backend/workers/feature
+        run: isort --check-only app tests
+
+      - name: Run flake8
+        working-directory: backend/workers/feature
+        run: flake8 app tests
 
       - name: Install dependencies
         working-directory: backend/workers/feature
@@ -55,7 +223,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov pytest-asyncio
 
-      - name: Run unit tests
+      - name: Run tests
         working-directory: backend/workers/feature
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
@@ -66,115 +234,24 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           TESTING: "true"
         run: |
-          pytest tests/ -v --tb=short -m "not integration" \
+          pytest tests/ --tb=short \
             --ignore=tests/e2e/test_youtube_fetch.py \
             --cov=app --cov-report=xml
-
-      - name: Run integration tests
-        working-directory: backend/workers/feature
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379/0
-          TESTING: "true"
-        run: |
-          pytest tests/ -v --tb=short -m "integration" || echo "Integration tests may need database setup"
 
       - name: Upload coverage
         uses: codecov/codecov-action@v6
         with:
-          file: backend/coverage.xml
-          flags: backend
+          file: backend/workers/feature/coverage.xml
+          flags: feature-worker
           fail_ci_if_error: false
 
-  test-frontend:
-    name: Frontend Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Run linting
-        working-directory: frontend
-        run: npm run lint || echo "Linting issues found"
-
-      - name: Run type check
-        working-directory: frontend
-        run: npm run type-check
-
-      - name: Run frontend tests
-        working-directory: frontend
-        run: npm run test:run
-
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
-
-  lint-backend:
-    name: Lint Backend
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install linters
-        run: pip install black flake8 isort
-
-      - name: Run black
-        working-directory: backend/workers/feature
-        run: black --check app/ tests/ || echo "Code formatting issues found"
-
-      - name: Run flake8
-        working-directory: backend/workers/feature
-        run: flake8 app/ tests/ --max-line-length=100 --ignore=E501,W503 || echo "Linting issues found"
-
-      - name: Run isort
-        working-directory: backend/workers/feature
-        run: isort --check-only app/ tests/ || echo "Import sorting issues found"
-
-  test-java-api:
-    name: Java API Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Run Java tests
-        working-directory: backend/api
-        run: mvn test -B -q -DskipDbBuild=true
-
-  test-audio-worker:
-    name: Audio Worker Tests
+  audio-worker:
+    name: Audio Worker
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:15
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -201,35 +278,53 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Matches the 3.10 base image in backend/workers/audio/Dockerfile.
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.10"
+          cache: pip
+          cache-dependency-path: backend/workers/audio/requirements.txt
+
+      - name: Install linters
+        run: pip install black flake8 isort
+
+      - name: Run black
+        working-directory: backend/workers/audio
+        run: black --check app tests
+
+      - name: Run isort
+        working-directory: backend/workers/audio
+        run: isort --check-only app tests
+
+      - name: Run flake8
+        working-directory: backend/workers/audio
+        run: flake8 app tests
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libsndfile1 ffmpeg
 
+      # madmom (via neckenml-analyzer) has no wheel and needs numpy + Cython
+      # present before its setup.py runs. Same ordering as the worker Dockerfile.
       - name: Install Python dependencies
+        working-directory: backend/workers/audio
         run: |
           python -m pip install --upgrade pip
-          pip install sqlalchemy psycopg2-binary pydantic-settings python-dotenv
-          pip install celery redis
-          pip install pytest pytest-cov
+          pip install numpy Cython
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-env
 
-      - name: Install neckenml-core for unit tests
-        run: |
-          pip install neckenml-core || echo "neckenml-core not yet published, tests may skip"
-
-      - name: Run unit tests
+      - name: Run tests
         working-directory: backend/workers/audio
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379/0
           TESTING: "true"
         run: |
-          pytest tests/ -v --tb=short -m "not integration and not requires_audio" --cov=app --cov-report=xml || echo "Some tests may fail without full deps"
+          pytest tests/ --tb=short -m "not integration" \
+            --cov=app --cov-report=xml
 
       - name: Upload coverage
         uses: codecov/codecov-action@v6
@@ -237,60 +332,6 @@ jobs:
           file: backend/workers/audio/coverage.xml
           flags: audio-worker
           fail_ci_if_error: false
-
-  lint-audio-worker:
-    name: Lint Audio Worker
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.10"
-
-      - name: Install linters
-        run: pip install black flake8 isort
-
-      - name: Run black
-        working-directory: backend/workers/audio
-        run: black --check app/ tests/ || echo "Code formatting issues found"
-
-      - name: Run flake8
-        working-directory: backend/workers/audio
-        run: flake8 app/ tests/ --max-line-length=100 --ignore=E501,W503 || echo "Linting issues found"
-
-      - name: Run isort
-        working-directory: backend/workers/audio
-        run: isort --check-only app/ tests/ || echo "Import sorting issues found"
-
-  detect-changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      api: ${{ steps.filter.outputs.api }}
-      feature-worker: ${{ steps.filter.outputs.feature-worker }}
-      audio-worker: ${{ steps.filter.outputs.audio-worker }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Filter changed paths
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            api:
-              - 'backend/api/**'
-            feature-worker:
-              - 'backend/workers/feature/**'
-            audio-worker:
-              - 'backend/workers/audio/**'
-            frontend:
-              - 'frontend/**'
 
   docker-build-api:
     name: Docker Build (API)
@@ -318,7 +359,7 @@ jobs:
   docker-build-feature-worker:
     name: Docker Build (Feature Worker)
     runs-on: ubuntu-latest
-    needs: [test-backend, detect-changes]
+    needs: [feature-worker, detect-changes]
     if: needs.detect-changes.outputs.feature-worker == 'true'
 
     steps:
@@ -341,7 +382,7 @@ jobs:
   docker-build-audio-worker:
     name: Docker Build (Audio Worker)
     runs-on: ubuntu-latest
-    needs: [test-audio-worker, detect-changes]
+    needs: [audio-worker, detect-changes]
     if: needs.detect-changes.outputs.audio-worker == 'true'
 
     steps:
@@ -384,26 +425,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  summary:
-    name: CI Summary
-    needs: [test-backend, test-frontend, test-java-api, test-audio-worker, lint-backend, lint-audio-worker, docker-build-api, docker-build-feature-worker, docker-build-audio-worker, docker-build-frontend]
+  # Single required status check. Branch protection should require "CI Gate"
+  # rather than the individual jobs, so that conditional docker builds skipping
+  # does not block a merge, but any real failure does.
+  ci-gate:
+    name: CI Gate
     runs-on: ubuntu-latest
     if: always()
+    needs:
+      - migrations
+      - test-java-api
+      - test-frontend
+      - feature-worker
+      - audio-worker
+      - docker-build-api
+      - docker-build-feature-worker
+      - docker-build-audio-worker
+      - docker-build-frontend
 
     steps:
-      - name: Create Summary
+      - name: Verify no job failed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
         run: |
-          echo "## Dansbart.se CI Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Tests (Python) | ${{ needs.test-backend.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Audio Worker Tests | ${{ needs.test-audio-worker.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend Tests | ${{ needs.test-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Java API Tests | ${{ needs.test-java-api.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend Lint | ${{ needs.lint-backend.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Audio Worker Lint | ${{ needs.lint-audio-worker.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Build (API) | ${{ needs.docker-build-api.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Build (Feature Worker) | ${{ needs.docker-build-feature-worker.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Build (Audio Worker) | ${{ needs.docker-build-audio-worker.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Build (Frontend) | ${{ needs.docker-build-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.value.result)\t\(.key)"' | sort
+
+          bad=$(echo "$NEEDS" | jq -r '
+            to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | .key')
+
+          if [ -n "$bad" ]; then
+            echo "::error::CI failed. Jobs not successful:"
+            echo "$bad"
+            exit 1
+          fi
+
+          echo "All jobs succeeded or were skipped."
