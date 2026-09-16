@@ -6,8 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# A PR push previously triggered CI twice (once via push on '**', once via
-# pull_request). Pushes are now limited to main; everything else arrives as a PR.
+# Pushes run CI only on main, so each pull request branch runs CI once.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -19,35 +18,52 @@ jobs:
   detect-changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       api: ${{ steps.filter.outputs.api }}
       feature-worker: ${{ steps.filter.outputs.feature-worker }}
       audio-worker: ${{ steps.filter.outputs.audio-worker }}
       frontend: ${{ steps.filter.outputs.frontend }}
-      migrations: ${{ steps.filter.outputs.migrations }}
+      workflow: ${{ steps.filter.outputs.workflow }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
       - name: Filter changed paths
         uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name == 'pull_request'
         with:
           filters: |
+            workflow:
+              - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
+              - '.github/actions/**'
             api:
+              - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
+              - '.github/actions/**'
               - 'backend/api/**'
             feature-worker:
+              - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
+              - '.github/actions/**'
               - 'backend/workers/feature/**'
             audio-worker:
+              - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
+              - '.github/actions/**'
               - 'backend/workers/audio/**'
             frontend:
+              - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
+              - '.github/actions/**'
               - 'frontend/**'
-            migrations:
-              - 'backend/api/src/main/resources/db/migration/**'
 
   migrations:
     name: Database Migrations
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.api == 'true'
 
     services:
       postgres:
@@ -109,6 +125,8 @@ jobs:
   test-java-api:
     name: Java API Tests
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.api == 'true'
 
     steps:
       - name: Checkout code
@@ -123,38 +141,71 @@ jobs:
 
       - name: Run Java tests
         working-directory: backend/api
-        run: mvn test -B -DskipDbBuild=true
+        run: |
+          # Start the Testcontainers image pulls while Maven compiles.
+          docker pull testcontainers/ryuk:0.5.1 >/dev/null 2>&1 &
+          docker pull pgvector/pgvector:pg16 >/dev/null 2>&1 &
+          docker pull redis:7-alpine >/dev/null 2>&1 &
+          mvn test -B -DskipDbBuild=true
 
   test-frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.frontend == 'true'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Set up Node.js
+        id: setup-node
         uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Cache node_modules
+        id: node-modules
+        uses: actions/cache@v6
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('frontend/package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
         working-directory: frontend
         run: npm ci
 
-      - name: Run linting
+      - name: Lint, type check, and test
         working-directory: frontend
-        run: npm run lint
+        run: |
+          declare -A pids
+          declare -A logs
 
-      - name: Run type check
-        working-directory: frontend
-        run: npm run type-check
+          for name in lint type-check test:run; do
+            log="$RUNNER_TEMP/frontend-${name//:/-}.log"
+            npm run "$name" > "$log" 2>&1 &
+            pids[$name]=$!
+            logs[$name]=$log
+          done
 
-      - name: Run frontend tests
-        working-directory: frontend
-        run: npm run test:run
+          failed=0
+          for name in "${!pids[@]}"; do
+            if ! wait "${pids[$name]}"; then
+              failed=1
+              echo "::error::$name failed"
+            fi
+          done
+
+          for name in lint type-check test:run; do
+            echo "::group::$name"
+            cat "${logs[$name]}"
+            echo "::endgroup::"
+          done
+
+          exit $failed
 
       - name: Build frontend
         working-directory: frontend
@@ -163,31 +214,20 @@ jobs:
   feature-worker:
     name: Feature Worker
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.feature-worker == 'true'
 
+    # The Spotify task tests store Celery results in Redis.
     services:
-      postgres:
-        image: pgvector/pgvector:pg15
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
       redis:
         image: redis:7
         ports:
           - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
-          --health-interval 10s
+          --health-interval 1s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - name: Checkout code
@@ -195,14 +235,28 @@ jobs:
 
       # Matches the 3.11 base image in backend/workers/feature/Dockerfile.
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-          cache: pip
-          cache-dependency-path: backend/workers/feature/requirements.txt
 
-      - name: Install linters
-        run: pip install black flake8 isort
+      - name: Cache venv
+        id: venv
+        uses: ./.github/actions/cache-python-venv
+        with:
+          venv-path: backend/workers/feature/.venv
+          requirements-file: backend/workers/feature/requirements.txt
+          python-version: ${{ steps.setup-python.outputs.python-version }}
+
+      - name: Install dependencies
+        if: steps.venv.outputs.cache-hit != 'true'
+        working-directory: backend/workers/feature
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install black flake8 isort
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install pytest pytest-cov pytest-asyncio
 
       - name: Run black
         working-directory: backend/workers/feature
@@ -215,13 +269,6 @@ jobs:
       - name: Run flake8
         working-directory: backend/workers/feature
         run: flake8 app tests
-
-      - name: Install dependencies
-        working-directory: backend/workers/feature
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio
 
       - name: Run tests
         working-directory: backend/workers/feature
@@ -248,31 +295,8 @@ jobs:
   audio-worker:
     name: Audio Worker
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: pgvector/pgvector:pg15
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.audio-worker == 'true'
 
     steps:
       - name: Checkout code
@@ -280,14 +304,36 @@ jobs:
 
       # Matches the 3.10 base image in backend/workers/audio/Dockerfile.
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v6
         with:
           python-version: "3.10"
-          cache: pip
-          cache-dependency-path: backend/workers/audio/requirements.txt
 
-      - name: Install linters
-        run: pip install black flake8 isort
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsndfile1 ffmpeg
+
+      - name: Cache venv
+        id: venv
+        uses: ./.github/actions/cache-python-venv
+        with:
+          venv-path: backend/workers/audio/.venv
+          requirements-file: backend/workers/audio/requirements.txt
+          python-version: ${{ steps.setup-python.outputs.python-version }}
+
+      # madmom (via neckenml-analyzer) has no wheel and needs numpy + Cython
+      # present before its setup.py runs. Same ordering as the worker Dockerfile.
+      - name: Install dependencies
+        if: steps.venv.outputs.cache-hit != 'true'
+        working-directory: backend/workers/audio
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install black flake8 isort
+          .venv/bin/pip install numpy Cython
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install pytest pytest-cov pytest-env
 
       - name: Run black
         working-directory: backend/workers/audio
@@ -300,21 +346,6 @@ jobs:
       - name: Run flake8
         working-directory: backend/workers/audio
         run: flake8 app tests
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsndfile1 ffmpeg
-
-      # madmom (via neckenml-analyzer) has no wheel and needs numpy + Cython
-      # present before its setup.py runs. Same ordering as the worker Dockerfile.
-      - name: Install Python dependencies
-        working-directory: backend/workers/audio
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Cython
-          pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-env
 
       - name: Run tests
         working-directory: backend/workers/audio
@@ -336,8 +367,8 @@ jobs:
   docker-build-api:
     name: Docker Build (API)
     runs-on: ubuntu-latest
-    needs: [test-java-api, detect-changes]
-    if: needs.detect-changes.outputs.api == 'true'
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.api == 'true'
 
     steps:
       - name: Checkout code
@@ -353,14 +384,14 @@ jobs:
           file: ./backend/api/Dockerfile
           push: false
           tags: dansbart-api:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=api
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,scope=api,mode=max' || '' }}
 
   docker-build-feature-worker:
     name: Docker Build (Feature Worker)
     runs-on: ubuntu-latest
-    needs: [feature-worker, detect-changes]
-    if: needs.detect-changes.outputs.feature-worker == 'true'
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.feature-worker == 'true'
 
     steps:
       - name: Checkout code
@@ -376,14 +407,14 @@ jobs:
           file: ./backend/workers/feature/Dockerfile
           push: false
           tags: dansbart-feature-worker:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=feature-worker
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,scope=feature-worker,mode=max' || '' }}
 
   docker-build-audio-worker:
     name: Docker Build (Audio Worker)
     runs-on: ubuntu-latest
-    needs: [audio-worker, detect-changes]
-    if: needs.detect-changes.outputs.audio-worker == 'true'
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.audio-worker == 'true'
 
     steps:
       - name: Checkout code
@@ -400,14 +431,14 @@ jobs:
           push: false
           tags: dansbart-audio-worker:test
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=audio-worker
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,scope=audio-worker,mode=max' || '' }}
 
   docker-build-frontend:
     name: Docker Build (Frontend)
     runs-on: ubuntu-latest
-    needs: [test-frontend, detect-changes]
-    if: needs.detect-changes.outputs.frontend == 'true'
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.frontend == 'true'
 
     steps:
       - name: Checkout code
@@ -422,8 +453,28 @@ jobs:
           context: ./frontend
           push: false
           tags: dansbart-frontend:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,scope=frontend,mode=max' || '' }}
+
+  check-workflow:
+    name: Workflow Check
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: github.event_name != 'pull_request' || needs.detect-changes.outputs.workflow == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check CI workflow shape
+        run: |
+          pip install pyyaml
+          python .github/scripts/check_ci_workflow.py .github/workflows/ci.yml
 
   # Single required status check. Branch protection should require "CI Gate"
   # rather than the individual jobs, so that conditional docker builds skipping
@@ -433,6 +484,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - detect-changes
       - migrations
       - test-java-api
       - test-frontend
@@ -442,6 +494,7 @@ jobs:
       - docker-build-feature-worker
       - docker-build-audio-worker
       - docker-build-frontend
+      - check-workflow
 
     steps:
       - name: Verify no job failed
