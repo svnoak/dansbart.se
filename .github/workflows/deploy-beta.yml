@@ -1,31 +1,64 @@
 name: Deploy to Beta
 
+# Trunk-based: every commit that lands on main and passes CI becomes beta.
+# Promotion to production is a version tag (see deploy-production.yml).
 on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-    branches: [develop]
-  workflow_dispatch:  # Allow manual triggers
+    branches: [main]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository_owner }}/dansbart
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
+    name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
       packages: write
 
     strategy:
+      fail-fast: false
       matrix:
-        service: [frontend, api]
+        include:
+          - service: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+          - service: api
+            context: ./backend/api
+            dockerfile: ./backend/api/Dockerfile
+          - service: feature-worker
+            context: ./backend/workers/feature
+            dockerfile: ./backend/workers/feature/Dockerfile
+          - service: audio-worker
+            context: ./backend/workers/audio
+            dockerfile: ./backend/workers/audio/Dockerfile
 
     steps:
+      # workflow_run checks out the default branch HEAD by default, not the
+      # commit CI actually validated. With two commits landing close together
+      # that silently ships the wrong code, so pin to the tested SHA.
+      - name: Resolve tested commit
+        id: commit
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.commit.outputs.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -44,27 +77,29 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
           tags: |
             type=raw,value=beta
-            type=sha,prefix=
+            type=raw,value=${{ steps.commit.outputs.sha }}
 
       - name: Compute frontend build args
         id: build-args
         run: |
           if [ "${{ matrix.service }}" = "frontend" ]; then
-            echo "args<<EOF" >> $GITHUB_OUTPUT
-            echo "FARO_API_KEY=${{ secrets.FARO_API_KEY }}" >> $GITHUB_OUTPUT
-            echo "FARO_UPLOAD_ENDPOINT=${{ vars.FARO_UPLOAD_ENDPOINT }}" >> $GITHUB_OUTPUT
-            echo "FARO_APP_ID=${{ vars.FARO_APP_ID }}" >> $GITHUB_OUTPUT
-            echo "FARO_STACK_ID=${{ vars.FARO_STACK_ID }}" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            {
+              echo "args<<EOF"
+              echo "FARO_API_KEY=${{ secrets.FARO_API_KEY }}"
+              echo "FARO_UPLOAD_ENDPOINT=${{ vars.FARO_UPLOAD_ENDPOINT }}"
+              echo "FARO_APP_ID=${{ vars.FARO_APP_ID }}"
+              echo "FARO_STACK_ID=${{ vars.FARO_STACK_ID }}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "args=" >> $GITHUB_OUTPUT
+            echo "args=" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build and push Docker image
+      - name: Build and push image
         uses: docker/build-push-action@v7
         with:
-          context: ${{ matrix.service == 'api' && './backend/api' || './frontend' }}
-          file: ${{ matrix.service == 'api' && './backend/api/Dockerfile' || './frontend/Dockerfile' }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -73,74 +108,57 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:buildcache,mode=max
           platforms: linux/amd64
 
-  # Feature Worker only - Audio Worker is built and deployed from its own AGPL repo
-  build-and-push-feature-worker:
-    runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker
-          tags: |
-            type=raw,value=beta
-            type=sha,prefix=
-
-      - name: Build and push feature-worker image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./backend/workers/feature
-          file: ./backend/workers/feature/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:buildcache,mode=max
-          platforms: linux/amd64
-
-  deploy:
-    needs: [build-and-push, build-and-push-feature-worker]
+  notify:
+    name: Notify deployment
+    needs: [build-and-push]
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy notification
+      - name: Resolve tested commit
+        id: commit
         run: |
-          echo "Beta images built and pushed successfully." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Images:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Frontend: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:beta\`" >> $GITHUB_STEP_SUMMARY
-          echo "- API: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api:beta\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Feature Worker: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-feature-worker:beta\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** Audio Worker is built and deployed from its own AGPL repo." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
 
-      # Add your beta deployment steps here
-      # Example: SSH into beta server and pull new images
-      # - name: Deploy to beta server
-      #   uses: appleboy/ssh-action@master
-      #   with:
-      #     host: ${{ secrets.BETA_HOST }}
-      #     username: ${{ secrets.BETA_USER }}
-      #     key: ${{ secrets.BETA_SSH_KEY }}
-      #     script: |
-      #       cd /path/to/beta-app
-      #       docker compose pull
-      #       docker compose up -d
+      # Deployment itself lives in a separate private Ansible repo. Set the
+      # DEPLOY_DISPATCH_REPO variable (owner/name) and a DEPLOY_DISPATCH_TOKEN
+      # secret with repo scope there to have it pulled automatically; without
+      # them this step is skipped and images simply wait to be pulled manually.
+      - name: Trigger deployment repository
+        if: vars.DEPLOY_DISPATCH_REPO != ''
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
+          TARGET_REPO: ${{ vars.DEPLOY_DISPATCH_REPO }}
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          payload=$(jq -n --arg sha "$SHA" \
+            '{event_type: "dansbart-beta", client_payload: {sha: $sha, environment: "beta", tag: "beta"}}')
+          curl -sS -f -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$TARGET_REPO/dispatches" \
+            -d "$payload"
+          echo "Dispatched dansbart-beta to $TARGET_REPO"
+
+      - name: Summary
+        env:
+          SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          {
+            echo "## Beta images pushed"
+            echo ""
+            echo "Commit: \`$SHA\`"
+            echo ""
+            echo "| Image | Tags |"
+            echo "|-------|------|"
+            for svc in frontend api feature-worker audio-worker; do
+              echo "| \`${REGISTRY}/${IMAGE_PREFIX}-${svc}\` | \`beta\`, \`${SHA}\` |"
+            done
+            echo ""
+            if [ -z "${{ vars.DEPLOY_DISPATCH_REPO }}" ]; then
+              echo "_No DEPLOY_DISPATCH_REPO configured; pull these manually from the Ansible repo._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

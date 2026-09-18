@@ -1,0 +1,32 @@
+name: Cache Python venv
+description: Restores or primes a cache for a Python virtual environment.
+
+inputs:
+  venv-path:
+    description: Path to the virtual environment, relative to the workspace.
+    required: true
+  requirements-file:
+    description: Path to the requirements file the cache key hashes.
+    required: true
+  python-version:
+    description: Python version used in the cache key.
+    required: true
+
+outputs:
+  cache-hit:
+    description: Whether the venv cache was restored.
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Cache venv
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ inputs.venv-path }}
+        key: python-venv-${{ runner.os }}-${{ runner.arch }}-${{ inputs.python-version }}-${{ inputs.venv-path }}-${{ hashFiles(inputs.requirements-file) }}
+
+    - name: Add venv to PATH
+      shell: bash
+      run: echo "$GITHUB_WORKSPACE/${{ inputs.venv-path }}/bin" >> "$GITHUB_PATH"

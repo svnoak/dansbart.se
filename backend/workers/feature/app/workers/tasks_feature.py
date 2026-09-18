@@ -4,20 +4,21 @@ Feature worker tasks - Classification from stored analysis data.
 These tasks use neckenml-core (MIT licensed) only.
 No audio processing - just re-classification from stored artifacts.
 """
+
 import structlog
-from celery import shared_task
+from sqlalchemy import desc
+
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
-from app.core.models import Track, AnalysisSource
+from app.core.models import AnalysisSource, Track
 from app.services.classification import ClassificationService
-from app.services.training import ModelTrainingService
 from app.services.style_config_cache import get_beats_per_bar
-from sqlalchemy import desc
+from app.services.training import ModelTrainingService
 
 log = structlog.get_logger()
 
 
-@celery_app.task(bind=True, acks_late=True, queue='feature')
+@celery_app.task(bind=True, acks_late=True, queue="feature")
 def reclassify_library_task(self):
     """
     Re-classify all tracks in the library from stored analysis data.
@@ -36,14 +37,14 @@ def reclassify_library_task(self):
         result = service.reclassify_library()
         log.info("reclassification_complete", result=result)
         return result
-    except Exception as e:
+    except Exception:
         log.error("reclassification_failed", exc_info=True)
         raise
     finally:
         db.close()
 
 
-@celery_app.task(name="retrain_model_task", bind=True, acks_late=True, queue='light')
+@celery_app.task(name="retrain_model_task", bind=True, acks_late=True, queue="light")
 def retrain_model_task(self, reclassify_after=False):
     """
     Retrain the dance style classification model from confirmed tracks.
@@ -70,14 +71,14 @@ def retrain_model_task(self, reclassify_after=False):
             reclassify_library_task.delay()
 
         return result
-    except Exception as e:
+    except Exception:
         log.error("model_retrain_failed", exc_info=True)
         raise
     finally:
         db.close()
 
 
-@celery_app.task(bind=True, acks_late=True, queue='feature')
+@celery_app.task(bind=True, acks_late=True, queue="feature")
 def classify_track_task(self, track_id: str, analysis_data: dict = None):
     """
     Classify a single track from stored analysis data.
@@ -102,14 +103,14 @@ def classify_track_task(self, track_id: str, analysis_data: dict = None):
         service.classify_track_immediately(track, analysis_data)
 
         return {"status": "success", "track_id": track_id}
-    except Exception as e:
+    except Exception:
         log.error("classification_failed", track_id=track_id, exc_info=True)
         raise
     finally:
         db.close()
 
 
-@celery_app.task(bind=True, acks_late=True, queue='feature')
+@celery_app.task(bind=True, acks_late=True, queue="feature")
 def correct_bars_task(self, track_id: str, main_style: str, sub_style: str = None):
     """
     Re-derive bar positions for a track based on its confirmed dance style.
@@ -152,8 +153,12 @@ def correct_bars_task(self, track_id: str, main_style: str, sub_style: str = Non
 
         beats_per_bar = get_beats_per_bar(db, main_style, sub_style)
         if beats_per_bar is None:
-            log.info("correct_bars_skipped", reason="no_style_config",
-                     track_id=track_id, main_style=main_style)
+            log.info(
+                "correct_bars_skipped",
+                reason="no_style_config",
+                track_id=track_id,
+                main_style=main_style,
+            )
             return {"status": "skipped", "reason": "no_style_config"}
 
         bars = [beat_times[i] for i in range(0, len(beat_times), beats_per_bar)]
@@ -165,11 +170,16 @@ def correct_bars_task(self, track_id: str, main_style: str, sub_style: str = Non
 
         db.commit()
 
-        log.info("correct_bars_done", track_id=track_id, main_style=main_style,
-                 beats_per_bar=beats_per_bar, bar_count=len(bars))
+        log.info(
+            "correct_bars_done",
+            track_id=track_id,
+            main_style=main_style,
+            beats_per_bar=beats_per_bar,
+            bar_count=len(bars),
+        )
         return {"status": "success", "bar_count": len(bars), "beats_per_bar": beats_per_bar}
 
-    except Exception as e:
+    except Exception:
         db.rollback()
         log.error("correct_bars_failed", track_id=track_id, exc_info=True)
         raise

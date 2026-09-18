@@ -6,10 +6,11 @@ to classification and database storage.
 
 Pipeline: Spotify → Database → YouTube → Analysis → Classification → Database
 """
-import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
+
 import uuid
-import numpy as np
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestFullPipelineSingleTrack:
@@ -22,7 +23,7 @@ class TestFullPipelineSingleTrack:
         mock_spotify_client,
         mock_spotify_credentials,
         sample_analysis_result,
-        e2e_env_vars
+        e2e_env_vars,
     ):
         """Test: Complete flow from Spotify ID to analyzed track in DB."""
         # Step 1: Ingest from Spotify
@@ -45,15 +46,13 @@ class TestFullPipelineSingleTrack:
 
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             from app.workers.ingestion.spotify import SpotifyIngestor
 
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
-            track_ids = ingestor.ingest_tracks_from_list([
-                mock_spotify_client.track.return_value
-            ])
+            track_ids = ingestor.ingest_tracks_from_list([mock_spotify_client.track.return_value])
 
         assert len(track_ids) == 1
         assert mock_track.processing_status == "PENDING"
@@ -61,35 +60,34 @@ class TestFullPipelineSingleTrack:
         # Step 2: Simulate audio analysis (would be done by audio-worker)
         # This step would typically update the track with analysis results
 
-        mock_track.tempo_bpm = sample_analysis_result['features']['tempo_bpm']
-        mock_track.loudness = sample_analysis_result['features']['loudness_lufs']
-        mock_track.embedding = sample_analysis_result['features']['embedding']
+        mock_track.tempo_bpm = sample_analysis_result["features"]["tempo_bpm"]
+        mock_track.loudness = sample_analysis_result["features"]["loudness_lufs"]
+        mock_track.embedding = sample_analysis_result["features"]["embedding"]
         mock_track.processing_status = "DONE"
 
         # Step 3: Classification
         mock_classifier = MagicMock()
         mock_classifier.classify.return_value = [
             {
-                'style': 'Polska',
-                'sub_style': 'Slängpolska',
-                'type': 'Primary',
-                'confidence': 0.85,
-                'dance_tempo': 'Medium',
-                'multiplier': 1.0,
-                'effective_bpm': 120
+                "style": "Polska",
+                "sub_style": "Slängpolska",
+                "type": "Primary",
+                "confidence": 0.85,
+                "dance_tempo": "Medium",
+                "multiplier": 1.0,
+                "effective_bpm": 120,
             }
         ]
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 from app.services.classification import ClassificationService
 
                 service = ClassificationService(mock_db_session)
                 service.classifier = mock_classifier
 
                 service.classify_track_immediately(
-                    mock_track,
-                    analysis_data=sample_analysis_result['features']
+                    mock_track, analysis_data=sample_analysis_result["features"]
                 )
 
         # Verify final state
@@ -99,11 +97,7 @@ class TestFullPipelineSingleTrack:
 
     @pytest.mark.e2e
     def test_pipeline_handles_missing_youtube_audio(
-        self,
-        mock_db_session,
-        mock_spotify_client,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: Pipeline handles case when YouTube audio is not found."""
         track_id = uuid.uuid4()
@@ -128,8 +122,8 @@ class TestFullPipelineSingleTrack:
         # The track should be classifiable by title if it contains style keywords
         mock_track.title = "Slängpolska from Boda"  # Contains style keyword
 
-        with patch('neckenml.core.StyleClassifier', return_value=mock_classifier):
-            with patch('app.services.style_keywords_cache.get_sorted_keywords', return_value=[]):
+        with patch("neckenml.core.StyleClassifier", return_value=mock_classifier):
+            with patch("app.services.style_keywords_cache.get_sorted_keywords", return_value=[]):
                 from app.services.classification import ClassificationService
 
                 service = ClassificationService(mock_db_session)
@@ -147,17 +141,14 @@ class TestFullPipelinePlaylist:
 
     @pytest.mark.e2e
     def test_playlist_pipeline_ingests_all_tracks(
-        self,
-        mock_db_session,
-        mock_spotify_client,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: All tracks from playlist are ingested and queued."""
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
 
         created_tracks = []
+
         def create_track_side_effect(**kwargs):
             track = MagicMock()
             track.id = uuid.uuid4()
@@ -167,7 +158,7 @@ class TestFullPipelinePlaylist:
 
         mock_repo.create_track.side_effect = create_track_side_effect
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             from app.workers.ingestion.spotify import SpotifyIngestor
 
             ingestor = SpotifyIngestor(mock_db_session)
@@ -182,11 +173,7 @@ class TestFullPipelinePlaylist:
 
     @pytest.mark.e2e
     def test_playlist_pipeline_skips_duplicates(
-        self,
-        mock_db_session,
-        mock_spotify_client,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: Duplicate tracks in playlist are not re-ingested."""
         mock_repo = MagicMock()
@@ -198,6 +185,7 @@ class TestFullPipelinePlaylist:
         existing_track.duration_ms = 180000
 
         call_count = [0]
+
         def get_by_isrc_side_effect(isrc):
             call_count[0] += 1
             if call_count[0] == 1:
@@ -211,7 +199,7 @@ class TestFullPipelinePlaylist:
         new_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = new_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             from app.workers.ingestion.spotify import SpotifyIngestor
 
             ingestor = SpotifyIngestor(mock_db_session)
@@ -229,19 +217,16 @@ class TestFullPipelineAlbum:
 
     @pytest.mark.e2e
     def test_album_pipeline_preserves_album_metadata(
-        self,
-        mock_db_session,
-        mock_spotify_client,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: Album metadata is preserved throughout the pipeline."""
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
 
         captured_album_data = []
+
         def create_track_side_effect(**kwargs):
-            captured_album_data.append(kwargs.get('album_data'))
+            captured_album_data.append(kwargs.get("album_data"))
             track = MagicMock()
             track.id = uuid.uuid4()
             track.processing_status = "PENDING"
@@ -249,7 +234,7 @@ class TestFullPipelineAlbum:
 
         mock_repo.create_track.side_effect = create_track_side_effect
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             from app.workers.ingestion.spotify import SpotifyIngestor
 
             ingestor = SpotifyIngestor(mock_db_session)
@@ -259,7 +244,7 @@ class TestFullPipelineAlbum:
 
         # All tracks should have the same album data
         for album_data in captured_album_data:
-            assert album_data['name'] == 'Swedish Folk Music'
+            assert album_data["name"] == "Swedish Folk Music"
 
 
 class TestFullPipelineArtist:
@@ -267,17 +252,14 @@ class TestFullPipelineArtist:
 
     @pytest.mark.e2e
     def test_artist_pipeline_fetches_full_discography(
-        self,
-        mock_db_session,
-        mock_spotify_client,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: Full artist discography is ingested."""
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
 
         track_count = [0]
+
         def create_track_side_effect(**kwargs):
             track_count[0] += 1
             track = MagicMock()
@@ -287,7 +269,7 @@ class TestFullPipelineArtist:
 
         mock_repo.create_track.side_effect = create_track_side_effect
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             from app.workers.ingestion.spotify import SpotifyIngestor
 
             ingestor = SpotifyIngestor(mock_db_session)
@@ -304,10 +286,7 @@ class TestPipelineStateTransitions:
 
     @pytest.mark.e2e
     def test_track_transitions_pending_to_done(
-        self,
-        mock_db_session,
-        sample_analysis_result,
-        e2e_env_vars
+        self, mock_db_session, sample_analysis_result, e2e_env_vars
     ):
         """Test: Track state transitions correctly through pipeline."""
         track = MagicMock()
@@ -333,11 +312,7 @@ class TestPipelineStateTransitions:
         assert track.processing_status == "DONE"
 
     @pytest.mark.e2e
-    def test_track_transitions_to_failed_on_error(
-        self,
-        mock_db_session,
-        e2e_env_vars
-    ):
+    def test_track_transitions_to_failed_on_error(self, mock_db_session, e2e_env_vars):
         """Test: Track transitions to FAILED state on errors."""
         track = MagicMock()
         track.id = uuid.uuid4()
@@ -358,10 +333,7 @@ class TestPipelineDataIntegrity:
 
     @pytest.mark.e2e
     def test_analysis_artifacts_are_stored(
-        self,
-        mock_db_session,
-        sample_analysis_result,
-        e2e_env_vars
+        self, mock_db_session, sample_analysis_result, e2e_env_vars
     ):
         """Test: Analysis artifacts are correctly stored in database."""
         track_id = uuid.uuid4()
@@ -369,30 +341,25 @@ class TestPipelineDataIntegrity:
         # Simulate storing analysis results
         mock_repo = MagicMock()
 
-        from app.core.models import AnalysisSource
-
         # The analysis service would store artifacts like this
         stored_source = {
-            'track_id': track_id,
-            'source_type': 'neckenml_analyzer',
-            'raw_data': sample_analysis_result['raw_artifacts'],
-            'confidence_score': 1.0
+            "track_id": track_id,
+            "source_type": "neckenml_analyzer",
+            "raw_data": sample_analysis_result["raw_artifacts"],
+            "confidence_score": 1.0,
         }
 
         mock_repo.add_analysis.return_value = stored_source
 
         # Verify artifacts can be retrieved for reclassification
-        assert 'rhythm_extractor' in sample_analysis_result['raw_artifacts']
-        assert 'musicnn' in sample_analysis_result['raw_artifacts']
-        assert 'vocal' in sample_analysis_result['raw_artifacts']
-        assert 'audio_stats' in sample_analysis_result['raw_artifacts']
+        assert "rhythm_extractor" in sample_analysis_result["raw_artifacts"]
+        assert "musicnn" in sample_analysis_result["raw_artifacts"]
+        assert "vocal" in sample_analysis_result["raw_artifacts"]
+        assert "audio_stats" in sample_analysis_result["raw_artifacts"]
 
     @pytest.mark.e2e
     def test_embedding_vector_is_stored(
-        self,
-        mock_db_session,
-        sample_analysis_result,
-        e2e_env_vars
+        self, mock_db_session, sample_analysis_result, e2e_env_vars
     ):
         """Test: Embedding vector is correctly stored for similarity search."""
         track = MagicMock()
@@ -400,7 +367,7 @@ class TestPipelineDataIntegrity:
         track.embedding = None
 
         # Store embedding from analysis
-        embedding = sample_analysis_result['features']['embedding']
+        embedding = sample_analysis_result["features"]["embedding"]
         track.embedding = embedding
 
         # Verify embedding dimensions
@@ -408,11 +375,7 @@ class TestPipelineDataIntegrity:
 
     @pytest.mark.e2e
     def test_playback_links_are_preserved(
-        self,
-        mock_db_session,
-        mock_spotify_client,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: Both Spotify and YouTube playback links are stored."""
         track_id = uuid.uuid4()
@@ -426,23 +389,22 @@ class TestPipelineDataIntegrity:
         mock_repo.create_track.return_value = mock_track
 
         playback_links = []
+
         def add_link_side_effect(**kwargs):
             playback_links.append(kwargs)
 
         mock_repo.add_playback_link.side_effect = add_link_side_effect
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
             from app.workers.ingestion.spotify import SpotifyIngestor
 
             ingestor = SpotifyIngestor(mock_db_session)
             ingestor.sp = mock_spotify_client
 
-            ingestor.ingest_tracks_from_list([
-                mock_spotify_client.track.return_value
-            ])
+            ingestor.ingest_tracks_from_list([mock_spotify_client.track.return_value])
 
         # Spotify link should be added
-        assert any(link['platform'] == 'spotify' for link in playback_links)
+        assert any(link["platform"] == "spotify" for link in playback_links)
 
 
 class TestPipelineErrorRecovery:
@@ -450,10 +412,7 @@ class TestPipelineErrorRecovery:
 
     @pytest.mark.e2e
     def test_pipeline_recovers_from_spotify_api_error(
-        self,
-        mock_db_session,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: Pipeline handles Spotify API errors gracefully."""
         mock_client = MagicMock()
@@ -461,8 +420,8 @@ class TestPipelineErrorRecovery:
 
         mock_repo = MagicMock()
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-            with patch('spotipy.Spotify', return_value=mock_client):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+            with patch("spotipy.Spotify", return_value=mock_client):
                 from app.workers.ingestion.spotify import SpotifyIngestor
 
                 ingestor = SpotifyIngestor(mock_db_session)
@@ -475,49 +434,44 @@ class TestPipelineErrorRecovery:
 
     @pytest.mark.e2e
     def test_pipeline_continues_after_single_track_failure(
-        self,
-        mock_db_session,
-        mock_spotify_credentials,
-        e2e_env_vars
+        self, mock_db_session, mock_spotify_credentials, e2e_env_vars
     ):
         """Test: Pipeline continues processing after single track failure."""
         mock_client = MagicMock()
 
         playlist_response = {
-            'items': [
+            "items": [
                 {
-                    'track': {
-                        'id': 'track_1',
-                        'name': 'Good Track',
-                        'duration_ms': 180000,
-                        'artists': [{'id': 'a1', 'name': 'Artist'}],
-                        'album': {'id': 'album1', 'name': 'Album', 'images': []},
-                        'external_ids': {'isrc': 'ISRC0001'}
+                    "track": {
+                        "id": "track_1",
+                        "name": "Good Track",
+                        "duration_ms": 180000,
+                        "artists": [{"id": "a1", "name": "Artist"}],
+                        "album": {"id": "album1", "name": "Album", "images": []},
+                        "external_ids": {"isrc": "ISRC0001"},
                     }
                 },
+                {"track": None},  # Invalid track
                 {
-                    'track': None  # Invalid track
-                },
-                {
-                    'track': {
-                        'id': 'track_3',
-                        'name': 'Another Good Track',
-                        'duration_ms': 180000,
-                        'artists': [{'id': 'a1', 'name': 'Artist'}],
-                        'album': {'id': 'album1', 'name': 'Album', 'images': []},
-                        'external_ids': {'isrc': 'ISRC0003'}
+                    "track": {
+                        "id": "track_3",
+                        "name": "Another Good Track",
+                        "duration_ms": 180000,
+                        "artists": [{"id": "a1", "name": "Artist"}],
+                        "album": {"id": "album1", "name": "Album", "images": []},
+                        "external_ids": {"isrc": "ISRC0003"},
                     }
-                }
+                },
             ],
-            'next': None
+            "next": None,
         }
 
         mock_client.playlist_tracks.return_value = playlist_response
         mock_client.tracks.return_value = {
-            'tracks': [
-                playlist_response['items'][0]['track'],
+            "tracks": [
+                playlist_response["items"][0]["track"],
                 None,
-                playlist_response['items'][2]['track']
+                playlist_response["items"][2]["track"],
             ]
         }
 
@@ -525,8 +479,9 @@ class TestPipelineErrorRecovery:
         mock_repo.get_by_isrc.return_value = None
 
         processed_tracks = []
+
         def create_track_side_effect(**kwargs):
-            processed_tracks.append(kwargs['title'])
+            processed_tracks.append(kwargs["title"])
             track = MagicMock()
             track.id = uuid.uuid4()
             track.processing_status = "PENDING"
@@ -534,8 +489,8 @@ class TestPipelineErrorRecovery:
 
         mock_repo.create_track.side_effect = create_track_side_effect
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-            with patch('spotipy.Spotify', return_value=mock_client):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+            with patch("spotipy.Spotify", return_value=mock_client):
                 from app.workers.ingestion.spotify import SpotifyIngestor
 
                 ingestor = SpotifyIngestor(mock_db_session)
@@ -545,48 +500,41 @@ class TestPipelineErrorRecovery:
 
         # Should have processed 2 valid tracks
         assert len(track_ids) == 2
-        assert 'Good Track' in processed_tracks
-        assert 'Another Good Track' in processed_tracks
+        assert "Good Track" in processed_tracks
+        assert "Another Good Track" in processed_tracks
 
 
 class TestPipelinePerformance:
     """Tests for pipeline performance considerations."""
 
     @pytest.mark.e2e
-    def test_batch_track_fetching(
-        self,
-        mock_db_session,
-        mock_spotify_credentials,
-        e2e_env_vars
-    ):
+    def test_batch_track_fetching(self, mock_db_session, mock_spotify_credentials, e2e_env_vars):
         """Test: Tracks are fetched in batches for efficiency."""
         mock_client = MagicMock()
 
         # Create 60 tracks (more than batch size of 50)
         tracks = [
             {
-                'id': f'track_{i}',
-                'name': f'Track {i}',
-                'duration_ms': 180000,
-                'artists': [{'id': 'a1', 'name': 'Artist'}],
-                'album': {'id': 'album1', 'name': 'Album', 'images': []},
-                'external_ids': {'isrc': f'ISRC{i:04d}'}
+                "id": f"track_{i}",
+                "name": f"Track {i}",
+                "duration_ms": 180000,
+                "artists": [{"id": "a1", "name": "Artist"}],
+                "album": {"id": "album1", "name": "Album", "images": []},
+                "external_ids": {"isrc": f"ISRC{i:04d}"},
             }
             for i in range(60)
         ]
 
-        playlist_response = {
-            'items': [{'track': t} for t in tracks],
-            'next': None
-        }
+        playlist_response = {"items": [{"track": t} for t in tracks], "next": None}
 
         mock_client.playlist_tracks.return_value = playlist_response
 
         # Track batch calls
         batch_calls = []
+
         def tracks_side_effect(track_ids):
             batch_calls.append(len(track_ids))
-            return {'tracks': tracks[:len(track_ids)]}
+            return {"tracks": tracks[: len(track_ids)]}
 
         mock_client.tracks.side_effect = tracks_side_effect
 
@@ -598,8 +546,8 @@ class TestPipelinePerformance:
         mock_track.processing_status = "PENDING"
         mock_repo.create_track.return_value = mock_track
 
-        with patch('app.workers.ingestion.spotify.TrackRepository', return_value=mock_repo):
-            with patch('spotipy.Spotify', return_value=mock_client):
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+            with patch("spotipy.Spotify", return_value=mock_client):
                 from app.workers.ingestion.spotify import SpotifyIngestor
 
                 ingestor = SpotifyIngestor(mock_db_session)

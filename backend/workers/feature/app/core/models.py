@@ -4,19 +4,22 @@ Minimal SQLAlchemy models for the feature worker.
 Only includes models needed for classification and spider/ingestion tasks.
 The Java API owns the full schema - this worker only reads/writes specific tables.
 """
+
 import uuid
 from datetime import datetime
-from typing import List, Optional
-from sqlalchemy import String, Integer, Float, Boolean, ForeignKey, DateTime, Text
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from typing import Optional
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from app.core.database import Base
-from pgvector.sqlalchemy import Vector
 
 
 class Track(Base):
     """Track entity - fields needed for classification and ingestion."""
+
     __tablename__ = "tracks"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -24,21 +27,31 @@ class Track(Base):
     isrc: Mapped[str | None] = mapped_column(String, unique=True, nullable=True, index=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     has_vocals: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
-    processing_status: Mapped[str] = mapped_column(String, default="PENDING", server_default="PENDING")
+    processing_status: Mapped[str] = mapped_column(
+        String, default="PENDING", server_default="PENDING"
+    )
     music_genre: Mapped[str | None] = mapped_column(String, nullable=True)
     genre_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
-    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     bars: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships needed for classification and ingestion
-    analysis_sources = relationship("AnalysisSource", back_populates="track", cascade="all, delete-orphan")
-    dance_styles = relationship("TrackDanceStyle", back_populates="track", cascade="all, delete-orphan")
-    structure_versions = relationship("TrackStructureVersion", back_populates="track", cascade="all, delete-orphan")
+    analysis_sources = relationship(
+        "AnalysisSource", back_populates="track", cascade="all, delete-orphan"
+    )
+    dance_styles = relationship(
+        "TrackDanceStyle", back_populates="track", cascade="all, delete-orphan"
+    )
+    structure_versions = relationship(
+        "TrackStructureVersion", back_populates="track", cascade="all, delete-orphan"
+    )
     artist_links = relationship("TrackArtist", back_populates="track", cascade="all, delete-orphan")
     album_links = relationship("TrackAlbum", back_populates="track", cascade="all, delete-orphan")
-    playback_links = relationship("PlaybackLink", back_populates="track", cascade="all, delete-orphan")
+    playback_links = relationship(
+        "PlaybackLink", back_populates="track", cascade="all, delete-orphan"
+    )
 
     @property
     def primary_artist(self) -> Optional["Artist"]:
@@ -56,6 +69,7 @@ class Track(Base):
 
 class AnalysisSource(Base):
     """Stores raw ML analysis artifacts from audio-worker."""
+
     __tablename__ = "analysis_sources"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -63,13 +77,16 @@ class AnalysisSource(Base):
     source_type: Mapped[str] = mapped_column(String)
     raw_data: Mapped[dict] = mapped_column(JSONB)
     confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
-    analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    analyzed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     track = relationship("Track", back_populates="analysis_sources")
 
 
 class TrackDanceStyle(Base):
     """Classification results for a track."""
+
     __tablename__ = "track_dance_styles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -92,28 +109,31 @@ class TrackDanceStyle(Base):
 
 class StyleKeyword(Base):
     """Keyword to dance style mappings for metadata-based classification."""
+
     __tablename__ = "style_keywords"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     keyword: Mapped[str] = mapped_column(String, nullable=False, index=True)
     main_style: Mapped[str] = mapped_column(String, nullable=False, index=True)
     sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
 
 class DanceStyleConfig(Base):
     """Configuration for dance styles, including beats_per_bar for bar correction."""
+
     __tablename__ = "dance_style_config"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     main_style: Mapped[str] = mapped_column(String, nullable=False, index=True)
     sub_style: Mapped[str | None] = mapped_column(String, nullable=True)
     beats_per_bar: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
 
 class TrackStructureVersion(Base):
     """Audio structure annotations (bars, sections) - subset of fields needed for bar updates."""
+
     __tablename__ = "track_structure_versions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -128,15 +148,17 @@ class TrackStructureVersion(Base):
 # Artist & Album Models (for spider/ingestion)
 # =============================================================================
 
+
 class Artist(Base):
     """Artist entity."""
+
     __tablename__ = "artists"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
     spotify_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True, index=True)
     image_url: Mapped[str | None] = mapped_column(String, nullable=True)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false')
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     track_links = relationship("TrackArtist", back_populates="artist")
     albums = relationship("Album", back_populates="artist")
@@ -144,6 +166,7 @@ class Artist(Base):
 
 class Album(Base):
     """Album entity."""
+
     __tablename__ = "albums"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -159,6 +182,7 @@ class Album(Base):
 
 class TrackArtist(Base):
     """Many-to-many relationship between tracks and artists."""
+
     __tablename__ = "track_artists"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -172,6 +196,7 @@ class TrackArtist(Base):
 
 class TrackAlbum(Base):
     """Many-to-many relationship between tracks and albums."""
+
     __tablename__ = "track_albums"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -184,13 +209,14 @@ class TrackAlbum(Base):
 
 class PlaybackLink(Base):
     """Playback links for tracks (Spotify, YouTube, etc.)."""
+
     __tablename__ = "playback_links"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     track_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracks.id", ondelete="CASCADE"))
     platform: Mapped[str] = mapped_column(String, nullable=False)
     deep_link: Mapped[str] = mapped_column(String, nullable=False)
-    is_working: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true')
+    is_working: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     track = relationship("Track", back_populates="playback_links")
 
@@ -199,8 +225,10 @@ class PlaybackLink(Base):
 # Spider/Discovery Models
 # =============================================================================
 
+
 class ArtistCrawlLog(Base):
     """Log of artist crawl operations for deduplication."""
+
     __tablename__ = "artist_crawl_logs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -216,17 +244,21 @@ class ArtistCrawlLog(Base):
 
 class RejectionLog(Base):
     """Log of rejected entities (artists, tracks) to prevent re-crawling."""
+
     __tablename__ = "rejection_logs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     spotify_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
     entity_type: Mapped[str] = mapped_column(String, nullable=False)  # 'artist' or 'track'
     reason: Mapped[str | None] = mapped_column(String, nullable=True)
-    rejected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    rejected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class PendingArtistApproval(Base):
     """Queue of artists pending manual approval."""
+
     __tablename__ = "pending_artist_approvals"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

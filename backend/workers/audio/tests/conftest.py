@@ -1,10 +1,12 @@
 """
 Shared pytest fixtures for dansbart-audio-worker tests.
 """
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+
 import uuid
+from unittest.mock import MagicMock, patch
+
 import numpy as np
+import pytest
 
 
 @pytest.fixture
@@ -20,6 +22,7 @@ def mock_db_session():
 @pytest.fixture
 def sample_track():
     """Create a sample track for testing."""
+
     class MockArtist:
         def __init__(self):
             self.name = "Boda Spelmanslag"
@@ -107,14 +110,14 @@ def sample_analysis_result():
             "vocal": {"vocal_score": 0.2, "instrumental_score": 0.8},
             "audio_stats": {"loudness_lufs": -14.0, "rms": 0.1, "zcr": 0.1, "onset_rate": 2.0},
         },
-        "actual_duration_ms": 180000
+        "actual_duration_ms": 180000,
     }
 
 
 @pytest.fixture
 def mock_audio_analyzer():
     """Mock AudioAnalyzer for testing without actual audio files."""
-    with patch('app.services.analysis.AudioAnalyzer') as MockAnalyzer:
+    with patch("app.services.analysis.AudioAnalyzer") as MockAnalyzer:
         instance = MockAnalyzer.return_value
         instance.analyze_file.return_value = {
             "features": {
@@ -125,7 +128,7 @@ def mock_audio_analyzer():
                 "tempo_bpm": 120.0,
             },
             "raw_artifacts": {},
-            "actual_duration_ms": 180000
+            "actual_duration_ms": 180000,
         }
         instance.close.return_value = None
         yield instance
@@ -134,11 +137,11 @@ def mock_audio_analyzer():
 @pytest.fixture
 def mock_audio_fetcher():
     """Mock AudioFetcher for testing without actual downloads."""
-    with patch('app.services.analysis.AudioFetcher') as MockFetcher:
+    with patch("app.services.analysis.AudioFetcher") as MockFetcher:
         instance = MockFetcher.return_value
         instance.fetch_track_audio.return_value = {
-            'file_path': '/tmp/test_audio.mp3',
-            'youtube_id': 'dQw4w9WgXcQ'
+            "file_path": "/tmp/test_audio.mp3",
+            "youtube_id": "dQw4w9WgXcQ",
         }
         instance.cleanup.return_value = None
         yield instance
