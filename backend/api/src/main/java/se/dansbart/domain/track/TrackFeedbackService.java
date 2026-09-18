@@ -84,9 +84,10 @@ public class TrackFeedbackService {
     }
 
     /**
-     * CONFIRMATION_THRESHOLD (equal to a single anonymous vote's weight) confirms the
-     * style for display. RETRAINING_THRESHOLD is a deliberately higher bar reserved for
-     * anything that would otherwise feed back into the ML model.
+     * CONFIRMATION_THRESHOLD needs two anonymous votes, or one vote from a signed-in
+     * voter at the lowest reputation, to confirm the style for display.
+     * RETRAINING_THRESHOLD is a deliberately higher bar reserved for anything that would
+     * otherwise feed back into the ML model.
      *
      * @return true if this vote was the one that newly confirmed the style (i.e. the
      *         style was not yet confirmed before this call, and confirmStyleIfNeeded

@@ -64,9 +64,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
-                // Dance-track vote: same anonymous X-Voter-ID model as /api/tracks/** style
-                // votes (VoterContextInterceptor resolves the voter either way). Must be
-                // listed before the broader /api/dances/** authenticated rules below.
+                // Dance-track vote: anonymous X-Voter-ID, same as /api/tracks/** style votes.
                 .requestMatchers(HttpMethod.POST, "/api/dances/*/tracks/*/vote").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/dances/*/tracks/*/vote").permitAll()
                 .requestMatchers("/api/config/auth").permitAll()

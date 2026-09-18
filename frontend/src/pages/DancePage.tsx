@@ -164,7 +164,7 @@ export function DancePage() {
             setRecommendations((prev) => prev.filter((t) => t.id !== track.id));
             setMatchingTracks((prev) => [track, ...prev]);
           }
-          toast('Kunde inte ta bort rösten', 'error');
+          toast('Kunde inte ta bort rösten, försök igen.', 'error');
         });
       } else {
         setVotes((prev) => ({ ...prev, [track.id!]: newVote }));
@@ -185,7 +185,7 @@ export function DancePage() {
             setMatchingTracks((prev) => prev.filter((t) => t.id !== track.id));
             setRecommendations((prev) => [track, ...prev]);
           }
-          toast('Kunde inte spara rösten', 'error');
+          toast('Kunde inte spara rösten, försök igen.', 'error');
         });
       }
     },
