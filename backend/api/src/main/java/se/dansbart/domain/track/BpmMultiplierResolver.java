@@ -1,9 +1,6 @@
 package se.dansbart.domain.track;
 
-/** Ported from neckenml-analyzer's StyleClassifier._calculate_mpm
- *  (style_classifier.py). Keep the thresholds exactly in sync with the Python
- *  original — this is not the place to "improve" them. Moving this into the
- *  dance_style_config table is a reasonable later refactor. */
+/** Mirrors neckenml-analyzer's StyleClassifier._calculate_mpm (style_classifier.py). */
 public final class BpmMultiplierResolver {
 
     private BpmMultiplierResolver() {

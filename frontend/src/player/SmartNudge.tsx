@@ -44,8 +44,7 @@ interface SmartNudgeProps {
 // for no real gain. Unclassified tracks (no confidence yet) always remain eligible.
 const HIGH_CONFIDENCE_THRESHOLD = 0.8;
 
-// Keys match ClassifyPage.tsx/FlagTrackModal.tsx's tempo_correction vocabulary —
-// the backend expects one of these five, not a Swedish label.
+// Keys match the tempo_correction vocabulary ClassifyPage.tsx and FlagTrackModal.tsx send to the backend.
 const TEMPO_OPTIONS = [
   { key: 'Slow', label: 'Långsamt' },
   { key: 'SlowMed', label: 'Lugnt' },

@@ -127,12 +127,9 @@ public class TrackDanceStyleJooqRepository {
         for (var r : candidates) {
             UUID id = r.get(TRACK_DANCE_STYLES.ID);
             String style = r.get(TRACK_DANCE_STYLES.DANCE_STYLE);
-            Float rawBpm = r.get(TRACKS.TEMPO_BPM) != null ? r.get(TRACKS.TEMPO_BPM).floatValue() : null;
+            Float rawBpm = r.get(TRACKS.TEMPO_BPM).floatValue();
 
             BpmMultiplierResolver.Result bpm = BpmMultiplierResolver.resolve(style, rawBpm);
-            if (bpm.effectiveBpm() == 0) {
-                continue;
-            }
 
             dsl.update(TRACK_DANCE_STYLES)
                 .set(TRACK_DANCE_STYLES.BPM_MULTIPLIER, (double) bpm.multiplier())

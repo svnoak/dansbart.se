@@ -5,8 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Boundary cases mirror neckenml-analyzer's StyleClassifier._calculate_mpm
- * (style_classifier.py) exactly — this class is a direct port, not a reinterpretation.
+ * Boundary cases match neckenml-analyzer's StyleClassifier._calculate_mpm (style_classifier.py).
  */
 class BpmMultiplierResolverTest {
 

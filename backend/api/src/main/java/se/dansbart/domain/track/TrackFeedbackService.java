@@ -126,9 +126,7 @@ public class TrackFeedbackService {
             return false;
         }
 
-        // Derive bpm_multiplier/effective_bpm from the track's raw tempo_bpm rather than
-        // leaving them at the classifier's default — a community-confirmed style with no
-        // prior worker-computed row must still be findable by tempo search.
+        // Derives bpm_multiplier/effective_bpm from the track's raw tempo_bpm so the confirmed style stays findable by tempo search.
         Float rawBpm = trackJooqRepository.findById(trackId).map(Track::getTempoBpm).orElse(null);
         BpmMultiplierResolver.Result bpm = BpmMultiplierResolver.resolve(style, rawBpm);
 
