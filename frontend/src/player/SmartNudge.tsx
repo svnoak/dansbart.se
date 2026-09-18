@@ -410,11 +410,13 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
     placeholder: string,
     items: { label: string; value: string; bold?: boolean }[],
     compactClassName: string,
+    ariaLabel: string,
   ) => (
     <div className="mb-3 md:mb-2">
       <StylePicker
         presentation="compact"
         placeholder={placeholder}
+        ariaLabel={ariaLabel}
         options={items.map((i) => ({ value: i.value, label: i.label, bold: i.bold }))}
         onSelect={(value) => {
           if (step === 'ask-main' || step === 'fix-main') selectMain(value);
@@ -552,6 +554,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                 correction.main || 'Välj kategori...',
                 styleVote.mainCategories.map((c) => ({ label: c, value: c })),
                 'bg-purple-700 border-purple-500 text-white',
+                'Välj dansstil',
               )}
               <div className="flex justify-end gap-2">
                 <button
@@ -596,6 +599,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   ...currentSubStyles.map((s) => ({ label: s, value: s })),
                 ],
                 'bg-purple-700 border-purple-500 text-white',
+                `Välj variant av ${correction.main}`,
               )}
             </div>
           )}
@@ -624,6 +628,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <StylePicker
                 presentation="compact"
                 placeholder="Välj tempo..."
+                ariaLabel="Välj tempo"
                 options={TEMPO_OPTIONS.map((t) => ({ value: t.key, label: t.label }))}
                 onSelect={(key) => submitTempoSelection(key)}
                 compactClassName="w-full bg-purple-800 border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs"
@@ -649,6 +654,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                 correction.main || 'Välj kategori...',
                 styleVote.mainCategories.map((c) => ({ label: c, value: c })),
                 `w-full ${colorClasses.btn} border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs`,
+                'Välj dansstil',
               )}
             </div>
           )}
@@ -678,6 +684,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   ...currentSubStyles.map((s) => ({ label: s, value: s })),
                 ],
                 `w-full ${colorClasses.btn} border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs`,
+                `Välj variant av ${correction.main}`,
               )}
             </div>
           )}

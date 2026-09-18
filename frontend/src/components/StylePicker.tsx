@@ -11,9 +11,13 @@ interface StylePickerProps {
    *  screen-reader support for free. */
   presentation: 'full' | 'compact';
   options: StylePickerOption[];
-  placeholder: string;
+  placeholder?: string;
   onSelect: (value: string) => void;
   compactClassName?: string;
+  disabled?: boolean;
+  /** Accessible name for the 'compact' native select — required there since the
+   *  placeholder option drops out of the accessible name once a value is picked. */
+  ariaLabel?: string;
 }
 
 export function StylePicker({
@@ -22,11 +26,14 @@ export function StylePicker({
   placeholder,
   onSelect,
   compactClassName,
+  disabled,
+  ariaLabel,
 }: StylePickerProps) {
   if (presentation === 'compact') {
     return (
       <select
         value=""
+        aria-label={ariaLabel}
         onChange={(e) => {
           if (e.target.value) onSelect(e.target.value);
         }}
@@ -54,7 +61,8 @@ export function StylePicker({
           key={o.value}
           type="button"
           onClick={() => onSelect(o.value)}
-          className={`py-6 px-2 rounded-xl font-bold text-sm shadow-sm transition-all border bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] hover:shadow-md active:scale-95 break-words leading-tight ${
+          disabled={disabled}
+          className={`py-6 px-2 rounded-xl font-bold text-sm shadow-sm transition-all border bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] hover:shadow-md active:scale-95 break-words leading-tight disabled:opacity-50 ${
             o.bold
               ? 'border-[rgb(var(--color-accent))] text-[rgb(var(--color-accent))]'
               : 'border-[rgb(var(--color-border))]'

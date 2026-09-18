@@ -38,7 +38,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
   const [correctionStyle, setCorrectionStyle] = useState('');
   const [correctionTempo, setCorrectionTempo] = useState('ok');
 
-  const styleVote = useStyleVote(track.id);
+  const styleVote = useStyleVote(track.id, open);
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -418,6 +418,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 options={TEMPO_OPTIONS.map((t) => ({ value: t.key, label: t.label }))}
                 placeholder="Välj tempo..."
                 onSelect={(key) => handleSubmitStyleTempo(key)}
+                disabled={isSubmitting}
               />
             </div>
           </div>

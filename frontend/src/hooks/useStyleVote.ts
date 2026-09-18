@@ -19,15 +19,16 @@ export interface UseStyleVoteResult {
   submit: (style: string, tempoCorrection: string) => Promise<StyleVoteSubmitResult>;
 }
 
-/** Shared style-tree fetch + vote submission for the three classification surfaces
- *  (ClassifyPage, SmartNudge, FlagTrackModal). Each caller keeps its own step/view
- *  machine — the flows differ enough (verify-first vs ask-first, addition mode,
- *  secondary-style confirmation) that unifying them isn't worth the coupling. */
-export function useStyleVote(trackId: string | undefined): UseStyleVoteResult {
+/** Fetches the style tree and submits style/tempo votes for a track. */
+export function useStyleVote(
+  trackId: string | undefined,
+  enabled: boolean = true,
+): UseStyleVoteResult {
   const [styleTree, setStyleTree] = useState<StyleTree>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!enabled) return;
     getStyleTree()
       .then((nodes: StyleNode[]) => {
         const tree: StyleTree = {};
@@ -37,7 +38,7 @@ export function useStyleVote(trackId: string | undefined): UseStyleVoteResult {
         setStyleTree(tree);
       })
       .catch(() => {});
-  }, []);
+  }, [enabled]);
 
   const mainCategories = useMemo(() => Object.keys(styleTree).sort(), [styleTree]);
   const subStylesFor = useCallback((main: string) => styleTree[main] ?? [], [styleTree]);
