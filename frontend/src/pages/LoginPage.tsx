@@ -30,6 +30,9 @@ export function LoginPage() {
           <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
             Logga in med ditt Folkhub-konto
           </p>
+          <p className="mt-3 text-sm text-[rgb(var(--color-text-muted))]">
+            Folkhub är ett forum för svensk folkmusik. Med samma konto loggar du in här.
+          </p>
         </div>
 
         <div className="space-y-3">
@@ -47,14 +50,13 @@ export function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-[rgb(var(--color-text-muted))]">
-          Konton hanteras via{' '}
           <a
             href={DISCOURSE_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-[rgb(var(--color-text))]"
           >
-            folkhub.se
+            Läs mer på folkhub.se
           </a>
         </p>
       </div>
