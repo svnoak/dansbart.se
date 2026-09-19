@@ -47,7 +47,7 @@ class DanceTrackVoteRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
-    void suppressionRequiresSumOfTwoNotTwoAnonymousDownvotes() {
+    void twoAnonymousDownvotesSuppressTrackButOneDoesNot() {
         UUID danceId = createDance();
         Track belowThreshold = testData.track().build();
         Track atThreshold = testData.track().build();
@@ -55,9 +55,9 @@ class DanceTrackVoteRepositoryTest extends AbstractRepositoryTest {
         danceTrackVoteRepository.upsertVote(
                 danceId, belowThreshold.getId(), UUID.randomUUID(), -1, VoterReputationService.ANONYMOUS_WEIGHT);
         danceTrackVoteRepository.upsertVote(
-                danceId, belowThreshold.getId(), UUID.randomUUID(), -1, VoterReputationService.ANONYMOUS_WEIGHT);
+                danceId, atThreshold.getId(), UUID.randomUUID(), -1, VoterReputationService.ANONYMOUS_WEIGHT);
         danceTrackVoteRepository.upsertVote(
-                danceId, atThreshold.getId(), UUID.randomUUID(), -1, VoterReputationService.SUPPRESSION_THRESHOLD);
+                danceId, atThreshold.getId(), UUID.randomUUID(), -1, VoterReputationService.ANONYMOUS_WEIGHT);
         flush();
 
         List<UUID> suppressed = danceTrackVoteRepository.findSuppressedTrackIds(danceId);

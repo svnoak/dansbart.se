@@ -31,7 +31,7 @@ public class VoterReputationService {
     public static final BigDecimal CONFIRMATION_THRESHOLD = new BigDecimal("0.6");
     public static final BigDecimal RETRAINING_THRESHOLD = new BigDecimal("2.0");
     public static final BigDecimal MATCHING_THRESHOLD = new BigDecimal("0.3");
-    public static final BigDecimal SUPPRESSION_THRESHOLD = new BigDecimal("2.0");
+    public static final BigDecimal SUPPRESSION_THRESHOLD = new BigDecimal("0.6");
 
     private static final BigDecimal DELTA_CONFIRM = new BigDecimal("0.05");
     private static final BigDecimal USER_MULT_MIN = new BigDecimal("0.30");
