@@ -6,8 +6,10 @@ Tests cover:
 - Error handling
 - Memory management
 """
+
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
 
 
 class TestAnalysisService:
@@ -16,24 +18,27 @@ class TestAnalysisService:
     @pytest.fixture
     def analysis_service(self, mock_db_session, mock_audio_analyzer, mock_audio_fetcher):
         """Create an AnalysisService instance with mocked dependencies."""
-        with patch('app.services.analysis.ClassificationService') as MockClassifier:
+        with patch("app.services.analysis.ClassificationService") as MockClassifier:
             MockClassifier.return_value.classify_track_immediately.return_value = None
 
             from app.services.analysis import AnalysisService
+
             service = AnalysisService(mock_db_session)
             return service
 
     def test_initialization(self, mock_db_session):
         """Test service can be initialized."""
-        with patch('app.services.analysis.AudioFetcher'):
+        with patch("app.services.analysis.AudioFetcher"):
             from app.services.analysis import AnalysisService
+
             service = AnalysisService(mock_db_session)
             assert service.db == mock_db_session
 
     def test_initialization_without_db(self):
         """Test service handles None db gracefully."""
-        with patch('app.services.analysis.AudioFetcher'):
+        with patch("app.services.analysis.AudioFetcher"):
             from app.services.analysis import AnalysisService
+
             service = AnalysisService(None)
             assert service.repo is None
             assert service.classifier_service is None
@@ -96,8 +101,9 @@ class TestAnalysisServiceIntegration:
     @pytest.mark.integration
     def test_imports_work(self):
         """Test that all imports work correctly."""
-        from app.services.analysis import AnalysisService
         from neckenml.analyzer import AudioAnalyzer
+
+        from app.services.analysis import AnalysisService
 
         assert AnalysisService is not None
         assert AudioAnalyzer is not None
@@ -105,8 +111,9 @@ class TestAnalysisServiceIntegration:
     @pytest.mark.integration
     def test_classification_imports(self):
         """Test classification service imports work."""
-        from app.services.classification import ClassificationService
         from neckenml.core import StyleClassifier, compute_derived_features
+
+        from app.services.classification import ClassificationService
 
         assert ClassificationService is not None
         assert StyleClassifier is not None

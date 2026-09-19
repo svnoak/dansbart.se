@@ -94,6 +94,14 @@ public class MaintenanceController {
         return ResponseEntity.ok(maintenanceService.backfillIsrcs(limit));
     }
 
+    @PostMapping("/maintenance/backfill-effective-bpm")
+    @Operation(summary = "Recompute effective_bpm for rows left at 0 despite a known track tempo",
+        description = "Runs synchronously. Safe to re-run — only rows still at effective_bpm=0 "
+            + "with a known tracks.tempo_bpm are touched.")
+    public ResponseEntity<Map<String, Object>> backfillEffectiveBpm() {
+        return ResponseEntity.ok(maintenanceService.backfillEffectiveBpm());
+    }
+
     @PostMapping("/maintenance/pause")
     @Operation(summary = "Pause task dispatching for a queue (or all queues)",
         description = "Sets a pause flag and purges pending messages. Workers finish current work but receive nothing new.")

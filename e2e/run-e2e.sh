@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 # Run E2E tests against the full stack.
-# Usage: from repo root: ./dansbart.se/e2e/run-e2e.sh
-# Or:     cd dansbart.se/e2e && ./run-e2e.sh  (compose must be run from repo root separately)
+# Usage: ./e2e/run-e2e.sh  (from anywhere; paths resolve against the repo root)
 
 set -e
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 COMPOSE_FILES="-f docker-compose.yml"
 
-echo "Starting stack (db, redis, api, frontend, worker-feature, worker-audio)..."
-docker compose $COMPOSE_FILES up -d db redis api frontend worker-feature worker-audio
+echo "Starting stack (db, redis, backend, frontend, worker-feature, worker-audio)..."
+docker compose $COMPOSE_FILES up -d db redis backend frontend worker-feature worker-audio
 
 echo "Clearing any stale Celery messages from Redis queues..."
 docker compose $COMPOSE_FILES exec -T redis redis-cli DEL light feature audio celery 2>/dev/null || true
@@ -71,10 +70,10 @@ docker compose $COMPOSE_FILES exec -T redis redis-cli LLEN feature 2>/dev/null |
 docker compose $COMPOSE_FILES exec -T redis redis-cli LLEN audio 2>/dev/null || echo "?"
 
 echo "Running E2E tests..."
-cd dansbart.se/e2e
+cd "$REPO_ROOT/e2e"
 npm ci --quiet 2>/dev/null || npm install --quiet
 # Load root .env so ADMIN_PASSWORD and API_URL are set for tests
 set -a
-[ -f ../../.env ] && source ../../.env
+[ -f "$REPO_ROOT/.env" ] && source "$REPO_ROOT/.env"
 set +a
 npm run e2e

@@ -5,10 +5,9 @@ Environment variables are loaded from .env file or system environment.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from pydantic import PostgresDsn, computed_field
-from typing import Optional
-import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -36,10 +35,7 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()

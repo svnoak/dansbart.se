@@ -58,7 +58,8 @@ class DanceServiceVoteThresholdTest {
     private void stubVoter(String voterId) {
         lenient().when(voterContext.getVoterId()).thenReturn(UUID.fromString(voterId));
         lenient().when(reputationService.getWeightForCurrentVoter()).thenReturn(BigDecimal.ONE);
-        lenient().when(voteRepository.weightedUpvoteSumByDanceAndTrack(any(), any())).thenReturn(BigDecimal.ZERO);
+        lenient().when(voteRepository.weightedUpvoteSumByDanceAndTrack(any(), any()))
+            .thenReturn(VoterReputationService.CONFIRMATION_THRESHOLD);
     }
 
     @Test
@@ -106,6 +107,53 @@ class DanceServiceVoteThresholdTest {
         verify(danceJooqRepository, never()).addTrackConfirmed(any(), any(), any());
         verify(danceJooqRepository, never()).findById(any());
         verify(trackFeedbackService, never()).submitStyleFeedback(any(), any(), any());
+    }
+
+    @Test
+    void singleAnonymousUpvote_doesNotConfirmTrack() {
+        UUID danceId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID voterId = UUID.randomUUID();
+        when(voterContext.getVoterId()).thenReturn(voterId);
+        when(reputationService.getWeightForCurrentVoter()).thenReturn(VoterReputationService.ANONYMOUS_WEIGHT);
+        when(voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId))
+            .thenReturn(VoterReputationService.ANONYMOUS_WEIGHT);
+
+        danceService().voteOnTrack(danceId, trackId, 1);
+
+        verify(danceJooqRepository, never()).addTrackConfirmed(any(), any(), any());
+    }
+
+    @Test
+    void twoAnonymousUpvotes_confirmTrack() {
+        UUID danceId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID voterId = UUID.randomUUID();
+        when(voterContext.getVoterId()).thenReturn(voterId);
+        when(reputationService.getWeightForCurrentVoter()).thenReturn(VoterReputationService.ANONYMOUS_WEIGHT);
+        when(voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId))
+            .thenReturn(VoterReputationService.ANONYMOUS_WEIGHT.multiply(new BigDecimal("2")));
+
+        danceService().voteOnTrack(danceId, trackId, 1);
+
+        verify(danceJooqRepository).addTrackConfirmed(danceId, trackId, null);
+    }
+
+    @Test
+    void upvoteFromSignedInVoterAtLowestReputation_confirmsTrack() {
+        UUID danceId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID voterId = UUID.randomUUID();
+        // USER_BASE (2.0) * lowest reputation multiplier (0.30) = CONFIRMATION_THRESHOLD.
+        BigDecimal lowestReputationWeight = VoterReputationService.CONFIRMATION_THRESHOLD;
+        when(voterContext.getVoterId()).thenReturn(voterId);
+        when(reputationService.getWeightForCurrentVoter()).thenReturn(lowestReputationWeight);
+        when(voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId))
+            .thenReturn(lowestReputationWeight);
+
+        danceService().voteOnTrack(danceId, trackId, 1);
+
+        verify(danceJooqRepository).addTrackConfirmed(danceId, trackId, null);
     }
 
     @Test

@@ -6,12 +6,14 @@ downloads the best match, and validates the audio file.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
-import structlog
-import os
-import glob
-import re
-import yt_dlp
+
 import difflib
+import glob
+import os
+import re
+
+import structlog
+import yt_dlp
 
 
 class AudioFetcher:
@@ -36,18 +38,29 @@ class AudioFetcher:
         """
         title = title.lower()
         # Remove content in parentheses/brackets (feat., remix info, etc.)
-        title = re.sub(r'\([^)]*\)', '', title)
-        title = re.sub(r'\[[^\]]*\]', '', title)
+        title = re.sub(r"\([^)]*\)", "", title)
+        title = re.sub(r"\[[^\]]*\]", "", title)
         # Remove common suffixes
-        title = re.sub(r'\s*[-\u2013\u2014]\s*(official|audio|video|lyric|lyrics|hd|hq|4k|visualizer|visualiser).*$', '', title, flags=re.IGNORECASE)
+        title = re.sub(
+            r"\s*[-\u2013\u2014]\s*(official|audio|video|lyric|lyrics|hd|hq|4k|visualizer|visualiser).*$",
+            "",
+            title,
+            flags=re.IGNORECASE,
+        )
         # Remove special characters and extra whitespace
-        title = re.sub(r'[^\w\s]', ' ', title)
-        title = re.sub(r'\s+', ' ', title).strip()
+        title = re.sub(r"[^\w\s]", " ", title)
+        title = re.sub(r"\s+", " ", title).strip()
         return title
 
-    def fetch_track_audio(self, track_id: str, query: str, expected_duration_ms: int = None,
-                          track_title: str = None, artist_name: str = None,
-                          direct_video_id: str = None) -> dict | None:
+    def fetch_track_audio(
+        self,
+        track_id: str,
+        query: str,
+        expected_duration_ms: int = None,
+        track_title: str = None,
+        artist_name: str = None,
+        direct_video_id: str = None,
+    ) -> dict | None:
         """
         Fetch audio from YouTube.
 
@@ -77,15 +90,17 @@ class AudioFetcher:
 
         # Download Options
         dl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': f'{self.temp_dir}/{track_id}.%(ext)s',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '128',
-            }],
-            'quiet': True,
-            'noplaylist': True,
+            "format": "bestaudio/best",
+            "outtmpl": f"{self.temp_dir}/{track_id}.%(ext)s",
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "128",
+                }
+            ],
+            "quiet": True,
+            "noplaylist": True,
         }
 
         try:
@@ -96,15 +111,17 @@ class AudioFetcher:
 
                 with yt_dlp.YoutubeDL(dl_opts) as ydl:
                     info = ydl.extract_info(video_url, download=True)
-                    youtube_id = info.get('id')
-                    youtube_title = info.get('title')
+                    youtube_id = info.get("id")
+                    youtube_title = info.get("title")
 
                 expected_file = f"{self.temp_dir}/{track_id}.mp3"
 
                 # Verify downloaded audio
                 verification = self._verify_downloaded_audio(expected_file)
                 if not verification["valid"]:
-                    self.log.warn("direct_download_verification_failed", reason=verification['reason'])
+                    self.log.warn(
+                        "direct_download_verification_failed", reason=verification["reason"]
+                    )
 
                 if os.path.exists(expected_file):
                     return {
@@ -112,15 +129,15 @@ class AudioFetcher:
                         "youtube_id": youtube_id,
                         "youtube_title": youtube_title,
                         "verified": verification["valid"],
-                        "actual_duration_ms": verification["actual_duration_ms"]
+                        "actual_duration_ms": verification["actual_duration_ms"],
                     }
                 return None
 
             # --- SEARCH PATH (No direct link provided) ---
             search_opts = {
-                'quiet': True,
-                'noplaylist': True,
-                'extract_flat': True,
+                "quiet": True,
+                "noplaylist": True,
+                "extract_flat": True,
             }
 
             with yt_dlp.YoutubeDL(search_opts) as ydl:
@@ -128,7 +145,7 @@ class AudioFetcher:
 
                 search_query = f"ytsearch20:{query}"
                 info = ydl.extract_info(search_query, download=False)
-                entries = info.get('entries', [])
+                entries = info.get("entries", [])
 
                 if not entries:
                     self.log.warn("search_no_results", query=query)
@@ -141,10 +158,10 @@ class AudioFetcher:
                     return None
 
                 # Get full info and download
-                full_info = ydl.extract_info(best_match['url'], download=False)
-                youtube_id = full_info.get('id')
-                youtube_title = full_info.get('title')
-                webpage_url = full_info.get('webpage_url')
+                full_info = ydl.extract_info(best_match["url"], download=False)
+                youtube_id = full_info.get("id")
+                youtube_title = full_info.get("title")
+                webpage_url = full_info.get("webpage_url")
 
             # Download the verified video
             with yt_dlp.YoutubeDL(dl_opts) as ydl:
@@ -157,17 +174,19 @@ class AudioFetcher:
                 verification = self._verify_downloaded_audio(expected_file)
 
                 if not verification["valid"]:
-                    self.log.warn("post_download_verification_failed", reason=verification['reason'])
+                    self.log.warn(
+                        "post_download_verification_failed", reason=verification["reason"]
+                    )
                     self.cleanup(track_id)
                     return None
 
-                self.log.info("audio_verified", reason=verification['reason'])
+                self.log.info("audio_verified", reason=verification["reason"])
                 return {
                     "file_path": expected_file,
                     "youtube_id": youtube_id,
                     "youtube_title": youtube_title,
                     "verified": True,
-                    "actual_duration_ms": verification["actual_duration_ms"]
+                    "actual_duration_ms": verification["actual_duration_ms"],
                 }
 
         except Exception as e:
@@ -199,9 +218,11 @@ class AudioFetcher:
         for video_data in entries:
             score = 0
 
-            video_title = video_data.get('title', '')
+            video_title = video_data.get("title", "")
             normalized_video_title = self._normalize_title(video_title)
-            video_channel = video_data.get('channel', '').lower() if video_data.get('channel') else ''
+            video_channel = (
+                video_data.get("channel", "").lower() if video_data.get("channel") else ""
+            )
 
             # Basic validation
             if not self._passes_basic_filters(video_data, track_title):
@@ -223,7 +244,11 @@ class AudioFetcher:
                         title_similarity = max(title_similarity, 0.9)
 
             if normalized_track_title and title_similarity < MIN_TITLE_SIMILARITY:
-                self.log.debug("candidate_rejected_low_title_similarity", video_title=video_title, title_similarity=round(title_similarity, 2))
+                self.log.debug(
+                    "candidate_rejected_low_title_similarity",
+                    video_title=video_title,
+                    title_similarity=round(title_similarity, 2),
+                )
                 continue
 
             score += title_similarity * TITLE_WEIGHT
@@ -237,8 +262,10 @@ class AudioFetcher:
                     artist_similarity = 0.9
                 else:
                     artist_similarity = max(
-                        difflib.SequenceMatcher(None, normalized_artist, normalized_video_title).ratio(),
-                        difflib.SequenceMatcher(None, normalized_artist, video_channel).ratio()
+                        difflib.SequenceMatcher(
+                            None, normalized_artist, normalized_video_title
+                        ).ratio(),
+                        difflib.SequenceMatcher(None, normalized_artist, video_channel).ratio(),
                     )
             else:
                 artist_similarity = 0.5
@@ -246,7 +273,7 @@ class AudioFetcher:
             score += artist_similarity * ARTIST_WEIGHT
 
             # Duration score
-            yt_duration_sec = video_data.get('duration', 0)
+            yt_duration_sec = video_data.get("duration", 0)
             expected_sec = expected_duration_ms / 1000 if expected_duration_ms else 0
 
             if expected_sec > 0 and yt_duration_sec > 0:
@@ -261,26 +288,34 @@ class AudioFetcher:
             if "topic" in video_channel or "- topic" in video_channel:
                 score += 0.05
 
-            candidates.append({
-                'video': video_data,
-                'score': score,
-                'url': video_data.get('webpage_url'),
-                'title_sim': title_similarity,
-                'artist_sim': artist_similarity
-            })
+            candidates.append(
+                {
+                    "video": video_data,
+                    "score": score,
+                    "url": video_data.get("webpage_url"),
+                    "title_sim": title_similarity,
+                    "artist_sim": artist_similarity,
+                }
+            )
 
             self.log.debug("candidate_scored", video_title=video_title, score=round(score, 2))
 
-        candidates.sort(key=lambda x: x['score'], reverse=True)
+        candidates.sort(key=lambda x: x["score"], reverse=True)
 
         if candidates:
             best = candidates[0]
-            self.log.info("best_match_found", title=best['video'].get('title'), score=round(best['score'], 2))
+            self.log.info(
+                "best_match_found", title=best["video"].get("title"), score=round(best["score"], 2)
+            )
 
-            if best['score'] >= MIN_CONFIDENCE:
-                return best['video']
+            if best["score"] >= MIN_CONFIDENCE:
+                return best["video"]
             else:
-                self.log.warn("best_score_below_threshold", score=round(best['score'], 2), threshold=MIN_CONFIDENCE)
+                self.log.warn(
+                    "best_score_below_threshold",
+                    score=round(best["score"], 2),
+                    threshold=MIN_CONFIDENCE,
+                )
 
         return None
 
@@ -288,19 +323,31 @@ class AudioFetcher:
         """
         Check for obvious mismatches (karaoke, live, covers, etc.).
         """
-        video_title = video_data.get('title', '').lower()
+        video_title = video_data.get("title", "").lower()
         track_title_lower = track_title.lower() if track_title else ""
 
         # Forbidden keywords
-        forbidden_keywords = ['live', 'cover', 'karaoke', 'remix', 'mix', 'tutorial',
-                              'instrumental', 'acoustic', 'slowed', 'reverb', 'sped up', '8d']
+        forbidden_keywords = [
+            "live",
+            "cover",
+            "karaoke",
+            "remix",
+            "mix",
+            "tutorial",
+            "instrumental",
+            "acoustic",
+            "slowed",
+            "reverb",
+            "sped up",
+            "8d",
+        ]
 
         for word in forbidden_keywords:
             if word in video_title and word not in track_title_lower:
                 return False
 
         # Reject very short or very long videos
-        duration = video_data.get('duration', 0)
+        duration = video_data.get("duration", 0)
         if duration > 0 and (duration < 60 or duration > 600):
             return False
 
@@ -331,7 +378,11 @@ class AudioFetcher:
             actual_duration_ms = int(audio.info.length * 1000)
 
             if not self._expected_duration_ms:
-                return {"valid": True, "actual_duration_ms": actual_duration_ms, "reason": "No expected duration to compare"}
+                return {
+                    "valid": True,
+                    "actual_duration_ms": actual_duration_ms,
+                    "reason": "No expected duration to compare",
+                }
 
             diff_ms = abs(actual_duration_ms - self._expected_duration_ms)
             diff_seconds = diff_ms / 1000
@@ -341,13 +392,13 @@ class AudioFetcher:
                 return {
                     "valid": True,
                     "actual_duration_ms": actual_duration_ms,
-                    "reason": f"Duration match (diff: {diff_seconds:.1f}s)"
+                    "reason": f"Duration match (diff: {diff_seconds:.1f}s)",
                 }
             else:
                 return {
                     "valid": False,
                     "actual_duration_ms": actual_duration_ms,
-                    "reason": f"Duration mismatch: expected {self._expected_duration_ms/1000:.0f}s, got {actual_duration_ms/1000:.0f}s"
+                    "reason": f"Duration mismatch: expected {self._expected_duration_ms/1000:.0f}s, got {actual_duration_ms/1000:.0f}s",
                 }
 
         except Exception as e:

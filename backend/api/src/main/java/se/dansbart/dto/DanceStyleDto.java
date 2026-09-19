@@ -21,6 +21,7 @@ public class DanceStyleDto {
     private String tempoCategory;
     private Float bpmMultiplier;
     private Integer effectiveBpm;
+    private String source;
     private Integer confirmationCount;
     private Boolean isUserConfirmed;
 }

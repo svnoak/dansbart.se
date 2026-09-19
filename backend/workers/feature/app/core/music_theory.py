@@ -6,17 +6,18 @@
 # Format: "Style": (slow_threshold, typical_low, typical_high, fast_threshold)
 TEMPO_RANGES = {
     #                 Slow   Typical Range    Fast
-    "Hambo":        (95,    100,    115,    125),
-    "Polska":       (100,   105,    125,    135),
-    "Slängpolska":  (105,   110,    125,    135),
-    "Vals":         (140,   150,    200,    220),
-    "Schottis":     (130,   140,    160,    175),
-    "Snoa":         (70,    80,     110,    120),
-    "Polka":        (110,   120,    150,    165),
-    "Engelska":     (100,   110,    130,    145),
-    "Mazurka":      (120,   130,    160,    175),
-    "Gånglåt":      (70,    80,     100,    110),
+    "Hambo": (95, 100, 115, 125),
+    "Polska": (100, 105, 125, 135),
+    "Slängpolska": (105, 110, 125, 135),
+    "Vals": (140, 150, 200, 220),
+    "Schottis": (130, 140, 160, 175),
+    "Snoa": (70, 80, 110, 120),
+    "Polka": (110, 120, 150, 165),
+    "Engelska": (100, 110, 130, 145),
+    "Mazurka": (120, 130, 160, 175),
+    "Gånglåt": (70, 80, 100, 110),
 }
+
 
 def get_tempo_description(style: str, bpm: int) -> dict:
     """
@@ -29,11 +30,7 @@ def get_tempo_description(style: str, bpm: int) -> dict:
     }
     """
     if not style or style not in TEMPO_RANGES or not bpm:
-        return {
-            "level": 3,
-            "label": "Lagom",
-            "relative": "typical"
-        }
+        return {"level": 3, "label": "Lagom", "relative": "typical"}
 
     slow_th, typical_low, typical_high, fast_th = TEMPO_RANGES[style]
 

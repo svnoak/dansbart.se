@@ -5,11 +5,15 @@ Provides CRUD operations for AnalysisSource entities.
 
 AGPL-3.0 License - See LICENSE file for details.
 """
+
 import uuid
-from typing import Optional, List, Dict
-from sqlalchemy.orm import Session
+from typing import Dict, List, Optional
+
 from sqlalchemy import desc
+from sqlalchemy.orm import Session
+
 from app.core.models import AnalysisSource, GenreProfile
+
 from .base import BaseRepository
 
 
@@ -22,11 +26,7 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
     # ==================== ANALYSIS SOURCE OPERATIONS ====================
 
     def add_analysis(
-        self,
-        track_id: uuid.UUID,
-        source_type: str,
-        raw_data: dict,
-        confidence_score: float = 1.0
+        self, track_id: uuid.UUID, source_type: str, raw_data: dict, confidence_score: float = 1.0
     ) -> AnalysisSource:
         """
         Add a new analysis source for a track.
@@ -44,14 +44,12 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
             track_id=track_id,
             source_type=source_type,
             raw_data=raw_data,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
         )
         return analysis
 
     def get_latest_by_track(
-        self,
-        track_id: uuid.UUID,
-        source_type: str = None
+        self, track_id: uuid.UUID, source_type: str = None
     ) -> Optional[AnalysisSource]:
         """
         Get the most recent analysis for a track.
@@ -63,9 +61,7 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
         Returns:
             Latest AnalysisSource or None
         """
-        query = self.db.query(AnalysisSource).filter(
-            AnalysisSource.track_id == track_id
-        )
+        query = self.db.query(AnalysisSource).filter(AnalysisSource.track_id == track_id)
 
         if source_type:
             query = query.filter(AnalysisSource.source_type == source_type)
@@ -73,9 +69,7 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
         return query.order_by(desc(AnalysisSource.analyzed_at)).first()
 
     def get_all_by_track(
-        self,
-        track_id: uuid.UUID,
-        source_type: str = None
+        self, track_id: uuid.UUID, source_type: str = None
     ) -> List[AnalysisSource]:
         """
         Get all analyses for a track.
@@ -87,14 +81,11 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
         Returns:
             List of AnalysisSource entries
         """
-        filters = {'track_id': track_id}
+        filters = {"track_id": track_id}
         if source_type:
-            filters['source_type'] = source_type
+            filters["source_type"] = source_type
 
-        return self.find_all(
-            filters=filters,
-            order_by=desc(AnalysisSource.analyzed_at)
-        )
+        return self.find_all(filters=filters, order_by=desc(AnalysisSource.analyzed_at))
 
     def delete_by_track(self, track_id: uuid.UUID) -> int:
         """
@@ -106,9 +97,11 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
         Returns:
             Count of deleted entries
         """
-        count = self.db.query(AnalysisSource).filter(
-            AnalysisSource.track_id == track_id
-        ).delete(synchronize_session=False)
+        count = (
+            self.db.query(AnalysisSource)
+            .filter(AnalysisSource.track_id == track_id)
+            .delete(synchronize_session=False)
+        )
 
         self.db.flush()
         return count
@@ -121,7 +114,7 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
         avg_note_density: float,
         common_meters: dict,
         rhythm_patterns: dict,
-        sample_size: int
+        sample_size: int,
     ) -> GenreProfile:
         """
         Create or update a genre profile.
@@ -136,9 +129,7 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
         Returns:
             Created or updated GenreProfile
         """
-        existing = self.db.query(GenreProfile).filter(
-            GenreProfile.genre_name == genre_name
-        ).first()
+        existing = self.db.query(GenreProfile).filter(GenreProfile.genre_name == genre_name).first()
 
         if existing:
             existing.avg_note_density = avg_note_density
@@ -153,7 +144,7 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
             avg_note_density=avg_note_density,
             common_meters=common_meters,
             rhythm_patterns=rhythm_patterns,
-            sample_size=sample_size
+            sample_size=sample_size,
         )
         self.db.add(profile)
         self.db.flush()
@@ -161,16 +152,12 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
 
     def get_genre_profile(self, genre_name: str) -> Optional[GenreProfile]:
         """Get a genre profile by name."""
-        return self.db.query(GenreProfile).filter(
-            GenreProfile.genre_name == genre_name
-        ).first()
+        return self.db.query(GenreProfile).filter(GenreProfile.genre_name == genre_name).first()
 
     # ==================== BATCH OPERATIONS ====================
 
     def get_tracks_with_analysis(
-        self,
-        source_type: str = None,
-        limit: int = 100
+        self, source_type: str = None, limit: int = 100
     ) -> List[uuid.UUID]:
         """
         Get track IDs that have analysis data.
@@ -197,9 +184,10 @@ class AnalysisRepository(BaseRepository[AnalysisSource]):
         Returns:
             Dict mapping source_type to count
         """
-        results = self.db.query(
-            AnalysisSource.source_type,
-            self.db.func.count(AnalysisSource.id)
-        ).group_by(AnalysisSource.source_type).all()
+        results = (
+            self.db.query(AnalysisSource.source_type, self.db.func.count(AnalysisSource.id))
+            .group_by(AnalysisSource.source_type)
+            .all()
+        )
 
         return {source_type: count for source_type, count in results}

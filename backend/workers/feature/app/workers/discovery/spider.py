@@ -9,21 +9,27 @@ Features:
 - Multi-signal folk detection
 - Statistics tracking
 """
+
 import time
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 
 import structlog
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.core.celery_app import celery_app
 from app.core.logging import canonical_bind
-from app.workers.ingestion.spotify import SpotifyIngestor
-from app.repository.track import TrackRepository
 from app.core.models import (
-    Track, Artist, Album, TrackAlbum,
-    ArtistCrawlLog, RejectionLog, PendingArtistApproval
+    Album,
+    Artist,
+    ArtistCrawlLog,
+    PendingArtistApproval,
+    RejectionLog,
+    Track,
+    TrackAlbum,
 )
+from app.repository.track import TrackRepository
 from app.services.genre_classifier import GenreClassifier
+from app.workers.ingestion.spotify import SpotifyIngestor
 
 log = structlog.get_logger()
 
@@ -33,9 +39,7 @@ def _dispatch_audio_analysis(track_ids: list[str]) -> int:
     dispatched = 0
     for track_id in track_ids:
         celery_app.send_task(
-            "app.workers.tasks_audio.analyze_track_task",
-            args=[track_id],
-            queue="audio"
+            "app.workers.tasks_audio.analyze_track_task", args=[track_id], queue="audio"
         )
         dispatched += 1
     return dispatched
@@ -60,12 +64,12 @@ class DiscoverySpider:
 
         # Statistics
         self.stats = {
-            'artists_evaluated': 0,
-            'artists_passed_gatekeeper': 0,
-            'artists_already_crawled': 0,
-            'artists_rejected': 0,
-            'artists_crawled': 0,
-            'tracks_found': 0
+            "artists_evaluated": 0,
+            "artists_passed_gatekeeper": 0,
+            "artists_already_crawled": 0,
+            "artists_rejected": 0,
+            "artists_crawled": 0,
+            "tracks_found": 0,
         }
 
     def crawl_by_search(self, max_discoveries: int = 10) -> dict:
@@ -92,7 +96,7 @@ class DiscoverySpider:
             "scandinavian folk",
             "svensk folkmusik",
             "riksspelman",
-            "traditional folk sweden"
+            "traditional folk sweden",
         ]
 
         discovered_count = 0
@@ -105,13 +109,13 @@ class DiscoverySpider:
             log.info("searching", query=query)
 
             try:
-                results = self.sp.search(q=query, type='artist', limit=20)
+                results = self.sp.search(q=query, type="artist", limit=20)
 
-                if not results.get('artists', {}).get('items'):
+                if not results.get("artists", {}).get("items"):
                     log.info("search_no_results", query=query)
                     continue
 
-                for artist in results['artists']['items']:
+                for artist in results["artists"]["items"]:
                     if discovered_count >= max_discoveries:
                         break
 
@@ -125,9 +129,7 @@ class DiscoverySpider:
         return self.stats
 
     def backfill_existing_artists(
-        self,
-        max_artists: int = 20,
-        discover_from_albums: bool = True
+        self, max_artists: int = 20, discover_from_albums: bool = True
     ) -> dict:
         """
         Backfill method: Find all artists we have tracks for and ingest their
@@ -148,9 +150,9 @@ class DiscoverySpider:
         )
 
         # Get all artists in our database that have a Spotify ID
-        artists = self.db.query(Artist).filter(
-            Artist.spotify_id.isnot(None)
-        ).limit(max_artists * 2).all()
+        artists = (
+            self.db.query(Artist).filter(Artist.spotify_id.isnot(None)).limit(max_artists * 2).all()
+        )
 
         if not artists:
             log.warn("no_artists_found", reason="no artists with Spotify IDs in database")
@@ -169,12 +171,14 @@ class DiscoverySpider:
             artist_name = artist.name
 
             # Check if already crawled
-            existing_log = self.db.query(ArtistCrawlLog).filter(
-                ArtistCrawlLog.spotify_artist_id == artist_id
-            ).first()
+            existing_log = (
+                self.db.query(ArtistCrawlLog)
+                .filter(ArtistCrawlLog.spotify_artist_id == artist_id)
+                .first()
+            )
 
             if existing_log:
-                self.stats['artists_already_crawled'] += 1
+                self.stats["artists_already_crawled"] += 1
                 log.debug(
                     "artist_already_crawled",
                     artist_name=artist_name,
@@ -187,7 +191,7 @@ class DiscoverySpider:
             try:
                 # Get artist details from Spotify for genre info
                 sp_artist = self.sp.artist(artist_id)
-                genres = sp_artist.get('genres', [])
+                genres = sp_artist.get("genres", [])
 
                 # Classify the artist's genre
                 music_genre, confidence = self.genre_classifier.classify_artist_genre(
@@ -218,10 +222,10 @@ class DiscoverySpider:
                     spotify_artist_id=artist_id,
                     artist_name=artist_name,
                     tracks_found=len(track_ids) if isinstance(track_ids, list) else track_ids,
-                    status='success',
+                    status="success",
                     detected_genres=genres,
                     music_genre_classification=music_genre,
-                    discovery_source='backfill'
+                    discovery_source="backfill",
                 )
 
                 self.db.add(crawl_log)
@@ -237,8 +241,10 @@ class DiscoverySpider:
                         music_genre=music_genre,
                     )
 
-                self.stats['artists_crawled'] += 1
-                self.stats['tracks_found'] += len(track_ids) if isinstance(track_ids, list) else track_ids
+                self.stats["artists_crawled"] += 1
+                self.stats["tracks_found"] += (
+                    len(track_ids) if isinstance(track_ids, list) else track_ids
+                )
                 backfilled_count += 1
 
             except Exception as e:
@@ -250,10 +256,10 @@ class DiscoverySpider:
                         spotify_artist_id=artist_id,
                         artist_name=artist_name,
                         tracks_found=0,
-                        status='failed',
+                        status="failed",
                         detected_genres=[],
-                        music_genre_classification='unknown',
-                        discovery_source='backfill'
+                        music_genre_classification="unknown",
+                        discovery_source="backfill",
                     )
                     self.db.add(crawl_log)
                     self.db.commit()
@@ -288,22 +294,25 @@ class DiscoverySpider:
         # Get unique album Spotify IDs from our tracks
         album_spotify_ids = set()
 
-        tracks_with_albums = self.db.query(Track).join(
-            TrackAlbum, Track.id == TrackAlbum.track_id
-        ).join(Album, TrackAlbum.album_id == Album.id).limit(100).all()
+        tracks_with_albums = (
+            self.db.query(Track)
+            .join(TrackAlbum, Track.id == TrackAlbum.track_id)
+            .join(Album, TrackAlbum.album_id == Album.id)
+            .limit(100)
+            .all()
+        )
 
         for track in tracks_with_albums:
             spotify_link = next(
-                (l for l in track.playback_links if l.platform == 'spotify'),
-                None
+                (link for link in track.playback_links if link.platform == "spotify"), None
             )
             if not spotify_link:
                 continue
 
             try:
                 sp_track = self.sp.track(spotify_link.deep_link)
-                if sp_track and sp_track.get('album') and sp_track['album'].get('id'):
-                    album_spotify_ids.add(sp_track['album']['id'])
+                if sp_track and sp_track.get("album") and sp_track["album"].get("id"):
+                    album_spotify_ids.add(sp_track["album"]["id"])
             except Exception:
                 continue
 
@@ -317,15 +326,15 @@ class DiscoverySpider:
             try:
                 album = self.sp.album(album_id)
 
-                if not album or not album.get('tracks'):
+                if not album or not album.get("tracks"):
                     continue
 
                 # Look at all artists on this album
                 album_artists = set()
-                for track in album['tracks']['items']:
-                    for artist in track.get('artists', []):
-                        if artist.get('id'):
-                            album_artists.add(artist['id'])
+                for track in album["tracks"]["items"]:
+                    for artist in track.get("artists", []):
+                        if artist.get("id"):
+                            album_artists.add(artist["id"])
 
                 # For each artist on the album, check if they're new and folk
                 for artist_id in album_artists:
@@ -333,17 +342,19 @@ class DiscoverySpider:
                         break
 
                     # Skip if already crawled
-                    existing_log = self.db.query(ArtistCrawlLog).filter(
-                        ArtistCrawlLog.spotify_artist_id == artist_id
-                    ).first()
+                    existing_log = (
+                        self.db.query(ArtistCrawlLog)
+                        .filter(ArtistCrawlLog.spotify_artist_id == artist_id)
+                        .first()
+                    )
 
                     if existing_log:
                         continue
 
                     # Skip if already in our database
-                    existing_artist = self.db.query(Artist).filter(
-                        Artist.spotify_id == artist_id
-                    ).first()
+                    existing_artist = (
+                        self.db.query(Artist).filter(Artist.spotify_id == artist_id).first()
+                    )
 
                     if existing_artist:
                         continue
@@ -355,8 +366,8 @@ class DiscoverySpider:
                             discovered_count += 1
                             log.info(
                                 "discovered_from_album",
-                                artist_name=sp_artist.get('name', 'Unknown'),
-                                album_name=album.get('name', 'Unknown'),
+                                artist_name=sp_artist.get("name", "Unknown"),
+                                album_name=album.get("name", "Unknown"),
                             )
                     except Exception as e:
                         log.error(
@@ -384,20 +395,21 @@ class DiscoverySpider:
 
         Returns True if artist was newly crawled.
         """
-        artist_id = artist_obj['id']
-        name = artist_obj['name']
-        genres = artist_obj.get('genres', [])
+        artist_id = artist_obj["id"]
+        name = artist_obj["name"]
+        genres = artist_obj.get("genres", [])
 
-        self.stats['artists_evaluated'] += 1
+        self.stats["artists_evaluated"] += 1
 
         # STEP 1: REJECTION CHECK
-        rejected = self.db.query(RejectionLog).filter(
-            RejectionLog.spotify_id == artist_id,
-            RejectionLog.entity_type == 'artist'
-        ).first()
+        rejected = (
+            self.db.query(RejectionLog)
+            .filter(RejectionLog.spotify_id == artist_id, RejectionLog.entity_type == "artist")
+            .first()
+        )
 
         if rejected:
-            self.stats['artists_rejected'] += 1
+            self.stats["artists_rejected"] += 1
             log.info(
                 "artist_rejected",
                 artist_name=name,
@@ -406,9 +418,7 @@ class DiscoverySpider:
             return False
 
         # STEP 2: CHECK EXISTING VERIFICATION STATUS
-        existing_db_artist = self.db.query(Artist).filter(
-            Artist.spotify_id == artist_id
-        ).first()
+        existing_db_artist = self.db.query(Artist).filter(Artist.spotify_id == artist_id).first()
         is_manually_verified = existing_db_artist and existing_db_artist.is_verified
 
         if is_manually_verified:
@@ -419,15 +429,17 @@ class DiscoverySpider:
             if not is_folk:
                 return False
 
-        self.stats['artists_passed_gatekeeper'] += 1
+        self.stats["artists_passed_gatekeeper"] += 1
 
         # STEP 3: DEDUPLICATION
-        existing_log = self.db.query(ArtistCrawlLog).filter(
-            ArtistCrawlLog.spotify_artist_id == artist_id
-        ).first()
+        existing_log = (
+            self.db.query(ArtistCrawlLog)
+            .filter(ArtistCrawlLog.spotify_artist_id == artist_id)
+            .first()
+        )
 
         if existing_log:
-            self.stats['artists_already_crawled'] += 1
+            self.stats["artists_already_crawled"] += 1
             log.debug(
                 "artist_already_crawled",
                 artist_name=name,
@@ -436,9 +448,7 @@ class DiscoverySpider:
             return False
 
         # STEP 4: GENRE CLASSIFICATION
-        music_genre, confidence = self.genre_classifier.classify_artist_genre(
-            name, genres, None
-        )
+        music_genre, confidence = self.genre_classifier.classify_artist_genre(name, genres, None)
 
         # STEP 5: CONFIDENCE CHECK
         if is_manually_verified:
@@ -446,7 +456,7 @@ class DiscoverySpider:
         else:
             AUTO_APPROVE_CONFIDENCE = 0.7
             name_lower = name.lower()
-            traditional_keywords = ['spelmanslag', 'riksspelman', 'folkmusik', 'polska']
+            traditional_keywords = ["spelmanslag", "riksspelman", "folkmusik", "polska"]
             has_strong_folk_signal = any(kw in name_lower for kw in traditional_keywords)
 
             should_auto_approve = confidence >= AUTO_APPROVE_CONFIDENCE or has_strong_folk_signal
@@ -462,32 +472,40 @@ class DiscoverySpider:
             )
 
             try:
-                existing_pending = self.db.query(PendingArtistApproval).filter(
-                    PendingArtistApproval.spotify_id == artist_id
-                ).first()
+                existing_pending = (
+                    self.db.query(PendingArtistApproval)
+                    .filter(PendingArtistApproval.spotify_id == artist_id)
+                    .first()
+                )
 
                 if existing_pending:
                     log.debug("already_pending_approval", artist_name=name)
                     return False
 
-                image_url = artist_obj.get('images', [{}])[0].get('url') if artist_obj.get('images') else None
+                image_url = (
+                    artist_obj.get("images", [{}])[0].get("url")
+                    if artist_obj.get("images")
+                    else None
+                )
 
                 pending = PendingArtistApproval(
                     spotify_id=artist_id,
                     name=name,
                     image_url=image_url,
-                    discovery_source='spider',
+                    discovery_source="spider",
                     detected_genres=genres,
                     music_genre_classification=music_genre,
                     genre_confidence=confidence,
-                    status='pending'
+                    status="pending",
                 )
 
                 self.db.add(pending)
                 self.db.commit()
 
                 log.info("added_to_approval_queue", artist_name=name)
-                self.stats['artists_pending_approval'] = self.stats.get('artists_pending_approval', 0) + 1
+                self.stats["artists_pending_approval"] = (
+                    self.stats.get("artists_pending_approval", 0) + 1
+                )
                 return False
 
             except IntegrityError:
@@ -536,10 +554,10 @@ class DiscoverySpider:
                 spotify_artist_id=artist_id,
                 artist_name=name,
                 tracks_found=len(track_ids) if isinstance(track_ids, list) else track_ids,
-                status='success',
+                status="success",
                 detected_genres=genres,
                 music_genre_classification=music_genre,
-                discovery_source='spider'
+                discovery_source="spider",
             )
 
             self.db.add(crawl_log)
@@ -555,14 +573,16 @@ class DiscoverySpider:
                     music_genre=music_genre,
                 )
 
-            self.stats['artists_crawled'] += 1
-            self.stats['tracks_found'] += len(track_ids) if isinstance(track_ids, list) else track_ids
+            self.stats["artists_crawled"] += 1
+            self.stats["tracks_found"] += (
+                len(track_ids) if isinstance(track_ids, list) else track_ids
+            )
 
             return True
 
         except IntegrityError:
             self.db.rollback()
-            self.stats['artists_already_crawled'] += 1
+            self.stats["artists_already_crawled"] += 1
             return False
 
         except Exception as e:
@@ -572,10 +592,10 @@ class DiscoverySpider:
                     spotify_artist_id=artist_id,
                     artist_name=name,
                     tracks_found=0,
-                    status='failed',
+                    status="failed",
                     detected_genres=genres,
                     music_genre_classification=music_genre,
-                    discovery_source='spider'
+                    discovery_source="spider",
                 )
                 self.db.add(crawl_log)
                 self.db.commit()
@@ -588,22 +608,22 @@ class DiscoverySpider:
         """Log final statistics as a structured log event."""
         stats_kwargs = dict(
             spider_name=spider_name,
-            artists_evaluated=self.stats['artists_evaluated'],
-            artists_rejected=self.stats['artists_rejected'],
-            artists_passed_gatekeeper=self.stats['artists_passed_gatekeeper'],
-            artists_already_crawled=self.stats['artists_already_crawled'],
-            artists_crawled=self.stats['artists_crawled'],
-            tracks_found=self.stats['tracks_found'],
+            artists_evaluated=self.stats["artists_evaluated"],
+            artists_rejected=self.stats["artists_rejected"],
+            artists_passed_gatekeeper=self.stats["artists_passed_gatekeeper"],
+            artists_already_crawled=self.stats["artists_already_crawled"],
+            artists_crawled=self.stats["artists_crawled"],
+            tracks_found=self.stats["tracks_found"],
         )
 
-        if 'artists_pending_approval' in self.stats:
-            stats_kwargs['artists_pending_approval'] = self.stats['artists_pending_approval']
+        if "artists_pending_approval" in self.stats:
+            stats_kwargs["artists_pending_approval"] = self.stats["artists_pending_approval"]
 
         log.info("session_complete", **stats_kwargs)
 
         canonical_bind(
             spider_name=spider_name,
-            artists_evaluated=self.stats['artists_evaluated'],
-            artists_crawled=self.stats['artists_crawled'],
-            tracks_found=self.stats['tracks_found'],
+            artists_evaluated=self.stats["artists_evaluated"],
+            artists_crawled=self.stats["artists_crawled"],
+            tracks_found=self.stats["tracks_found"],
         )

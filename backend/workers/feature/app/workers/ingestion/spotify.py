@@ -3,14 +3,16 @@ Spotify Ingestor - Import tracks from Spotify playlists and artist discographies
 
 MIT Licensed - No AGPL dependencies.
 """
+
 import hashlib
 import time
-from sqlalchemy.orm import Session
-from app.repository.track import TrackRepository
-from app.core.config import settings
-from app.core.models import Album, TrackAlbum
 
 import structlog
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.core.models import Album, TrackAlbum
+from app.repository.track import TrackRepository
 
 log = structlog.get_logger()
 
@@ -26,8 +28,7 @@ class SpotifyIngestor:
         self.repo = TrackRepository(db)
 
         client_credentials_manager = SpotifyClientCredentials(
-            client_id=settings.SPOTIPY_CLIENT_ID,
-            client_secret=settings.SPOTIPY_CLIENT_SECRET
+            client_id=settings.SPOTIPY_CLIENT_ID, client_secret=settings.SPOTIPY_CLIENT_SECRET
         )
         self.sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
@@ -51,16 +52,18 @@ class SpotifyIngestor:
         processed_ids = []
 
         while results:
-            raw_items = [item.get('track') for item in results['items']]
+            raw_items = [item.get("track") for item in results["items"]]
             batch_ids = self.ingest_tracks_from_list(raw_items)
             processed_ids.extend(batch_ids)
 
-            if results['next']:
+            if results["next"]:
                 results = self.sp.next(results)
             else:
                 results = None
 
-        log.info("playlist_ingestion_complete", playlist_id=playlist_id, tracks_queued=len(processed_ids))
+        log.info(
+            "playlist_ingestion_complete", playlist_id=playlist_id, tracks_queued=len(processed_ids)
+        )
         return processed_ids
 
     def ingest_tracks_from_list(self, track_items: list) -> list[str]:
@@ -77,8 +80,8 @@ class SpotifyIngestor:
         track_ids = []
         track_map = {}
         for track in track_items:
-            if track and not track.get('is_local') and track.get('id'):
-                track_id = track['id']
+            if track and not track.get("is_local") and track.get("id"):
+                track_id = track["id"]
                 track_ids.append(track_id)
                 track_map[track_id] = track
 
@@ -88,22 +91,22 @@ class SpotifyIngestor:
         # Batch fetch full track details to get ISRCs (up to 50 at a time)
         full_tracks = []
         for i in range(0, len(track_ids), 50):
-            batch_ids = track_ids[i:i+50]
+            batch_ids = track_ids[i : i + 50]
             try:
                 batch_response = self.sp.tracks(batch_ids)
-                batch_tracks = batch_response.get('tracks', [])
+                batch_tracks = batch_response.get("tracks", [])
 
                 # Merge full track data with original album data
                 fetched_ids = set()
                 for full_track in batch_tracks:
-                    if full_track and full_track.get('id') in track_map:
-                        track_id = full_track['id']
+                    if full_track and full_track.get("id") in track_map:
+                        track_id = full_track["id"]
                         fetched_ids.add(track_id)
                         original_track = track_map.get(track_id, {})
 
                         # Preserve album data if injected
-                        if 'album' in original_track and original_track['album']:
-                            full_track['album'] = original_track['album']
+                        if "album" in original_track and original_track["album"]:
+                            full_track["album"] = original_track["album"]
 
                         full_tracks.append(full_track)
 
@@ -149,25 +152,30 @@ class SpotifyIngestor:
 
         try:
             album = self.sp.album(album_id)
-            album_name = album.get('name', 'Unknown')
+            album_name = album.get("name", "Unknown")
             log.info("album_fetched", album_id=album_id, album_name=album_name)
 
             tracks_to_save = []
             album_tracks_results = self.sp.album_tracks(album_id)
 
             while album_tracks_results:
-                for track in album_tracks_results['items']:
+                for track in album_tracks_results["items"]:
                     # Inject album object for _process_single_track
-                    track['album'] = album
+                    track["album"] = album
                     tracks_to_save.append(track)
 
-                if album_tracks_results['next']:
+                if album_tracks_results["next"]:
                     album_tracks_results = self.sp.next(album_tracks_results)
                 else:
                     album_tracks_results = None
 
             pending_ids = self.ingest_tracks_from_list(tracks_to_save)
-            log.info("album_ingestion_complete", album_id=album_id, album_name=album_name, tracks_queued=len(pending_ids))
+            log.info(
+                "album_ingestion_complete",
+                album_id=album_id,
+                album_name=album_name,
+                tracks_queued=len(pending_ids),
+            )
             return pending_ids
 
         except Exception as e:
@@ -189,12 +197,12 @@ class SpotifyIngestor:
         # Get all albums (Albums + Singles)
         albums = []
         results = self.sp.artist_albums(
-            artist_id, album_type='album,single', country='SE', limit=50
+            artist_id, album_type="album,single", country="SE", limit=50
         )
 
         while results:
-            albums.extend(results['items'])
-            if results['next']:
+            albums.extend(results["items"])
+            if results["next"]:
                 results = self.sp.next(results)
             else:
                 results = None
@@ -209,16 +217,16 @@ class SpotifyIngestor:
                 if idx > 0 and idx % 10 == 0:
                     time.sleep(1.0)
 
-                album_tracks_results = self.sp.album_tracks(album['id'])
+                album_tracks_results = self.sp.album_tracks(album["id"])
 
                 tracks_to_save = []
                 while album_tracks_results:
-                    for track in album_tracks_results['items']:
+                    for track in album_tracks_results["items"]:
                         # Inject album object for _process_single_track
-                        track['album'] = album
+                        track["album"] = album
                         tracks_to_save.append(track)
 
-                    if album_tracks_results['next']:
+                    if album_tracks_results["next"]:
                         album_tracks_results = self.sp.next(album_tracks_results)
                     else:
                         album_tracks_results = None
@@ -228,9 +236,13 @@ class SpotifyIngestor:
                 all_pending_ids.extend(pending_ids)
 
             except Exception as e:
-                log.error("artist_album_processing_failed", album_name=album['name'], error=str(e))
+                log.error("artist_album_processing_failed", album_name=album["name"], error=str(e))
 
-        log.info("artist_discography_ingestion_complete", artist_id=artist_id, tracks_queued=len(all_pending_ids))
+        log.info(
+            "artist_discography_ingestion_complete",
+            artist_id=artist_id,
+            tracks_queued=len(all_pending_ids),
+        )
         return all_pending_ids
 
     def _process_single_track(self, sp_track: dict):
@@ -239,17 +251,17 @@ class SpotifyIngestor:
 
         Returns the database Track object or None if processing failed.
         """
-        external_ids = sp_track.get('external_ids', {})
-        isrc = external_ids.get('isrc')
-        title = sp_track.get('name')
-        duration_ms = sp_track.get('duration_ms')
+        external_ids = sp_track.get("external_ids", {})
+        isrc = external_ids.get("isrc")
+        title = sp_track.get("name")
+        duration_ms = sp_track.get("duration_ms")
 
         # If no ISRC, generate a fallback identifier from track metadata
         if not isrc:
-            album_obj = sp_track.get('album', {})
-            album_name = album_obj.get('name', '')
-            artists = sp_track.get('artists', [])
-            first_artist = artists[0]['name'] if artists else ''
+            album_obj = sp_track.get("album", {})
+            album_name = album_obj.get("name", "")
+            artists = sp_track.get("artists", [])
+            first_artist = artists[0]["name"] if artists else ""
 
             # Normalize and create hash
             hash_input = f"{title}|{first_artist}|{album_name}|{duration_ms}".lower()
@@ -258,24 +270,21 @@ class SpotifyIngestor:
             log.warn("no_isrc_using_fallback", title=title, fallback_isrc=isrc)
 
         # Extract Album Info
-        album_obj = sp_track.get('album', {})
-        album_images = album_obj.get('images', [])
-        cover_url = album_images[0]['url'] if album_images else None
+        album_obj = sp_track.get("album", {})
+        album_images = album_obj.get("images", [])
+        cover_url = album_images[0]["url"] if album_images else None
 
         album_data = {
-            'name': album_obj.get('name'),
-            'cover': cover_url,
-            'date': album_obj.get('release_date'),
-            'spotify_id': album_obj.get('id')
+            "name": album_obj.get("name"),
+            "cover": cover_url,
+            "date": album_obj.get("release_date"),
+            "spotify_id": album_obj.get("id"),
         }
 
         # Extract Artists Info
         artists_data = []
-        for artist in sp_track.get('artists', []):
-            artists_data.append({
-                'name': artist['name'],
-                'id': artist['id']
-            })
+        for artist in sp_track.get("artists", []):
+            artists_data.append({"name": artist["name"], "id": artist["id"]})
 
         # Database Interaction
         db_track = self.repo.get_by_isrc(isrc)
@@ -287,7 +296,7 @@ class SpotifyIngestor:
                 isrc=isrc,
                 duration_ms=duration_ms,
                 album_data=album_data,
-                artists_data=artists_data
+                artists_data=artists_data,
             )
         else:
             # Track exists - update missing data and add new album link if needed
@@ -299,66 +308,65 @@ class SpotifyIngestor:
                 updated = True
 
             # Add new album link if this track appears in a new album
-            if album_data and album_data.get('name'):
+            if album_data and album_data.get("name"):
                 primary_artist_data = artists_data[0] if artists_data else None
                 if primary_artist_data:
                     primary_artist = self.repo.get_or_create_artist(
-                        primary_artist_data['name'],
-                        primary_artist_data.get('id')
+                        primary_artist_data["name"], primary_artist_data.get("id")
                     )
 
                     # Check if album exists (first by spotify_id)
                     album = None
-                    if album_data.get('spotify_id'):
-                        album = self.db.query(Album).filter(
-                            Album.spotify_id == album_data['spotify_id']
-                        ).first()
+                    if album_data.get("spotify_id"):
+                        album = (
+                            self.db.query(Album)
+                            .filter(Album.spotify_id == album_data["spotify_id"])
+                            .first()
+                        )
 
                     # Fall back to title + artist
                     if not album:
-                        album = self.db.query(Album).filter(
-                            Album.title == album_data['name'],
-                            Album.artist_id == primary_artist.id
-                        ).first()
+                        album = (
+                            self.db.query(Album)
+                            .filter(
+                                Album.title == album_data["name"],
+                                Album.artist_id == primary_artist.id,
+                            )
+                            .first()
+                        )
 
                     if not album:
                         # Create new album
                         album = Album(
-                            title=album_data['name'],
+                            title=album_data["name"],
                             artist_id=primary_artist.id,
-                            cover_image_url=album_data.get('cover'),
-                            release_date=album_data.get('date'),
-                            spotify_id=album_data.get('spotify_id')
+                            cover_image_url=album_data.get("cover"),
+                            release_date=album_data.get("date"),
+                            spotify_id=album_data.get("spotify_id"),
                         )
                         self.db.add(album)
                         self.db.flush()
-                    elif not album.spotify_id and album_data.get('spotify_id'):
-                        album.spotify_id = album_data.get('spotify_id')
+                    elif not album.spotify_id and album_data.get("spotify_id"):
+                        album.spotify_id = album_data.get("spotify_id")
                         self.db.flush()
 
                     # Check if track is already linked to this album
-                    existing_link = self.db.query(TrackAlbum).filter(
-                        TrackAlbum.track_id == db_track.id,
-                        TrackAlbum.album_id == album.id
-                    ).first()
+                    existing_link = (
+                        self.db.query(TrackAlbum)
+                        .filter(TrackAlbum.track_id == db_track.id, TrackAlbum.album_id == album.id)
+                        .first()
+                    )
 
                     if not existing_link:
-                        self.db.add(TrackAlbum(
-                            track_id=db_track.id,
-                            album_id=album.id
-                        ))
+                        self.db.add(TrackAlbum(track_id=db_track.id, album_id=album.id))
                         updated = True
 
             if updated:
                 self.db.commit()
 
         # Link Spotify ID
-        spotify_id = sp_track.get('id')
+        spotify_id = sp_track.get("id")
         if spotify_id:
-            self.repo.add_playback_link(
-                track_id=db_track.id,
-                platform="spotify",
-                url=spotify_id
-            )
+            self.repo.add_playback_link(track_id=db_track.id, platform="spotify", url=spotify_id)
 
         return db_track

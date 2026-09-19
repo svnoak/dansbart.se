@@ -6,14 +6,17 @@ Requires: TensorFlow, Essentia, Madmom, Librosa, neckenml
 
 AGPL-3.0 License - See LICENSE file for details.
 """
+
+import gc
+
 import structlog
 from celery.exceptions import MaxRetriesExceededError
 from celery.signals import worker_shutdown
+
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
-from app.services.analysis import AnalysisService
 from app.core.models import Track
-import gc
+from app.services.analysis import AnalysisService
 
 log = structlog.get_logger()
 
@@ -40,8 +43,7 @@ def cleanup_resources():
 @worker_shutdown.connect
 def cleanup_worker_on_shutdown(**kwargs):
     """Clean up neckenml resources when worker shuts down gracefully."""
-    global _worker_analysis_service
-    if _worker_analysis_service and hasattr(_worker_analysis_service, '_analyzer'):
+    if _worker_analysis_service and hasattr(_worker_analysis_service, "_analyzer"):
         if _worker_analysis_service._analyzer:
             log.info("worker_shutdown_cleanup", message="Cleaning up neckenml models")
             _worker_analysis_service._analyzer.close()
@@ -51,7 +53,7 @@ def cleanup_worker_on_shutdown(**kwargs):
 @celery_app.task(
     bind=True,
     acks_late=True,
-    queue='audio',
+    queue="audio",
     autoretry_for=(Exception,),
     retry_backoff=60,
     retry_backoff_max=600,
@@ -83,11 +85,13 @@ def analyze_track_task(self, track_id: str):
         service.db = db
         if service.repo is None:
             from app.repository.analysis import AnalysisRepository
+
             service.repo = AnalysisRepository(db)
         else:
             service.repo.db = db
         if service.classifier_service is None:
             from app.services.classification import ClassificationService
+
             service.classifier_service = ClassificationService(db)
         else:
             service.classifier_service.db = db
@@ -119,7 +123,13 @@ def analyze_track_task(self, track_id: str):
 
     except Exception as e:
         db.rollback()
-        log.error("analysis_failed", track_id=track_id, attempt=attempt, max_attempts=max_attempts, error=str(e))
+        log.error(
+            "analysis_failed",
+            track_id=track_id,
+            attempt=attempt,
+            max_attempts=max_attempts,
+            error=str(e),
+        )
 
         if self.request.retries >= self.max_retries:
             log.error("final_attempt_failed", track_id=track_id)
@@ -148,7 +158,12 @@ def analyze_track_task(self, track_id: str):
                         db.commit()
                         log.info("status_reset_to_pending", track_id=track_id)
             except Exception as status_err:
-                log.error("failed_to_update_status", track_id=track_id, target_status="PENDING", error=str(status_err))
+                log.error(
+                    "failed_to_update_status",
+                    track_id=track_id,
+                    target_status="PENDING",
+                    error=str(status_err),
+                )
         raise
 
     finally:

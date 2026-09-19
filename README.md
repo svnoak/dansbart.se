@@ -92,6 +92,19 @@ docker compose up worker-audio worker-feature
 
 ## Development
 
+`make` is the shortest path — every check target runs the same command as the
+matching CI job:
+
+```bash
+make install   # install all dev dependencies
+make up        # start the docker compose stack
+make check     # lint + test everything CI checks
+make fix       # auto-apply formatting
+make help      # list all targets
+```
+
+The per-component commands below are what those targets wrap.
+
 ### Java API
 
 ```bash
@@ -133,11 +146,19 @@ pytest
 
 ## Deployment
 
-Production images are built and pushed to GitHub Container Registry via CI on every merge to `main`:
-- `ghcr.io/svnoak/dansbart-frontend:production`
-- `ghcr.io/svnoak/dansbart-api:production`
-- `ghcr.io/svnoak/dansbart-feature-worker:production`
-- `ghcr.io/svnoak/dansbart-audio-worker:production`
+Development is trunk-based:
+
+- **Beta** — every commit that lands on `main` and passes CI is published to
+  GitHub Container Registry as `:beta`, plus an immutable `:<sha>` tag.
+- **Production** — cut by pushing a version tag (`v1.2.3`), which publishes
+  `:latest`, `:1.2.3` and `:<sha>`. The release workflow refuses tags that do
+  not point at a commit on `main`, so every release has soaked on beta.
+
+Images (`ghcr.io/svnoak/…`): `dansbart-frontend`, `dansbart-api`,
+`dansbart-feature-worker`, `dansbart-audio-worker`.
+
+Deployment itself runs from a separate private Ansible repository, which pulls
+these images.
 
 ## Open Dataset
 
