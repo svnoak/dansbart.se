@@ -6,6 +6,7 @@ import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.reputation.VoterReputationService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -63,7 +64,7 @@ public class DanceTrackVoteRepository {
                 .where(COL_DANCE_ID.eq(danceId))
                 .and(COL_VOTE.eq(1))
                 .groupBy(COL_TRACK_ID)
-                .having(DSL.sum(COL_WEIGHT).ge(new BigDecimal("1.0")))
+                .having(DSL.sum(COL_WEIGHT).ge(VoterReputationService.MATCHING_THRESHOLD))
                 .fetch(COL_TRACK_ID);
     }
 
@@ -81,7 +82,7 @@ public class DanceTrackVoteRepository {
                 .and(COL_VOTE.eq(-1))
                 .and(COL_TRACK_ID.notIn(upvotedIds))
                 .groupBy(COL_TRACK_ID)
-                .having(DSL.sum(COL_WEIGHT).ge(new BigDecimal("2.0")))
+                .having(DSL.sum(COL_WEIGHT).ge(VoterReputationService.SUPPRESSION_THRESHOLD))
                 .fetch(COL_TRACK_ID);
     }
 
