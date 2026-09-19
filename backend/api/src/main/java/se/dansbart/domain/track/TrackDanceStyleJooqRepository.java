@@ -82,6 +82,7 @@ public class TrackDanceStyleJooqRepository {
                     TRACK_DANCE_STYLES.TEMPO_CATEGORY,
                     TRACK_DANCE_STYLES.BPM_MULTIPLIER,
                     TRACK_DANCE_STYLES.EFFECTIVE_BPM,
+                    TRACK_DANCE_STYLES.SOURCE,
                     TRACK_DANCE_STYLES.CONFIRMATION_COUNT,
                     TRACK_DANCE_STYLES.IS_USER_CONFIRMED
                 )
@@ -95,6 +96,7 @@ public class TrackDanceStyleJooqRepository {
                     style.getTempoCategory(),
                     style.getBpmMultiplier() != null ? style.getBpmMultiplier().doubleValue() : null,
                     style.getEffectiveBpm(),
+                    style.getSource(),
                     style.getConfirmationCount(),
                     style.getIsUserConfirmed()
                 )
@@ -109,6 +111,7 @@ public class TrackDanceStyleJooqRepository {
                 .set(TRACK_DANCE_STYLES.TEMPO_CATEGORY, style.getTempoCategory())
                 .set(TRACK_DANCE_STYLES.BPM_MULTIPLIER, style.getBpmMultiplier() != null ? style.getBpmMultiplier().doubleValue() : null)
                 .set(TRACK_DANCE_STYLES.EFFECTIVE_BPM, style.getEffectiveBpm())
+                .set(TRACK_DANCE_STYLES.SOURCE, style.getSource())
                 .set(TRACK_DANCE_STYLES.CONFIRMATION_COUNT, style.getConfirmationCount())
                 .set(TRACK_DANCE_STYLES.IS_USER_CONFIRMED, style.getIsUserConfirmed())
                 .where(TRACK_DANCE_STYLES.ID.eq(style.getId()))
@@ -128,6 +131,7 @@ public class TrackDanceStyleJooqRepository {
         s.setTempoCategory(r.get(TRACK_DANCE_STYLES.TEMPO_CATEGORY));
         s.setBpmMultiplier(r.get(TRACK_DANCE_STYLES.BPM_MULTIPLIER) != null ? r.get(TRACK_DANCE_STYLES.BPM_MULTIPLIER).floatValue() : null);
         s.setEffectiveBpm(r.get(TRACK_DANCE_STYLES.EFFECTIVE_BPM));
+        s.setSource(r.get(TRACK_DANCE_STYLES.SOURCE));
         s.setConfirmationCount(r.get(TRACK_DANCE_STYLES.CONFIRMATION_COUNT));
         s.setIsUserConfirmed(r.get(TRACK_DANCE_STYLES.IS_USER_CONFIRMED));
         return s;
