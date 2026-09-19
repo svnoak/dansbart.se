@@ -126,8 +126,16 @@ public class TrackFeedbackService {
             return false;
         }
 
+        // Derives bpm_multiplier/effective_bpm from the track's raw tempo_bpm so the confirmed style stays findable by tempo search.
+        Float rawBpm = trackJooqRepository.findById(trackId).map(Track::getTempoBpm).orElse(null);
+        BpmMultiplierResolver.Result bpm = BpmMultiplierResolver.resolve(style, rawBpm);
+
         if (existing.isPresent()) {
-            danceStyleRepository.setUserConfirmed(trackId, style, true);
+            TrackDanceStyle danceStyle = existing.get();
+            danceStyle.setBpmMultiplier(bpm.multiplier());
+            danceStyle.setEffectiveBpm(bpm.effectiveBpm());
+            danceStyle.setIsUserConfirmed(true);
+            danceStyleRepository.save(danceStyle);
         } else {
             // Create a new TrackDanceStyle row for the voted style
             TrackDanceStyle newStyle = new TrackDanceStyle();
@@ -135,8 +143,8 @@ public class TrackFeedbackService {
             newStyle.setDanceStyle(style);
             newStyle.setIsPrimary(false);
             newStyle.setConfidence(0.5f);
-            newStyle.setBpmMultiplier(1.0f);
-            newStyle.setEffectiveBpm(0);
+            newStyle.setBpmMultiplier(bpm.multiplier());
+            newStyle.setEffectiveBpm(bpm.effectiveBpm());
             newStyle.setConfirmationCount(0);
             newStyle.setIsUserConfirmed(true);
             danceStyleRepository.save(newStyle);
