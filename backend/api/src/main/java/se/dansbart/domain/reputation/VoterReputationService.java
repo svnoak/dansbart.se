@@ -16,22 +16,22 @@ import java.util.UUID;
  * tracks a per-authenticated-voter reputation multiplier that rewards consistently
  * useful contributions.
  *
- * CONFIRMATION_THRESHOLD is deliberately low (equal to ANONYMOUS_WEIGHT): a single
- * anonymous vote is enough to confirm a style for display. RETRAINING_THRESHOLD is the
+ * CONFIRMATION_THRESHOLD needs two anonymous votes, or one vote from a signed-in voter
+ * at the lowest reputation, to confirm a style for display. RETRAINING_THRESHOLD is the
  * higher-trust gate for anything that feeds back into the ML model.
  */
 @Service
 @RequiredArgsConstructor
 public class VoterReputationService {
 
-    public static final BigDecimal ANONYMOUS_WEIGHT = new BigDecimal("1.0");
+    public static final BigDecimal ANONYMOUS_WEIGHT = new BigDecimal("0.3");
     public static final BigDecimal USER_BASE = new BigDecimal("2.0");
     public static final BigDecimal ADMIN_BASE = new BigDecimal("3.0");
 
-    public static final BigDecimal CONFIRMATION_THRESHOLD = new BigDecimal("1.0");
+    public static final BigDecimal CONFIRMATION_THRESHOLD = new BigDecimal("0.6");
     public static final BigDecimal RETRAINING_THRESHOLD = new BigDecimal("2.0");
-    public static final BigDecimal MATCHING_THRESHOLD = new BigDecimal("1.0");
-    public static final BigDecimal SUPPRESSION_THRESHOLD = new BigDecimal("2.0");
+    public static final BigDecimal MATCHING_THRESHOLD = new BigDecimal("0.3");
+    public static final BigDecimal SUPPRESSION_THRESHOLD = new BigDecimal("0.6");
 
     private static final BigDecimal DELTA_CONFIRM = new BigDecimal("0.05");
     private static final BigDecimal USER_MULT_MIN = new BigDecimal("0.30");

@@ -1,12 +1,13 @@
 """
 Model training service for the dance style classifier.
 
-Gathers training data from user-confirmed and high-confidence tracks,
+Gathers training data from user-confirmed and metadata-sourced tracks,
 then retrains the ClassificationHead using neckenml's TrainingService.
 """
 
 import structlog
 from neckenml.core import ClassificationHead, compute_derived_features
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.models import AnalysisSource, TrackDanceStyle
@@ -14,11 +15,10 @@ from app.core.models import AnalysisSource, TrackDanceStyle
 log = structlog.get_logger()
 
 MINIMUM_TRAINING_SAMPLES = 50
-HIGH_CONFIDENCE_THRESHOLD = 0.95
 
 
 class ModelTrainingService:
-    """Trains the classification model from confirmed and high-confidence tracks."""
+    """Trains the classification model from confirmed and metadata-sourced tracks."""
 
     def __init__(self, db: Session):
         self.db = db
@@ -27,9 +27,8 @@ class ModelTrainingService:
         """
         Gather training data and retrain the classification head.
 
-        Training data comes from two sources:
-        1. User-confirmed tracks (is_user_confirmed = true)
-        2. High-confidence metadata-classified tracks (confidence >= 0.95)
+        A row enters the training set when a user confirmed it, or when its
+        source is metadata.
 
         Returns:
             dict with training stats (status, trained_on, styles, accuracy)
@@ -38,30 +37,10 @@ class ModelTrainingService:
         labels = []
         styles_seen = set()
 
-        # Source 1: User-confirmed styles
-        confirmed_styles = (
-            self.db.query(TrackDanceStyle).filter(TrackDanceStyle.is_user_confirmed.is_(True)).all()
-        )
+        training_rows = self._select_training_rows()
 
-        confirmed_count = self._collect_training_data(
-            confirmed_styles, embeddings, labels, styles_seen
-        )
-        log.info("collected_confirmed_tracks", count=confirmed_count)
-
-        # Source 2: High-confidence metadata-classified styles
-        high_conf_styles = (
-            self.db.query(TrackDanceStyle)
-            .filter(
-                TrackDanceStyle.confidence >= HIGH_CONFIDENCE_THRESHOLD,
-                TrackDanceStyle.is_user_confirmed.is_(False),
-            )
-            .all()
-        )
-
-        high_conf_count = self._collect_training_data(
-            high_conf_styles, embeddings, labels, styles_seen
-        )
-        log.info("collected_high_confidence_tracks", count=high_conf_count)
+        training_count = self._collect_training_data(training_rows, embeddings, labels, styles_seen)
+        log.info("collected_training_tracks", count=training_count)
 
         total_samples = len(embeddings)
         if total_samples < MINIMUM_TRAINING_SAMPLES:
@@ -90,10 +69,21 @@ class ModelTrainingService:
         return {
             "status": "trained",
             "trained_on": total_samples,
-            "confirmed_samples": confirmed_count,
-            "high_confidence_samples": high_conf_count,
             "styles": sorted(styles_seen),
         }
+
+    def _select_training_rows(self) -> list[TrackDanceStyle]:
+        """Return rows that a user confirmed or that a metadata match produced."""
+        return (
+            self.db.query(TrackDanceStyle)
+            .filter(
+                or_(
+                    TrackDanceStyle.is_user_confirmed.is_(True),
+                    TrackDanceStyle.source == "metadata",
+                )
+            )
+            .all()
+        )
 
     def _collect_training_data(
         self,

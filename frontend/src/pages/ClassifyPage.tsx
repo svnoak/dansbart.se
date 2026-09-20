@@ -9,6 +9,7 @@ import { recordInteraction1 } from '@/api/generated/analytics/analytics';
 import { usePlayer } from '@/player/usePlayer';
 import { getVoterId } from '@/utils/voter';
 import { getTempoLabel } from '@/utils/tempoLabel';
+import { TEMPO_OPTIONS } from '@/utils/tempoOptions';
 import { FlagTrackModal } from '@/components/FlagTrackModal';
 import { SuggestNewTrackModal } from '@/components/SuggestNewTrackModal';
 import { SuggestDanceStyleModal } from '@/components/SuggestDanceStyleModal';
@@ -17,14 +18,6 @@ import { useAuth } from '@/auth/useAuth';
 import { FlagIcon, PlayIcon, PauseIcon } from '@/icons';
 
 const LOGIN_NUDGE_VOTE_THRESHOLD = 3;
-
-const TEMPO_BUTTONS = [
-  { key: 'Slow', label: 'Långsamt' },
-  { key: 'SlowMed', label: 'Lugnt' },
-  { key: 'Medium', label: 'Lagom' },
-  { key: 'Fast', label: 'Snabbt' },
-  { key: 'Turbo', label: 'V. snabbt' },
-];
 
 const PINNED_STYLES = ['Polska', 'Schottis', 'Vals', 'Hambo', 'Polkett', 'Snoa'];
 const QUEUE_LOW_WATERMARK = 5;
@@ -404,7 +397,7 @@ export function ClassifyPage() {
                   <div className="w-12" />
                 </div>
                 <div className="grid grid-cols-1 gap-3 max-w-sm mx-auto w-full">
-                  {TEMPO_BUTTONS.map((tempo) => (
+                  {TEMPO_OPTIONS.map((tempo) => (
                     <button
                       key={tempo.key}
                       onClick={() => selectTempo(tempo.key)}

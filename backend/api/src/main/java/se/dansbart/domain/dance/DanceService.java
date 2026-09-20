@@ -178,7 +178,6 @@ public class DanceService {
         voteRepository.upsertVote(danceId, trackId, voterId, vote, weight);
 
         if (vote == 1) {
-            danceJooqRepository.addTrackConfirmed(danceId, trackId, null);
             danceJooqRepository.findById(danceId).ifPresent(dance -> {
                 if (dance.getDanceType() != null && !dance.getDanceType().isBlank()) {
                     trackFeedbackService.submitStyleFeedback(trackId, dance.getDanceType(), null);
@@ -186,6 +185,10 @@ public class DanceService {
             });
 
             BigDecimal sumAfter = voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId);
+            if (sumAfter.compareTo(VoterReputationService.CONFIRMATION_THRESHOLD) >= 0) {
+                danceJooqRepository.addTrackConfirmed(danceId, trackId, null);
+            }
+
             boolean crossedRetrainThreshold =
                 sumAfter.compareTo(VoterReputationService.RETRAINING_THRESHOLD) >= 0
                     && sumBefore.compareTo(VoterReputationService.RETRAINING_THRESHOLD) < 0;
