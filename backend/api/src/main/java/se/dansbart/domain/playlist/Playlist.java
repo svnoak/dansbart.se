@@ -19,8 +19,12 @@ public class Playlist {
     private UUID id;
     private String name;
     private String description;
+
+    /** Exactly one of userId/groupId is set — a playlist is owned by a user or a group. */
     private UUID userId;
     private User user;
+
+    private UUID groupId;
 
     @Builder.Default
     private Boolean isPublic = false;

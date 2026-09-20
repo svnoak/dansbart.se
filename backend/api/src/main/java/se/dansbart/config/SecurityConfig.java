@@ -79,6 +79,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/dances/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/dances/**").authenticated()
                 .requestMatchers("/api/playlists/**").authenticated()
+                .requestMatchers("/api/groups/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()
                 .requestMatchers("/api/spotify/**").authenticated()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getPlaylist,
   updatePlaylist,
@@ -97,7 +97,7 @@ export function PlaylistSettingsPage() {
   if (loading) return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
   if (!playlist) return <p className="text-[rgb(var(--color-text-muted))]">Spellistan hittades inte.</p>;
 
-  const isOwner = !!(playlist.owner?.id && user?.id && playlist.owner.id === user.id);
+  const isOwner = !!playlist.viewerCanManage;
   const myCollaborator = playlist.collaborators?.find((c) => c.userId === user?.id);
   const canManageShare = isOwner || myCollaborator?.permission === 'edit';
 
@@ -333,11 +333,20 @@ export function PlaylistSettingsPage() {
         <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] divide-y divide-[rgb(var(--color-border))]">
           <div className="flex items-center justify-between px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                {playlist.owner?.displayName ?? playlist.owner?.username ?? 'Okänd'}
-              </p>
+              {playlist.ownerGroup ? (
+                <Link
+                  to={`/groups/${playlist.ownerGroup.id}`}
+                  className="text-sm font-medium text-[rgb(var(--color-text))] hover:underline"
+                >
+                  {playlist.ownerGroup.name}
+                </Link>
+              ) : (
+                <p className="text-sm font-medium text-[rgb(var(--color-text))]">
+                  {playlist.owner?.displayName ?? playlist.owner?.username ?? 'Okänd'}
+                </p>
+              )}
               <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                {playlist.owner?.username}
+                {playlist.ownerGroup ? 'Grupp' : playlist.owner?.username}
               </p>
             </div>
             <span className="rounded-full bg-[rgb(var(--color-accent))]/10 px-2 py-0.5 text-[10px] font-medium text-[rgb(var(--color-accent))]">
@@ -476,8 +485,8 @@ export function PlaylistSettingsPage() {
         )}
       </section>
 
-      {/* Överlåt ägarskap — owner only */}
-      {isOwner && acceptedCollaborators.length > 0 && (
+      {/* Överlåt ägarskap — owner only, not applicable to a group-owned playlist */}
+      {isOwner && !playlist.ownerGroup && acceptedCollaborators.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
             Överlåt ägarskap

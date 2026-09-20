@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.jooq.Check;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
@@ -29,12 +30,14 @@ import org.jooq.TableField;
 import org.jooq.TableOptions;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
+import org.jooq.impl.Internal;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.Groups.GroupsPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
@@ -115,7 +118,12 @@ public class Playlists extends TableImpl<Record> {
     /**
      * The column <code>public.playlists.user_id</code>.
      */
-    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID, this, "");
+
+    /**
+     * The column <code>public.playlists.group_id</code>.
+     */
+    public final TableField<Record, UUID> GROUP_ID = createField(DSL.name("group_id"), SQLDataType.UUID, this, "");
 
     private Playlists(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -186,7 +194,7 @@ public class Playlists extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_PLAYLISTS_SHARE_TOKEN, Indexes.IX_PLAYLISTS_USER_ID);
+        return Arrays.asList(Indexes.IDX_PLAYLISTS_GROUP_ID, Indexes.IX_PLAYLISTS_SHARE_TOKEN, Indexes.IX_PLAYLISTS_USER_ID);
     }
 
     @Override
@@ -196,7 +204,7 @@ public class Playlists extends TableImpl<Record> {
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.PLAYLISTS__PLAYLISTS_USER_ID_FKEY);
+        return Arrays.asList(Keys.PLAYLISTS__PLAYLISTS_USER_ID_FKEY, Keys.PLAYLISTS__PLAYLISTS_GROUP_ID_FKEY);
     }
 
     private transient UsersPath _users;
@@ -209,6 +217,18 @@ public class Playlists extends TableImpl<Record> {
             _users = new UsersPath(this, Keys.PLAYLISTS__PLAYLISTS_USER_ID_FKEY, null);
 
         return _users;
+    }
+
+    private transient GroupsPath _groups;
+
+    /**
+     * Get the implicit join path to the <code>public.groups</code> table.
+     */
+    public GroupsPath groups() {
+        if (_groups == null)
+            _groups = new GroupsPath(this, Keys.PLAYLISTS__PLAYLISTS_GROUP_ID_FKEY, null);
+
+        return _groups;
     }
 
     private transient PlaylistCollaboratorsPath _playlistCollaborators;
@@ -243,6 +263,13 @@ public class Playlists extends TableImpl<Record> {
      */
     public TracksPath tracks() {
         return playlistTracks().tracks();
+    }
+
+    @Override
+    public List<Check<Record>> getChecks() {
+        return Arrays.asList(
+            Internal.createCheck(this, DSL.name("playlists_owner_xor_check"), "(((user_id IS NOT NULL) <> (group_id IS NOT NULL)))", true)
+        );
     }
 
     @Override

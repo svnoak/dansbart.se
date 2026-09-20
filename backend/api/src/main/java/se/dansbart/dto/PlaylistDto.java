@@ -26,8 +26,9 @@ public class PlaylistDto {
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
-    // Owner info
+    // Owner info — exactly one of owner/ownerGroup is set, mirroring Playlist.userId/groupId.
     private UserSummaryDto owner;
+    private GroupSummaryDto ownerGroup;
 
     // Track count
     private Integer trackCount;
@@ -37,4 +38,10 @@ public class PlaylistDto {
 
     // Collaborators (includes permission + status for role-aware UI)
     private List<CollaboratorDto> collaborators;
+
+    /** True if the requesting user has full (owner-equivalent) control: the direct
+     *  owner, or — for a group-owned playlist — an admin or canManagePlaylists member
+     *  of the owning group. Null when the playlist was fetched without a viewer
+     *  (e.g. by share token). */
+    private Boolean viewerCanManage;
 }

@@ -250,7 +250,7 @@ export function PlaylistPage() {
   // Prevent autoplay from firing again on subsequent playlist state updates
   const autoplayTriggered = useRef(false);
 
-  const isOwner = !!(playlist?.owner?.id && user?.id && playlist.owner.id === user.id);
+  const isOwner = !!playlist?.viewerCanManage;
   const myCollaborator = playlist?.collaborators?.find((c) => c.userId === user?.id);
   const myPermission: 'owner' | 'edit' | 'view' = isOwner
     ? 'owner'

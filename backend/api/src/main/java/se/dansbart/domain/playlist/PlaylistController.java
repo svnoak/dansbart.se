@@ -38,8 +38,8 @@ public class PlaylistController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get playlist by ID")
-    public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID id) {
-        return playlistService.findByIdAsDto(id)
+    public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+        return playlistService.findByIdAsDto(id, userId)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }

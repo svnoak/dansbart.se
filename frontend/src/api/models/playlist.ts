@@ -14,6 +14,7 @@ export interface Playlist {
   description?: string;
   userId?: string;
   user?: User;
+  groupId?: string;
   isPublic?: boolean;
   shareToken?: string;
   danceStyle?: string;

@@ -39,6 +39,8 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.CommunitySuggestions.CommunitySuggestionsPath;
 import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.Dances.DancesPath;
+import se.dansbart.jooq.tables.GroupMembers.GroupMembersPath;
+import se.dansbart.jooq.tables.Groups.GroupsPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
@@ -236,6 +238,34 @@ public class Users extends TableImpl<Record> {
         return _danceTracksConfirmedByFkey;
     }
 
+    private transient GroupMembersPath _groupMembersInvitedByFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.group_members</code> table, via the
+     * <code>group_members_invited_by_fkey</code> key
+     */
+    public GroupMembersPath groupMembersInvitedByFkey() {
+        if (_groupMembersInvitedByFkey == null)
+            _groupMembersInvitedByFkey = new GroupMembersPath(this, null, Keys.GROUP_MEMBERS__GROUP_MEMBERS_INVITED_BY_FKEY.getInverseKey());
+
+        return _groupMembersInvitedByFkey;
+    }
+
+    private transient GroupMembersPath _groupMembersUserIdFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.group_members</code> table, via the
+     * <code>group_members_user_id_fkey</code> key
+     */
+    public GroupMembersPath groupMembersUserIdFkey() {
+        if (_groupMembersUserIdFkey == null)
+            _groupMembersUserIdFkey = new GroupMembersPath(this, null, Keys.GROUP_MEMBERS__GROUP_MEMBERS_USER_ID_FKEY.getInverseKey());
+
+        return _groupMembersUserIdFkey;
+    }
+
     private transient PlaylistCollaboratorsPath _playlistCollaboratorsInvitedByFkey;
 
     /**
@@ -327,6 +357,14 @@ public class Users extends TableImpl<Record> {
             _voterReputation = new VoterReputationPath(this, null, Keys.VOTER_REPUTATION__VOTER_REPUTATION_VOTER_ID_FKEY.getInverseKey());
 
         return _voterReputation;
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>public.groups</code>
+     * table
+     */
+    public GroupsPath groups() {
+        return groupMembersUserIdFkey().groups();
     }
 
     /**

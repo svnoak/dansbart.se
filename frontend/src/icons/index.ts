@@ -42,3 +42,4 @@ export { BadgeCheckIcon } from './BadgeCheckIcon';
 export { SettingsIcon } from './SettingsIcon';
 export { HeartIcon, HeartFilledIcon } from './HeartIcon';
 export { StarIcon, StarFilledIcon } from './StarIcon';
+export { GroupIcon } from './GroupIcon';

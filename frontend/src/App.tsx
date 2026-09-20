@@ -30,6 +30,9 @@ import { PlaylistsPage } from '@/pages/PlaylistsPage';
 import { PlaylistPage } from '@/pages/PlaylistPage';
 import { PlaylistSettingsPage } from '@/pages/PlaylistSettingsPage';
 import { SharedPlaylistPage } from '@/pages/SharedPlaylistPage';
+import { GroupsPage } from '@/pages/GroupsPage';
+import { GroupPage } from '@/pages/GroupPage';
+import { GroupSettingsPage } from '@/pages/GroupSettingsPage';
 import { AdminLayout } from '@/admin/layout/AdminLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { AdminLibraryPage } from '@/admin/pages/AdminLibraryPage';
@@ -93,6 +96,23 @@ export function App() {
                           }
                         />
                         <Route path="/shared/:token" element={<SharedPlaylistPage />} />
+                        <Route path="/groups" element={<GroupsPage />} />
+                        <Route
+                          path="/groups/:id"
+                          element={
+                            <ProtectedRoute>
+                              <GroupPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/groups/:id/settings"
+                          element={
+                            <ProtectedRoute>
+                              <GroupSettingsPage />
+                            </ProtectedRoute>
+                          }
+                        />
                         <Route path="/favorites" element={<FavoritesPage />} />
                         <Route path="/help" element={<HelpPage />} />
                         <Route path="/help/topic/:slug/:id" element={<HelpTopicPage />} />

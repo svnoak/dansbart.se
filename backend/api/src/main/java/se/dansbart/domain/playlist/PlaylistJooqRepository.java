@@ -33,6 +33,10 @@ public class PlaylistJooqRepository {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.USER_ID.eq(userId)).orderBy(PLAYLISTS.NAME.asc()).fetch(this::toPlaylist);
     }
 
+    public List<Playlist> findByGroupId(UUID groupId) {
+        return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.GROUP_ID.eq(groupId)).orderBy(PLAYLISTS.NAME.asc()).fetch(this::toPlaylist);
+    }
+
     public Optional<Playlist> findByShareToken(String shareToken) {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.SHARE_TOKEN.eq(shareToken)).fetchOptional().map(this::toPlaylist);
     }
@@ -66,8 +70,8 @@ public class PlaylistJooqRepository {
     public Playlist insert(Playlist playlist) {
         UUID id = playlist.getId() != null ? playlist.getId() : UUID.randomUUID();
         dsl.insertInto(PLAYLISTS)
-            .columns(PLAYLISTS.ID, PLAYLISTS.USER_ID, PLAYLISTS.NAME, PLAYLISTS.DESCRIPTION, PLAYLISTS.IS_PUBLIC, PLAYLISTS.SHARE_TOKEN, PLAYLISTS.DANCE_STYLE, PLAYLISTS.SUB_STYLE, PLAYLISTS.TEMPO_CATEGORY)
-            .values(id, playlist.getUserId(), playlist.getName(), playlist.getDescription(), playlist.getIsPublic(), playlist.getShareToken(), playlist.getDanceStyle(), playlist.getSubStyle(), playlist.getTempoCategory())
+            .columns(PLAYLISTS.ID, PLAYLISTS.USER_ID, PLAYLISTS.GROUP_ID, PLAYLISTS.NAME, PLAYLISTS.DESCRIPTION, PLAYLISTS.IS_PUBLIC, PLAYLISTS.SHARE_TOKEN, PLAYLISTS.DANCE_STYLE, PLAYLISTS.SUB_STYLE, PLAYLISTS.TEMPO_CATEGORY)
+            .values(id, playlist.getUserId(), playlist.getGroupId(), playlist.getName(), playlist.getDescription(), playlist.getIsPublic(), playlist.getShareToken(), playlist.getDanceStyle(), playlist.getSubStyle(), playlist.getTempoCategory())
             .execute();
         playlist.setId(id);
         return playlist;
@@ -106,6 +110,7 @@ public class PlaylistJooqRepository {
             .name(r.get(PLAYLISTS.NAME))
             .description(r.get(PLAYLISTS.DESCRIPTION))
             .userId(r.get(PLAYLISTS.USER_ID))
+            .groupId(r.get(PLAYLISTS.GROUP_ID))
             .isPublic(r.get(PLAYLISTS.IS_PUBLIC) != null && r.get(PLAYLISTS.IS_PUBLIC))
             .shareToken(r.get(PLAYLISTS.SHARE_TOKEN))
             .danceStyle(r.get(PLAYLISTS.DANCE_STYLE))

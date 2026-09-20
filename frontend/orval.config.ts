@@ -34,6 +34,7 @@ export default defineConfig({
           'Dances',
           'Admin Dances',
           'Favorites',
+          'Groups',
         ],
       },
     },

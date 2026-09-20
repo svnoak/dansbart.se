@@ -93,6 +93,10 @@
     {
       "name": "Admin Pending",
       "description": "Pending artist and album approval endpoints"
+    },
+    {
+      "name": "Groups",
+      "description": "User groups that can jointly own playlists"
     }
   ],
   "paths": {
@@ -5564,6 +5568,347 @@
           }
         }
       }
+    },
+    "/api/groups/{id}": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get group by ID",
+        "operationId": "getGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupDto" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Update a group's name, about-us text or visibility",
+        "operationId": "updateGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateGroupRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Group" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Groups"],
+        "summary": "Delete a group",
+        "operationId": "deleteGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/groups/{id}/members/{memberId}": {
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Update a member's permissions or admin status (admin only)",
+        "operationId": "updateMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateMemberRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupMember" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Groups"],
+        "summary": "Remove a member from the group (or leave it yourself)",
+        "operationId": "removeMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/groups/invitations/{invitationId}": {
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Accept or reject a group invitation",
+        "operationId": "respondToGroupInvitation",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupMember" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get groups the current user belongs to",
+        "operationId": "getMyGroups",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GroupSummaryDto" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Create a new group",
+        "operationId": "createGroup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGroupRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Group" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/playlists": {
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Create a playlist owned by the group",
+        "operationId": "createGroupPlaylist",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupPlaylistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Playlist" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/members": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get group members",
+        "operationId": "getMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GroupMemberDto" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Invite a user to the group",
+        "operationId": "inviteMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InviteMemberRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupMember" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/public": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get public groups",
+        "operationId": "getPublicGroups",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GroupSummaryDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/invitations": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get pending group invitations for current user",
+        "operationId": "getGroupInvitations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GroupInvitationDto" }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5583,6 +5928,7 @@
           "description": { "type": "string" },
           "userId": { "type": "string", "format": "uuid" },
           "user": { "$ref": "#/components/schemas/User" },
+          "groupId": { "type": "string", "format": "uuid" },
           "isPublic": { "type": "boolean" },
           "shareToken": { "type": "string" },
           "danceStyle": { "type": "string" },
@@ -6226,6 +6572,7 @@
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" },
           "owner": { "$ref": "#/components/schemas/UserSummaryDto" },
+          "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" },
           "trackCount": { "type": "integer", "format": "int32" },
           "tracks": {
             "type": "array",
@@ -6234,7 +6581,8 @@
           "collaborators": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/CollaboratorDto" }
-          }
+          },
+          "viewerCanManage": { "type": "boolean" }
         }
       },
       "PlaylistTrackDto": {
@@ -6447,6 +6795,146 @@
           "page": { "type": "integer", "format": "int32" },
           "size": { "type": "integer", "format": "int32" },
           "hasMore": { "type": "boolean" }
+        }
+      },
+      "Group": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "aboutUs": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "members": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/GroupMember" }
+          }
+        }
+      },
+      "GroupDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "aboutUs": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "members": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/GroupMemberDto" }
+          },
+          "playlists": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaylistSummaryDto" }
+          }
+        }
+      },
+      "GroupMember": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "groupId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "isAdmin": { "type": "boolean" },
+          "canEditInfo": { "type": "boolean" },
+          "canManagePlaylists": { "type": "boolean" },
+          "canInviteMembers": { "type": "boolean" },
+          "canRemoveMembers": { "type": "boolean" },
+          "status": { "type": "string" },
+          "invitedBy": { "type": "string", "format": "uuid" },
+          "invitedAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" },
+          "group": { "$ref": "#/components/schemas/Group" },
+          "user": { "$ref": "#/components/schemas/User" },
+          "accepted": { "type": "boolean" }
+        }
+      },
+      "GroupMemberDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "avatarUrl": { "type": "string" },
+          "isAdmin": { "type": "boolean" },
+          "canEditInfo": { "type": "boolean" },
+          "canManagePlaylists": { "type": "boolean" },
+          "canInviteMembers": { "type": "boolean" },
+          "canRemoveMembers": { "type": "boolean" },
+          "status": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GroupSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "memberCount": { "type": "integer", "format": "int32" }
+        }
+      },
+      "GroupInvitationDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "groupId": { "type": "string", "format": "uuid" },
+          "groupName": { "type": "string" },
+          "invitedByUserId": { "type": "string", "format": "uuid" },
+          "invitedByDisplayName": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateGroupRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "aboutUs": { "type": "string" },
+          "isPublic": { "type": "boolean" }
+        }
+      },
+      "UpdateGroupRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "aboutUs": { "type": "string" },
+          "isPublic": { "type": "boolean" }
+        }
+      },
+      "InviteMemberRequest": {
+        "type": "object",
+        "properties": { "userId": { "type": "string", "format": "uuid" } }
+      },
+      "UpdateMemberRequest": {
+        "type": "object",
+        "properties": {
+          "isAdmin": { "type": "boolean" },
+          "canEditInfo": { "type": "boolean" },
+          "canManagePlaylists": { "type": "boolean" },
+          "canInviteMembers": { "type": "boolean" },
+          "canRemoveMembers": { "type": "boolean" }
+        }
+      },
+      "CreateGroupPlaylistRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "PlaylistSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "trackCount": { "type": "integer", "format": "int32" },
+          "ownerDisplayName": { "type": "string" }
         }
       }
     }
