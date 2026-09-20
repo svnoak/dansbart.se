@@ -224,7 +224,7 @@ export function PlayerControls({
       aria-label="Spelarkontroller"
     >
       {controlsDisabled && (
-        <p className="hidden md:block text-[9px] text-[rgb(var(--color-text-muted))] text-center mb-1">
+        <p className="hidden md:block text-sm text-[rgb(var(--color-text-muted))] text-center mb-1">
           Använd Spotify-spelaren
         </p>
       )}

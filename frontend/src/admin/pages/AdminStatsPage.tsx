@@ -382,12 +382,12 @@ export function AdminStatsPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-xs font-medium text-[rgb(var(--color-text))]">{t.playCount} spelningar</p>
-                    <p className="text-[10px] text-[rgb(var(--color-text-muted))]">{formatMinutes(t.totalDurationSeconds)} totalt</p>
+                    <p className="text-sm text-[rgb(var(--color-text-muted))]">{formatMinutes(t.totalDurationSeconds)} totalt</p>
                   </div>
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-[10px] text-[rgb(var(--color-text-muted))]">Stapeln visar genomföringsgrad</p>
+            <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">Stapeln visar genomföringsgrad</p>
           </>
         )}
       </div>
@@ -398,7 +398,7 @@ export function AdminStatsPage() {
           <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
             {showHourly ? 'Besök per timme' : 'Dagliga besök'}
           </h2>
-          <div className="flex items-center gap-3 text-[10px] text-[rgb(var(--color-text-muted))]">
+          <div className="flex items-center gap-3 text-sm text-[rgb(var(--color-text-muted))]">
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-3 rounded-sm" style={{ background: 'rgb(var(--color-accent))' }} />
               Autentiserade

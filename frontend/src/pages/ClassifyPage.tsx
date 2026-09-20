@@ -431,7 +431,7 @@ export function ClassifyPage() {
               </div>
             )}
             {hasBpm && !awaitingTempo && (
-              <p className="mt-3 text-center text-[10px] text-[rgb(var(--color-text-muted))]">
+              <p className="mt-3 text-center text-sm text-[rgb(var(--color-text-muted))]">
                 Redan uppmätt tempo: {aiTempoLabel.toLowerCase()}. Fel? Tryck Ångra efter att du valt stil.
               </p>
             )}

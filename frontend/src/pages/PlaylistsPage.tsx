@@ -243,7 +243,7 @@ export function PlaylistsPage() {
                     <div className="mt-1 flex flex-wrap gap-1">
                       {styleColor && pl.danceStyle && (
                         <span
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          className="inline-flex items-center rounded-full px-2 py-0.5 text-sm font-medium"
                           style={{
                             backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
                             color: theme === 'dark' ? styleColor.textDark : styleColor.text,
@@ -254,7 +254,7 @@ export function PlaylistsPage() {
                       )}
                       {styleColor && pl.subStyle && (
                         <span
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium opacity-80"
+                          className="inline-flex items-center rounded-full px-2 py-0.5 text-sm font-medium opacity-80"
                           style={{
                             backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
                             color: theme === 'dark' ? styleColor.textDark : styleColor.text,
@@ -264,7 +264,7 @@ export function PlaylistsPage() {
                         </span>
                       )}
                       {tempoLabel && (
-                        <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border))] px-2 py-0.5 text-[10px] font-medium text-[rgb(var(--color-text-muted))]">
+                        <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border))] px-2 py-0.5 text-sm font-medium text-[rgb(var(--color-text-muted))]">
                           {tempoLabel}
                         </span>
                       )}

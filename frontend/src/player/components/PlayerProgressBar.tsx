@@ -139,10 +139,10 @@ export function PlayerProgressBar({
     return (
       <div className="relative w-full h-8 flex flex-col justify-end">
         {/* Bar number labels */}
-        <div className="absolute top-0 left-0 right-0 h-4 pointer-events-none select-none">
+        <div className="absolute top-0 left-0 right-0 h-5 pointer-events-none select-none">
           {/* Bar 1 is always at the very start */}
           <span
-            className="absolute text-[10px] font-mono text-[rgb(var(--color-text-muted))]/60"
+            className="absolute text-sm font-mono text-[rgb(var(--color-text-muted))]/60"
             style={{ left: '0%' }}
           >
             1
@@ -152,7 +152,7 @@ export function PlayerProgressBar({
             return shouldShowLabel(barNum) ? (
               <span
                 key={i}
-                className="absolute text-[10px] font-mono text-[rgb(var(--color-text-muted))]/60 -translate-x-1/2"
+                className="absolute text-sm font-mono text-[rgb(var(--color-text-muted))]/60 -translate-x-1/2"
                 style={{ left: `${tick.left}%` }}
               >
                 {barNum}
@@ -192,7 +192,7 @@ export function PlayerProgressBar({
           {/* Hover tooltip */}
           {hoveredBar !== null && (
             <div
-              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
+              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-sm font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
               style={{ left: `${hoverX}px` }}
             >
               Takt {hoveredBar + 2}
@@ -271,7 +271,7 @@ export function PlayerProgressBar({
       </div>
       {hoverTime !== null && (
         <div
-          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
+          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-sm font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
           style={{ left: `${hoverX}px` }}
         >
           {formatDurationMs(hoverTime)}

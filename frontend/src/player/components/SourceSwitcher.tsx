@@ -55,7 +55,7 @@ export function SourceSwitcher({
 
   return (
     <>
-      <span className="text-[10px] text-[rgb(var(--color-text-muted))] font-bold uppercase mr-2">Källa</span>
+      <span className="text-sm text-[rgb(var(--color-text-muted))] font-bold uppercase mr-2">Källa</span>
       {hasYt && (
         <button
           type="button"
