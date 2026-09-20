@@ -1,11 +1,5 @@
-## Related issue
-
 Closes #
 
-## What and why
+**Why:** <!-- One line: why this change is necessary. -->
 
-<!-- Briefly describe what this PR does and why. -->
-
-## How to test
-
-<!-- Steps to verify the change works as expected. -->
+**What:** <!-- One line: what this change does. -->
