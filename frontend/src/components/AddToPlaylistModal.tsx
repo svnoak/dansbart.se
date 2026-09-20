@@ -149,7 +149,7 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Namn på spellistan"
                   autoFocus
-                  className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                  className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
                 />
                 <button
                   type="submit"

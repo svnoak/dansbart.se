@@ -264,7 +264,7 @@ export function AdminStyleConfigPage() {
           max={12}
           value={formBeatsPerBar}
           onChange={(e) => setFormBeatsPerBar(parseInt(e.target.value, 10) || 3)}
-          className="w-20 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))]"
+          className="w-20 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))]"
         />
       </FormField>
       {editModal && (

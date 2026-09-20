@@ -159,7 +159,7 @@ export function DataTable<T>({
                   key={key}
                   className={`border-b border-[rgb(var(--color-border))]/50 last:border-b-0 transition-colors ${
                     isSelected
-                      ? 'bg-[rgb(var(--color-primary))]/5'
+                      ? 'bg-[rgb(var(--color-accent))]/5'
                       : 'hover:bg-[rgb(var(--color-bg))]/50'
                   }`}
                 >
