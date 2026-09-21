@@ -106,7 +106,7 @@ function StyleVoteDialog({
                 <p>Tack! Din röst är sparad.</p>
                 {!isAuthenticated && (
                   <>
-                    <p>Med ett konto räcker din röst för att bekräfta en stil.</p>
+                    <p>Inloggade användare kan bekräfta stilar med enbart en röst</p>
                     <Button variant="secondary" onClick={login}>
                       Logga in eller skapa konto
                     </Button>
