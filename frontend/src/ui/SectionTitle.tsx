@@ -30,7 +30,7 @@ export function SectionTitle({
       {linkTo && (
         <Link
           to={linkTo}
-          className="text-sm font-medium text-[rgb(var(--color-primary))] hover:underline"
+          className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
         >
           {linkLabel}
         </Link>
