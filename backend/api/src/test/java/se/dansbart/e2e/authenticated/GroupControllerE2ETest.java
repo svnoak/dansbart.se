@@ -127,7 +127,8 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/groups/{id}", group.getId())
                     .with(jwt.userToken(outsider.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Öppen grupp"));
+                .andExpect(jsonPath("$.name").value("Öppen grupp"))
+                .andExpect(jsonPath("$.members").doesNotExist());
         }
     }
 

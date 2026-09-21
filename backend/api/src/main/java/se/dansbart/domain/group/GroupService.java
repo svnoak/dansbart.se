@@ -55,7 +55,7 @@ public class GroupService {
     public Optional<GroupDto> findByIdAsDto(UUID groupId, UUID viewerId) {
         return groupJooqRepository.findById(groupId)
             .filter(g -> canView(g, viewerId))
-            .map(this::toGroupDto);
+            .map(g -> toGroupDto(g, memberOf(groupId, viewerId).isPresent()));
     }
 
     @Transactional(readOnly = true)
@@ -146,9 +146,15 @@ public class GroupService {
     }
 
     private GroupDto toGroupDto(Group group) {
-        List<GroupMemberDto> members = groupMemberJooqRepository.findByGroupId(group.getId()).stream()
-            .map(this::toMemberDto)
-            .collect(Collectors.toList());
+        return toGroupDto(group, true);
+    }
+
+    private GroupDto toGroupDto(Group group, boolean includeMembers) {
+        List<GroupMemberDto> members = includeMembers
+            ? groupMemberJooqRepository.findByGroupId(group.getId()).stream()
+                .map(this::toMemberDto)
+                .collect(Collectors.toList())
+            : null;
         return GroupDto.builder()
             .id(group.getId())
             .name(group.getName())
