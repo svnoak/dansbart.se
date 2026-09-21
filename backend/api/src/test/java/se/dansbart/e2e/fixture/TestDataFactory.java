@@ -397,6 +397,7 @@ public class TestDataFactory {
         private String name = "Test Playlist";
         private String description;
         private UUID userId;
+        private UUID groupId;
         private boolean isPublic = false;
         private String shareToken;
 
@@ -420,6 +421,11 @@ public class TestDataFactory {
             return this;
         }
 
+        public PlaylistBuilder withGroup(Group group) {
+            this.groupId = group.getId();
+            return this;
+        }
+
         public PlaylistBuilder isPublic() {
             this.isPublic = true;
             return this;
@@ -431,14 +437,15 @@ public class TestDataFactory {
         }
 
         public Playlist build() {
-            if (userId == null) {
-                throw new IllegalStateException("Playlist must have an owner. Call withOwner() or withOwnerId().");
+            if (userId == null && groupId == null) {
+                throw new IllegalStateException("Playlist must have an owner. Call withOwner(), withOwnerId(), or withGroup().");
             }
 
             Playlist playlist = Playlist.builder()
                 .name(name)
                 .description(description)
                 .userId(userId)
+                .groupId(groupId)
                 .isPublic(isPublic)
                 .shareToken(shareToken)
                 .build();
@@ -523,6 +530,15 @@ public class TestDataFactory {
             .canInviteMembers(canInviteMembers)
             .canRemoveMembers(canRemoveMembers)
             .status("accepted")
+            .build();
+        return groupMemberJooqRepository.save(member);
+    }
+
+    public GroupMember addPendingGroupMember(Group group, User user) {
+        GroupMember member = GroupMember.builder()
+            .groupId(group.getId())
+            .userId(user.getId())
+            .status("pending")
             .build();
         return groupMemberJooqRepository.save(member);
     }

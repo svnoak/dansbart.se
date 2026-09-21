@@ -777,4 +777,122 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isNotFound());
         }
     }
+
+    @Nested
+    @DisplayName("Group playlists")
+    class GroupPlaylists {
+
+        private se.dansbart.domain.group.Group group;
+        private se.dansbart.domain.artist.Artist artist;
+
+        @BeforeEach
+        void setUp() {
+            group = testData.group().withName("Test Group").build();
+            artist = testData.artist().withName("Test Artist").verified().build();
+        }
+
+        @Test
+        @DisplayName("create group playlist by manager should return 201")
+        void createGroupPlaylist_byManager_shouldReturn201() throws Exception {
+            testData.addGroupMember(group, admin, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/groups/{id}/playlists", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Barngruppens lista"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.ownerGroup.id").value(group.getId().toString()))
+                .andExpect(jsonPath("$.name").value("Barngruppens lista"));
+        }
+
+        @Test
+        @DisplayName("create group playlist without permission should return 403")
+        void createGroupPlaylist_withoutPermission_shouldReturn403() throws Exception {
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/groups/{id}/playlists", group.getId())
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Forbidden List"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("create group playlist by outsider in private group should return 404")
+        void createGroupPlaylist_byOutsider_privateGroup_shouldReturn404() throws Exception {
+            mockMvc.perform(post("/api/groups/{id}/playlists", group.getId())
+                    .with(jwt.userToken(outsider.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Outsider List"))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("create group playlist with blank name should return 400")
+        void createGroupPlaylist_withBlankName_shouldReturn400() throws Exception {
+            testData.addGroupMember(group, admin, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/groups/{id}/playlists", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "   "))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("get group lists public playlists to outsider")
+        void getGroup_listsPublicPlaylistsToOutsider() throws Exception {
+            Group publicGroup = testData.group().withName("Public Group").isPublic().build();
+            testData.addGroupAdmin(publicGroup, admin);
+
+            se.dansbart.domain.playlist.Playlist publicPlaylist =
+                testData.playlist().withName("Public Playlist").withGroup(publicGroup).isPublic().build();
+            se.dansbart.domain.playlist.Playlist privatePlaylist =
+                testData.playlist().withName("Private Playlist").withGroup(publicGroup).build();
+
+            mockMvc.perform(get("/api/groups/{id}", publicGroup.getId())
+                    .with(jwt.userToken(outsider.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.playlists", hasSize(1)))
+                .andExpect(jsonPath("$.playlists[0].name").value("Public Playlist"));
+        }
+
+        @Test
+        @DisplayName("get group lists all playlists to member")
+        void getGroup_listsAllPlaylistsToMember() throws Exception {
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            se.dansbart.domain.playlist.Playlist publicPlaylist =
+                testData.playlist().withName("Public Playlist").withGroup(group).isPublic().build();
+            se.dansbart.domain.playlist.Playlist privatePlaylist =
+                testData.playlist().withName("Private Playlist").withGroup(group).build();
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.playlists", hasSize(2)));
+        }
+
+        @Test
+        @DisplayName("get group playlist track count")
+        void getGroup_playlistTrackCount() throws Exception {
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            se.dansbart.domain.playlist.Playlist groupPlaylist =
+                testData.playlist().withName("Group Playlist").withGroup(group).build();
+
+            se.dansbart.domain.track.Track track1 =
+                testData.track().withTitle("Track 1").withArtist(artist).complete().build();
+            se.dansbart.domain.track.Track track2 =
+                testData.track().withTitle("Track 2").withArtist(artist).complete().build();
+
+            testData.addTrackToPlaylist(groupPlaylist, track1, 0);
+            testData.addTrackToPlaylist(groupPlaylist, track2, 1);
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.playlists[0].trackCount").value(2));
+        }
+    }
 }

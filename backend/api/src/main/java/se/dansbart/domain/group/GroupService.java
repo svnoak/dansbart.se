@@ -3,12 +3,16 @@ package se.dansbart.domain.group;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.playlist.PlaylistJooqRepository;
+import se.dansbart.domain.playlist.PlaylistService;
 import se.dansbart.domain.user.User;
 import se.dansbart.domain.user.UserJooqRepository;
 import se.dansbart.dto.GroupDto;
 import se.dansbart.dto.GroupInvitationDto;
 import se.dansbart.dto.GroupMemberDto;
 import se.dansbart.dto.GroupSummaryDto;
+import se.dansbart.dto.PlaylistDto;
+import se.dansbart.dto.PlaylistSummaryDto;
 import se.dansbart.exception.BadRequestException;
 import se.dansbart.exception.ConflictException;
 import se.dansbart.exception.ForbiddenException;
@@ -27,6 +31,8 @@ public class GroupService {
     private final GroupJooqRepository groupJooqRepository;
     private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final UserJooqRepository userJooqRepository;
+    private final PlaylistJooqRepository playlistJooqRepository;
+    private final PlaylistService playlistService;
 
     @Transactional
     public GroupDto create(UUID creatorId, String name, String aboutUs, Boolean isPublic) {
@@ -53,6 +59,16 @@ public class GroupService {
         groupMemberJooqRepository.save(creator);
 
         return toGroupDto(group, true, true);
+    }
+
+    @Transactional
+    public PlaylistDto createPlaylist(UUID groupId, UUID creatorId, String name, String description) {
+        Group group = loadVisibleGroup(groupId, creatorId);
+        if (!memberOf(groupId, creatorId).map(GroupMember::canManagePlaylists).orElse(false)) {
+            throw new ForbiddenException("You do not have permission to create playlists for this group.");
+        }
+        String trimmedName = validateAndTrimName(name);
+        return playlistService.createForGroup(group.getId(), creatorId, trimmedName, description);
     }
 
     @Transactional(readOnly = true)
@@ -287,6 +303,15 @@ public class GroupService {
                 .map(this::toMemberDto)
                 .collect(Collectors.toList())
             : null;
+        List<PlaylistSummaryDto> playlists = playlistJooqRepository.findByGroupIdWithTrackCount(group.getId(), includeMembers).stream()
+            .map(pwc -> PlaylistSummaryDto.builder()
+                .id(pwc.playlist().getId())
+                .name(pwc.playlist().getName())
+                .description(pwc.playlist().getDescription())
+                .isPublic(pwc.playlist().getIsPublic())
+                .trackCount(pwc.trackCount())
+                .build())
+            .collect(Collectors.toList());
         return GroupDto.builder()
             .id(group.getId())
             .name(group.getName())
@@ -295,6 +320,7 @@ public class GroupService {
             .createdAt(group.getCreatedAt())
             .updatedAt(group.getUpdatedAt())
             .members(members)
+            .playlists(playlists)
             .build();
     }
 }

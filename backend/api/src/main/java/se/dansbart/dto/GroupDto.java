@@ -20,4 +20,5 @@ public class GroupDto {
     private OffsetDateTime updatedAt;
 
     private List<GroupMemberDto> members;
+    private List<PlaylistSummaryDto> playlists;
 }

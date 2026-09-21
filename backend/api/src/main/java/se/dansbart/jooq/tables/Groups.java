@@ -32,6 +32,7 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.GroupMembers.GroupMembersPath;
+import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
 
 
@@ -169,6 +170,19 @@ public class Groups extends TableImpl<Record> {
             _groupMembers = new GroupMembersPath(this, null, Keys.GROUP_MEMBERS__GROUP_MEMBERS_GROUP_ID_FKEY.getInverseKey());
 
         return _groupMembers;
+    }
+
+    private transient PlaylistsPath _playlists;
+
+    /**
+     * Get the implicit to-many join path to the <code>public.playlists</code>
+     * table
+     */
+    public PlaylistsPath playlists() {
+        if (_playlists == null)
+            _playlists = new PlaylistsPath(this, null, Keys.PLAYLISTS__PLAYLISTS_GROUP_ID_FKEY.getInverseKey());
+
+        return _playlists;
     }
 
     /**
