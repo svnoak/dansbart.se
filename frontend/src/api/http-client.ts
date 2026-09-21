@@ -1,3 +1,5 @@
+import { generateUuid } from '../utils/uuid';
+
 /**
  * Unified HTTP client used by all Orval-generated API calls.
  *
@@ -15,7 +17,7 @@ export const httpClient = async <T>(
   init?: RequestInit,
 ): Promise<T> => {
   const headers = new Headers(init?.headers);
-  headers.set('X-Trace-Id', crypto.randomUUID());
+  headers.set('X-Trace-Id', generateUuid());
 
   const method = (init?.method ?? 'GET').toUpperCase();
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
@@ -52,7 +54,7 @@ export function apiFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const headers = new Headers(init?.headers);
-  headers.set('X-Trace-Id', crypto.randomUUID());
+  headers.set('X-Trace-Id', generateUuid());
 
   const method = (init?.method ?? 'GET').toUpperCase();
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
