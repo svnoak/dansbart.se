@@ -8,6 +8,10 @@ import se.dansbart.domain.album.TrackAlbum;
 import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.artist.ArtistJooqRepository;
 import se.dansbart.domain.artist.TrackArtist;
+import se.dansbart.domain.group.Group;
+import se.dansbart.domain.group.GroupJooqRepository;
+import se.dansbart.domain.group.GroupMember;
+import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.playlist.Playlist;
 import se.dansbart.domain.playlist.PlaylistJooqRepository;
 import se.dansbart.domain.playlist.PlaylistTrack;
@@ -64,6 +68,12 @@ public class TestDataFactory {
     @Autowired
     private PlaylistCollaboratorJooqRepository playlistCollaboratorJooqRepository;
 
+    @Autowired
+    private GroupJooqRepository groupJooqRepository;
+
+    @Autowired
+    private GroupMemberJooqRepository groupMemberJooqRepository;
+
     // Builder factory methods
     public UserBuilder user() {
         return new UserBuilder();
@@ -83,6 +93,10 @@ public class TestDataFactory {
 
     public PlaylistBuilder playlist() {
         return new PlaylistBuilder();
+    }
+
+    public GroupBuilder group() {
+        return new GroupBuilder();
     }
 
     /**
@@ -432,18 +446,85 @@ public class TestDataFactory {
         }
     }
 
+    // Group Builder
+    public class GroupBuilder {
+        private String name = "Test Group";
+        private String aboutUs;
+        private boolean isPublic = false;
+
+        public GroupBuilder withName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public GroupBuilder withAboutUs(String aboutUs) {
+            this.aboutUs = aboutUs;
+            return this;
+        }
+
+        public GroupBuilder isPublic() {
+            this.isPublic = true;
+            return this;
+        }
+
+        public Group build() {
+            Group group = Group.builder()
+                .name(name)
+                .aboutUs(aboutUs)
+                .isPublic(isPublic)
+                .build();
+            return groupJooqRepository.insert(group);
+        }
+    }
+
     /**
      * Add an accepted collaborator to a playlist with the given permission.
      */
     public PlaylistCollaborator addCollaborator(Playlist playlist, User user, String permission) {
+        return saveCollaborator(playlist, user, permission, "accepted");
+    }
+
+    /**
+     * Add a pending collaborator to a playlist with the given permission.
+     */
+    public PlaylistCollaborator addPendingCollaborator(Playlist playlist, User user, String permission) {
+        return saveCollaborator(playlist, user, permission, "pending");
+    }
+
+    private PlaylistCollaborator saveCollaborator(Playlist playlist, User user, String permission, String status) {
         PlaylistCollaborator collab = PlaylistCollaborator.builder()
             .playlistId(playlist.getId())
             .userId(user.getId())
             .permission(permission)
-            .status("accepted")
+            .status(status)
             .invitedBy(playlist.getUserId())
             .build();
         return playlistCollaboratorJooqRepository.save(collab);
+    }
+
+    /**
+     * Add an accepted admin member to a group.
+     */
+    public GroupMember addGroupAdmin(Group group, User user) {
+        return addGroupMember(group, user, true, true, true, true, true);
+    }
+
+    /**
+     * Add an accepted member with the given permission flags to a group.
+     */
+    public GroupMember addGroupMember(Group group, User user, boolean isAdmin, boolean canEditInfo,
+            boolean canManagePlaylists, boolean canInviteMembers, boolean canRemoveMembers) {
+        GroupMember member = GroupMember.builder()
+            .groupId(group.getId())
+            .userId(user.getId())
+            .isAdmin(isAdmin)
+            .canEditInfo(canEditInfo)
+            .canManagePlaylists(canManagePlaylists)
+            .canInviteMembers(canInviteMembers)
+            .canRemoveMembers(canRemoveMembers)
+            .status("accepted")
+            .build();
+        return groupMemberJooqRepository.save(member);
     }
 
     /**

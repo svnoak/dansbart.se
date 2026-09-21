@@ -109,6 +109,50 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isNotFound());
         }
+
+        @Test
+        @DisplayName("private playlist by non-collaborator should return 404")
+        void getPlaylist_privatePlaylist_byNonCollaborator_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("private playlist by accepted collaborator should return 200")
+        void getPlaylist_privatePlaylist_byAcceptedCollaborator_shouldReturn200() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+            testData.addCollaborator(playlist, otherUser, "view");
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(playlist.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("private playlist by pending collaborator should return 404")
+        void getPlaylist_privatePlaylist_byPendingCollaborator_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+            testData.addPendingCollaborator(playlist, otherUser, "view");
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("public playlist by any logged-in user should return 200")
+        void getPlaylist_publicPlaylist_byAnyLoggedInUser_shouldReturn200() throws Exception {
+            Playlist playlist = testData.playlist().withName("Public Playlist").withOwner(owner).isPublic().build();
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(playlist.getId().toString()));
+        }
     }
 
     @Nested
@@ -404,6 +448,71 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
                 .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/playlists/{id}/collaborators")
+    class GetCollaborators {
+
+        @Test
+        @DisplayName("should return 404 for unknown playlist")
+        void getCollaborators_withInvalidId_shouldReturn404() throws Exception {
+            mockMvc.perform(get("/api/playlists/{id}/collaborators", "00000000-0000-0000-0000-000000000000")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("own private playlist by owner should return 200")
+        void getCollaborators_ownPrivatePlaylist_byOwner_shouldReturn200() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("private playlist by non-collaborator should return 404")
+        void getCollaborators_privatePlaylist_byNonCollaborator_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("private playlist by accepted collaborator should return 200")
+        void getCollaborators_privatePlaylist_byAcceptedCollaborator_shouldReturn200() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+            testData.addCollaborator(playlist, otherUser, "view");
+
+            mockMvc.perform(get("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("private playlist by pending collaborator should return 404")
+        void getCollaborators_privatePlaylist_byPendingCollaborator_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+            testData.addPendingCollaborator(playlist, otherUser, "view");
+
+            mockMvc.perform(get("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("public playlist by any logged-in user should return 200")
+        void getCollaborators_publicPlaylist_byAnyLoggedInUser_shouldReturn200() throws Exception {
+            Playlist playlist = testData.playlist().withName("Public Playlist").withOwner(owner).isPublic().build();
+
+            mockMvc.perform(get("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk());
         }
     }
 }
