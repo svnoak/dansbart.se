@@ -71,6 +71,7 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/groups/public").permitAll()
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")
@@ -79,6 +80,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/dances/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/dances/**").authenticated()
                 .requestMatchers("/api/playlists/**").authenticated()
+                .requestMatchers("/api/groups/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()
                 .requestMatchers("/api/spotify/**").authenticated()
