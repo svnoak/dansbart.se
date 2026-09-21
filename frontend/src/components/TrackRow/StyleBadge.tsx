@@ -21,16 +21,19 @@ export function StyleBadge({
 }: StyleBadgeProps) {
   const { theme } = useTheme();
   const [panelOpen, setPanelOpen] = useState(false);
+  const [confirmedStyle, setConfirmedStyle] = useState<string | null>(null);
   const isDark = theme === 'dark';
-  const hasValidStyle = typeof danceStyle === 'string' && danceStyle.length > 0;
+  const shownStyle = confirmedStyle ?? danceStyle;
+  const shownConfidence = confirmedStyle ? 1.0 : confidence;
+  const hasValidStyle = typeof shownStyle === 'string' && shownStyle.length > 0;
 
-  const isVerified = confidence >= 1.0;
-  const isAiHigh = hasValidStyle && confidence >= 0.7 && !isVerified;
+  const isVerified = shownConfidence >= 1.0;
+  const isAiHigh = hasValidStyle && shownConfidence >= 0.7 && !isVerified;
 
   const textColor = isDark ? styleColor.textDark : styleColor.text;
   const bgColor = isDark ? styleColor.bgDark : styleColor.bg;
 
-  const badgeContent = hasValidStyle ? danceStyle : 'Okänd stil';
+  const badgeContent = hasValidStyle ? shownStyle : 'Okänd stil';
   const ariaLabel = hasValidStyle ? 'Ändra dansstil' : 'Ange dansstil';
 
   let pillStyle: React.CSSProperties;
@@ -71,9 +74,12 @@ export function StyleBadge({
       <StyleVotePanel
         trackId={trackId}
         trackTitle={trackTitle}
-        currentStyle={danceStyle}
+        currentStyle={shownStyle}
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
+        onVoted={(style, confirmed) => {
+          if (confirmed) setConfirmedStyle(style);
+        }}
       />
     </>
   );

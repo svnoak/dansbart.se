@@ -14,6 +14,7 @@ interface StyleVotePanelProps {
   currentStyle: string | null | undefined;
   open: boolean;
   onClose: () => void;
+  onVoted?: (style: string, confirmed: boolean) => void;
 }
 
 /** Dialog where a person votes for the main dance style of one track. */
@@ -26,6 +27,7 @@ function StyleVoteDialog({
   trackTitle,
   currentStyle,
   onClose,
+  onVoted,
 }: Omit<StyleVotePanelProps, 'open'>) {
   const [step, setStep] = useState<Step>('main');
   const [selectedMain, setSelectedMain] = useState('');
@@ -43,9 +45,12 @@ function StyleVoteDialog({
   }, [onClose]);
 
   async function handleSelect(style: string) {
-    const { success } = await styleVote.submit(style);
+    const { success, styleJustConfirmed } = await styleVote.submit(style);
     setFailed(!success);
-    if (success) setStep('success');
+    if (success) {
+      setStep('success');
+      onVoted?.(style, styleJustConfirmed);
+    }
   }
 
   function handleSelectMain(main: string) {

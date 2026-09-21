@@ -42,7 +42,12 @@ describe('StyleVotePanel', () => {
   });
 
   async function renderPanel(
-    props: Partial<{ currentStyle: string | null; open: boolean; onClose: () => void }> = {},
+    props: Partial<{
+      currentStyle: string | null;
+      open: boolean;
+      onClose: () => void;
+      onVoted?: (style: string, confirmed: boolean) => void;
+    }> = {},
   ) {
     await act(async () => {
       root.render(
@@ -58,6 +63,11 @@ describe('StyleVotePanel', () => {
     });
   }
 
+  function clickButton(text: string) {
+    const button = Array.from(document.body.querySelectorAll('button')).find((b) => b.textContent?.includes(text));
+    expect(button).toBeDefined();
+    return button;
+  }
   it('fetches the style tree only after the panel opens', async () => {
     await renderPanel({ open: false });
     expect(getStyleTree).not.toHaveBeenCalled();
@@ -178,5 +188,17 @@ describe('StyleVotePanel', () => {
     });
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it.each([[true], [false]])('calls onVoted with confirmed=%s', async (confirmed) => {
+    const onVoted = vi.fn();
+    submitFeedback.mockResolvedValue({ styleJustConfirmed: confirmed });
+    await renderPanel({ currentStyle: null, onVoted });
+    const hallingButton = clickButton('Halling');
+    await act(async () => {
+      hallingButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(onVoted).toHaveBeenCalledWith('Halling', confirmed);
   });
 });
