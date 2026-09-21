@@ -10,9 +10,10 @@
   --color-border: 229 231 235;
   --color-text: 17 24 39;
   --color-text-muted: 107 114 128;
-  --color-accent: 29 78 216;
-  --color-accent-hover: 30 64 175;
-  --color-accent-muted: 219 234 254;
+  --color-accent: 47 111 159;
+  --color-accent-foreground: 255 255 255;
+  --color-accent-hover: 38 92 135;
+  --color-accent-muted: 224 238 248;
   --color-pill-bg: 238 242 255;
   --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08);
   --radius: 0.5rem;
@@ -29,8 +30,9 @@ html.dark,
   --color-text: 243 244 246;
   --color-text-muted: 156 163 175;
   --color-accent: 96 165 250;
+  --color-accent-foreground: 15 23 42;
   --color-accent-hover: 147 197 253;
-  --color-accent-muted: 30 58 138;
+  --color-accent-muted: 23 37 84;
   --color-pill-bg: 100 90 180;
   --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
 }
@@ -38,7 +40,7 @@ html.dark,
 body {
   background-color: rgb(var(--color-bg));
   color: rgb(var(--color-text));
-  font-family: ui-sans-serif, system-ui, sans-serif, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Open Sans Variable', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Buttons and clickable elements show pointer cursor */

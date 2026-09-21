@@ -38,8 +38,8 @@ public class PlaylistController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get playlist by ID")
-    public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID id) {
-        return playlistService.findByIdAsDto(id)
+    public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+        return playlistService.findByIdAsDto(id, userId)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
@@ -150,8 +150,10 @@ public class PlaylistController {
 
     @GetMapping("/{id}/collaborators")
     @Operation(summary = "Get playlist collaborators")
-    public ResponseEntity<List<CollaboratorDto>> getCollaborators(@PathVariable UUID id) {
-        return ResponseEntity.ok(playlistService.getCollaborators(id));
+    public ResponseEntity<List<CollaboratorDto>> getCollaborators(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+        return playlistService.getCollaborators(id, userId)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}/collaborators/{collaboratorId}")
