@@ -135,9 +135,22 @@ public class PlaylistService {
 
     /** Playlist detail with tracks as TrackListDto (danceStyle, subStyle, playback, artist). */
     @Transactional(readOnly = true)
-    public Optional<PlaylistDto> findByIdAsDto(UUID playlistId) {
+    public Optional<PlaylistDto> findByIdAsDto(UUID playlistId, UUID viewerId) {
         return playlistJooqRepository.findById(playlistId)
+            .filter(playlist -> canView(playlist, viewerId))
             .map(this::toPlaylistDto);
+    }
+
+    private boolean canView(Playlist playlist, UUID viewerId) {
+        if (Boolean.TRUE.equals(playlist.getIsPublic())) {
+            return true;
+        }
+        if (playlist.getUserId().equals(viewerId)) {
+            return true;
+        }
+        return collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), viewerId)
+            .filter(c -> "accepted".equals(c.getStatus()))
+            .isPresent();
     }
 
     /** Playlist by share token with tracks as TrackListDto. */
@@ -280,22 +293,24 @@ public class PlaylistService {
     }
 
     @Transactional(readOnly = true)
-    public List<CollaboratorDto> getCollaborators(UUID playlistId) {
-        return collaboratorRepository.findByPlaylistId(playlistId).stream()
-            .map(collab -> {
-                var user = collab.getUser();
-                return CollaboratorDto.builder()
-                    .id(collab.getId())
-                    .userId(collab.getUserId())
-                    .username(user != null ? user.getUsername() : null)
-                    .displayName(user != null ? user.getDisplayName() : null)
-                    .permission(collab.getPermission())
-                    .status(collab.getStatus())
-                    .invitedAt(collab.getInvitedAt())
-                    .acceptedAt(collab.getAcceptedAt())
-                    .build();
-            })
-            .collect(Collectors.toList());
+    public Optional<List<CollaboratorDto>> getCollaborators(UUID playlistId, UUID viewerId) {
+        return playlistJooqRepository.findById(playlistId)
+            .filter(playlist -> canView(playlist, viewerId))
+            .map(playlist -> collaboratorRepository.findByPlaylistId(playlistId).stream()
+                .map(collab -> {
+                    var user = collab.getUser();
+                    return CollaboratorDto.builder()
+                        .id(collab.getId())
+                        .userId(collab.getUserId())
+                        .username(user != null ? user.getUsername() : null)
+                        .displayName(user != null ? user.getDisplayName() : null)
+                        .permission(collab.getPermission())
+                        .status(collab.getStatus())
+                        .invitedAt(collab.getInvitedAt())
+                        .acceptedAt(collab.getAcceptedAt())
+                        .build();
+                })
+                .collect(Collectors.toList()));
     }
 
     @Transactional

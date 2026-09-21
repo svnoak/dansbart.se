@@ -436,11 +436,22 @@ public class TestDataFactory {
      * Add an accepted collaborator to a playlist with the given permission.
      */
     public PlaylistCollaborator addCollaborator(Playlist playlist, User user, String permission) {
+        return saveCollaborator(playlist, user, permission, "accepted");
+    }
+
+    /**
+     * Add a pending collaborator to a playlist with the given permission.
+     */
+    public PlaylistCollaborator addPendingCollaborator(Playlist playlist, User user, String permission) {
+        return saveCollaborator(playlist, user, permission, "pending");
+    }
+
+    private PlaylistCollaborator saveCollaborator(Playlist playlist, User user, String permission, String status) {
         PlaylistCollaborator collab = PlaylistCollaborator.builder()
             .playlistId(playlist.getId())
             .userId(user.getId())
             .permission(permission)
-            .status("accepted")
+            .status(status)
             .invitedBy(playlist.getUserId())
             .build();
         return playlistCollaboratorJooqRepository.save(collab);
