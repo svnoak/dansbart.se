@@ -51,6 +51,10 @@ public class GroupMember {
         return hasPermission(canEditInfo);
     }
 
+    public boolean canManagePlaylists() {
+        return hasPermission(canManagePlaylists);
+    }
+
     public boolean canInviteMembers() {
         return hasPermission(canInviteMembers);
     }

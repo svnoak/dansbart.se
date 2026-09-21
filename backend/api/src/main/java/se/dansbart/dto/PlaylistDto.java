@@ -28,6 +28,10 @@ public class PlaylistDto {
 
     // Owner info
     private UserSummaryDto owner;
+    private GroupSummaryDto ownerGroup;
+
+    // Whether the requesting viewer has full control (owner, or group manager); null when the viewer is unknown
+    private Boolean viewerCanManage;
 
     // Track count
     private Integer trackCount;

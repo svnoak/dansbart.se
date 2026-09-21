@@ -3,11 +3,15 @@ package se.dansbart.domain.playlist;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.group.GroupJooqRepository;
+import se.dansbart.domain.group.GroupMember;
+import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
 import se.dansbart.domain.user.UserJooqRepository;
 import se.dansbart.dto.CollaboratorDto;
+import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.dto.PlaylistTrackDto;
@@ -29,6 +33,8 @@ public class PlaylistService {
     private final TrackJooqRepository trackJooqRepository;
     private final PlaylistCollaboratorJooqRepository collaboratorRepository;
     private final UserJooqRepository userJooqRepository;
+    private final GroupMemberJooqRepository groupMemberJooqRepository;
+    private final GroupJooqRepository groupJooqRepository;
 
     @Transactional(readOnly = true)
     public Optional<Playlist> findById(UUID id) {
@@ -57,14 +63,24 @@ public class PlaylistService {
     }
 
     @Transactional
+    public PlaylistDto createForGroup(UUID groupId, UUID creatorId, String name, String description) {
+        Playlist playlist = Playlist.builder()
+            .groupId(groupId)
+            .name(name)
+            .description(description)
+            .isPublic(false)
+            .build();
+        return toPlaylistDto(playlistJooqRepository.insert(playlist), creatorId);
+    }
+
+    @Transactional
     public Optional<Playlist> update(UUID playlistId, UUID userId, String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
+            .filter(p -> hasEditAccess(p, userId))
             .map(playlist -> {
-                boolean isOwner = playlist.getUserId().equals(userId);
-                // Edit collaborators may only update name
+                boolean fullControl = hasFullControl(playlist, userId);
                 if (name != null) playlist.setName(name);
-                if (isOwner) {
+                if (fullControl) {
                     if (description != null) playlist.setDescription(description);
                     if (isPublic != null) playlist.setIsPublic(isPublic);
                     if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
@@ -79,7 +95,7 @@ public class PlaylistService {
     @Transactional
     public boolean delete(UUID playlistId, UUID userId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId))
+            .filter(p -> hasFullControl(p, userId))
             .map(playlist -> {
                 playlistJooqRepository.delete(playlistId);
                 return true;
@@ -90,7 +106,7 @@ public class PlaylistService {
     @Transactional
     public Optional<PlaylistTrack> addTrack(UUID playlistId, UUID userId, UUID trackId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
+            .filter(p -> hasEditAccess(p, userId))
             .flatMap(playlist -> trackJooqRepository.findById(trackId).map(track -> {
                 int nextPosition = playlistJooqRepository.getTrackCount(playlistId);
                 PlaylistTrack pt = PlaylistTrack.builder()
@@ -105,7 +121,7 @@ public class PlaylistService {
     @Transactional
     public boolean removeTrack(UUID playlistId, UUID userId, UUID trackId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
+            .filter(p -> hasEditAccess(p, userId))
             .map(playlist -> {
                 playlistTrackJooqRepository.deleteByPlaylistIdAndTrackId(playlistId, trackId);
                 reorderTracks(playlistId);
@@ -116,6 +132,19 @@ public class PlaylistService {
 
     private boolean hasEditPermission(UUID playlistId, UUID userId) {
         return playlistJooqRepository.existsByPlaylistIdAndUserIdAndPermission(playlistId, userId, "edit");
+    }
+
+    private boolean hasFullControl(Playlist playlist, UUID userId) {
+        if (playlist.getGroupId() != null) {
+            return groupMemberJooqRepository.findByGroupIdAndUserId(playlist.getGroupId(), userId)
+                .map(GroupMember::canManagePlaylists)
+                .orElse(false);
+        }
+        return userId.equals(playlist.getUserId());
+    }
+
+    private boolean hasEditAccess(Playlist playlist, UUID userId) {
+        return hasFullControl(playlist, userId) || hasEditPermission(playlist.getId(), userId);
     }
 
     private void reorderTracks(UUID playlistId) {
@@ -138,29 +167,37 @@ public class PlaylistService {
     public Optional<PlaylistDto> findByIdAsDto(UUID playlistId, UUID viewerId) {
         return playlistJooqRepository.findById(playlistId)
             .filter(playlist -> canView(playlist, viewerId))
-            .map(this::toPlaylistDto);
+            .map(playlist -> toPlaylistDto(playlist, viewerId));
     }
 
     private boolean canView(Playlist playlist, UUID viewerId) {
         if (Boolean.TRUE.equals(playlist.getIsPublic())) {
             return true;
         }
-        if (playlist.getUserId().equals(viewerId)) {
+        if (hasEditAccess(playlist, viewerId)) {
             return true;
         }
-        return collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), viewerId)
-            .filter(c -> "accepted".equals(c.getStatus()))
-            .isPresent();
+        if (collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), viewerId)
+                .filter(c -> "accepted".equals(c.getStatus()))
+                .isPresent()) {
+            return true;
+        }
+        if (playlist.getGroupId() != null) {
+            return groupMemberJooqRepository.findByGroupIdAndUserId(playlist.getGroupId(), viewerId)
+                .map(GroupMember::isAccepted)
+                .orElse(false);
+        }
+        return false;
     }
 
     /** Playlist by share token with tracks as TrackListDto. */
     @Transactional(readOnly = true)
     public Optional<PlaylistDto> findByShareTokenAsDto(String shareToken) {
         return playlistJooqRepository.findByShareToken(shareToken)
-            .map(this::toPlaylistDto);
+            .map(playlist -> toPlaylistDto(playlist, null));
     }
 
-    private PlaylistDto toPlaylistDto(Playlist playlist) {
+    private PlaylistDto toPlaylistDto(Playlist playlist, UUID viewerId) {
         UserSummaryDto owner = playlist.getUserId() != null
             ? userJooqRepository.findById(playlist.getUserId())
                 .map(u -> UserSummaryDto.builder()
@@ -171,6 +208,12 @@ public class PlaylistService {
                     .build())
                 .orElse(null)
             : null;
+        GroupSummaryDto ownerGroup = playlist.getGroupId() != null
+            ? groupJooqRepository.findById(playlist.getGroupId())
+                .map(g -> GroupSummaryDto.builder().id(g.getId()).name(g.getName()).build())
+                .orElse(null)
+            : null;
+        Boolean viewerCanManage = viewerId != null ? hasFullControl(playlist, viewerId) : null;
         List<PlaylistTrack> ptList = playlistTrackJooqRepository.findByPlaylistIdOrderByPositionAsc(playlist.getId());
         List<UUID> trackIds = ptList.stream().map(PlaylistTrack::getTrackId).toList();
         List<TrackListDto> trackDtos = trackJooqRepository.findTrackListDtosByIds(trackIds);
@@ -213,6 +256,8 @@ public class PlaylistService {
             .createdAt(playlist.getCreatedAt())
             .updatedAt(playlist.getUpdatedAt())
             .owner(owner)
+            .ownerGroup(ownerGroup)
+            .viewerCanManage(viewerCanManage)
             .trackCount(playlistTrackDtos.size())
             .tracks(playlistTrackDtos)
             .collaborators(collaborators)
@@ -256,7 +301,7 @@ public class PlaylistService {
     @Transactional
     public boolean reorderTracks(UUID playlistId, UUID userId, List<UUID> trackIds) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
+            .filter(p -> hasEditAccess(p, userId))
             .map(playlist -> {
                 List<PlaylistTrack> tracks = playlistTrackJooqRepository.findByPlaylistIdOrderByPositionAsc(playlistId);
                 for (int i = 0; i < trackIds.size(); i++) {
@@ -277,7 +322,7 @@ public class PlaylistService {
     @Transactional
     public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, UUID inviteeId, String permission) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(ownerId))
+            .filter(p -> hasFullControl(p, ownerId))
             .filter(p -> !inviteeId.equals(ownerId))
             .filter(p -> collaboratorRepository.findByPlaylistIdAndUserId(playlistId, inviteeId).isEmpty())
             .map(playlist -> {
@@ -316,7 +361,7 @@ public class PlaylistService {
     @Transactional
     public Optional<PlaylistCollaborator> updateCollaborator(UUID playlistId, UUID userId, UUID collaboratorId, String permission) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId))
+            .filter(p -> hasFullControl(p, userId))
             .flatMap(p -> collaboratorRepository.findById(collaboratorId))
             .filter(collab -> collab.getPlaylistId().equals(playlistId))
             .map(collab -> {
@@ -328,7 +373,7 @@ public class PlaylistService {
     @Transactional
     public boolean removeCollaborator(UUID playlistId, UUID userId, UUID collaboratorId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId))
+            .filter(p -> hasFullControl(p, userId))
             .flatMap(p -> collaboratorRepository.findById(collaboratorId))
             .filter(collab -> collab.getPlaylistId().equals(playlistId))
             .map(collab -> {
@@ -341,7 +386,7 @@ public class PlaylistService {
     @Transactional
     public Optional<Playlist> generateShareToken(UUID playlistId, UUID userId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
+            .filter(p -> hasEditAccess(p, userId))
             .map(playlist -> {
                 playlist.setShareToken(UUID.randomUUID().toString());
                 playlist.setUpdatedAt(OffsetDateTime.now());
@@ -352,7 +397,7 @@ public class PlaylistService {
     @Transactional
     public boolean invalidateShareToken(UUID playlistId, UUID userId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId) || hasEditPermission(playlistId, userId))
+            .filter(p -> hasEditAccess(p, userId))
             .map(playlist -> {
                 playlist.setShareToken(null);
                 playlist.setUpdatedAt(OffsetDateTime.now());
@@ -365,7 +410,7 @@ public class PlaylistService {
     @Transactional
     public Optional<Playlist> transferOwnership(UUID playlistId, UUID userId, UUID newOwnerId) {
         return playlistJooqRepository.findById(playlistId)
-            .filter(p -> p.getUserId().equals(userId))
+            .filter(p -> userId.equals(p.getUserId()))
             .filter(p -> !newOwnerId.equals(userId))
             .map(playlist -> {
                 // Add former owner as edit collaborator if not already a collaborator

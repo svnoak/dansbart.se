@@ -11,6 +11,7 @@ import se.dansbart.dto.GroupDto;
 import se.dansbart.dto.GroupInvitationDto;
 import se.dansbart.dto.GroupMemberDto;
 import se.dansbart.dto.GroupSummaryDto;
+import se.dansbart.dto.PlaylistDto;
 import se.dansbart.exception.BadRequestException;
 
 import java.net.URI;
@@ -79,6 +80,16 @@ public class GroupController {
         return ResponseEntity.ok(groupService.inviteMember(id, userId, request.userId()));
     }
 
+    @PostMapping("/{id}/playlists")
+    @Operation(operationId = "createGroupPlaylist", summary = "Create a playlist owned by the group")
+    public ResponseEntity<PlaylistDto> createGroupPlaylist(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody CreateGroupPlaylistRequest request) {
+        PlaylistDto playlist = groupService.createPlaylist(id, userId, request.name(), request.description());
+        return ResponseEntity.created(URI.create("/api/playlists/" + playlist.getId())).body(playlist);
+    }
+
     @GetMapping("/invitations")
     @Operation(operationId = "getGroupInvitations", summary = "Get pending group invitations for current user")
     public ResponseEntity<List<GroupInvitationDto>> getInvitations(@AuthenticationPrincipal UUID userId) {
@@ -128,6 +139,7 @@ public class GroupController {
     }
 
     public record CreateGroupRequest(String name, String aboutUs, Boolean isPublic) {}
+    public record CreateGroupPlaylistRequest(String name, String description) {}
     public record UpdateGroupRequest(String name, String aboutUs, Boolean isPublic) {}
     public record InviteMemberRequest(UUID userId) {}
     public record RespondToInvitationRequest(Boolean accept) {}
