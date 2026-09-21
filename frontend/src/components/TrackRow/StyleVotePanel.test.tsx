@@ -235,7 +235,7 @@ describe('StyleVotePanel', () => {
     const text = document.body.textContent;
     expect(text).toContain('Tack! Din röst är sparad.');
     expect(text).not.toContain('Stilen bekräftas');
-    expect(text).toContain('Med ett konto räcker din röst för att bekräfta en stil.');
+    expect(text).toContain('Inloggade användare kan bekräfta stilar med enbart en röst');
 
     const loginButton = clickButton('Logga in eller skapa konto');
     const mockLogin = useAuth().login;
@@ -258,7 +258,7 @@ describe('StyleVotePanel', () => {
 
     const text = document.body.textContent;
     expect(text).toContain('Tack! Din röst är sparad.');
-    expect(text).not.toContain('Med ett konto');
+    expect(text).not.toContain('Inloggade användare');
     expect(
       Array.from(document.body.querySelectorAll('button')).some((b) => b.textContent?.includes('Logga in'))
     ).toBe(false);
