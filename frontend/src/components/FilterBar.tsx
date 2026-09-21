@@ -175,7 +175,7 @@ function RangeSlider({
   step: number;
 }) {
   return (
-    <div className="min-w-[200px]">
+    <div className="min-w-50">
       <div className="flex items-center justify-between mb-1">
         <label className="text-xs font-medium text-[rgb(var(--color-text-muted))]">{label}</label>
         <ToggleSwitch
@@ -681,7 +681,7 @@ export function FilterBar({
         </div>
         {searchType === 'tracks' && (
           <div className="flex flex-wrap items-end gap-4">
-            <div className="min-w-[140px]">
+            <div className="min-w-35">
               <label htmlFor="filter-category" className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1 block">
                 Kategori
               </label>
@@ -702,7 +702,7 @@ export function FilterBar({
                 ))}
               </select>
             </div>
-            <div className="min-w-[140px]">
+            <div className="min-w-35">
               <label htmlFor="filter-substyle" className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1 block">
                 Specifik dans
               </label>
@@ -722,7 +722,7 @@ export function FilterBar({
                 ))}
               </select>
             </div>
-            <div className="min-w-[120px]">
+            <div className="min-w-30">
               <label htmlFor="filter-duration" className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1 block">
                 Längd
               </label>
@@ -740,7 +740,7 @@ export function FilterBar({
                 ))}
               </select>
             </div>
-            <div className="flex-1 min-w-[200px]">
+            <div className="flex-1 min-w-50">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-[rgb(var(--color-text-muted))]">Tempo</label>
                 <ToggleSwitch
