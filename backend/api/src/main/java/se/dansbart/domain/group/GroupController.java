@@ -8,7 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.GroupDto;
+import se.dansbart.dto.GroupInvitationDto;
+import se.dansbart.dto.GroupMemberDto;
 import se.dansbart.dto.GroupSummaryDto;
+import se.dansbart.exception.BadRequestException;
 
 import java.net.URI;
 import java.util.List;
@@ -67,6 +70,66 @@ public class GroupController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/members")
+    @Operation(summary = "Invite a user to the group")
+    public ResponseEntity<GroupMemberDto> inviteMember(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody InviteMemberRequest request) {
+        return ResponseEntity.ok(groupService.inviteMember(id, userId, request.userId()));
+    }
+
+    @GetMapping("/invitations")
+    @Operation(operationId = "getGroupInvitations", summary = "Get pending group invitations for current user")
+    public ResponseEntity<List<GroupInvitationDto>> getInvitations(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(groupService.getPendingInvitations(userId));
+    }
+
+    @PutMapping("/invitations/{invitationId}")
+    @Operation(operationId = "respondToGroupInvitation", summary = "Accept or reject a group invitation")
+    public ResponseEntity<GroupMemberDto> respondToInvitation(
+            @PathVariable UUID invitationId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody RespondToInvitationRequest request) {
+        if (request.accept() == null) {
+            throw new BadRequestException("Say whether you accept the invitation.");
+        }
+        if (request.accept()) {
+            return groupService.acceptInvitation(invitationId, userId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+        }
+        if (groupService.declineInvitation(invitationId, userId)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/members/{memberId}")
+    @Operation(summary = "Update a member's permissions or admin status (admin only)")
+    public ResponseEntity<GroupMemberDto> updateMember(
+            @PathVariable UUID id,
+            @PathVariable UUID memberId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody UpdateMemberRequest request) {
+        return ResponseEntity.ok(groupService.updateMemberPermissions(id, userId, memberId,
+                request.isAdmin(), request.canEditInfo(), request.canManagePlaylists(),
+                request.canInviteMembers(), request.canRemoveMembers()));
+    }
+
+    @DeleteMapping("/{id}/members/{memberId}")
+    @Operation(summary = "Remove a member from the group (or leave it yourself)")
+    public ResponseEntity<Void> removeMember(
+            @PathVariable UUID id,
+            @PathVariable UUID memberId,
+            @AuthenticationPrincipal UUID userId) {
+        groupService.removeMember(id, userId, memberId);
+        return ResponseEntity.noContent().build();
+    }
+
     public record CreateGroupRequest(String name, String aboutUs, Boolean isPublic) {}
     public record UpdateGroupRequest(String name, String aboutUs, Boolean isPublic) {}
+    public record InviteMemberRequest(UUID userId) {}
+    public record RespondToInvitationRequest(Boolean accept) {}
+    public record UpdateMemberRequest(Boolean isAdmin, Boolean canEditInfo, Boolean canManagePlaylists, Boolean canInviteMembers, Boolean canRemoveMembers) {}
 }

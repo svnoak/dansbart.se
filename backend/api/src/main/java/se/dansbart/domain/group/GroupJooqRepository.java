@@ -27,6 +27,11 @@ public class GroupJooqRepository {
         return dsl.selectFrom(GROUPS).where(GROUPS.ID.eq(id)).fetchOptional(this::toGroup);
     }
 
+    /** Locks the group's row so a concurrent request cannot remove the last admin at the same time. */
+    public Optional<Group> lockForUpdate(UUID groupId) {
+        return dsl.selectFrom(GROUPS).where(GROUPS.ID.eq(groupId)).forUpdate().fetchOptional(this::toGroup);
+    }
+
     public List<GroupWithMemberCount> findPublicGroups() {
         return dsl.select(GROUPS.fields())
             .select(memberCountField())

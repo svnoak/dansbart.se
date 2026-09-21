@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import se.dansbart.domain.group.Group;
+import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.user.User;
 import se.dansbart.e2e.base.AbstractE2ETest;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -304,6 +306,474 @@ class GroupControllerE2ETest extends AbstractE2ETest {
 
             mockMvc.perform(delete("/api/groups/{id}", unknownId)
                     .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
+    @DisplayName("Group membership")
+    class Membership {
+
+        @Test
+        @DisplayName("member with canInviteMembers can invite a new member")
+        void inviteMember_byPermittedMember_shouldCreatePendingInvite() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, true, false);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("pending"));
+        }
+
+        @Test
+        @DisplayName("invited user can accept the invitation and becomes a visible member")
+        void respondToInvitation_accept_shouldAddMember() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+            mockMvc.perform(get("/api/groups/invitations")
+                    .with(jwt.userToken(outsider.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].groupName").value("Grupp"));
+
+            mockMvc.perform(put("/api/groups/invitations/{id}", invitationId)
+                    .with(jwt.userToken(outsider.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("accepted"));
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.members", hasSize(2)));
+        }
+
+        @Test
+        @DisplayName("non-admin member with canRemoveMembers can remove a plain member")
+        void removeMember_byMemberWithRemovePermission_canRemovePlainMember() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, true);
+            var outsiderMembership = testData.addGroupMember(group, outsider, false, false, false, false, false);
+
+            mockMvc.perform(delete("/api/groups/{id}/members/{memberId}", group.getId(), outsiderMembership.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("a member can remove themselves (leave)")
+        void removeMember_self_shouldLeaveGroup() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            var membership = testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(delete("/api/groups/{id}/members/{memberId}", group.getId(), membership.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("admin can grant permissions to a member")
+        void updateMemberPermissions_byAdmin_shouldSucceed() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            var membership = testData.addGroupMember(group, member, false, false, false, false, false);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("canManagePlaylists", true);
+
+            mockMvc.perform(put("/api/groups/{id}/members/{memberId}", group.getId(), membership.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canManagePlaylists").value(true));
+        }
+
+        @Test
+        @DisplayName("invited user can decline the invitation and becomes removed")
+        void respondToInvitation_decline_shouldReturn204AndRemoveInvitation() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+            mockMvc.perform(put("/api/groups/invitations/{id}", invitationId)
+                    .with(jwt.userToken(outsider.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", false))))
+                .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/groups/invitations")
+                    .with(jwt.userToken(outsider.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.members", hasSize(1)));
+        }
+
+        @Test
+        @DisplayName("member without canInviteMembers cannot invite")
+        void inviteMember_byMemberWithoutInvitePermission_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("outsider cannot invite in a private group")
+        void inviteMember_byOutsider_privateGroup_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(outsider.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", member.getId().toString()))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("cannot invite someone who is already a member")
+        void inviteMember_alreadyMember_shouldReturn409() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", member.getId().toString()))))
+                .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("cannot invite someone who is already invited")
+        void inviteMember_alreadyInvited_shouldReturn409() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("cannot invite self")
+        void inviteMember_self_shouldReturn400() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", admin.getId().toString()))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("cannot invite unknown user")
+        void inviteMember_unknownUser_shouldReturn400() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", UUID.randomUUID().toString()))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("non-admin member cannot update permissions")
+        void updateMemberPermissions_byNonAdminMember_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            var memberMembership = testData.addGroupMember(group, member, false, false, false, false, false);
+            var outsiderMembership = testData.addGroupMember(group, outsider, false, false, false, false, false);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("canManagePlaylists", true);
+
+            mockMvc.perform(put("/api/groups/{id}/members/{memberId}", group.getId(), outsiderMembership.getId())
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(body)))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("member without canRemoveMembers cannot remove a plain member")
+        void removeMember_byMemberWithoutRemovePermission_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+            var outsiderMembership = testData.addGroupMember(group, outsider, false, false, false, false, false);
+
+            mockMvc.perform(delete("/api/groups/{id}/members/{memberId}", group.getId(), outsiderMembership.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("non-admin with remove permission cannot remove an admin")
+        void removeMember_adminByNonAdminWithRemovePermission_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            GroupMember adminMembership = testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, true);
+
+            mockMvc.perform(delete("/api/groups/{id}/members/{memberId}", group.getId(), adminMembership.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("outsider cannot remove members in a private group")
+        void removeMember_byOutsider_privateGroup_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            var memberMembership = testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(delete("/api/groups/{id}/members/{memberId}", group.getId(), memberMembership.getId())
+                    .with(jwt.userToken(outsider.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("cannot update permissions on a pending member")
+        void updateMemberPermissions_onPendingMember_shouldReturn409() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            UUID pendingMemberId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("canManagePlaylists", true);
+
+            mockMvc.perform(put("/api/groups/{id}/members/{memberId}", group.getId(), pendingMemberId)
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(body)))
+                .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("sole admin cannot remove themselves")
+        void removeMember_lastAdminLeaving_shouldReturn409() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            var adminMembership = testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(delete("/api/groups/{id}/members/{memberId}", group.getId(), adminMembership.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isConflict());
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.members", hasSize(1)));
+        }
+
+        @Test
+        @DisplayName("sole admin cannot be demoted")
+        void updateMemberPermissions_demotingLastAdmin_shouldReturn409() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            var adminMembership = testData.addGroupAdmin(group, admin);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("isAdmin", false);
+
+            mockMvc.perform(put("/api/groups/{id}/members/{memberId}", group.getId(), adminMembership.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(body)))
+                .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("member without invite permission cannot see pending invitations")
+        void getGroup_byMemberWithoutInvitePermission_shouldHidePendingInvitations() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.members", hasSize(2)));
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.members", hasSize(3)));
+        }
+
+        @Test
+        @DisplayName("inviteMember_shouldReturnInviteeName")
+        void inviteMember_shouldReturnInviteeName() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(outsider.getUsername()))
+                .andExpect(jsonPath("$.username").isNotEmpty());
+        }
+
+        @Test
+        @DisplayName("respondToInvitation_accept_shouldReturnMemberName")
+        void respondToInvitation_accept_shouldReturnMemberName() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+            mockMvc.perform(put("/api/groups/invitations/{id}", invitationId)
+                    .with(jwt.userToken(outsider.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(outsider.getUsername()));
+        }
+
+        @Test
+        @DisplayName("updateMemberPermissions_shouldReturnMemberName")
+        void updateMemberPermissions_shouldReturnMemberName() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            var membership = testData.addGroupMember(group, member, false, false, false, false, false);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("canManagePlaylists", true);
+
+            mockMvc.perform(put("/api/groups/{id}/members/{memberId}", group.getId(), membership.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(member.getUsername()));
+        }
+
+        @Test
+        @DisplayName("updateMemberPermissions_unknownMember_byNonAdmin_shouldReturn404")
+        void updateMemberPermissions_unknownMember_byNonAdmin_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("canManagePlaylists", true);
+            UUID unknownMemberId = UUID.randomUUID();
+
+            mockMvc.perform(put("/api/groups/{id}/members/{memberId}", group.getId(), unknownMemberId)
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(body)))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("respondToInvitation_withoutAcceptField_shouldReturn400AndKeepInvitation")
+        void respondToInvitation_withoutAcceptField_shouldReturn400AndKeepInvitation() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+            mockMvc.perform(put("/api/groups/invitations/{id}", invitationId)
+                    .with(jwt.userToken(outsider.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of())))
+                .andExpect(status().isBadRequest());
+
+            mockMvc.perform(get("/api/groups/invitations")
+                    .with(jwt.userToken(outsider.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+        }
+
+        @Test
+        @DisplayName("respondToInvitation_toSomeoneElsesInvitation_shouldReturn404")
+        void respondToInvitation_toSomeoneElsesInvitation_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
+
+            mockMvc.perform(put("/api/groups/invitations/{id}", invitationId)
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
                 .andExpect(status().isNotFound());
         }
     }

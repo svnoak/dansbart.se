@@ -48,6 +48,18 @@ public class GroupMember {
     }
 
     public boolean canEditInfo() {
-        return isAccepted() && (Boolean.TRUE.equals(isAdmin) || Boolean.TRUE.equals(canEditInfo));
+        return hasPermission(canEditInfo);
+    }
+
+    public boolean canInviteMembers() {
+        return hasPermission(canInviteMembers);
+    }
+
+    public boolean canRemoveMembers() {
+        return hasPermission(canRemoveMembers);
+    }
+
+    private boolean hasPermission(Boolean flag) {
+        return isAccepted() && (Boolean.TRUE.equals(isAdmin) || Boolean.TRUE.equals(flag));
     }
 }
