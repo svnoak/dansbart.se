@@ -16,7 +16,7 @@ export interface UseStyleVoteResult {
   mainCategories: string[];
   subStylesFor: (main: string) => string[];
   isSubmitting: boolean;
-  submit: (style: string, tempoCorrection: string) => Promise<StyleVoteSubmitResult>;
+  submit: (style: string, tempoCorrection?: string) => Promise<StyleVoteSubmitResult>;
 }
 
 /** Fetches the style tree and submits style/tempo votes for a track. */
@@ -44,7 +44,7 @@ export function useStyleVote(
   const subStylesFor = useCallback((main: string) => styleTree[main] ?? [], [styleTree]);
 
   const submit = useCallback(
-    async (style: string, tempoCorrection: string): Promise<StyleVoteSubmitResult> => {
+    async (style: string, tempoCorrection?: string): Promise<StyleVoteSubmitResult> => {
       if (!trackId) return { success: false, styleJustConfirmed: false };
       setIsSubmitting(true);
       try {

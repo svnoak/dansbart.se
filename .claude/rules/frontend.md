@@ -28,7 +28,9 @@ Many users are older and non-technical. Apply these rules to each component you 
 - Use at least 14px text for body text and controls. Remove `text-[9px]`, `text-[10px]`, and `text-[11px]`.
 - Do not make text smaller on larger screens.
 - Make tap targets at least 44x44px.
-- Give every action a labelled control with a verb. An icon, a colour, a badge, or a border style alone must not carry an action.
+- Give every control a strong clickability cue: a button shape and a visible icon or word.
+- Use a visible word when the action is new or has no widely known icon.
+- Give every control an accessible name with a verb.
 - Give each control one behaviour in all states.
 - Show every status with a word. An icon or a colour alone is not sufficient.
 - Do not remove content on a timer.
