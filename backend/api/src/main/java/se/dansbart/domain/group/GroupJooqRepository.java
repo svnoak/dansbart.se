@@ -1,7 +1,6 @@
 package se.dansbart.domain.group;
 
 import org.jooq.DSLContext;
-import org.jooq.Field;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
@@ -9,8 +8,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.jooq.impl.DSL.field;
-import static org.jooq.impl.DSL.count;
 import static se.dansbart.jooq.Tables.GROUP_MEMBERS;
 import static se.dansbart.jooq.Tables.GROUPS;
 
@@ -32,33 +29,21 @@ public class GroupJooqRepository {
         return dsl.selectFrom(GROUPS).where(GROUPS.ID.eq(groupId)).forUpdate().fetchOptional(this::toGroup);
     }
 
-    public List<GroupWithMemberCount> findPublicGroups() {
-        return dsl.select(GROUPS.fields())
-            .select(memberCountField())
-            .from(GROUPS)
+    public List<Group> findPublicGroups() {
+        return dsl.selectFrom(GROUPS)
             .where(GROUPS.IS_PUBLIC.isTrue())
             .orderBy(GROUPS.NAME.asc())
-            .fetch(this::toGroupWithMemberCount);
+            .fetch(this::toGroup);
     }
 
-    public List<GroupWithMemberCount> findByMemberUserId(UUID userId) {
+    public List<Group> findByMemberUserId(UUID userId) {
         return dsl.select(GROUPS.fields())
-            .select(memberCountField())
             .from(GROUPS)
             .join(GROUP_MEMBERS).on(GROUP_MEMBERS.GROUP_ID.eq(GROUPS.ID))
             .where(GROUP_MEMBERS.USER_ID.eq(userId))
             .and(GROUP_MEMBERS.STATUS.eq("accepted"))
             .orderBy(GROUPS.NAME.asc())
-            .fetch(this::toGroupWithMemberCount);
-    }
-
-    private Field<Integer> memberCountField() {
-        return field(
-            dsl.select(count())
-                .from(GROUP_MEMBERS)
-                .where(GROUP_MEMBERS.GROUP_ID.eq(GROUPS.ID))
-                .and(GROUP_MEMBERS.STATUS.eq("accepted"))
-        ).as("member_count");
+            .fetch(this::toGroup);
     }
 
     public Group insert(Group group) {
@@ -96,10 +81,4 @@ public class GroupJooqRepository {
             .updatedAt(r.get(GROUPS.UPDATED_AT))
             .build();
     }
-
-    private GroupWithMemberCount toGroupWithMemberCount(Record r) {
-        return new GroupWithMemberCount(toGroup(r), r.get("member_count", Integer.class));
-    }
-
-    public record GroupWithMemberCount(Group group, int memberCount) {}
 }
