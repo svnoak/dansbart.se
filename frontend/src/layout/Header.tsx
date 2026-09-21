@@ -29,7 +29,7 @@ function UserMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Användarmeny"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:opacity-90 transition-opacity"
       >
         {initial}
       </button>
@@ -118,7 +118,7 @@ export function Header({
                 <button
                   type="button"
                   onClick={login}
-                  className="rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                  className="rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90 transition-opacity"
                 >
                   Logga in
                 </button>

@@ -274,7 +274,7 @@ export function AdminSuggestionsPage() {
             onClick={() => updateParam('status', s)}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               status === s
-                ? 'bg-[rgb(var(--color-accent))] text-white'
+                ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
                 : 'bg-[rgb(var(--color-border))]/30 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
             }`}
           >

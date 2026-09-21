@@ -127,7 +127,7 @@ export function PlayerControls({
                 ? 'Pausa'
                 : 'Spela'
           }
-          className={`rounded-full shrink-0 flex items-center justify-center shadow-lg transition-all active:scale-95 w-14 h-14 text-white ${
+          className={`rounded-full shrink-0 flex items-center justify-center shadow-lg transition-all active:scale-95 w-14 h-14 text-[rgb(var(--color-accent-foreground))] ${
             controlsDisabled
               ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
               : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
@@ -301,7 +301,7 @@ export function PlayerControls({
                 ? 'Pause'
                 : 'Play'
           }
-          className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square text-white ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
+          className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square text-[rgb(var(--color-accent-foreground))] ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
             controlsDisabled
               ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
               : 'bg-[rgb(var(--color-accent))] hover:opacity-90'

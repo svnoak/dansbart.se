@@ -292,7 +292,7 @@ export function PlaylistSettingsPage() {
                   <button
                     type="button"
                     onClick={handleCopyLink}
-                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90"
                   >
                     Kopiera
                   </button>
@@ -313,7 +313,7 @@ export function PlaylistSettingsPage() {
                 <button
                   type="button"
                   onClick={handleGenerateToken}
-                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90"
                 >
                   Skapa delningslänk
                 </button>
@@ -456,7 +456,7 @@ export function PlaylistSettingsPage() {
             <button
               type="submit"
               disabled={inviting || !inviteSelected}
-              className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-[rgb(var(--color-accent-foreground))] disabled:opacity-50"
             >
               Bjud in
             </button>

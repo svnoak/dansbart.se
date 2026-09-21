@@ -105,7 +105,7 @@ export function PlaylistsPage() {
           <button
             type="button"
             onClick={() => setShowForm((s) => !s)}
-            className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90"
           >
             <PlusIcon className="h-4 w-4" aria-hidden />
             Ny spellista
@@ -126,7 +126,7 @@ export function PlaylistsPage() {
           <button
             type="submit"
             disabled={creating || !newName.trim()}
-            className="rounded-lg bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-lg bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-medium text-[rgb(var(--color-accent-foreground))] disabled:opacity-50"
           >
             Skapa
           </button>
@@ -176,7 +176,7 @@ export function PlaylistsPage() {
                     type="button"
                     disabled={respondingId === inv.id}
                     onClick={() => handleRespond(inv.id!, true)}
-                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 hover:opacity-90"
+                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-[rgb(var(--color-accent-foreground))] disabled:opacity-50 hover:opacity-90"
                   >
                     Acceptera
                   </button>
@@ -203,7 +203,7 @@ export function PlaylistsPage() {
           </p>
           <Link
             to="/login"
-            className="mt-1 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className="mt-1 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90"
           >
             Logga in
           </Link>

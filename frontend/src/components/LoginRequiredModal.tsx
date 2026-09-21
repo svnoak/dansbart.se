@@ -34,7 +34,7 @@ export function LoginRequiredModal({ open, onClose, message }: LoginRequiredModa
           <Link
             to="/login"
             onClick={onClose}
-            className="flex-1 rounded-lg bg-[rgb(var(--color-accent))] px-4 py-2 text-center text-sm font-medium text-white hover:opacity-90"
+            className="flex-1 rounded-lg bg-[rgb(var(--color-accent))] px-4 py-2 text-center text-sm font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90"
           >
             Logga in
           </Link>

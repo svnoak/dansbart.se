@@ -273,7 +273,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setView('menu')} className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">Tillbaka</button>
               <button type="button" onClick={() => setView('fix_main')} className="rounded bg-[rgb(var(--color-border))] px-4 py-2 text-sm font-bold text-[rgb(var(--color-text))]">Nej, r{'\u00e4'}tta</button>
-              <button type="button" onClick={() => handleSubmitStyleTempo()} disabled={isSubmitting} className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Ja, st{'\u00e4'}mmer</button>
+              <button type="button" onClick={() => handleSubmitStyleTempo()} disabled={isSubmitting} className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-[rgb(var(--color-accent-foreground))] disabled:opacity-50">Ja, st{'\u00e4'}mmer</button>
             </div>
           </div>
         );
@@ -309,7 +309,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                   setCorrectionStyle(track.subStyle ?? track.danceStyle ?? '');
                   setView('ask_tempo');
                 }}
-                className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-white"
+                className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-[rgb(var(--color-accent-foreground))]"
               >
                 Ja
               </button>
@@ -485,7 +485,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 type="button"
                 onClick={() => handleSubmitStyleTempo('half')}
                 disabled={isSubmitting}
-                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-white disabled:opacity-50"
+                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-[rgb(var(--color-accent-foreground))] disabled:opacity-50"
               >
                 Den {'\u00e4'}r<br />l{'\u00e5'}ngsammare
               </button>
@@ -501,7 +501,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 type="button"
                 onClick={() => handleSubmitStyleTempo('double')}
                 disabled={isSubmitting}
-                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-white disabled:opacity-50"
+                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-[rgb(var(--color-accent-foreground))] disabled:opacity-50"
               >
                 Den {'\u00e4'}r<br />snabbare
               </button>

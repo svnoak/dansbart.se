@@ -43,7 +43,7 @@ function NavLink({
       <span className="flex-1">{children}</span>
       {isNew && <Pill>Ny</Pill>}
       {badge != null && badge > 0 && (
-        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1 text-[10px] font-bold text-white">
+        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1 text-[10px] font-bold text-[rgb(var(--color-accent-foreground))]">
           {badge}
         </span>
       )}

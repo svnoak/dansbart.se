@@ -154,7 +154,7 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
                 <button
                   type="submit"
                   disabled={creating || !newName.trim()}
-                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-[rgb(var(--color-accent-foreground))] disabled:opacity-50"
                 >
                   Skapa
                 </button>

@@ -444,7 +444,7 @@ export function PlaylistPage() {
               <button
                 type="submit"
                 disabled={!nameValue.trim()}
-                className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-[rgb(var(--color-accent-foreground))] disabled:opacity-50"
               >
                 Spara
               </button>
@@ -649,7 +649,7 @@ export function PlaylistPage() {
             <button
               type="button"
               onClick={handlePlayAll}
-              className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90"
             >
               <PlayIcon className="h-4 w-4" aria-hidden />
               Spela alla
@@ -677,7 +677,7 @@ export function PlaylistPage() {
                 onClick={() => setSort(key)}
                 className={`px-3 py-1.5 transition-colors ${
                   sort === key
-                    ? 'bg-[rgb(var(--color-accent))] text-white'
+                    ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
                     : 'text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]'
                 }`}
               >

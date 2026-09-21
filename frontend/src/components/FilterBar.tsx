@@ -405,7 +405,7 @@ export function FilterBar({
             onClick={() => setFilters({ vocals: value, offset: 0 })}
             className={`px-3 py-1.5 text-sm font-medium transition-colors border-l first:border-l-0 border-[rgb(var(--color-border))] ${
               filters.vocals === value
-                ? 'bg-[rgb(var(--color-accent))] text-white'
+                ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
                 : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/30'
             }`}
             aria-pressed={filters.vocals === value}
@@ -628,7 +628,7 @@ export function FilterBar({
           </span>
           <span className="flex items-center gap-2">
             {activeFilterCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-xs font-bold text-white">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-xs font-bold text-[rgb(var(--color-accent-foreground))]">
                 {activeFilterCount}
               </span>
             )}

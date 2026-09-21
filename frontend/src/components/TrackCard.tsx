@@ -63,7 +63,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
       <button
         type="button"
         onClick={() => play(track, contextTracks)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))] hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
         aria-label={isCurrent && isPlaying ? 'Pausa' : 'Spela'}
       >
         {isCurrent && isPlaying ? (

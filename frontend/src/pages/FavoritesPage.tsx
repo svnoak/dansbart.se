@@ -75,7 +75,7 @@ export function FavoritesPage() {
         </p>
         <Link
           to="/login"
-          className="mt-2 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+          className="mt-2 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-[rgb(var(--color-accent-foreground))] hover:opacity-90"
         >
           Logga in
         </Link>
@@ -119,7 +119,7 @@ export function FavoritesPage() {
                 onClick={() => setSort(key)}
                 className={`px-3 py-1.5 transition-colors ${
                   sort === key
-                    ? 'bg-[rgb(var(--color-accent))] text-white'
+                    ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
                     : 'text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]'
                 }`}
               >

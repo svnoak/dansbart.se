@@ -86,7 +86,7 @@ export function CookieBanner() {
           <button
             type="button"
             onClick={handleAccept}
-            className="flex-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-6 py-3 font-semibold text-white transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
+            className="flex-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-6 py-3 font-semibold text-[rgb(var(--color-accent-foreground))] transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
             aria-label="Acceptera cookies"
           >
             Acceptera
