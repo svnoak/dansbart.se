@@ -52,14 +52,15 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                 .andExpect(jsonPath("$.isPublic").value(true))
                 .andExpect(jsonPath("$.members", hasSize(1)))
                 .andExpect(jsonPath("$.members[0].isAdmin").value(true))
-                .andExpect(jsonPath("$.members[0].userId").value(admin.getId().toString()));
+                .andExpect(jsonPath("$.members[0].userId").value(admin.getId().toString()))
+                .andExpect(jsonPath("$.memberCount").value(1));
 
             mockMvc.perform(get("/api/groups")
                     .with(jwt.userToken(admin.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].name").value("Folkdanslaget"))
-                .andExpect(jsonPath("$[0].memberCount").value(1));
+                .andExpect(jsonPath("$[0].memberCount").doesNotExist());
         }
 
         @Test
@@ -132,6 +133,80 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                 .andExpect(jsonPath("$.name").value("Öppen grupp"))
                 .andExpect(jsonPath("$.members").doesNotExist());
         }
+
+        @Test
+        @DisplayName("admin should see memberCount")
+        void getGroup_memberCount_visibleToAdmin() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberCount").value(2));
+        }
+
+        @Test
+        @DisplayName("member with canInviteMembers should see memberCount")
+        void getGroup_memberCount_visibleToMemberWhoCanInvite() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, true, false);
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberCount").value(2));
+        }
+
+        @Test
+        @DisplayName("plain member should not see memberCount")
+        void getGroup_memberCount_hiddenFromPlainMember() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberCount").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("outsider on public group should not see memberCount")
+        void getGroup_memberCount_hiddenFromOutsider() throws Exception {
+            Group group = testData.group().withName("Grupp").isPublic().build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(outsider.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberCount").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("anonymous visitor can view a public group")
+        void getGroup_withoutAuth_publicGroup_shouldReturn200() throws Exception {
+            Group group = testData.group().withName("Oppen grupp").isPublic().build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Oppen grupp"))
+                .andExpect(jsonPath("$.members").doesNotExist())
+                .andExpect(jsonPath("$.memberCount").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("anonymous visitor should get 404 for a private group")
+        void getGroup_withoutAuth_privateGroup_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Privat grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(get("/api/groups/{id}", group.getId()))
+                .andExpect(status().isNotFound());
+        }
     }
 
     @Nested
@@ -148,6 +223,17 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].name").value("Öppen grupp"));
+        }
+
+        @Test
+        @DisplayName("should not include memberCount in public group list")
+        void getPublicGroups_shouldNotIncludeMemberCount() throws Exception {
+            testData.group().withName("Öppen grupp").isPublic().build();
+
+            mockMvc.perform(get("/api/groups/public"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].memberCount").doesNotExist());
         }
     }
 
@@ -169,7 +255,8 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                 .andExpect(jsonPath("$.name").value("Nytt namn"))
                 .andExpect(jsonPath("$.isPublic").value(true))
                 .andExpect(jsonPath("$.members", notNullValue()))
-                .andExpect(jsonPath("$.members", hasSize(greaterThan(0))));
+                .andExpect(jsonPath("$.members", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$.memberCount").value(1));
         }
 
         @Test
@@ -893,6 +980,30 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                     .with(jwt.userToken(member.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.playlists[0].trackCount").value(2));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/groups")
+    class GetMyGroups {
+
+        @Test
+        @DisplayName("should return 401 without authentication")
+        void getMyGroups_withoutAuth_shouldReturn401() throws Exception {
+            mockMvc.perform(get("/api/groups"))
+                .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/groups/invitations")
+    class GetInvitations {
+
+        @Test
+        @DisplayName("should return 401 without authentication")
+        void getInvitations_withoutAuth_shouldReturn401() throws Exception {
+            mockMvc.perform(get("/api/groups/invitations"))
+                .andExpect(status().isUnauthorized());
         }
     }
 }

@@ -58,7 +58,7 @@ public class GroupService {
             .build();
         groupMemberJooqRepository.save(creator);
 
-        return toGroupDto(group, true, true);
+        return toGroupDto(group, true, true, Optional.of(creator));
     }
 
     @Transactional
@@ -83,7 +83,7 @@ public class GroupService {
         }
         boolean includeMembers = viewerMembership.isPresent();
         boolean includePending = viewerMembership.map(GroupMember::canInviteMembers).orElse(false);
-        return Optional.of(toGroupDto(group.get(), includeMembers, includePending));
+        return Optional.of(toGroupDto(group.get(), includeMembers, includePending, viewerMembership));
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +111,7 @@ public class GroupService {
         if (trimmedName != null) group.setName(trimmedName);
         if (aboutUs != null) group.setAboutUs(aboutUs.isEmpty() ? null : aboutUs);
         if (isPublic != null) group.setIsPublic(isPublic);
-        return toGroupDto(groupJooqRepository.update(group), true, membership.canInviteMembers());
+        return toGroupDto(groupJooqRepository.update(group), true, membership.canInviteMembers(), Optional.of(membership));
     }
 
     @Transactional
@@ -267,13 +267,11 @@ public class GroupService {
         return Boolean.TRUE.equals(group.getIsPublic()) || viewerMembership.isPresent();
     }
 
-    private GroupSummaryDto toSummaryDto(GroupJooqRepository.GroupWithMemberCount groupWithMemberCount) {
-        Group group = groupWithMemberCount.group();
+    private GroupSummaryDto toSummaryDto(Group group) {
         return GroupSummaryDto.builder()
             .id(group.getId())
             .name(group.getName())
             .isPublic(group.getIsPublic())
-            .memberCount(groupWithMemberCount.memberCount())
             .build();
     }
 
@@ -296,7 +294,7 @@ public class GroupService {
             .build();
     }
 
-    private GroupDto toGroupDto(Group group, boolean includeMembers, boolean includePending) {
+    private GroupDto toGroupDto(Group group, boolean includeMembers, boolean includePending, Optional<GroupMember> viewerMembership) {
         List<GroupMemberDto> members = includeMembers
             ? groupMemberJooqRepository.findByGroupId(group.getId()).stream()
                 .filter(m -> includePending || m.isAccepted())
@@ -312,6 +310,13 @@ public class GroupService {
                 .trackCount(pwc.trackCount())
                 .build())
             .collect(Collectors.toList());
+        boolean canOpenSettings = viewerMembership
+            .map(m -> m.canEditInfo() || m.canInviteMembers() || m.canRemoveMembers())
+            .orElse(false);
+        Integer memberCount = null;
+        if (canOpenSettings) {
+            memberCount = (int) members.stream().filter(m -> "accepted".equals(m.getStatus())).count();
+        }
         return GroupDto.builder()
             .id(group.getId())
             .name(group.getName())
@@ -321,6 +326,7 @@ public class GroupService {
             .updatedAt(group.getUpdatedAt())
             .members(members)
             .playlists(playlists)
+            .memberCount(memberCount)
             .build();
     }
 }

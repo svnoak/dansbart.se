@@ -36,6 +36,8 @@ public class TestSecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/groups/public").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/groups/invitations").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/groups/*").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/playlists/**").authenticated()
