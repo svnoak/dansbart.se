@@ -7,6 +7,7 @@ import { StyleVotePanel } from './StyleVotePanel';
 
 const getStyleTree = vi.fn();
 const submitFeedback = vi.fn();
+const useAuth = vi.fn();
 
 vi.mock('@/api/generated/styles/styles', () => ({
   getStyleTree: () => getStyleTree(),
@@ -14,6 +15,10 @@ vi.mock('@/api/generated/styles/styles', () => ({
 
 vi.mock('@/api/generated/tracks/tracks', () => ({
   submitFeedback: (...args: unknown[]) => submitFeedback(...args),
+}));
+
+vi.mock('@/auth/useAuth', () => ({
+  useAuth: () => useAuth(),
 }));
 
 const mockStyleTree = [
@@ -31,6 +36,8 @@ describe('StyleVotePanel', () => {
     getStyleTree.mockResolvedValue(mockStyleTree);
     submitFeedback.mockReset();
     submitFeedback.mockResolvedValue({ styleJustConfirmed: false });
+    useAuth.mockReset();
+    useAuth.mockReturnValue({ isAuthenticated: false, isLoading: false, user: null, login: vi.fn(), logout: vi.fn() });
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -200,5 +207,60 @@ describe('StyleVotePanel', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
     expect(onVoted).toHaveBeenCalledWith('Halling', confirmed);
+  });
+
+  it("says the style is confirmed when the vote confirms it", async () => {
+    submitFeedback.mockResolvedValue({ styleJustConfirmed: true });
+    await renderPanel({ currentStyle: null });
+
+    const hallingButton = clickButton('Halling');
+    await act(async () => {
+      hallingButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Tack! Nu är stilen bekräftad.');
+  });
+
+  it('invites an anonymous voter to sign in when the vote does not confirm the style', async () => {
+    submitFeedback.mockResolvedValue({ styleJustConfirmed: false });
+    await renderPanel({ currentStyle: null });
+
+    const hallingButton = clickButton('Halling');
+    await act(async () => {
+      hallingButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const text = document.body.textContent;
+    expect(text).toContain('Tack! Din röst är sparad.');
+    expect(text).not.toContain('Stilen bekräftas');
+    expect(text).toContain('Med ett konto räcker din röst för att bekräfta en stil.');
+
+    const loginButton = clickButton('Logga in eller skapa konto');
+    const mockLogin = useAuth().login;
+    await act(async () => {
+      loginButton?.click();
+    });
+    expect(mockLogin).toHaveBeenCalled();
+  });
+
+  it('shows only the thank-you text to a signed-in voter when the vote does not confirm the style', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: true, isLoading: false, user: null, login: vi.fn(), logout: vi.fn() });
+    submitFeedback.mockResolvedValue({ styleJustConfirmed: false });
+    await renderPanel({ currentStyle: null });
+
+    const hallingButton = clickButton('Halling');
+    await act(async () => {
+      hallingButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const text = document.body.textContent;
+    expect(text).toContain('Tack! Din röst är sparad.');
+    expect(text).not.toContain('Med ett konto');
+    expect(
+      Array.from(document.body.querySelectorAll('button')).some((b) => b.textContent?.includes('Logga in'))
+    ).toBe(false);
   });
 });
