@@ -370,11 +370,11 @@ export function AdminLibraryPage() {
       header: 'Titel',
       sortKey: 'title',
       render: (t) => (
-        <div className="min-w-[180px]">
-          <p className="font-medium text-[rgb(var(--color-text))] truncate max-w-[260px]">
+        <div className="min-w-45">
+          <p className="font-medium text-[rgb(var(--color-text))] truncate max-w-65">
             {t.title}
           </p>
-          <p className="text-xs text-[rgb(var(--color-text-muted))] truncate max-w-[260px]">
+          <p className="text-xs text-[rgb(var(--color-text-muted))] truncate max-w-65">
             {t.artists?.map((a) => a.name).join(', ') || '-'}
           </p>
         </div>
@@ -384,7 +384,7 @@ export function AdminLibraryPage() {
       key: 'album',
       header: 'Album',
       render: (t) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))] truncate max-w-[160px] block">
+        <span className="text-xs text-[rgb(var(--color-text-muted))] truncate max-w-40 block">
           {t.album?.title || '-'}
         </span>
       ),
@@ -512,7 +512,7 @@ export function AdminLibraryPage() {
       </div>
 
       <FilterBar>
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-50">
           <TextInput
             type="search"
             placeholder="Sök titel, artist..."
@@ -523,7 +523,7 @@ export function AdminLibraryPage() {
         <Select
           value={status}
           onChange={(e) => updateParam('status', e.target.value)}
-          className="w-auto min-w-[140px]"
+          className="w-auto min-w-35"
         >
           <option value="">Alla statusar</option>
           <option value="PENDING">PENDING</option>
@@ -535,7 +535,7 @@ export function AdminLibraryPage() {
         <Select
           value={flagged ?? ''}
           onChange={(e) => updateParam('flagged', e.target.value)}
-          className="w-auto min-w-[120px]"
+          className="w-auto min-w-30"
         >
           <option value="">Alla</option>
           <option value="true">Flaggade</option>

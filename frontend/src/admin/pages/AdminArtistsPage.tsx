@@ -148,7 +148,7 @@ export function AdminArtistsPage() {
       <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Artister</h1>
 
       <FilterBar>
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-50">
           <TextInput
             type="search"
             placeholder="Sök artist..."
