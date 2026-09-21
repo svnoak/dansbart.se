@@ -32,11 +32,11 @@ export function TrackInfo({
         <div className="font-bold truncate text-sm md:text-base text-[rgb(var(--color-text))]">
           {currentTrack?.title ?? 'Välj en låt att spela'}
         </div>
-        <div className="text-[10px] text-[rgb(var(--color-text-muted))] font-mono md:hidden">
+        <div className="text-xs text-[rgb(var(--color-text-muted))] font-mono md:hidden">
           {formatDurationMs(Math.round(playbackPositionMs))} / {durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}
         </div>
         {activeSource === 'youtube' && (
-          <div className="hidden md:block text-[10px] text-[rgb(var(--color-text-muted))] font-mono">
+          <div className="hidden md:block text-xs text-[rgb(var(--color-text-muted))] font-mono">
             {formatDurationMs(Math.round(playbackPositionMs))} / {durationMs > 0 ? formatDurationMs(durationMs) : '0:00'}
           </div>
         )}
@@ -48,7 +48,7 @@ export function TrackInfo({
                 e.stopPropagation();
                 onToggleStructureMode();
               }}
-              className={`text-[9px] font-bold uppercase border px-1.5 rounded transition-colors ${
+              className={`text-sm font-bold uppercase border px-1.5 rounded transition-colors ${
                 structureMode !== 'none'
                   ? 'bg-[rgb(var(--color-accent))]/10 text-[rgb(var(--color-accent))] border-[rgb(var(--color-accent))]/30'
                   : 'bg-transparent text-[rgb(var(--color-text-muted))] border-[rgb(var(--color-border))]'

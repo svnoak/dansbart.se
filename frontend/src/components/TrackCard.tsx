@@ -91,7 +91,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   </button>
                   {hasSubStyle && (
                     <>
-                      <span className="text-[10px] font-bold text-[rgb(var(--color-text-muted))]">›</span>
+                      <span className="text-xs font-bold text-[rgb(var(--color-text-muted))]">›</span>
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
@@ -117,7 +117,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   </button>
                   {hasSubStyle && (
                     <>
-                      <span className="text-[10px] font-bold text-[rgb(var(--color-text-muted))]">›</span>
+                      <span className="text-xs font-bold text-[rgb(var(--color-text-muted))]">›</span>
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
@@ -143,7 +143,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   </button>
                   {hasSubStyle && (
                     <>
-                      <span className="text-[10px] font-bold text-[rgb(var(--color-text-muted))]">›</span>
+                      <span className="text-xs font-bold text-[rgb(var(--color-text-muted))]">›</span>
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}

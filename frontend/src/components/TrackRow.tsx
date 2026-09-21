@@ -78,7 +78,7 @@ export function TrackRow({
               onApplyStyleFilter={onApplyStyleFilter}
             />
             {tempo && (
-              <span className="text-[11px] font-bold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+              <span className="text-xs font-bold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
                 {tempo}
               </span>
             )}

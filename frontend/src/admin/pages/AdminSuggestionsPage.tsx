@@ -363,7 +363,7 @@ function StatusBadge({ status }: { status: string }) {
     rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${colors[status] ?? ''}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${colors[status] ?? ''}`}>
       {statusLabel[status] ?? status}
     </span>
   );

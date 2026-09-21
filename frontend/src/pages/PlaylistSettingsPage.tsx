@@ -340,7 +340,7 @@ export function PlaylistSettingsPage() {
                 {playlist.owner?.username}
               </p>
             </div>
-            <span className="rounded-full bg-[rgb(var(--color-accent))]/10 px-2 py-0.5 text-[10px] font-medium text-[rgb(var(--color-accent))]">
+            <span className="rounded-full bg-[rgb(var(--color-accent))]/10 px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-accent))]">
               Ägare
             </span>
           </div>
@@ -354,7 +354,7 @@ export function PlaylistSettingsPage() {
                 <p className="text-xs text-[rgb(var(--color-text-muted))]">
                   {collab.username}
                   {collab.status === 'pending' && (
-                    <span className="ml-1.5 rounded-full bg-[rgb(var(--color-border))] px-1.5 py-0.5 text-[10px]">
+                    <span className="ml-1.5 rounded-full bg-[rgb(var(--color-border))] px-1.5 py-0.5 text-xs">
                       {statusLabel(collab.status)}
                     </span>
                   )}

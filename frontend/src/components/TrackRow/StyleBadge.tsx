@@ -39,11 +39,11 @@ export function StyleBadge({
   if (!hasValidStyle) {
     badgeStyle = {};
     badgeClasses =
-      'rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[rgb(var(--color-text-muted))]';
+      'rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-[rgb(var(--color-text-muted))]';
   } else if (isVerified || isAiHigh) {
     badgeStyle = { backgroundColor: bgColor, color: textColor };
     badgeClasses =
-      'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide transition-opacity hover:opacity-80';
+      'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide transition-opacity hover:opacity-80';
   } else {
     // AI Low (<70%) - 1px dashed border, white background
     badgeStyle = {
@@ -51,7 +51,7 @@ export function StyleBadge({
       color: textColor,
     };
     badgeClasses =
-      'inline-flex items-center gap-1 rounded-full border border-dashed bg-[rgb(var(--color-bg-elevated))] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide transition-opacity hover:opacity-80';
+      'inline-flex items-center gap-1 rounded-full border border-dashed bg-[rgb(var(--color-bg-elevated))] px-2 py-0.5 text-xs font-bold uppercase tracking-wide transition-opacity hover:opacity-80';
   }
 
   const isClickable = !!onApplyStyleFilter && hasValidStyle;
