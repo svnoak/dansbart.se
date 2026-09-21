@@ -9,8 +9,10 @@ import { getStyleColor } from '@/styles/danceStyleColors';
 
 const getStyleTree = vi.fn();
 const submitFeedback = vi.fn();
+const useAuth = vi.fn();
 vi.mock('@/api/generated/styles/styles', () => ({ getStyleTree: () => getStyleTree() }));
 vi.mock('@/api/generated/tracks/tracks', () => ({ submitFeedback: (...a: unknown[]) => submitFeedback(...a) }));
+vi.mock('@/auth/useAuth', () => ({ useAuth: () => useAuth() }));
 const mockStyleTree = [{ name: 'Polska', subStyles: ['Värmländska', 'Uppländska'] }, { name: 'Halling', subStyles: [] }, { name: 'Springar', subStyles: ['Långa springar', 'Korta springar'] }];
 
 describe('StyleBadge', () => {
@@ -20,6 +22,7 @@ describe('StyleBadge', () => {
   beforeEach(() => {
     getStyleTree.mockReset().mockResolvedValue(mockStyleTree);
     submitFeedback.mockReset().mockResolvedValue({ styleJustConfirmed: false });
+    useAuth.mockReset().mockReturnValue({ isAuthenticated: false, isLoading: false, user: null, login: vi.fn(), logout: vi.fn() });
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);

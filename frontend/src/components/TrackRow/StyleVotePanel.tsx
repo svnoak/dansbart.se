@@ -5,6 +5,7 @@ import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
 import { StylePicker } from '@/components/StylePicker';
 import { useStyleVote } from '@/hooks/useStyleVote';
+import { useAuth } from '@/auth/useAuth';
 
 type Step = 'main' | 'sub' | 'success';
 
@@ -32,9 +33,11 @@ function StyleVoteDialog({
   const [step, setStep] = useState<Step>('main');
   const [selectedMain, setSelectedMain] = useState('');
   const [failed, setFailed] = useState(false);
+  const [styleJustConfirmed, setStyleJustConfirmed] = useState(false);
   const titleId = useId();
 
   const styleVote = useStyleVote(trackId, true);
+  const { isAuthenticated, login } = useAuth();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -45,11 +48,12 @@ function StyleVoteDialog({
   }, [onClose]);
 
   async function handleSelect(style: string) {
-    const { success, styleJustConfirmed } = await styleVote.submit(style);
+    const { success, styleJustConfirmed: confirmed } = await styleVote.submit(style);
     setFailed(!success);
     if (success) {
+      setStyleJustConfirmed(confirmed);
       setStep('success');
-      onVoted?.(style, styleJustConfirmed);
+      onVoted?.(style, confirmed);
     }
   }
 
@@ -93,7 +97,25 @@ function StyleVoteDialog({
           {currentStyle ? `Nuvarande dansstil: ${currentStyle}` : 'Dansstil saknas'}
         </p>
 
-        {step === 'success' && <p className="text-sm text-[rgb(var(--color-text))]">Tack! Din röst är sparad.</p>}
+        {step === 'success' && (
+          <div className="text-sm text-[rgb(var(--color-text))]">
+            {styleJustConfirmed ? (
+              <p>Tack! Nu är stilen bekräftad.</p>
+            ) : (
+              <>
+                <p>Tack! Din röst är sparad.</p>
+                {!isAuthenticated && (
+                  <>
+                    <p>Inloggade användare kan bekräfta stilar med enbart en röst</p>
+                    <Button variant="secondary" onClick={login}>
+                      Logga in eller skapa konto
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
         {failed && (
           <p role="alert" className="mb-3 text-sm text-red-600">
             Det gick inte att spara din röst. Försök igen.
