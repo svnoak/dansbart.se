@@ -138,7 +138,7 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-5 space-y-4 max-w-lg">
+    <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-5 space-y-4 max-w-lg">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Importera danser</h2>
         <button
@@ -389,7 +389,7 @@ function DancesTab() {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  const inputClass = 'w-full rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-2 py-1 text-sm focus:outline-none';
+  const inputClass = 'w-full rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1 text-sm focus:outline-none';
 
   return (
     <div className="space-y-4">
@@ -397,7 +397,7 @@ function DancesTab() {
         type="text"
         placeholder="Sök dans..."
         onChange={(e) => handleSearch(e.target.value)}
-        className="w-full max-w-sm rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-4 py-2 text-sm focus:outline-none"
+        className="w-full max-w-sm rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm focus:outline-none"
       />
       <p className="text-sm text-[rgb(var(--color-text-muted))]">{total} danser</p>
 
@@ -636,7 +636,7 @@ function DanceDetailPanel({
           placeholder="Sök låtar..."
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
-          className="w-full max-w-sm rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-3 py-1.5 text-sm focus:outline-none"
+          className="w-full max-w-sm rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1.5 text-sm focus:outline-none"
         />
         {searching && (
           <p className="text-xs text-[rgb(var(--color-text-muted))]">Söker...</p>
