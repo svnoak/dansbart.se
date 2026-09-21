@@ -29,11 +29,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true },
+      '/api': { target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true },
       // DiscourseConnect flow: proxy /sso/* to Spring so the backend can handle
       // the SSO initiation and callback. The React /login page is served by Vite directly.
-      '/sso': { target: 'http://localhost:8000', changeOrigin: true },
-      '/logout': { target: 'http://localhost:8000', changeOrigin: true },
+      '/sso': { target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true },
+      '/logout': { target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true },
     },
   },
   test: {

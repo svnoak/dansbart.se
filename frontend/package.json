@@ -16,6 +16,7 @@
     "api:update": "npm run api:export && npm run api:generate"
   },
   "dependencies": {
+    "@fontsource-variable/open-sans": "^5.3.0",
     "@grafana/faro-react": "^2.4.0",
     "@grafana/faro-web-sdk": "^2.4.0",
     "@grafana/faro-web-tracing": "^2.4.0",
