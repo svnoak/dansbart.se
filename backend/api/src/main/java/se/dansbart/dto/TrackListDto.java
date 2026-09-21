@@ -28,6 +28,7 @@ public class TrackListDto {
     private Integer effectiveBpm;
     private String tempoCategory;
     private Float confidence;
+    private String source;
     private Boolean hasVocals;
 
     // Primary artist (flattened)

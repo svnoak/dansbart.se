@@ -121,6 +121,11 @@ public class TrackDanceStyles extends TableImpl<Record> {
      */
     public final TableField<Record, String> CLASSIFICATION_SOURCE = createField(DSL.name("classification_source"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'ml'::text"), SQLDataType.CLOB)), this, "");
 
+    /**
+     * The column <code>public.track_dance_styles.source</code>.
+     */
+    public final TableField<Record, String> SOURCE = createField(DSL.name("source"), SQLDataType.VARCHAR, this, "");
+
     private TrackDanceStyles(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

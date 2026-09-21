@@ -317,14 +317,6 @@ export function SearchPage() {
               <TrackRow
                 track={track}
                 contextTracks={tracks}
-                onApplyStyleFilter={(style) =>
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    style,
-                    subStyle: '',
-                    offset: 0,
-                  }))
-                }
               />
             </li>
           ))}

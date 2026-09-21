@@ -33,13 +33,11 @@ function tempoLabel(track: TrackListDto): string {
 interface TrackRowProps {
   track: TrackListDto;
   contextTracks?: TrackListDto[];
-  onApplyStyleFilter?: (style: string) => void;
 }
 
 export function TrackRow({
   track,
   contextTracks,
-  onApplyStyleFilter,
 }: TrackRowProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
   const { isAuthenticated } = useAuth();
@@ -72,10 +70,11 @@ export function TrackRow({
           {/* Top line: Metadata - badge + tempo */}
           <div className="flex items-center gap-1.5">
             <StyleBadge
+              trackId={track.id ?? ''}
+              trackTitle={track.title ?? 'Okänd låt'}
               danceStyle={track.danceStyle}
               confidence={track.confidence ?? 0}
               styleColor={styleColor}
-              onApplyStyleFilter={onApplyStyleFilter}
             />
             {tempo && (
               <span className="text-[11px] font-bold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">

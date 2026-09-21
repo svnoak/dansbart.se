@@ -316,7 +316,7 @@ export function AdminKeywordsPage() {
       </div>
 
       <FilterBar>
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-50">
           <TextInput
             type="search"
             placeholder="Sök nyckelord..."
@@ -328,12 +328,12 @@ export function AdminKeywordsPage() {
           placeholder="Filtrera huvudstil..."
           value={mainStyle}
           onChange={(e) => updateParam('mainStyle', e.target.value)}
-          className="w-auto min-w-[140px]"
+          className="w-auto min-w-35"
         />
         <Select
           value={isActive ?? ''}
           onChange={(e) => updateParam('isActive', e.target.value)}
-          className="w-auto min-w-[120px]"
+          className="w-auto min-w-30"
         >
           <option value="">Alla</option>
           <option value="true">Aktiva</option>

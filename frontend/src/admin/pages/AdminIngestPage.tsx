@@ -259,7 +259,7 @@ export function AdminIngestPage() {
                 </span>
                 <span className="text-[rgb(var(--color-text-muted))]">{h.time}</span>
                 <span className="text-[rgb(var(--color-text))]">{h.type}</span>
-                <span className="text-[rgb(var(--color-text-muted))] truncate max-w-[300px]">
+                <span className="text-[rgb(var(--color-text-muted))] truncate max-w-75">
                   {h.url}
                 </span>
               </div>

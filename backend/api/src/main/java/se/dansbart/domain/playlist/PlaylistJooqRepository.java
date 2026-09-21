@@ -1,6 +1,7 @@
 package se.dansbart.domain.playlist;
 
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.jooq.impl.DSL.count;
+import static org.jooq.impl.DSL.field;
 import static se.dansbart.jooq.Tables.PLAYLIST_COLLABORATORS;
 import static se.dansbart.jooq.Tables.PLAYLIST_TRACKS;
 import static se.dansbart.jooq.Tables.PLAYLISTS;
@@ -31,6 +33,26 @@ public class PlaylistJooqRepository {
 
     public List<Playlist> findByUserId(UUID userId) {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.USER_ID.eq(userId)).orderBy(PLAYLISTS.NAME.asc()).fetch(this::toPlaylist);
+    }
+
+    public List<PlaylistWithTrackCount> findByGroupIdWithTrackCount(UUID groupId, boolean includePrivate) {
+        var condition = includePrivate
+            ? PLAYLISTS.GROUP_ID.eq(groupId)
+            : PLAYLISTS.GROUP_ID.eq(groupId).and(PLAYLISTS.IS_PUBLIC.isTrue());
+        return dsl.select(PLAYLISTS.fields())
+            .select(trackCountField())
+            .from(PLAYLISTS)
+            .where(condition)
+            .orderBy(PLAYLISTS.NAME.asc())
+            .fetch(this::toPlaylistWithTrackCount);
+    }
+
+    private Field<Integer> trackCountField() {
+        return field(
+            dsl.select(count())
+                .from(PLAYLIST_TRACKS)
+                .where(PLAYLIST_TRACKS.PLAYLIST_ID.eq(PLAYLISTS.ID))
+        ).as("track_count");
     }
 
     public Optional<Playlist> findByShareToken(String shareToken) {
@@ -60,14 +82,15 @@ public class PlaylistJooqRepository {
                 .where(PLAYLIST_COLLABORATORS.PLAYLIST_ID.eq(playlistId))
                 .and(PLAYLIST_COLLABORATORS.USER_ID.eq(userId))
                 .and(PLAYLIST_COLLABORATORS.PERMISSION.eq(permission))
+                .and(PLAYLIST_COLLABORATORS.STATUS.eq("accepted"))
         );
     }
 
     public Playlist insert(Playlist playlist) {
         UUID id = playlist.getId() != null ? playlist.getId() : UUID.randomUUID();
         dsl.insertInto(PLAYLISTS)
-            .columns(PLAYLISTS.ID, PLAYLISTS.USER_ID, PLAYLISTS.NAME, PLAYLISTS.DESCRIPTION, PLAYLISTS.IS_PUBLIC, PLAYLISTS.SHARE_TOKEN, PLAYLISTS.DANCE_STYLE, PLAYLISTS.SUB_STYLE, PLAYLISTS.TEMPO_CATEGORY)
-            .values(id, playlist.getUserId(), playlist.getName(), playlist.getDescription(), playlist.getIsPublic(), playlist.getShareToken(), playlist.getDanceStyle(), playlist.getSubStyle(), playlist.getTempoCategory())
+            .columns(PLAYLISTS.ID, PLAYLISTS.USER_ID, PLAYLISTS.GROUP_ID, PLAYLISTS.NAME, PLAYLISTS.DESCRIPTION, PLAYLISTS.IS_PUBLIC, PLAYLISTS.SHARE_TOKEN, PLAYLISTS.DANCE_STYLE, PLAYLISTS.SUB_STYLE, PLAYLISTS.TEMPO_CATEGORY)
+            .values(id, playlist.getUserId(), playlist.getGroupId(), playlist.getName(), playlist.getDescription(), playlist.getIsPublic(), playlist.getShareToken(), playlist.getDanceStyle(), playlist.getSubStyle(), playlist.getTempoCategory())
             .execute();
         playlist.setId(id);
         return playlist;
@@ -106,6 +129,7 @@ public class PlaylistJooqRepository {
             .name(r.get(PLAYLISTS.NAME))
             .description(r.get(PLAYLISTS.DESCRIPTION))
             .userId(r.get(PLAYLISTS.USER_ID))
+            .groupId(r.get(PLAYLISTS.GROUP_ID))
             .isPublic(r.get(PLAYLISTS.IS_PUBLIC) != null && r.get(PLAYLISTS.IS_PUBLIC))
             .shareToken(r.get(PLAYLISTS.SHARE_TOKEN))
             .danceStyle(r.get(PLAYLISTS.DANCE_STYLE))
@@ -115,4 +139,10 @@ public class PlaylistJooqRepository {
             .updatedAt(updatedAt)
             .build();
     }
+
+    private PlaylistWithTrackCount toPlaylistWithTrackCount(Record r) {
+        return new PlaylistWithTrackCount(toPlaylist(r), r.get("track_count", Integer.class));
+    }
+
+    public record PlaylistWithTrackCount(Playlist playlist, int trackCount) {}
 }

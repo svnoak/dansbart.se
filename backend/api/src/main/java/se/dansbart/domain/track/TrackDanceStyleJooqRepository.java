@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import static org.jooq.impl.DSL.countDistinct;
 import static se.dansbart.jooq.Tables.TRACK_DANCE_STYLES;
+import static se.dansbart.jooq.Tables.TRACKS;
 
 @Repository
 public class TrackDanceStyleJooqRepository {
@@ -39,14 +40,6 @@ public class TrackDanceStyleJooqRepository {
             .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
                 .and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true)))
             .fetchOptional(this::toDanceStyle);
-    }
-
-    public void setUserConfirmed(UUID trackId, String danceStyle, boolean confirmed) {
-        dsl.update(TRACK_DANCE_STYLES)
-            .set(TRACK_DANCE_STYLES.IS_USER_CONFIRMED, confirmed)
-            .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
-                .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danceStyle)))
-            .execute();
     }
 
     /** Count of distinct tracks currently classified under a given main style — used to show
@@ -82,6 +75,7 @@ public class TrackDanceStyleJooqRepository {
                     TRACK_DANCE_STYLES.TEMPO_CATEGORY,
                     TRACK_DANCE_STYLES.BPM_MULTIPLIER,
                     TRACK_DANCE_STYLES.EFFECTIVE_BPM,
+                    TRACK_DANCE_STYLES.SOURCE,
                     TRACK_DANCE_STYLES.CONFIRMATION_COUNT,
                     TRACK_DANCE_STYLES.IS_USER_CONFIRMED
                 )
@@ -95,6 +89,7 @@ public class TrackDanceStyleJooqRepository {
                     style.getTempoCategory(),
                     style.getBpmMultiplier() != null ? style.getBpmMultiplier().doubleValue() : null,
                     style.getEffectiveBpm(),
+                    style.getSource(),
                     style.getConfirmationCount(),
                     style.getIsUserConfirmed()
                 )
@@ -109,12 +104,44 @@ public class TrackDanceStyleJooqRepository {
                 .set(TRACK_DANCE_STYLES.TEMPO_CATEGORY, style.getTempoCategory())
                 .set(TRACK_DANCE_STYLES.BPM_MULTIPLIER, style.getBpmMultiplier() != null ? style.getBpmMultiplier().doubleValue() : null)
                 .set(TRACK_DANCE_STYLES.EFFECTIVE_BPM, style.getEffectiveBpm())
+                .set(TRACK_DANCE_STYLES.SOURCE, style.getSource())
                 .set(TRACK_DANCE_STYLES.CONFIRMATION_COUNT, style.getConfirmationCount())
                 .set(TRACK_DANCE_STYLES.IS_USER_CONFIRMED, style.getIsUserConfirmed())
                 .where(TRACK_DANCE_STYLES.ID.eq(style.getId()))
                 .execute();
         }
         return style;
+    }
+
+    /** One-off backfill for rows stuck at effective_bpm=0 despite a known track tempo.
+     *  Safe to re-run — only rows still at effective_bpm=0 are touched.
+     *  @return number of rows updated */
+    public int backfillEffectiveBpm() {
+        var candidates = dsl
+            .select(TRACK_DANCE_STYLES.ID, TRACK_DANCE_STYLES.DANCE_STYLE, TRACKS.TEMPO_BPM)
+            .from(TRACK_DANCE_STYLES)
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_DANCE_STYLES.TRACK_ID))
+            .where(TRACK_DANCE_STYLES.EFFECTIVE_BPM.eq(0))
+            .and(TRACKS.TEMPO_BPM.isNotNull())
+            .and(TRACKS.TEMPO_BPM.ne(0.0))
+            .fetch();
+
+        int updated = 0;
+        for (var r : candidates) {
+            UUID id = r.get(TRACK_DANCE_STYLES.ID);
+            String style = r.get(TRACK_DANCE_STYLES.DANCE_STYLE);
+            Float rawBpm = r.get(TRACKS.TEMPO_BPM).floatValue();
+
+            BpmMultiplierResolver.Result bpm = BpmMultiplierResolver.resolve(style, rawBpm);
+
+            dsl.update(TRACK_DANCE_STYLES)
+                .set(TRACK_DANCE_STYLES.BPM_MULTIPLIER, (double) bpm.multiplier())
+                .set(TRACK_DANCE_STYLES.EFFECTIVE_BPM, bpm.effectiveBpm())
+                .where(TRACK_DANCE_STYLES.ID.eq(id))
+                .execute();
+            updated++;
+        }
+        return updated;
     }
 
     private TrackDanceStyle toDanceStyle(Record r) {
@@ -128,6 +155,7 @@ public class TrackDanceStyleJooqRepository {
         s.setTempoCategory(r.get(TRACK_DANCE_STYLES.TEMPO_CATEGORY));
         s.setBpmMultiplier(r.get(TRACK_DANCE_STYLES.BPM_MULTIPLIER) != null ? r.get(TRACK_DANCE_STYLES.BPM_MULTIPLIER).floatValue() : null);
         s.setEffectiveBpm(r.get(TRACK_DANCE_STYLES.EFFECTIVE_BPM));
+        s.setSource(r.get(TRACK_DANCE_STYLES.SOURCE));
         s.setConfirmationCount(r.get(TRACK_DANCE_STYLES.CONFIRMATION_COUNT));
         s.setIsUserConfirmed(r.get(TRACK_DANCE_STYLES.IS_USER_CONFIRMED));
         return s;

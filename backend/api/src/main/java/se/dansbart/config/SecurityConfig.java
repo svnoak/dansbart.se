@@ -44,7 +44,9 @@ public class SecurityConfig {
                 .ignoringRequestMatchers(
                     new AntPathRequestMatcher("/api/tracks/**", "POST"),
                     new AntPathRequestMatcher("/api/tracks/**", "PATCH"),
-                    new AntPathRequestMatcher("/api/suggestions/**", "POST")))
+                    new AntPathRequestMatcher("/api/suggestions/**", "POST"),
+                    new AntPathRequestMatcher("/api/dances/*/tracks/*/vote", "POST"),
+                    new AntPathRequestMatcher("/api/dances/*/tracks/*/vote", "DELETE")))
             .authorizeHttpRequests(auth -> auth
                 // SSO endpoints — must be accessible before authentication
                 .requestMatchers("/sso/**").permitAll()
@@ -62,10 +64,14 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
+                // Dance-track vote: anonymous X-Voter-ID, same as /api/tracks/** style votes.
+                .requestMatchers(HttpMethod.POST, "/api/dances/*/tracks/*/vote").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/dances/*/tracks/*/vote").permitAll()
                 .requestMatchers("/api/config/auth").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/groups/public").permitAll()
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")
@@ -74,6 +80,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/dances/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/dances/**").authenticated()
                 .requestMatchers("/api/playlists/**").authenticated()
+                .requestMatchers("/api/groups/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/feedback/**").authenticated()
                 .requestMatchers("/api/spotify/**").authenticated()

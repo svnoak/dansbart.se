@@ -192,7 +192,7 @@ export function PlayerProgressBar({
           {/* Hover tooltip */}
           {hoveredBar !== null && (
             <div
-              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text-primary))] shadow whitespace-nowrap"
+              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
               style={{ left: `${hoverX}px` }}
             >
               Takt {hoveredBar + 2}
@@ -271,7 +271,7 @@ export function PlayerProgressBar({
       </div>
       {hoverTime !== null && (
         <div
-          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text-primary))] shadow whitespace-nowrap"
+          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
           style={{ left: `${hoverX}px` }}
         >
           {formatDurationMs(hoverTime)}
