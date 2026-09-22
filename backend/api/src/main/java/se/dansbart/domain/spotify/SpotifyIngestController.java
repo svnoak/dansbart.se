@@ -23,25 +23,25 @@ public class SpotifyIngestController {
     private final SpotifyIngestService spotifyIngestService;
 
     @GetMapping("/artist/{spotifyId}/albums")
-    @Operation(summary = "Preview artist's albums from Spotify")
+    @Operation(operationId = "getSpotifyArtistAlbums", summary = "Preview artist's albums from Spotify")
     public ResponseEntity<List<Map<String, Object>>> getArtistAlbums(@PathVariable String spotifyId) {
         return ResponseEntity.ok(spotifyIngestService.getArtistAlbums(spotifyId));
     }
 
     @GetMapping("/album/{spotifyId}/tracks")
-    @Operation(summary = "Preview album's tracks from Spotify")
+    @Operation(operationId = "getSpotifyAlbumTracks", summary = "Preview album's tracks from Spotify")
     public ResponseEntity<List<Map<String, Object>>> getAlbumTracks(@PathVariable String spotifyId) {
         return ResponseEntity.ok(spotifyIngestService.getAlbumTracks(spotifyId));
     }
 
     @PostMapping("/ingest/album")
-    @Operation(summary = "Ingest album from Spotify")
+    @Operation(operationId = "ingestSpotifyAlbum", summary = "Ingest album from Spotify")
     public ResponseEntity<Map<String, Object>> ingestAlbum(@RequestBody IngestAlbumRequest request) {
         return ResponseEntity.ok(spotifyIngestService.ingestAlbum(request.spotifyAlbumId()));
     }
 
     @PostMapping("/ingest/track")
-    @Operation(summary = "Ingest track from Spotify")
+    @Operation(operationId = "ingestSpotifyTrack", summary = "Ingest track from Spotify")
     public ResponseEntity<Map<String, Object>> ingestTrack(@RequestBody IngestTrackRequest request) {
         return ResponseEntity.ok(spotifyIngestService.ingestTrack(request.spotifyTrackId()));
     }

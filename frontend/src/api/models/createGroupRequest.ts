@@ -5,4 +5,8 @@
  * OpenAPI spec version: v0
  */
 
-export type GetArtistAlbums1200Item = {[key: string]: { [key: string]: unknown }};
+export interface CreateGroupRequest {
+  name?: string;
+  aboutUs?: string;
+  isPublic?: boolean;
+}

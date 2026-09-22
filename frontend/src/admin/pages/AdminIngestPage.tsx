@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
-  getArtistAlbums1,
-  getAlbumTracks1,
-  ingestAlbum,
-  ingestTrack,
-} from '@/api/generated/admin-spotify/admin-spotify';
+  getSpotifyArtistAlbums,
+  getSpotifyAlbumTracks,
+  ingestSpotifyAlbum,
+  ingestSpotifyTrack,
+} from '@/api/generated/spotify-ingest/spotify-ingest';
 import { ingest } from '@/api/generated/admin-maintenance/admin-maintenance';
 import { Button } from '@/ui';
 import { TextInput } from '@/admin/components/forms/TextInput';
@@ -74,7 +74,7 @@ export function AdminIngestPage() {
 
     try {
       if (parsed.type === 'artist') {
-        const result = await getArtistAlbums1(parsed.id);
+        const result = await getSpotifyArtistAlbums(parsed.id);
         const albums = Array.isArray(result) ? result : Object.values(result);
         setPreview(
           (albums as Record<string, unknown>[]).map((a) => ({
@@ -84,7 +84,7 @@ export function AdminIngestPage() {
           })),
         );
       } else if (parsed.type === 'album') {
-        const result = await getAlbumTracks1(parsed.id);
+        const result = await getSpotifyAlbumTracks(parsed.id);
         const tracks = Array.isArray(result) ? result : Object.values(result);
         setPreview(
           (tracks as Record<string, unknown>[]).map((t) => ({
@@ -114,9 +114,9 @@ export function AdminIngestPage() {
 
     try {
       if (previewType === 'track') {
-        await ingestTrack({ spotifyTrackId: previewId });
+        await ingestSpotifyTrack({ spotifyTrackId: previewId });
       } else if (previewType === 'album') {
-        await ingestAlbum({ spotifyAlbumId: previewId });
+        await ingestSpotifyAlbum({ spotifyAlbumId: previewId });
       } else if (previewType === 'artist' || previewType === 'playlist') {
         await ingest(
           { resourceId: previewId, resourceType: previewType.toUpperCase() },
@@ -137,7 +137,7 @@ export function AdminIngestPage() {
   const handleIngestSingleAlbum = async (albumId: string) => {
     setIngesting(true);
     try {
-      await ingestAlbum({ spotifyAlbumId: albumId });
+      await ingestSpotifyAlbum({ spotifyAlbumId: albumId });
       toast('Album-import startad');
       addHistory(`album:${albumId}`, 'album', 'success');
     } catch {

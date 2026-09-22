@@ -7,6 +7,7 @@
 import type {
   BackfillDuration200,
   BackfillDurationParams,
+  BackfillEffectiveBpm200,
   BackfillIsrcs200,
   BackfillIsrcsParams,
   CleanupOrphaned200,
@@ -259,6 +260,30 @@ export const getBackfillIsrcsUrl = (params?: BackfillIsrcsParams,) => {
 export const backfillIsrcs = async (params?: BackfillIsrcsParams, options?: RequestInit): Promise<BackfillIsrcs200> => {
   
   return httpClient<BackfillIsrcs200>(getBackfillIsrcsUrl(params),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * Runs synchronously. Safe to re-run — only rows still at effective_bpm=0 with a known tracks.tempo_bpm are touched.
+ * @summary Recompute effective_bpm for rows left at 0 despite a known track tempo
+ */
+export const getBackfillEffectiveBpmUrl = () => {
+
+
+  
+
+  return `/api/admin/maintenance/backfill-effective-bpm`
+}
+
+export const backfillEffectiveBpm = async ( options?: RequestInit): Promise<BackfillEffectiveBpm200> => {
+  
+  return httpClient<BackfillEffectiveBpm200>(getBackfillEffectiveBpmUrl(),
   {      
     ...options,
     method: 'POST'

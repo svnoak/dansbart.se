@@ -13,6 +13,7 @@ export interface Playlist {
   name?: string;
   description?: string;
   userId?: string;
+  groupId?: string;
   user?: User;
   isPublic?: boolean;
   shareToken?: string;

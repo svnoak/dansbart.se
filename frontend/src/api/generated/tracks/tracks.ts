@@ -10,6 +10,7 @@ import type {
   FeedbackRequest,
   FlagTrack200,
   FlagTrackParams,
+  GetClassifyQueueParams,
   GetSimilarTracksParams,
   GetTracksParams,
   MovementVoteRequest,
@@ -25,7 +26,7 @@ import type {
   Track,
   TrackListDto,
   TrackStructureVersion,
-  TrackStyleVote,
+  TrackStyleVoteDto,
   UnflagTrack200
 } from '../../models';
 
@@ -182,9 +183,9 @@ export const getSubmitFeedbackUrl = (id: string,) => {
 }
 
 export const submitFeedback = async (id: string,
-    feedbackRequest: FeedbackRequest, options?: RequestInit): Promise<TrackStyleVote> => {
+    feedbackRequest: FeedbackRequest, options?: RequestInit): Promise<TrackStyleVoteDto> => {
   
-  return httpClient<TrackStyleVote>(getSubmitFeedbackUrl(id),
+  return httpClient<TrackStyleVoteDto>(getSubmitFeedbackUrl(id),
   {      
     ...options,
     method: 'POST',
@@ -395,6 +396,36 @@ export const getSearchTracksUrl = (params: SearchTracksParams,) => {
 export const searchTracks = async (params: SearchTracksParams, options?: RequestInit): Promise<PageResponseTrackListDto> => {
   
   return httpClient<PageResponseTrackListDto>(getSearchTracksUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Personalized fast-classification queue: unconfirmed tracks this voter hasn't already voted on, lowest-confidence-first
+ */
+export const getGetClassifyQueueUrl = (params?: GetClassifyQueueParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tracks/classify-queue?${stringifiedParams}` : `/api/tracks/classify-queue`
+}
+
+export const getClassifyQueue = async (params?: GetClassifyQueueParams, options?: RequestInit): Promise<TrackListDto[]> => {
+  
+  return httpClient<TrackListDto[]>(getGetClassifyQueueUrl(params),
   {      
     ...options,
     method: 'GET'
