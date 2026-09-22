@@ -3,11 +3,13 @@ package se.dansbart.domain.reputation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.user.User;
 import se.dansbart.domain.user.UserJooqRepository;
 import se.dansbart.voter.VoterContext;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -51,6 +53,21 @@ public class VoterReputationService {
             .findMultiplierByVoterId(voterContext.getVoterId())
             .orElse(BigDecimal.ONE);
         return base.multiply(mult);
+    }
+
+    public BigDecimal getWeightForVoter(UUID voterId) {
+        Optional<User> user = userJooqRepository.findById(voterId);
+        if (user.isEmpty()) return ANONYMOUS_WEIGHT;
+        String role = userJooqRepository.findRoleById(voterId);
+        BigDecimal multiplier = reputationRepository
+            .findMultiplierByVoterId(voterId)
+            .orElse(BigDecimal.ONE);
+        return weightFor(role, multiplier);
+    }
+
+    private BigDecimal weightFor(String role, BigDecimal multiplier) {
+        BigDecimal base = "ADMIN".equals(role) ? ADMIN_BASE : USER_BASE;
+        return base.multiply(multiplier);
     }
 
     @Transactional

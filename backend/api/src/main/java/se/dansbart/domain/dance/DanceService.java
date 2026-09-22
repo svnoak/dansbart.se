@@ -169,8 +169,15 @@ public class DanceService {
         if (voterId == null) {
             throw new IllegalStateException("No voter identity");
         }
+        applyVote(danceId, trackId, voterId, vote, reputationService.getWeightForCurrentVoter());
+    }
 
-        BigDecimal weight = reputationService.getWeightForCurrentVoter();
+    @Transactional
+    public void castVoteAsVoter(UUID danceId, UUID trackId, UUID voterId, int vote) {
+        applyVote(danceId, trackId, voterId, vote, reputationService.getWeightForVoter(voterId));
+    }
+
+    private void applyVote(UUID danceId, UUID trackId, UUID voterId, int vote, BigDecimal weight) {
         BigDecimal sumBefore = vote == 1
             ? voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId)
             : BigDecimal.ZERO;
@@ -206,6 +213,11 @@ public class DanceService {
         if (voterId == null) {
             throw new IllegalStateException("No voter identity");
         }
+        withdrawVoteAsVoter(danceId, trackId, voterId);
+    }
+
+    @Transactional
+    public void withdrawVoteAsVoter(UUID danceId, UUID trackId, UUID voterId) {
         voteRepository.deleteVote(danceId, trackId, voterId);
     }
 

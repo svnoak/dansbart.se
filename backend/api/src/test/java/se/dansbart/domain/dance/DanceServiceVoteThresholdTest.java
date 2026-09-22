@@ -170,4 +170,38 @@ class DanceServiceVoteThresholdTest {
         }
         verify(voteRepository, never()).upsertVote(any(), any(), any(), anyInt(), any());
     }
+
+    @Test
+    void castVoteAsVoter_signedInVoter_confirmsTrackAlone() {
+        UUID danceId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID voterId = UUID.randomUUID();
+        Dance dance = Dance.builder().danceType("Polska").build();
+        BigDecimal lowestReputationWeight = VoterReputationService.CONFIRMATION_THRESHOLD;
+
+        lenient().when(voterContext.getVoterId()).thenReturn(null);
+        when(reputationService.getWeightForVoter(voterId)).thenReturn(lowestReputationWeight);
+        when(danceJooqRepository.findById(danceId)).thenReturn(Optional.of(dance));
+        when(voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId))
+            .thenReturn(lowestReputationWeight);
+
+        danceService().castVoteAsVoter(danceId, trackId, voterId, 1);
+
+        verify(voteRepository).upsertVote(danceId, trackId, voterId, 1, lowestReputationWeight);
+        verify(danceJooqRepository).addTrackConfirmed(danceId, trackId, null);
+        verify(trackFeedbackService).submitStyleFeedback(trackId, "Polska", null);
+    }
+
+    @Test
+    void withdrawVoteAsVoter_removesThatVotersVote() {
+        UUID danceId = UUID.randomUUID();
+        UUID trackId = UUID.randomUUID();
+        UUID voterToRemove = UUID.randomUUID();
+
+        lenient().when(voterContext.getVoterId()).thenReturn(null);
+
+        danceService().withdrawVoteAsVoter(danceId, trackId, voterToRemove);
+
+        verify(voteRepository).deleteVote(danceId, trackId, voterToRemove);
+    }
 }
