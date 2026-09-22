@@ -38,6 +38,7 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.DanceListEntries.DanceListEntriesPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
 
 
@@ -216,6 +217,19 @@ public class CommunitySuggestions extends TableImpl<Record> {
             _users = new UsersPath(this, Keys.COMMUNITY_SUGGESTIONS__COMMUNITY_SUGGESTIONS_REVIEWED_BY_FKEY, null);
 
         return _users;
+    }
+
+    private transient DanceListEntriesPath _danceListEntries;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_list_entries</code> table
+     */
+    public DanceListEntriesPath danceListEntries() {
+        if (_danceListEntries == null)
+            _danceListEntries = new DanceListEntriesPath(this, null, Keys.DANCE_LIST_ENTRIES__DANCE_LIST_ENTRIES_SUGGESTION_ID_FKEY.getInverseKey());
+
+        return _danceListEntries;
     }
 
     @Override

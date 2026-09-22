@@ -9,6 +9,10 @@ import se.dansbart.jooq.tables.AnalysisSources;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.CommunitySuggestions;
+import se.dansbart.jooq.tables.DanceListCollaborators;
+import se.dansbart.jooq.tables.DanceListEntries;
+import se.dansbart.jooq.tables.DanceListEntryTracks;
+import se.dansbart.jooq.tables.DanceLists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.DanceTrackVotes;
@@ -74,6 +78,26 @@ public class Tables {
      * The table <code>public.community_suggestions</code>.
      */
     public static final CommunitySuggestions COMMUNITY_SUGGESTIONS = CommunitySuggestions.COMMUNITY_SUGGESTIONS;
+
+    /**
+     * The table <code>public.dance_list_collaborators</code>.
+     */
+    public static final DanceListCollaborators DANCE_LIST_COLLABORATORS = DanceListCollaborators.DANCE_LIST_COLLABORATORS;
+
+    /**
+     * The table <code>public.dance_list_entries</code>.
+     */
+    public static final DanceListEntries DANCE_LIST_ENTRIES = DanceListEntries.DANCE_LIST_ENTRIES;
+
+    /**
+     * The table <code>public.dance_list_entry_tracks</code>.
+     */
+    public static final DanceListEntryTracks DANCE_LIST_ENTRY_TRACKS = DanceListEntryTracks.DANCE_LIST_ENTRY_TRACKS;
+
+    /**
+     * The table <code>public.dance_lists</code>.
+     */
+    public static final DanceLists DANCE_LISTS = DanceLists.DANCE_LISTS;
 
     /**
      * The table <code>public.dance_movement_feedback</code>.
