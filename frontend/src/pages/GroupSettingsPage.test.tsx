@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { GroupSettingsPage } from './GroupSettingsPage';
 import { ApiError } from '@/api/http-client';
 import { loggedInAuthValue } from '@/test/authValue';
+import { getInputByLabel } from '@/test/getInputByLabel';
 import { typeInto } from '@/test/typeInto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -81,15 +82,6 @@ describe('GroupSettingsPage', () => {
     return Array.from(document.body.querySelectorAll('button')).find((b) =>
       b.textContent?.includes(text),
     );
-  }
-
-  function getInputByLabel(label: string) {
-    const labelElement = Array.from(document.body.querySelectorAll('label')).find((l) =>
-      l.textContent?.includes(label),
-    );
-    if (!labelElement) return null;
-    const inputId = labelElement.getAttribute('for');
-    return inputId ? document.getElementById(inputId) : null;
   }
 
   function getCheckboxByAccessibleName(name: string) {

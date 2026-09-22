@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getPlaylist, removeTrack, updatePlaylist, reorderTracks } from '@/api/generated/playlists/playlists';
 import { getStyleTree } from '@/api/generated/styles/styles';
 import type { PlaylistDto } from '@/api/models/playlistDto';
@@ -7,7 +7,7 @@ import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
 import { BackArrowIcon, EditIcon, PlayIcon, SettingsIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
-import { IconButton, toast } from '@/ui';
+import { Button, IconButton, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -239,7 +239,7 @@ export function PlaylistPage() {
   // Prevent autoplay from firing again on subsequent playlist state updates
   const autoplayTriggered = useRef(false);
 
-  const isOwner = !!(playlist?.owner?.id && user?.id && playlist.owner.id === user.id);
+  const isOwner = playlist?.viewerCanManage === true;
   const myCollaborator = playlist?.collaborators?.find((c) => c.userId === user?.id);
   const myPermission: 'owner' | 'edit' | 'view' = isOwner
     ? 'owner'
@@ -467,18 +467,32 @@ export function PlaylistPage() {
                 </button>
               )}
               {canEdit && (
-                <button
-                  type="button"
-                  aria-label="Inställningar"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => navigate(`/playlists/${id}/settings`)}
-                  className="shrink-0 rounded p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
+                  className="flex items-center gap-1"
                 >
                   <SettingsIcon className="h-4 w-4" aria-hidden />
-                </button>
+                  Ändra inställningar
+                </Button>
               )}
             </div>
           )}
         </div>
+
+        {/* Owner group */}
+        {playlist.ownerGroup && (
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            Ägs av gruppen{' '}
+            <Link
+              to={`/groups/${playlist.ownerGroup.id}`}
+              className="text-[rgb(var(--color-accent))] hover:underline"
+            >
+              {playlist.ownerGroup.name}
+            </Link>
+          </p>
+        )}
 
         {/* Description */}
         {playlist.description && (

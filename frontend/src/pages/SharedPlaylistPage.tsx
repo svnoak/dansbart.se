@@ -82,10 +82,16 @@ export function SharedPlaylistPage() {
         )}
 
         {/* Owner */}
-        {playlist.owner && (
+        {playlist.ownerGroup ? (
           <p className="text-xs text-[rgb(var(--color-text-muted))]">
-            Av {playlist.owner.displayName ?? playlist.owner.username}
+            Av gruppen {playlist.ownerGroup.name}
           </p>
+        ) : (
+          playlist.owner && (
+            <p className="text-xs text-[rgb(var(--color-text-muted))]">
+              Av {playlist.owner.displayName ?? playlist.owner.username}
+            </p>
+          )
         )}
 
         {/* Tags */}

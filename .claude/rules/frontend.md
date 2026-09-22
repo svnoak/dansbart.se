@@ -48,7 +48,7 @@ Many users are older and non-technical. Apply these rules to each component you 
 
 ## Tests
 
-- Make every mock and simulated event match the real app. Use `src/test/authValue.ts` for auth and `src/test/typeInto.ts` for typing. Change app code to meet a behaviour that a test asserts, never to fit a mock.
+- Make every mock and simulated event match the real app. Use `src/test/authValue.ts` for auth, `src/test/typeInto.ts` for typing, and `src/test/getInputByLabel.ts` for finding inputs. Change app code to meet a behaviour that a test asserts, never to fit a mock.
 
 ## Product decisions
 

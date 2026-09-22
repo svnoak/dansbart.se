@@ -5,16 +5,21 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { GroupPage } from './GroupPage';
 import { ApiError } from '@/api/http-client';
 import { authValue, loggedInAuthValue } from '@/test/authValue';
+import { getInputByLabel } from '@/test/getInputByLabel';
+import { typeInto } from '@/test/typeInto';
+import { ToastContainer } from '@/ui';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const getGroup = vi.fn();
 const removeMember = vi.fn();
+const createGroupPlaylist = vi.fn();
 const useAuth = vi.fn();
 
 vi.mock('@/api/generated/groups/groups', () => ({
   getGroup: (...args: unknown[]) => getGroup(...args),
   removeMember: (...args: unknown[]) => removeMember(...args),
+  createGroupPlaylist: (...args: unknown[]) => createGroupPlaylist(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -28,6 +33,7 @@ describe('GroupPage', () => {
   beforeEach(() => {
     getGroup.mockReset();
     removeMember.mockReset();
+    createGroupPlaylist.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(authValue());
     container = document.createElement('div');
@@ -47,6 +53,7 @@ describe('GroupPage', () => {
           <Routes>
             <Route path="/groups/:id" element={<GroupPage />} />
           </Routes>
+          <ToastContainer />
         </MemoryRouter>,
       );
     });
@@ -234,5 +241,127 @@ describe('GroupPage', () => {
     });
 
     expect(document.body.textContent).toContain('Gruppen hittades inte.');
+  });
+
+  it("lists the group's playlists", async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+      playlists: [
+        { id: 'p1', name: 'Barnens favoriter', description: 'Lugna valser', isPublic: true, trackCount: 4 },
+      ],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Barnens favoriter');
+    expect(document.body.textContent).toContain('Lugna valser');
+    expect(document.body.textContent).toContain('4 låtar');
+    const playlistLink = getLinkByText('Barnens favoriter');
+    expect(playlistLink).toBeDefined();
+    expect(playlistLink?.getAttribute('href')).toBe('/playlists/p1');
+  });
+
+  it('shows an empty text when the group has no playlists', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+      playlists: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Gruppen har inga spellistor ännu.');
+  });
+
+  it('a member who can manage playlists creates one', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: true, status: 'accepted' },
+      ],
+      playlists: [],
+    });
+    createGroupPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Höstens danser',
+      description: undefined,
+      isPublic: false,
+      trackCount: 0,
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newPlaylistButton = getButtonByText('Ny spellista');
+    expect(newPlaylistButton).toBeDefined();
+
+    await act(async () => {
+      newPlaylistButton?.click();
+    });
+
+    const nameInput = getInputByLabel('Spellistans namn');
+    expect(nameInput).toBeDefined();
+
+    await act(async () => {
+      await typeInto(nameInput!, 'Höstens danser');
+    });
+
+    const createButton = getButtonByText('Skapa spellista');
+    expect(createButton).toBeDefined();
+
+    await act(async () => {
+      createButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(createGroupPlaylist).toHaveBeenCalledWith('g1', { name: 'Höstens danser' });
+    expect(document.body.textContent).toContain('Höstens danser');
+  });
+
+  it('a member without the permission sees no Ny spellista', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+      playlists: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newPlaylistButton = getButtonByText('Ny spellista');
+    expect(newPlaylistButton).toBeUndefined();
   });
 });
