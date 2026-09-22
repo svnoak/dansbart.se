@@ -10,7 +10,7 @@ import {
 import type { Playlist } from '@/api/models/playlist';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
-import { toast } from '@/ui';
+import { toast, Card, Badge } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -231,51 +231,54 @@ export function PlaylistsPage() {
 
               <Link
                 to={`/playlists/${pl.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors"
+                className="flex min-w-0 flex-1"
               >
-                <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">{pl.name}</p>
-                  {pl.description && (
-                    <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">{pl.description}</p>
+                <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
+                  <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">{pl.name}</p>
+                    {pl.description && (
+                      <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
+                    )}
+                    {(styleColor || tempoLabel) && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {styleColor && pl.danceStyle && (
+                          <Badge
+                            size="md"
+                            style={{
+                              backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                              color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                            }}
+                          >
+                            {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
+                          </Badge>
+                        )}
+                        {styleColor && pl.subStyle && (
+                          <Badge
+                            size="md"
+                            className="opacity-80"
+                            style={{
+                              backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                              color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                            }}
+                          >
+                            {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
+                          </Badge>
+                        )}
+                        {tempoLabel && (
+                          <Badge size="md" variant="muted">
+                            {tempoLabel}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {(pl.tracks?.length ?? 0) > 0 && (
+                    <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
+                      {pl.tracks!.length} {pl.tracks!.length === 1 ? 'låt' : 'låtar'}
+                    </span>
                   )}
-                  {(styleColor || tempoLabel) && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {styleColor && pl.danceStyle && (
-                        <span
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                          style={{
-                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                          }}
-                        >
-                          {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
-                        </span>
-                      )}
-                      {styleColor && pl.subStyle && (
-                        <span
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium opacity-80"
-                          style={{
-                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                          }}
-                        >
-                          {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
-                        </span>
-                      )}
-                      {tempoLabel && (
-                        <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border))] px-2 py-0.5 text-[10px] font-medium text-[rgb(var(--color-text-muted))]">
-                          {tempoLabel}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {(pl.tracks?.length ?? 0) > 0 && (
-                  <span className="shrink-0 text-xs text-[rgb(var(--color-text-muted))]">
-                    {pl.tracks!.length} {pl.tracks!.length === 1 ? 'låt' : 'låtar'}
-                  </span>
-                )}
+                </Card>
               </Link>
             </li>
           );
