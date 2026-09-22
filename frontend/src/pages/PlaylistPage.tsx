@@ -6,13 +6,16 @@ import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
-import { BackArrowIcon, EditIcon, PlayIcon, SettingsIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
-import { Button, IconButton, toast } from '@/ui';
+import { SharePlaylistPanel } from '@/components/SharePlaylistPanel';
+import { BackArrowIcon, EditIcon, PlayIcon, PlusIcon, SettingsIcon, ShareIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
+import { Button, IconButton, Pill, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
 import { usePlayer } from '@/player/usePlayer';
 import { useOutsideClick } from '@/hooks/useOutsideClick';
+import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
+import { canEditPlaylist } from '@/utils/playlistPermissions';
 
 // ── Tempo ────────────────────────────────────────────────────────────────────
 
@@ -232,6 +235,8 @@ export function PlaylistPage() {
   const [filterSpotify, setFilterSpotify] = useState(false);
   const [filterYouTube, setFilterYouTube] = useState(false);
 
+  const [showSharePanel, setShowSharePanel] = useState(false);
+
   // Drag state (position mode only)
   const dragIndex = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -239,14 +244,10 @@ export function PlaylistPage() {
   // Prevent autoplay from firing again on subsequent playlist state updates
   const autoplayTriggered = useRef(false);
 
+  const { shareToken, shareUrl, createLink, copyLink } = usePlaylistShareLink(id, playlist?.shareToken);
+
   const isOwner = playlist?.viewerCanManage === true;
-  const myCollaborator = playlist?.collaborators?.find((c) => c.userId === user?.id);
-  const myPermission: 'owner' | 'edit' | 'view' = isOwner
-    ? 'owner'
-    : myCollaborator?.permission === 'edit'
-      ? 'edit'
-      : 'view';
-  const canEdit = myPermission !== 'view';
+  const canEdit = canEditPlaylist(playlist, user?.id);
 
   // ── Data loading ────────────────────────────────────────────────────────────
 
@@ -377,9 +378,9 @@ export function PlaylistPage() {
     setDragOverIndex(null);
   }
 
-  // ── Play all ────────────────────────────────────────────────────────────────
+  // ── Play ────────────────────────────────────────────────────────────────────
 
-  function handlePlayAll() {
+  function handlePlay() {
     if (contextTracks.length === 0) return;
     play(contextTracks[0], contextTracks);
   }
@@ -454,28 +455,15 @@ export function PlaylistPage() {
                 {playlist.name}
               </h1>
               {canEdit && (
-                <button
-                  type="button"
-                  aria-label="Redigera namn"
+                <IconButton
+                  aria-label="Ändra namn"
                   onClick={() => {
                     setNameValue(playlist.name ?? '');
                     setEditingName(true);
                   }}
-                  className="shrink-0 rounded p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
                 >
                   <EditIcon className="h-4 w-4" aria-hidden />
-                </button>
-              )}
-              {canEdit && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigate(`/playlists/${id}/settings`)}
-                  className="flex items-center gap-1"
-                >
-                  <SettingsIcon className="h-4 w-4" aria-hidden />
-                  Ändra inställningar
-                </Button>
+                </IconButton>
               )}
             </div>
           )}
@@ -497,6 +485,49 @@ export function PlaylistPage() {
         {/* Description */}
         {playlist.description && (
           <p className="text-sm text-[rgb(var(--color-text-muted))]">{playlist.description}</p>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          {tracks.length > 0 && (
+            <Button onClick={handlePlay} className="flex items-center gap-1.5">
+              <PlayIcon className="h-4 w-4" aria-hidden />
+              Spela
+            </Button>
+          )}
+          {canEdit && (
+            <Link
+              to={`/search?addTo=${id}`}
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] px-4 py-2 text-sm font-medium text-[rgb(var(--color-accent))] hover:opacity-90"
+            >
+              <PlusIcon className="h-4 w-4" aria-hidden />
+              Lägg till låtar
+            </Link>
+          )}
+          {(canEdit || playlist.isPublic) && (
+            <Button
+              variant="secondary"
+              onClick={() => setShowSharePanel((s) => !s)}
+              className="flex items-center gap-1.5"
+            >
+              <ShareIcon className="h-4 w-4" aria-hidden />
+              Dela spellista
+            </Button>
+          )}
+          {canEdit && (
+            <Button
+              variant="secondary"
+              onClick={() => navigate(`/playlists/${id}/settings`)}
+              className="flex items-center gap-1.5"
+            >
+              <SettingsIcon className="h-4 w-4" aria-hidden />
+              Ändra inställningar
+            </Button>
+          )}
+        </div>
+
+        {showSharePanel && (canEdit || playlist.isPublic) && id && (
+          <SharePlaylistPanel playlistId={id} canEdit={canEdit} shareToken={shareToken} shareUrl={shareUrl} createLink={createLink} copyLink={copyLink} />
         )}
 
         {/* Tags row */}
@@ -643,82 +674,52 @@ export function PlaylistPage() {
           </div>
         </div>
 
-        {/* Track count + play all */}
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-[rgb(var(--color-text-muted))]">
-            {tracks.length} {tracks.length === 1 ? 'låt' : 'låtar'}
-          </p>
-          {tracks.length > 0 && (
-            <button
-              type="button"
-              onClick={handlePlayAll}
-              className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-            >
-              <PlayIcon className="h-4 w-4" aria-hidden />
-              Spela alla
-            </button>
-          )}
-        </div>
+        {/* Track count */}
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">
+          {tracks.length} {tracks.length === 1 ? 'låt' : 'låtar'}
+        </p>
       </div>
 
       {/* Sort + Filter bar */}
       {tracks.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          {/* Sort buttons */}
-          <div className="flex rounded-lg border border-[rgb(var(--color-border))] overflow-hidden text-xs">
-            {(
-              [
-                { key: 'position', label: 'Ordning' },
-                { key: 'name', label: 'Namn' },
-                { key: 'duration', label: 'Längd' },
-                { key: 'tempo', label: 'Tempo' },
-              ] as { key: SortKey; label: string }[]
-            ).map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSort(key)}
-                className={`px-3 py-1.5 transition-colors ${
-                  sort === key
-                    ? 'bg-[rgb(var(--color-accent))] text-white'
-                    : 'text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {(
+            [
+              { key: 'position', label: 'Ordning' },
+              { key: 'name', label: 'Namn' },
+              { key: 'duration', label: 'Längd' },
+              { key: 'tempo', label: 'Tempo' },
+            ] as { key: SortKey; label: string }[]
+          ).map(({ key, label }) => (
+            <Pill key={key} active={sort === key} onClick={() => setSort(key)} className="min-h-11">
+              {label}
+            </Pill>
+          ))}
 
           {/* Filter toggles */}
           <div className="flex items-center gap-1">
-            <button
-              type="button"
+            <Pill
+              active={filterSpotify}
+              variant="green"
               aria-label="Filtrera Spotify"
               title="Visa endast låtar med Spotify"
               onClick={() => setFilterSpotify((s) => !s)}
-              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
-                filterSpotify
-                  ? 'border-[#1DB954] bg-[#1DB954]/10 text-[#1DB954]'
-                  : 'border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50'
-              }`}
+              className="flex items-center gap-1 min-h-11"
             >
               <SpotifyIcon className="h-3.5 w-3.5" aria-hidden />
               Spotify
-            </button>
-            <button
-              type="button"
+            </Pill>
+            <Pill
+              active={filterYouTube}
+              variant="red"
               aria-label="Filtrera YouTube"
               title="Visa endast låtar med YouTube"
               onClick={() => setFilterYouTube((s) => !s)}
-              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
-                filterYouTube
-                  ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
-                  : 'border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50'
-              }`}
+              className="flex items-center gap-1 min-h-11"
             >
               <YouTubeIcon className="h-3.5 w-3.5" aria-hidden />
               YouTube
-            </button>
+            </Pill>
           </div>
         </div>
       )}

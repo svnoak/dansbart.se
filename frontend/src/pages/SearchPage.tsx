@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
 import { getVoterId } from '@/utils/voter';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getTracks } from '@/api/generated/tracks/tracks';
+import { getPlaylist } from '@/api/generated/playlists/playlists';
 import { searchArtists, getArtists } from '@/api/generated/artists/artists';
 import { searchAlbums, getAlbums } from '@/api/generated/albums/albums';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { Artist } from '@/api/models/artist';
 import type { Album } from '@/api/models/album';
+import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { StyleOverviewDto } from '@/api/models/styleOverviewDto';
 import {
   useSearchParamsState,
@@ -18,12 +20,15 @@ import {
 import { SearchBar } from '@/components/SearchBar';
 import { FilterBar } from '@/components/FilterBar';
 import { TrackRow, ArtistCard, AlbumCard } from '@/components';
+import { canEditPlaylist } from '@/utils/playlistPermissions';
+import { useAuth } from '@/auth/useAuth';
 
 const PAGE_SIZE = 20;
 
 export function SearchPage() {
   useAnalyticsFlag('search');
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const { filters, setFilters, toTracksParams } = useSearchParamsState();
 
   const [draftFilters, setDraftFilters] = useState(filters);
@@ -90,6 +95,11 @@ export function SearchPage() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
 
+  const addToId = searchParams.get('addTo');
+  const [addToPlaylist, setAddToPlaylist] = useState<PlaylistDto | null>(null);
+  const [addToError, setAddToError] = useState(false);
+  const canAddToPlaylist = canEditPlaylist(addToPlaylist, user?.id);
+
   // Sync draft from URL when applied filters change (e.g. after Apply or browser back)
   useEffect(() => {
     setDraftFilters(filters);
@@ -100,6 +110,23 @@ export function SearchPage() {
     const q = searchParams.get('q') ?? '';
     if (q !== filters.q) setFilters({ q, offset: 0 });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
+
+  // Load the playlist that tracks get added to
+  useEffect(() => {
+    if (!addToId) {
+      setAddToPlaylist(null);
+      setAddToError(false);
+      return;
+    }
+    const controller = new AbortController();
+    getPlaylist(addToId, { signal: controller.signal })
+      .then((pl) => setAddToPlaylist(pl))
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setAddToError(true);
+      });
+    return () => controller.abort();
+  }, [addToId]);
 
   // Fetch style overview for filter dropdowns
   useEffect(() => {
@@ -244,6 +271,21 @@ export function SearchPage() {
         Sök
       </h1>
 
+      {addToId && (
+        <div className={`flex items-center justify-between gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm ${addToError || !canAddToPlaylist ? 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text-muted))]' : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'}`}>
+          <p>
+            {addToError
+              ? 'Spellistan hittades inte.'
+              : !canAddToPlaylist
+              ? 'Du kan inte lägga till låtar i den här spellistan.'
+              : `Du lägger till låtar i ${addToPlaylist?.name ?? ''}`}
+          </p>
+          <Link to={`/playlists/${addToId}`} className="font-medium underline">
+            Klar
+          </Link>
+        </div>
+      )}
+
       <SearchBar
         query={draftFilters.q}
         searchType={draftFilters.searchType}
@@ -317,6 +359,7 @@ export function SearchPage() {
               <TrackRow
                 track={track}
                 contextTracks={tracks}
+                addToPlaylistId={addToId && !addToError && canAddToPlaylist ? addToId : undefined}
               />
             </li>
           ))}

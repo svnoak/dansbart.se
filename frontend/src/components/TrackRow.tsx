@@ -11,8 +11,9 @@ import { LoginRequiredModal } from './LoginRequiredModal';
 import { PlayButton } from './TrackRow/PlayButton';
 import { StyleBadge } from './TrackRow/StyleBadge';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
-import { IconButton } from '@/ui';
+import { Button, IconButton, toast } from '@/ui';
 import { HeartIcon, HeartFilledIcon } from '@/icons';
+import { addTrack } from '@/api/generated/playlists/playlists';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -33,11 +34,13 @@ function tempoLabel(track: TrackListDto): string {
 interface TrackRowProps {
   track: TrackListDto;
   contextTracks?: TrackListDto[];
+  addToPlaylistId?: string;
 }
 
 export function TrackRow({
   track,
   contextTracks,
+  addToPlaylistId,
 }: TrackRowProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
   const { isAuthenticated } = useAuth();
@@ -46,7 +49,22 @@ export function TrackRow({
   const [flagModalOpen, setFlagModalOpen] = useState(false);
   const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [adding, setAdding] = useState(false);
   const favorited = track.id != null && isFavorited(track.id);
+
+  const handleAddToPlaylist = async () => {
+    if (!addToPlaylistId || track.id == null) return;
+    setAdding(true);
+    try {
+      await addTrack(addToPlaylistId, { trackId: track.id });
+      setAdded(true);
+    } catch {
+      toast('Det gick inte att lägga till låten.', 'error');
+    } finally {
+      setAdding(false);
+    }
+  };
 
   const isCurrent = currentTrack?.id === track.id;
   const styleColor = getStyleColor(track.danceStyle);
@@ -92,6 +110,18 @@ export function TrackRow({
           <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">
             {track.artistName ?? 'Okänd artist'}
           </p>
+
+          {addToPlaylistId && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-1.5 self-start"
+              disabled={adding || added}
+              onClick={handleAddToPlaylist}
+            >
+              {added ? 'Tillagd' : 'Lägg till'}
+            </Button>
+          )}
         </div>
 
         {/* Right: Duration + Heart + Menu */}
