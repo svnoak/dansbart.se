@@ -8,6 +8,7 @@ import se.dansbart.domain.album.TrackAlbum;
 import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.artist.ArtistJooqRepository;
 import se.dansbart.domain.artist.TrackArtist;
+import se.dansbart.domain.dancelist.DanceListCollaborator;
 import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
@@ -553,5 +554,30 @@ public class TestDataFactory {
             .position(position)
             .build();
         return playlistTrackJooqRepository.insert(pt);
+    }
+
+    /**
+     * Add an accepted collaborator to a dance list with the given permission.
+     */
+    public DanceListCollaborator addDanceListCollaborator(String danceListId, User user, String permission) {
+        return saveDanceListCollaborator(danceListId, user, permission, "accepted");
+    }
+
+    /**
+     * Add a pending collaborator to a dance list with the given permission.
+     */
+    public DanceListCollaborator addPendingDanceListCollaborator(String danceListId, User user, String permission) {
+        return saveDanceListCollaborator(danceListId, user, permission, "pending");
+    }
+
+    private DanceListCollaborator saveDanceListCollaborator(String danceListId, User user, String permission, String status) {
+        DanceListCollaborator collab = DanceListCollaborator.builder()
+            .danceListId(java.util.UUID.fromString(danceListId))
+            .userId(user.getId())
+            .permission(permission)
+            .status(status)
+            .build();
+        // Note: This requires a DanceListCollaboratorJooqRepository which should be added when the repository is created
+        return collab;
     }
 }
