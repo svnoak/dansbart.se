@@ -1,8 +1,10 @@
 export { AlbumCard } from './AlbumCard';
 export { ArtistCard } from './ArtistCard';
+export { ConfirmDeleteByName } from './ConfirmDeleteByName';
 export { FilterBar } from './FilterBar';
 export { FlagTrackModal } from './FlagTrackModal';
 export { SearchBar } from './SearchBar';
 export { StyleShortcutCard } from './StyleShortcutCard';
 export { TrackCard } from './TrackCard';
 export { TrackRow } from './TrackRow';
+export { UserSearchSelect } from './UserSearchSelect';
