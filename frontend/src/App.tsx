@@ -48,6 +48,9 @@ import { AdminUsersPage } from '@/admin/pages/AdminUsersPage';
 import { AdminDancesPage } from '@/admin/pages/AdminDancesPage';
 import { DancesPage } from '@/pages/DancesPage';
 import { DancePage } from '@/pages/DancePage';
+import { GroupsPage } from '@/pages/GroupsPage';
+import { GroupPage } from '@/pages/GroupPage';
+import { GroupSettingsPage } from '@/pages/GroupSettingsPage';
 
 export function App() {
   return (
@@ -93,6 +96,16 @@ export function App() {
                           }
                         />
                         <Route path="/shared/:token" element={<SharedPlaylistPage />} />
+                        <Route path="/groups" element={<GroupsPage />} />
+                        <Route path="/groups/:id" element={<GroupPage />} />
+                        <Route
+                          path="/groups/:id/settings"
+                          element={
+                            <ProtectedRoute>
+                              <GroupSettingsPage />
+                            </ProtectedRoute>
+                          }
+                        />
                         <Route path="/favorites" element={<FavoritesPage />} />
                         <Route path="/help" element={<HelpPage />} />
                         <Route path="/help/topic/:slug/:id" element={<HelpTopicPage />} />

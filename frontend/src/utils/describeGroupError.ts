@@ -1,0 +1,27 @@
+import { ApiError } from '@/api/http-client';
+
+export function describeGroupError(
+  error: unknown,
+  action: 'leave' | 'remove' | 'updatePermissions' | 'invite',
+): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409) {
+      switch (action) {
+        case 'leave':
+          return 'Du kan inte lämna gruppen. En grupp måste ha minst en administratör.';
+        case 'remove':
+          return 'Personen kan inte tas bort. En grupp måste ha minst en administratör.';
+        case 'updatePermissions':
+          return 'Ändringen går inte att spara. Personen har inte tackat ja ännu, eller gruppen skulle sakna administratör.';
+        case 'invite':
+          return 'Personen är redan inbjuden eller medlem.';
+      }
+    }
+
+    if (error.status === 403) {
+      return 'Du har inte behörighet att göra det här i gruppen.';
+    }
+  }
+
+  return 'Det gick inte att genomföra ändringen. Försök igen.';
+}

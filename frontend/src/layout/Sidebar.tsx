@@ -3,8 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
 import { Button, Pill } from '@/ui';
-import { LibraryIcon, PlaylistIcon, HeartIcon } from '@/icons';
+import { LibraryIcon, PlaylistIcon, HeartIcon, GroupIcon } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
+import { getGroupInvitations } from '@/api/generated/groups/groups';
 
 function NavLink({
   to,
@@ -43,7 +44,7 @@ function NavLink({
       <span className="flex-1">{children}</span>
       {isNew && <Pill>Ny</Pill>}
       {badge != null && badge > 0 && (
-        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1 text-[10px] font-bold text-white">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-sm font-bold text-white">
           {badge}
         </span>
       )}
@@ -56,19 +57,40 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { consentStatus, openCookieSettings } = useConsent();
   const { isAuthenticated } = useAuth();
   const [invitationCount, setInvitationCount] = useState(0);
+  const [groupInvitationCount, setGroupInvitationCount] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     let cancelled = false;
     getInvitations()
-      .then((invitations) => { if (!cancelled) setInvitationCount(invitations.length); })
-      .catch(() => { if (!cancelled) setInvitationCount(0); });
+      .then((invitations) => {
+        if (!cancelled) {
+          setInvitationCount(invitations.length);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setInvitationCount(0);
+        }
+      });
+    getGroupInvitations()
+      .then((invitations) => {
+        if (!cancelled) {
+          setGroupInvitationCount(invitations.length);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGroupInvitationCount(0);
+        }
+      });
     return () => { cancelled = true; };
   }, [isAuthenticated]);
   const isSearch = location.pathname === '/search';
   const isHome = location.pathname === '/';
   const isDances = location.pathname.startsWith('/dance');
   const isPlaylists = location.pathname.startsWith('/playlists');
+  const isGroups = location.pathname.startsWith('/groups');
   const isFavorites = location.pathname === '/favorites';
   const isHelp = location.pathname === '/help';
   const isAbout = location.pathname === '/about';
@@ -129,6 +151,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         badge={invitationCount}
       >
         Spellistor
+      </NavLink>
+      <NavLink
+        to="/groups"
+        active={isGroups}
+        onClick={onNavigate}
+        new
+        icon={<GroupIcon className="h-5 w-5" aria-hidden />}
+        badge={groupInvitationCount}
+      >
+        Grupper
       </NavLink>
       <NavLink
         to="/favorites"

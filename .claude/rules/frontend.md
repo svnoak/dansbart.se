@@ -46,6 +46,10 @@ Many users are older and non-technical. Apply these rules to each component you 
 - To regenerate them, start the API locally and run `npm run api:update`.
 - `src/api/manual/` contains hand-written clients.
 
+## Tests
+
+- Make every mock and simulated event match the real app. Use `src/test/authValue.ts` for auth and `src/test/typeInto.ts` for typing. Change app code to meet a behaviour that a test asserts, never to fit a mock.
+
 ## Product decisions
 
 Do not change these without the maintainer:

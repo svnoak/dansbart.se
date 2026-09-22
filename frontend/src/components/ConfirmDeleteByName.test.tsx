@@ -2,14 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { ConfirmDeleteByName } from './ConfirmDeleteByName';
+import { typeInto } from '@/test/typeInto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-function setInputValue(input: HTMLInputElement, text: string) {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-  setter.call(input, text);
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-}
 
 describe('ConfirmDeleteByName', () => {
   let container: HTMLDivElement;
@@ -79,7 +74,7 @@ describe('ConfirmDeleteByName', () => {
     expect(input).toBeDefined();
 
     await act(async () => {
-      setInputValue(input!, 'My Play');
+      typeInto(input!, 'My Play');
     });
 
     const confirmButton = Array.from(container.querySelectorAll('button')).find((b) =>
@@ -89,7 +84,7 @@ describe('ConfirmDeleteByName', () => {
     expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => {
-      setInputValue(input!, 'My Playlist');
+      typeInto(input!, 'My Playlist');
     });
 
     expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
@@ -119,7 +114,7 @@ describe('ConfirmDeleteByName', () => {
     const input = container.querySelector<HTMLInputElement>('input');
 
     await act(async () => {
-      setInputValue(input!, 'My Playlist');
+      typeInto(input!, 'My Playlist');
     });
 
     const confirmButton = Array.from(container.querySelectorAll('button')).find((b) =>
@@ -155,7 +150,7 @@ describe('ConfirmDeleteByName', () => {
     const input = container.querySelector<HTMLInputElement>('input');
 
     await act(async () => {
-      setInputValue(input!, 'My Playlist');
+      typeInto(input!, 'My Playlist');
     });
 
     const cancelButton = Array.from(container.querySelectorAll('button')).find((b) =>

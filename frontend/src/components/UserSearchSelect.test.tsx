@@ -3,16 +3,11 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { UserSearchSelect } from './UserSearchSelect';
 import type { UserSummaryDto } from '@/api/models/userSummaryDto';
+import { typeInto, pressKey } from '@/test/typeInto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const searchUsers = vi.fn();
-
-function setInputValue(input: HTMLInputElement, text: string) {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-  setter.call(input, text);
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-}
 
 vi.mock('@/api/generated/users/users', () => ({
   searchUsers: (...args: unknown[]) => searchUsers(...args),
@@ -52,7 +47,7 @@ describe('UserSearchSelect', () => {
     expect(input).toBeDefined();
 
     await act(async () => {
-      setInputValue(input!, 'a');
+      typeInto(input!, 'a');
     });
 
     await act(async () => {
@@ -84,7 +79,7 @@ describe('UserSearchSelect', () => {
     expect(input).toBeDefined();
 
     await act(async () => {
-      setInputValue(input!, 'an');
+      typeInto(input!, 'an');
     });
 
     await act(async () => {
@@ -132,7 +127,7 @@ describe('UserSearchSelect', () => {
     const input = container.querySelector<HTMLInputElement>('input');
 
     await act(async () => {
-      setInputValue(input!, 'an');
+      typeInto(input!, 'an');
     });
 
     await act(async () => {
@@ -184,7 +179,7 @@ describe('UserSearchSelect', () => {
     const input = container.querySelector<HTMLInputElement>('input');
 
     await act(async () => {
-      setInputValue(input!, 'an');
+      typeInto(input!, 'an');
     });
 
     await act(async () => {
@@ -195,9 +190,8 @@ describe('UserSearchSelect', () => {
       await Promise.resolve();
     });
 
-    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
     await act(async () => {
-      input!.dispatchEvent(escapeEvent);
+      pressKey(input!, 'Escape');
     });
 
     const results_list = container.querySelector('ul');
@@ -224,7 +218,7 @@ describe('UserSearchSelect', () => {
     const input = container.querySelector<HTMLInputElement>('input');
 
     await act(async () => {
-      setInputValue(input!, 'ab');
+      typeInto(input!, 'ab');
     });
 
     await act(async () => {
@@ -259,7 +253,7 @@ describe('UserSearchSelect', () => {
     const input = container.querySelector<HTMLInputElement>('input');
 
     await act(async () => {
-      setInputValue(input!, 'an');
+      typeInto(input!, 'an');
     });
 
     await act(async () => {
