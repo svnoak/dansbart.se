@@ -8,6 +8,7 @@ import type {
   AddTrackRequest,
   CollaboratorDto,
   CreatePlaylistRequest,
+  EditablePlaylistDto,
   InvitationDto,
   InviteCollaboratorRequest,
   Playlist,
@@ -447,6 +448,29 @@ export const getGetInvitationsUrl = () => {
 export const getInvitations = async ( options?: RequestInit): Promise<InvitationDto[]> => {
   
   return httpClient<InvitationDto[]>(getGetInvitationsUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get playlists the current user can add tracks to
+ */
+export const getGetEditablePlaylistsUrl = () => {
+
+
+  
+
+  return `/api/playlists/editable`
+}
+
+export const getEditablePlaylists = async ( options?: RequestInit): Promise<EditablePlaylistDto[]> => {
+  
+  return httpClient<EditablePlaylistDto[]>(getGetEditablePlaylistsUrl(),
   {      
     ...options,
     method: 'GET'

@@ -3947,6 +3947,28 @@
         }
       }
     },
+    "/api/playlists/editable": {
+      "get": {
+        "tags": ["Playlists"],
+        "summary": "Get playlists the current user can add tracks to",
+        "operationId": "getEditablePlaylists",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EditablePlaylistDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/groups/public": {
       "get": {
         "tags": ["Groups"],
@@ -6949,6 +6971,14 @@
           "invitedByDisplayName": { "type": "string" },
           "permission": { "type": "string" },
           "invitedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "EditablePlaylistDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "ownerGroupName": { "type": "string" }
         }
       },
       "GroupInvitationDto": {
