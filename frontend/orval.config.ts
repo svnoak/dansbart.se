@@ -23,7 +23,7 @@ export default defineConfig({
           'Admin Albums',
           'Admin Style Keywords',
           'Admin Analytics',
-          'Admin Spotify',
+          'Spotify Ingest',
           'Admin Pending',
           'Admin Duplicates',
           'Admin Maintenance',

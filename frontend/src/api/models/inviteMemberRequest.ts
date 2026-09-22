@@ -5,4 +5,6 @@
  * OpenAPI spec version: v0
  */
 
-export type IngestAlbum200 = {[key: string]: { [key: string]: unknown }};
+export interface InviteMemberRequest {
+  userId?: string;
+}

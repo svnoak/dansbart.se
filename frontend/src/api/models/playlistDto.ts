@@ -5,6 +5,7 @@
  * OpenAPI spec version: v0
  */
 import type { CollaboratorDto } from './collaboratorDto';
+import type { GroupSummaryDto } from './groupSummaryDto';
 import type { PlaylistTrackDto } from './playlistTrackDto';
 import type { UserSummaryDto } from './userSummaryDto';
 
@@ -20,6 +21,8 @@ export interface PlaylistDto {
   createdAt?: string;
   updatedAt?: string;
   owner?: UserSummaryDto;
+  ownerGroup?: GroupSummaryDto;
+  viewerCanManage?: boolean;
   trackCount?: number;
   tracks?: PlaylistTrackDto[];
   collaborators?: CollaboratorDto[];

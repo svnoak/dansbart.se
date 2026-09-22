@@ -16,6 +16,7 @@ export interface TrackListDto {
   effectiveBpm?: number;
   tempoCategory?: string;
   confidence?: number;
+  source?: string;
   hasVocals?: boolean;
   artistId?: string;
   artistName?: string;

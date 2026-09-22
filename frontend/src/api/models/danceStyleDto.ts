@@ -14,6 +14,7 @@ export interface DanceStyleDto {
   tempoCategory?: string;
   bpmMultiplier?: number;
   effectiveBpm?: number;
+  source?: string;
   confirmationCount?: number;
   isUserConfirmed?: boolean;
 }

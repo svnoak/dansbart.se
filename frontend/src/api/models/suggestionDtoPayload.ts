@@ -5,4 +5,4 @@
  * OpenAPI spec version: v0
  */
 
-export type GetAlbumTracks1200Item = {[key: string]: { [key: string]: unknown }};
+export type SuggestionDtoPayload = {[key: string]: { [key: string]: unknown }};

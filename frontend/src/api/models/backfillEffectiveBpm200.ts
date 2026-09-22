@@ -5,4 +5,4 @@
  * OpenAPI spec version: v0
  */
 
-export type IngestTrack200 = {[key: string]: { [key: string]: unknown }};
+export type BackfillEffectiveBpm200 = {[key: string]: { [key: string]: unknown }};

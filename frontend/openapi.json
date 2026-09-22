@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": { "title": "OpenAPI definition", "version": "v0" },
   "servers": [
-    { "url": "http://localhost:8000", "description": "Generated server url" }
+    { "url": "http://localhost:8010", "description": "Generated server url" }
   ],
   "tags": [
     {
@@ -25,7 +25,15 @@
       "name": "Admin Spider",
       "description": "Spider crawl management endpoints"
     },
+    {
+      "name": "Spotify Ingest",
+      "description": "Spotify preview and ingest endpoints, authenticated users only"
+    },
     { "name": "Albums", "description": "Album discovery endpoints" },
+    {
+      "name": "Groups",
+      "description": "User groups that can jointly own playlists"
+    },
     {
       "name": "Admin Duplicates",
       "description": "Track duplicate management endpoints"
@@ -43,6 +51,10 @@
       "name": "Admin Analytics",
       "description": "Analytics dashboard and statistics endpoints"
     },
+    {
+      "name": "Suggestions",
+      "description": "Community-submitted track/album and dance-style suggestions"
+    },
     { "name": "Dances", "description": "Dance directory endpoints" },
     {
       "name": "Admin Folkwiki",
@@ -53,6 +65,10 @@
       "description": "Track discovery endpoints for homepage and exploration"
     },
     { "name": "Playlists", "description": "User playlist management" },
+    {
+      "name": "Admin Suggestions",
+      "description": "Admin review queue for community suggestions"
+    },
     { "name": "Artists", "description": "Artist discovery endpoints" },
     {
       "name": "Admin - Tracks",
@@ -63,10 +79,6 @@
     {
       "name": "Admin Style Keywords",
       "description": "Style keyword CRUD management"
-    },
-    {
-      "name": "Admin Spotify",
-      "description": "Spotify preview and ingest endpoints"
     },
     {
       "name": "Admin Style Config",
@@ -359,6 +371,170 @@
                 "schema": {
                   "$ref": "#/components/schemas/PlaylistCollaborator"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/{id}": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get group by ID",
+        "operationId": "getGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupDto" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Update a group's name, about-us text or visibility",
+        "operationId": "updateGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateGroupRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupDto" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Groups"],
+        "summary": "Delete a group",
+        "operationId": "deleteGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/groups/{id}/members/{memberId}": {
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Update a member's permissions or admin status (admin only)",
+        "operationId": "updateMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateMemberRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupMemberDto" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Groups"],
+        "summary": "Remove a member from the group (or leave it yourself)",
+        "operationId": "removeMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/groups/invitations/{invitationId}": {
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Accept or reject a group invitation",
+        "operationId": "respondToGroupInvitation",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupMemberDto" }
               }
             }
           }
@@ -994,12 +1170,6 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "X-Voter-ID",
-            "in": "header",
-            "required": false,
-            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
@@ -1015,7 +1185,7 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TrackStyleVote" }
+                "schema": { "$ref": "#/components/schemas/TrackStyleVoteDto" }
               }
             }
           }
@@ -1052,6 +1222,33 @@
                   "type": "object",
                   "additionalProperties": { "type": "object" }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/suggestions": {
+      "post": {
+        "tags": ["Suggestions"],
+        "summary": "Submit a new content or dance-style suggestion (anonymous-friendly)",
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuggestionDto" }
               }
             }
           }
@@ -1107,6 +1304,62 @@
             "schema": { "type": "string", "format": "uuid" }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spotify/ingest/track": {
+      "post": {
+        "tags": ["Spotify Ingest"],
+        "summary": "Ingest track from Spotify",
+        "operationId": "ingestSpotifyTrack",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/IngestTrackRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spotify/ingest/album": {
+      "post": {
+        "tags": ["Spotify Ingest"],
+        "summary": "Ingest album from Spotify",
+        "operationId": "ingestSpotifyAlbum",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/IngestAlbumRequest" }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -1300,6 +1553,117 @@
         }
       }
     },
+    "/api/groups": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get groups the current user belongs to",
+        "operationId": "getMyGroups",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GroupSummaryDto" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Create a new group",
+        "operationId": "createGroup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGroupRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/playlists": {
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Create a playlist owned by the group",
+        "operationId": "createGroupPlaylist",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupPlaylistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlaylistDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/members": {
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Invite a user to the group",
+        "operationId": "inviteMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InviteMemberRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupMemberDto" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/favorites/{trackId}": {
       "post": {
         "tags": ["Favorites"],
@@ -1379,12 +1743,6 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "X-Voter-ID",
-            "in": "header",
-            "required": false,
-            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
@@ -1413,12 +1771,6 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "X-Voter-ID",
-            "in": "header",
-            "required": false,
-            "schema": { "type": "string" }
           }
         ],
         "responses": { "200": { "description": "OK" } }
@@ -1887,6 +2239,99 @@
         }
       }
     },
+    "/api/admin/suggestions/{id}/reject": {
+      "post": {
+        "tags": ["Admin Suggestions"],
+        "summary": "Reject a suggestion",
+        "operationId": "reject",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuggestionDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/suggestions/{id}/activate": {
+      "post": {
+        "tags": ["Admin Suggestions"],
+        "summary": "Write an accepted dance_style suggestion into dance_style_config",
+        "operationId": "activate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuggestionDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/suggestions/{id}/accept": {
+      "post": {
+        "tags": ["Admin Suggestions"],
+        "summary": "Accept a suggestion (does not yet write dance_style_config for dance_style suggestions — see /activate)",
+        "operationId": "accept",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuggestionDto" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/style-keywords": {
       "get": {
         "tags": ["Admin Style Keywords"],
@@ -2032,62 +2477,6 @@
           "content": {
             "application/json": {
               "schema": { "$ref": "#/components/schemas/StyleConfigRequest" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/spotify/ingest/track": {
-      "post": {
-        "tags": ["Admin Spotify"],
-        "summary": "Ingest track from Spotify",
-        "operationId": "ingestTrack",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/IngestTrackRequest" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": { "type": "object" }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/spotify/ingest/album": {
-      "post": {
-        "tags": ["Admin Spotify"],
-        "summary": "Ingest album from Spotify",
-        "operationId": "ingestAlbum",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/IngestAlbumRequest" }
             }
           },
           "required": true
@@ -2449,6 +2838,27 @@
             "schema": { "type": "integer", "format": "int32", "default": 100 }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/maintenance/backfill-effective-bpm": {
+      "post": {
+        "tags": ["Admin Maintenance"],
+        "summary": "Recompute effective_bpm for rows left at 0 despite a known track tempo",
+        "description": "Runs synchronously. Safe to re-run — only rows still at effective_bpm=0 with a known tracks.tempo_bpm are touched.",
+        "operationId": "backfillEffectiveBpm",
         "responses": {
           "200": {
             "description": "OK",
@@ -2907,6 +3317,13 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/sso/initiate": {
+      "get": {
+        "tags": ["mock-auth-controller"],
+        "operationId": "initiate",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/users/{id}": {
       "get": {
         "tags": ["Users"],
@@ -3318,6 +3735,34 @@
         }
       }
     },
+    "/api/tracks/classify-queue": {
+      "get": {
+        "tags": ["Tracks"],
+        "summary": "Personalized fast-classification queue: unconfirmed tracks this voter hasn't already voted on, lowest-confidence-first",
+        "operationId": "getClassifyQueue",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 20 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TrackListDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/styles/tree": {
       "get": {
         "tags": ["Styles"],
@@ -3369,6 +3814,68 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StatsDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spotify/artist/{spotifyId}/albums": {
+      "get": {
+        "tags": ["Spotify Ingest"],
+        "summary": "Preview artist's albums from Spotify",
+        "operationId": "getSpotifyArtistAlbums",
+        "parameters": [
+          {
+            "name": "spotifyId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/spotify/album/{spotifyId}/tracks": {
+      "get": {
+        "tags": ["Spotify Ingest"],
+        "summary": "Preview album's tracks from Spotify",
+        "operationId": "getSpotifyAlbumTracks",
+        "parameters": [
+          {
+            "name": "spotifyId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": { "type": "object" }
+                  }
+                }
               }
             }
           }
@@ -3433,6 +3940,46 @@
                 "schema": {
                   "type": "array",
                   "items": { "$ref": "#/components/schemas/InvitationDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/public": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get public groups",
+        "operationId": "getPublicGroups",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GroupSummaryDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/invitations": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get pending group invitations for current user",
+        "operationId": "getGroupInvitations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GroupInvitationDto" }
                 }
               }
             }
@@ -4365,6 +4912,79 @@
         }
       }
     },
+    "/api/admin/suggestions": {
+      "get": {
+        "tags": ["Admin Suggestions"],
+        "summary": "List suggestions, optionally filtered by kind/status",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 20 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/suggestions/{id}/activation-preview": {
+      "get": {
+        "tags": ["Admin Suggestions"],
+        "summary": "Preview how many tracks a dance-style activation would affect, before committing it",
+        "operationId": "activationPreview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionActivationPreviewDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/style-keywords/stats": {
       "get": {
         "tags": ["Admin Style Keywords"],
@@ -4390,68 +5010,6 @@
         "tags": ["Admin Style Config"],
         "summary": "Get all active style configs",
         "operationId": "getActiveConfigs",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": { "type": "object" }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/spotify/artist/{spotifyId}/albums": {
-      "get": {
-        "tags": ["Admin Spotify"],
-        "summary": "Preview artist's albums from Spotify",
-        "operationId": "getArtistAlbums_1",
-        "parameters": [
-          {
-            "name": "spotifyId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": { "type": "object" }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/spotify/album/{spotifyId}/tracks": {
-      "get": {
-        "tags": ["Admin Spotify"],
-        "summary": "Preview album's tracks from Spotify",
-        "operationId": "getAlbumTracks_1",
-        "parameters": [
-          {
-            "name": "spotifyId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -5582,6 +6140,7 @@
           "name": { "type": "string" },
           "description": { "type": "string" },
           "userId": { "type": "string", "format": "uuid" },
+          "groupId": { "type": "string", "format": "uuid" },
           "user": { "$ref": "#/components/schemas/User" },
           "isPublic": { "type": "boolean" },
           "shareToken": { "type": "string" },
@@ -5677,6 +6236,7 @@
           "role": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" },
           "lastLoginAt": { "type": "string", "format": "date-time" },
+          "confirmedTrackCount": { "type": "integer", "format": "int64" },
           "playlists": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/Playlist" }
@@ -5718,6 +6278,73 @@
       "RespondToInvitationRequest": {
         "type": "object",
         "properties": { "accept": { "type": "boolean" } }
+      },
+      "UpdateGroupRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "aboutUs": { "type": "string" },
+          "isPublic": { "type": "boolean" }
+        }
+      },
+      "GroupDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "aboutUs": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "members": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/GroupMemberDto" }
+          },
+          "playlists": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaylistSummaryDto" }
+          },
+          "memberCount": { "type": "integer", "format": "int32" }
+        }
+      },
+      "GroupMemberDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "avatarUrl": { "type": "string" },
+          "isAdmin": { "type": "boolean" },
+          "canEditInfo": { "type": "boolean" },
+          "canManagePlaylists": { "type": "boolean" },
+          "canInviteMembers": { "type": "boolean" },
+          "canRemoveMembers": { "type": "boolean" },
+          "status": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PlaylistSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "trackCount": { "type": "integer", "format": "int32" },
+          "ownerDisplayName": { "type": "string" }
+        }
+      },
+      "UpdateMemberRequest": {
+        "type": "object",
+        "properties": {
+          "isAdmin": { "type": "boolean" },
+          "canEditInfo": { "type": "boolean" },
+          "canManagePlaylists": { "type": "boolean" },
+          "canInviteMembers": { "type": "boolean" },
+          "canRemoveMembers": { "type": "boolean" }
+        }
       },
       "SetPrimaryTrackRequest": {
         "type": "object",
@@ -5845,25 +6472,63 @@
           "tempoCorrection": { "type": "string" }
         }
       },
-      "TrackStyleVote": {
+      "TrackStyleVoteDto": {
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "trackId": { "type": "string", "format": "uuid" },
-          "track": { "$ref": "#/components/schemas/Track" },
-          "voterId": { "type": "string" },
           "suggestedStyle": { "type": "string" },
           "tempoCorrection": { "type": "string" },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "createdAt": { "type": "string", "format": "date-time" },
+          "styleJustConfirmed": { "type": "boolean" }
         }
       },
       "SecondaryStyleRequest": {
         "type": "object",
         "properties": { "style": { "type": "string" } }
       },
+      "SuggestionCreateRequest": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": { "type": "object" }
+          },
+          "note": { "type": "string" }
+        }
+      },
+      "SuggestionDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "kind": { "type": "string" },
+          "payload": {
+            "type": "object",
+            "additionalProperties": { "type": "object" }
+          },
+          "note": { "type": "string" },
+          "voterId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "reviewedBy": { "type": "string", "format": "uuid" },
+          "reviewedAt": { "type": "string", "format": "date-time" },
+          "reviewNote": { "type": "string" },
+          "resolvedRefId": { "type": "string", "format": "uuid" },
+          "activatedAt": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "VoteRequest": {
         "type": "object",
         "properties": { "voteType": { "type": "string" } }
+      },
+      "IngestTrackRequest": {
+        "type": "object",
+        "properties": { "spotifyTrackId": { "type": "string" } }
+      },
+      "IngestAlbumRequest": {
+        "type": "object",
+        "properties": { "spotifyAlbumId": { "type": "string" } }
       },
       "CreatePlaylistRequest": {
         "type": "object",
@@ -5882,6 +6547,125 @@
           "userId": { "type": "string", "format": "uuid" },
           "permission": { "type": "string" }
         }
+      },
+      "CreateGroupRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "aboutUs": { "type": "string" },
+          "isPublic": { "type": "boolean" }
+        }
+      },
+      "CreateGroupPlaylistRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "CollaboratorDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "permission": { "type": "string" },
+          "status": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GroupSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "isPublic": { "type": "boolean" }
+        }
+      },
+      "PlaybackLinkDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "platform": { "type": "string" },
+          "deepLink": { "type": "string" },
+          "isWorking": { "type": "boolean" }
+        }
+      },
+      "PlaylistDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "shareToken": { "type": "string" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "tempoCategory": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "owner": { "$ref": "#/components/schemas/UserSummaryDto" },
+          "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" },
+          "viewerCanManage": { "type": "boolean" },
+          "trackCount": { "type": "integer", "format": "int32" },
+          "tracks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaylistTrackDto" }
+          },
+          "collaborators": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CollaboratorDto" }
+          }
+        }
+      },
+      "PlaylistTrackDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "position": { "type": "integer", "format": "int32" },
+          "addedAt": { "type": "string", "format": "date-time" },
+          "addedByUserId": { "type": "string", "format": "uuid" },
+          "track": { "$ref": "#/components/schemas/TrackListDto" }
+        }
+      },
+      "TrackListDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "durationMs": { "type": "integer", "format": "int32" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "matchedStyle": { "type": "string" },
+          "effectiveBpm": { "type": "integer", "format": "int32" },
+          "tempoCategory": { "type": "string" },
+          "confidence": { "type": "number", "format": "float" },
+          "source": { "type": "string" },
+          "hasVocals": { "type": "boolean" },
+          "artistId": { "type": "string", "format": "uuid" },
+          "artistName": { "type": "string" },
+          "albumId": { "type": "string", "format": "uuid" },
+          "albumTitle": { "type": "string" },
+          "playbackLinks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
+          }
+        }
+      },
+      "UserSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "avatarUrl": { "type": "string" }
+        }
+      },
+      "InviteMemberRequest": {
+        "type": "object",
+        "properties": { "userId": { "type": "string", "format": "uuid" } }
       },
       "DanceTrackVoteRequest": {
         "type": "object",
@@ -5989,6 +6773,10 @@
           "limit": { "type": "integer", "format": "int32" }
         }
       },
+      "SuggestionReviewRequest": {
+        "type": "object",
+        "properties": { "reviewNote": { "type": "string" } }
+      },
       "StyleKeywordRequest": {
         "type": "object",
         "properties": {
@@ -6004,14 +6792,6 @@
           "subStyle": { "type": "string" },
           "beatsPerBar": { "type": "integer", "format": "int32" }
         }
-      },
-      "IngestTrackRequest": {
-        "type": "object",
-        "properties": { "spotifyTrackId": { "type": "string" } }
-      },
-      "IngestAlbumRequest": {
-        "type": "object",
-        "properties": { "spotifyAlbumId": { "type": "string" } }
       },
       "RejectNetworkRequest": {
         "type": "object",
@@ -6069,15 +6849,6 @@
           "username": { "type": "string" }
         }
       },
-      "UserSummaryDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "displayName": { "type": "string" },
-          "avatarUrl": { "type": "string" }
-        }
-      },
       "PageResponseTrackListDto": {
         "type": "object",
         "properties": {
@@ -6089,38 +6860,6 @@
           "page": { "type": "integer", "format": "int32" },
           "size": { "type": "integer", "format": "int32" },
           "hasMore": { "type": "boolean" }
-        }
-      },
-      "PlaybackLinkDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "platform": { "type": "string" },
-          "deepLink": { "type": "string" },
-          "isWorking": { "type": "boolean" }
-        }
-      },
-      "TrackListDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "title": { "type": "string" },
-          "durationMs": { "type": "integer", "format": "int32" },
-          "danceStyle": { "type": "string" },
-          "subStyle": { "type": "string" },
-          "matchedStyle": { "type": "string" },
-          "effectiveBpm": { "type": "integer", "format": "int32" },
-          "tempoCategory": { "type": "string" },
-          "confidence": { "type": "number", "format": "float" },
-          "hasVocals": { "type": "boolean" },
-          "artistId": { "type": "string", "format": "uuid" },
-          "artistName": { "type": "string" },
-          "albumId": { "type": "string", "format": "uuid" },
-          "albumTitle": { "type": "string" },
-          "playbackLinks": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
-          }
         }
       },
       "TrackStructureVersion": {
@@ -6153,6 +6892,7 @@
           "tempoCategory": { "type": "string" },
           "bpmMultiplier": { "type": "number", "format": "float" },
           "effectiveBpm": { "type": "integer", "format": "int32" },
+          "source": { "type": "string" },
           "confirmationCount": { "type": "integer", "format": "int32" },
           "isUserConfirmed": { "type": "boolean" }
         }
@@ -6199,54 +6939,6 @@
           "lastAdded": { "type": "string", "format": "date-time" }
         }
       },
-      "CollaboratorDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "displayName": { "type": "string" },
-          "permission": { "type": "string" },
-          "status": { "type": "string" },
-          "invitedAt": { "type": "string", "format": "date-time" },
-          "acceptedAt": { "type": "string", "format": "date-time" }
-        }
-      },
-      "PlaylistDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "isPublic": { "type": "boolean" },
-          "shareToken": { "type": "string" },
-          "danceStyle": { "type": "string" },
-          "subStyle": { "type": "string" },
-          "tempoCategory": { "type": "string" },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "updatedAt": { "type": "string", "format": "date-time" },
-          "owner": { "$ref": "#/components/schemas/UserSummaryDto" },
-          "trackCount": { "type": "integer", "format": "int32" },
-          "tracks": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/PlaylistTrackDto" }
-          },
-          "collaborators": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/CollaboratorDto" }
-          }
-        }
-      },
-      "PlaylistTrackDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "position": { "type": "integer", "format": "int32" },
-          "addedAt": { "type": "string", "format": "date-time" },
-          "addedByUserId": { "type": "string", "format": "uuid" },
-          "track": { "$ref": "#/components/schemas/TrackListDto" }
-        }
-      },
       "InvitationDto": {
         "type": "object",
         "properties": {
@@ -6256,6 +6948,17 @@
           "invitedByUserId": { "type": "string", "format": "uuid" },
           "invitedByDisplayName": { "type": "string" },
           "permission": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GroupInvitationDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "groupId": { "type": "string", "format": "uuid" },
+          "groupName": { "type": "string" },
+          "invitedByUserId": { "type": "string", "format": "uuid" },
+          "invitedByDisplayName": { "type": "string" },
           "invitedAt": { "type": "string", "format": "date-time" }
         }
       },
@@ -6418,6 +7121,15 @@
           "page": { "type": "integer", "format": "int32" },
           "size": { "type": "integer", "format": "int32" },
           "hasMore": { "type": "boolean" }
+        }
+      },
+      "SuggestionActivationPreviewDto": {
+        "type": "object",
+        "properties": {
+          "mainStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "proposedBeatsPerBar": { "type": "integer", "format": "int32" },
+          "affectedTrackCount": { "type": "integer", "format": "int64" }
         }
       },
       "DanceTrack": {
