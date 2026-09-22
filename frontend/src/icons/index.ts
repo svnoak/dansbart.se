@@ -35,6 +35,7 @@ export { AlbumListIcon } from './AlbumListIcon';
 export { MoonIcon } from './MoonIcon';
 export { SunIcon } from './SunIcon';
 export { GripIcon } from './GripIcon';
+export { GroupIcon } from './GroupIcon';
 export { LibraryIcon } from './LibraryIcon';
 export { MusicNoteIcon } from './MusicNoteIcon';
 export { CalendarIcon } from './CalendarIcon';

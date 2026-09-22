@@ -47,7 +47,7 @@ export function UserSearchSelect({ selected, onSelect, label }: UserSearchSelect
       <input
         ref={inputRef}
         id={inputId}
-        type="text"
+        type="search"
         value={displayValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}

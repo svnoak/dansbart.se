@@ -1,0 +1,168 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { getGroup, removeMember } from '@/api/generated/groups/groups';
+import type { GroupDto } from '@/api/models/groupDto';
+import { useAuth } from '@/auth/useAuth';
+import { canOpenGroupSettings } from '@/utils/groupPermissions';
+import { describeGroupError } from '@/utils/describeGroupError';
+import { Badge, Button, Card, IconButton, SectionTitle, toast } from '@/ui';
+import { BackArrowIcon } from '@/icons';
+
+export function GroupPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+
+  const [group, setGroup] = useState<GroupDto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    getGroup(id)
+      .then((data) => {
+        if (!cancelled) setGroup(data);
+      })
+      .catch(() => {
+        if (!cancelled) setNotFound(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (loading) {
+    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
+  }
+
+  if (notFound || !group) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-red-600" role="alert">
+          Gruppen hittades inte.
+        </p>
+        <Link to="/groups" className="text-sm text-[rgb(var(--color-accent))] hover:underline">
+          Tillbaka till grupper
+        </Link>
+      </div>
+    );
+  }
+
+  const members = (group.members ?? []).filter((m) => m.status === 'accepted');
+  const myMembership = members.find((m) => m.userId === user?.id);
+  const canSeeSettings = canOpenGroupSettings(myMembership);
+
+  async function handleLeave() {
+    if (!group?.id || !myMembership?.id) return;
+    setLeaving(true);
+    try {
+      await removeMember(group.id, myMembership.id);
+      toast('Du har lämnat gruppen.');
+      navigate('/groups');
+    } catch (error) {
+      setLeaveError(describeGroupError(error, 'leave'));
+      setConfirmingLeave(false);
+      setLeaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <IconButton aria-label="Tillbaka till grupper" onClick={() => navigate('/groups')}>
+        <BackArrowIcon className="h-5 w-5" aria-hidden />
+      </IconButton>
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">{group.name}</h1>
+            <Badge variant={group.isPublic ? 'default' : 'muted'} className="text-base">
+              {group.isPublic ? 'Offentlig' : 'Privat'}
+            </Badge>
+          </div>
+          {group.memberCount != null && (
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">
+              {group.memberCount} {group.memberCount === 1 ? 'medlem' : 'medlemmar'}
+            </p>
+          )}
+        </div>
+        {canSeeSettings && (
+          <Link
+            to={`/groups/${id}/settings`}
+            className="shrink-0 text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+          >
+            Inställningar för gruppen
+          </Link>
+        )}
+      </div>
+
+      {group.aboutUs && (
+        <section>
+          <SectionTitle>Om oss</SectionTitle>
+          <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">{group.aboutUs}</p>
+        </section>
+      )}
+
+      {group.members && (
+        <section>
+          <SectionTitle>Medlemmar</SectionTitle>
+          <ul className="mt-2 space-y-2">
+            {members.map((member) => (
+              <li key={member.id}>
+                <Card className="flex items-center justify-between gap-2 p-3">
+                  <span className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                    {member.displayName ?? member.username}
+                  </span>
+                  {member.isAdmin && <Badge>Administratör</Badge>}
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {myMembership ? (
+        <section className="space-y-2">
+          {!confirmingLeave ? (
+            <Button variant="secondary" onClick={() => setConfirmingLeave(true)}>
+              Lämna gruppen
+            </Button>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-[rgb(var(--color-text))]">Vill du lämna gruppen?</span>
+              <Button variant="danger" disabled={leaving} onClick={handleLeave}>
+                Ja, lämna gruppen
+              </Button>
+              <Button variant="ghost" disabled={leaving} onClick={() => setConfirmingLeave(false)}>
+                Avbryt
+              </Button>
+            </div>
+          )}
+          {leaveError && (
+            <p className="text-sm text-red-600" role="alert">
+              {leaveError}
+            </p>
+          )}
+        </section>
+      ) : authLoading ? null : !isAuthenticated ? (
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">
+          <Link to="/login" className="text-[rgb(var(--color-accent))] hover:underline">
+            Logga in
+          </Link>{' '}
+          för att gå med i grupper.
+        </p>
+      ) : (
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">
+          Du är inte medlem i gruppen. Be en administratör att bjuda in dig.
+        </p>
+      )}
+    </div>
+  );
+}
