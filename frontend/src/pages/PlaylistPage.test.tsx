@@ -10,12 +10,16 @@ import { authValue, loggedInAuthValue } from '@/test/authValue';
 const getPlaylist = vi.fn();
 const getStyleTree = vi.fn();
 const useAuth = vi.fn();
+const generateShareToken = vi.fn();
+const invalidateShareToken = vi.fn();
 
 vi.mock('@/api/generated/playlists/playlists', () => ({
   getPlaylist: (...args: unknown[]) => getPlaylist(...args),
   removeTrack: vi.fn(),
   updatePlaylist: vi.fn(),
   reorderTracks: vi.fn(),
+  generateShareToken: (...args: unknown[]) => generateShareToken(...args),
+  invalidateShareToken: (...args: unknown[]) => invalidateShareToken(...args),
 }));
 
 vi.mock('@/api/generated/styles/styles', () => ({
@@ -34,6 +38,13 @@ vi.mock('@/theme/useTheme', () => ({
   useTheme: () => ({ theme: 'light' }),
 }));
 
+vi.mock('@/favorites/useFavorites', () => ({
+  useFavorites: () => ({
+    isFavorited: () => false,
+    toggleFavorite: vi.fn(),
+  }),
+}));
+
 describe('PlaylistPage', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -42,6 +53,8 @@ describe('PlaylistPage', () => {
     getPlaylist.mockReset();
     getStyleTree.mockReset();
     useAuth.mockReset();
+    generateShareToken.mockReset();
+    invalidateShareToken.mockReset();
     useAuth.mockReturnValue(authValue());
     getStyleTree.mockResolvedValue([]);
     container = document.createElement('div');
@@ -128,5 +141,500 @@ describe('PlaylistPage', () => {
 
     const settingsButton = getButtonByText('Ändra inställningar');
     expect(settingsButton).toBeUndefined();
+  });
+
+  it('shows the actions in order', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 1,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const playButton = getButtonByText('Spela');
+    const addButton = getLinkByText('Lägg till låtar');
+    const shareButton = getButtonByText('Dela spellista');
+    const settingsButton = getButtonByText('Ändra inställningar');
+
+    expect(playButton).toBeDefined();
+    expect(addButton).toBeDefined();
+    expect(shareButton).toBeDefined();
+    expect(settingsButton).toBeDefined();
+
+    if (playButton && addButton && shareButton && settingsButton) {
+      const playIndex = Array.from(document.body.querySelectorAll('*')).indexOf(playButton);
+      const addIndex = Array.from(document.body.querySelectorAll('*')).indexOf(addButton);
+      const shareIndex = Array.from(document.body.querySelectorAll('*')).indexOf(shareButton);
+      const settingsIndex = Array.from(document.body.querySelectorAll('*')).indexOf(settingsButton);
+
+      expect(playIndex).toBeLessThan(addIndex);
+      expect(addIndex).toBeLessThan(shareIndex);
+      expect(shareIndex).toBeLessThan(settingsIndex);
+    }
+  });
+
+  it('hides Spela without tracks', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Tom spellista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const playButton = getButtonByText('Spela');
+    expect(playButton).toBeUndefined();
+  });
+
+  it('Lägg till låtar opens search for this playlist', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 1,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const addLink = getLinkByText('Lägg till låtar');
+    expect(addLink).toBeDefined();
+    if (addLink) {
+      expect(addLink.getAttribute('href')).toBe('/search?addTo=p1');
+    }
+  });
+
+  it('a viewer sees Spela but not Lägg till låtar or Ändra inställningar', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Delad spellista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u2', username: 'other' },
+      viewerCanManage: false,
+      trackCount: 1,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const playButton = getButtonByText('Spela');
+    const addLink = getLinkByText('Lägg till låtar');
+    const settingsButton = getButtonByText('Ändra inställningar');
+
+    expect(playButton).toBeDefined();
+    expect(addLink).toBeUndefined();
+    expect(settingsButton).toBeUndefined();
+  });
+
+  it('an editor creates a share link', async () => {
+    generateShareToken.mockResolvedValue({ shareToken: 'new-token' });
+
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 1,
+      shareToken: undefined,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const shareButton = getButtonByText('Dela spellista');
+    expect(shareButton).toBeDefined();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const createLinkButton = getButtonByText('Skapa länk');
+    expect(createLinkButton).toBeDefined();
+
+    if (createLinkButton) {
+      await act(async () => {
+        createLinkButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+    }
+
+    expect(generateShareToken).toHaveBeenCalledWith('p1');
+
+    const copyLinkButton = getButtonByText('Kopiera länk');
+    expect(copyLinkButton).toBeDefined();
+  });
+
+  it("a visitor copies a public playlist's address", async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Publik spellista',
+      description: undefined,
+      isPublic: true,
+      ownerGroup: undefined,
+      owner: { id: 'u2', username: 'other' },
+      viewerCanManage: false,
+      trackCount: 1,
+      shareToken: undefined,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const shareButton = getButtonByText('Dela spellista');
+    expect(shareButton).toBeDefined();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const copyLinkButton = getButtonByText('Kopiera länk');
+    const createLinkButton = getButtonByText('Skapa länk');
+
+    expect(copyLinkButton).toBeDefined();
+    expect(createLinkButton).toBeUndefined();
+  });
+
+  it('Dela spellista is hidden for a private playlist the viewer cannot manage', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Privat spellista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u2', username: 'other' },
+      viewerCanManage: false,
+      trackCount: 1,
+      shareToken: undefined,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const shareButton = getButtonByText('Dela spellista');
+    expect(shareButton).toBeUndefined();
+  });
+
+  it('the name pencil is a labelled button', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const editButton = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.getAttribute('aria-label') === 'Ändra namn'
+    );
+    expect(editButton).toBeDefined();
+  });
+
+  it('sorting by name reorders the tracks', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 3,
+      tracks: [
+        {
+          id: 'pt1',
+          track: {
+            id: 'track1',
+            title: 'Zebra',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 0,
+        },
+        {
+          id: 'pt2',
+          track: {
+            id: 'track2',
+            title: 'Apple',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 1,
+        },
+        {
+          id: 'pt3',
+          track: {
+            id: 'track3',
+            title: 'Mango',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 2,
+        },
+      ],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const sortButton = getButtonByText('Namn');
+    expect(sortButton).toBeDefined();
+
+    if (sortButton) {
+      await act(async () => {
+        sortButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const trackTitles = Array.from(document.body.querySelectorAll('li')).map(
+      (li) => li.textContent
+    );
+    const appleIndex = trackTitles.findIndex((title) => title?.includes('Apple'));
+    const mangoIndex = trackTitles.findIndex((title) => title?.includes('Mango'));
+    const zebraIndex = trackTitles.findIndex((title) => title?.includes('Zebra'));
+
+    expect(appleIndex).toBeLessThan(mangoIndex);
+    expect(mangoIndex).toBeLessThan(zebraIndex);
+  });
+
+  it('a created share link survives closing and reopening the panel', async () => {
+    generateShareToken.mockResolvedValue({ shareToken: 'new-token' });
+
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 1,
+      shareToken: undefined,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const shareButton = getButtonByText('Dela spellista');
+    expect(shareButton).toBeDefined();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const createLinkButton = getButtonByText('Skapa länk');
+    expect(createLinkButton).toBeDefined();
+
+    if (createLinkButton) {
+      await act(async () => {
+        createLinkButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+    }
+
+    expect(generateShareToken).toHaveBeenCalledTimes(1);
+    let copyLinkButton = getButtonByText('Kopiera länk');
+    expect(copyLinkButton).toBeDefined();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const createLinkButtonAfterClose = getButtonByText('Skapa länk');
+    expect(createLinkButtonAfterClose).toBeUndefined();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    copyLinkButton = getButtonByText('Kopiera länk');
+    expect(copyLinkButton).toBeDefined();
+
+    expect(generateShareToken).toHaveBeenCalledTimes(1);
   });
 });

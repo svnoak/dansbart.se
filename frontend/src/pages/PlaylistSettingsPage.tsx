@@ -4,8 +4,6 @@ import {
   getPlaylist,
   updatePlaylist,
   deletePlaylist,
-  generateShareToken,
-  invalidateShareToken,
   inviteCollaborator,
   updateCollaborator,
   removeCollaborator,
@@ -18,6 +16,7 @@ import { BackArrowIcon } from '@/icons';
 import { IconButton, toast } from '@/ui';
 import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
 import { useAuth } from '@/auth/useAuth';
+import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
 
 const PERMISSION_LABELS: Record<string, string> = {
   edit: 'Redaktör',
@@ -47,6 +46,11 @@ export function PlaylistSettingsPage() {
   // Transfer ownership
   const [transferTarget, setTransferTarget] = useState('');
   const [transferConfirm, setTransferConfirm] = useState(false);
+
+  const { shareToken, shareUrl, createLink, removeLink, copyLink } = usePlaylistShareLink(
+    id,
+    playlist?.shareToken,
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -83,36 +87,6 @@ export function PlaylistSettingsPage() {
     } catch {
       toast('Kunde inte ändra synlighet', 'error');
     }
-  }
-
-  // ── Share token ─────────────────────────────────────────────────────────────
-
-  async function handleGenerateToken() {
-    if (!id) return;
-    try {
-      const updated = await generateShareToken(id);
-      setPlaylist((prev) => (prev ? { ...prev, shareToken: updated.shareToken } : prev));
-      toast('Delningslänk skapad');
-    } catch {
-      toast('Kunde inte skapa delningslänk', 'error');
-    }
-  }
-
-  async function handleInvalidateToken() {
-    if (!id) return;
-    try {
-      await invalidateShareToken(id);
-      setPlaylist((prev) => (prev ? { ...prev, shareToken: undefined } : prev));
-      toast('Delningslänk ogiltigförklarad');
-    } catch {
-      toast('Kunde inte ogiltigförklara länk', 'error');
-    }
-  }
-
-  function handleCopyLink() {
-    if (!playlist?.shareToken) return;
-    const url = `${window.location.origin}/shared/${playlist.shareToken}`;
-    navigator.clipboard.writeText(url).then(() => toast('Länk kopierad'));
   }
 
   // ── Collaborators ───────────────────────────────────────────────────────────
@@ -244,7 +218,7 @@ export function PlaylistSettingsPage() {
             Delningslänk
           </h2>
           <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
-            {playlist.shareToken ? (
+            {shareToken ? (
               <>
                 <p className="text-xs text-[rgb(var(--color-text-muted))]">
                   Alla med länken kan se och spela den här spellistan.
@@ -252,12 +226,12 @@ export function PlaylistSettingsPage() {
                 <div className="flex gap-2">
                   <input
                     readOnly
-                    value={`${window.location.origin}/shared/${playlist.shareToken}`}
+                    value={shareUrl ?? ''}
                     className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-1.5 text-xs text-[rgb(var(--color-text-muted))] focus:outline-none"
                   />
                   <button
                     type="button"
-                    onClick={handleCopyLink}
+                    onClick={copyLink}
                     className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
                   >
                     Kopiera
@@ -265,7 +239,7 @@ export function PlaylistSettingsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={handleInvalidateToken}
+                  onClick={removeLink}
                   className="text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] underline"
                 >
                   Ogiltigförklara länk
@@ -278,7 +252,7 @@ export function PlaylistSettingsPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={handleGenerateToken}
+                  onClick={createLink}
                   className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
                 >
                   Skapa delningslänk
