@@ -13,7 +13,7 @@ import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
 import type { UserSummaryDto } from '@/api/models/userSummaryDto';
 import { BackArrowIcon } from '@/icons';
-import { IconButton, toast } from '@/ui';
+import { IconButton, toast, Card, SectionTitle, Button } from '@/ui';
 import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
@@ -52,11 +52,18 @@ export function PlaylistSettingsPage() {
     playlist?.shareToken,
   );
 
+  // Description
+  const [description, setDescription] = useState('');
+  const [savingDescription, setSavingDescription] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     const controller = new AbortController();
     getPlaylist(id, { signal: controller.signal })
-      .then(setPlaylist)
+      .then((pl) => {
+        setPlaylist(pl);
+        setDescription(pl.description ?? '');
+      })
       .catch(() => {
         if (controller.signal.aborted) return;
         setPlaylist(null);
@@ -75,6 +82,21 @@ export function PlaylistSettingsPage() {
   const acceptedCollaborators: CollaboratorDto[] = (playlist.collaborators ?? []).filter(
     (c) => c.status === 'accepted',
   );
+
+  // ── Description ────────────────────────────────────────────────────────────
+
+  async function handleSaveDescription() {
+    if (!id) return;
+    setSavingDescription(true);
+    try {
+      await updatePlaylist(id, { description });
+      toast('Beskrivningen är sparad.');
+    } catch {
+      toast('Det gick inte att spara beskrivningen.', 'error');
+    } finally {
+      setSavingDescription(false);
+    }
+  }
 
   // ── Visibility ─────────────────────────────────────────────────────────────
 
@@ -182,6 +204,33 @@ export function PlaylistSettingsPage() {
           Inställningar — {playlist.name}
         </h1>
       </div>
+
+      {/* Om spellistan */}
+      {canManageShare && (
+        <section className="space-y-3">
+          <SectionTitle>Om spellistan</SectionTitle>
+          <Card className="space-y-3 p-4">
+            <div className="space-y-1">
+              <label
+                htmlFor="playlist-description"
+                className="block text-sm font-medium text-[rgb(var(--color-text))]"
+              >
+                Beskrivning
+              </label>
+              <textarea
+                id="playlist-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                className="w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+              />
+            </div>
+            <Button onClick={handleSaveDescription} disabled={savingDescription}>
+              Spara
+            </Button>
+          </Card>
+        </section>
+      )}
 
       {/* Synlighet */}
       {isOwner && (
