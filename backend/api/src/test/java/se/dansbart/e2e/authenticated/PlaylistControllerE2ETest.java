@@ -753,4 +753,62 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isNotFound());
         }
     }
+
+    @Nested
+    @DisplayName("GET /api/playlists/editable")
+    class GetEditablePlaylists {
+
+        private Group group;
+        private Group groupNoManagePermission;
+
+        @BeforeEach
+        void setUp() {
+            group = testData.group().withName("Test Group").build();
+            groupNoManagePermission = testData.group().withName("No Manage Group").build();
+        }
+
+        @Test
+        @DisplayName("lists own collaboration and group playlists")
+        void getEditablePlaylists_listsOwnCollaborationAndGroupPlaylists() throws Exception {
+            // Own playlist
+            Playlist ownPlaylist = testData.playlist().withName("Alpha Own").withOwner(owner).build();
+
+            // Edit collaboration
+            Playlist editCollab = testData.playlist().withName("Beta Collaboration").withOwner(otherUser).build();
+            testData.addCollaborator(editCollab, owner, "edit");
+
+            // View collaboration (excluded)
+            Playlist viewCollab = testData.playlist().withName("View Only").withOwner(otherUser).build();
+            testData.addCollaborator(viewCollab, owner, "view");
+
+            // Group playlist with manage permission
+            Playlist groupPlaylist = testData.playlist().withName("Gamma Group").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+
+            // Group playlist without manage permission (excluded)
+            Playlist groupNoManage = testData.playlist().withName("Delta No Access").withGroup(groupNoManagePermission).build();
+            testData.addGroupMember(groupNoManagePermission, owner, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/playlists/editable")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[*].name", containsInAnyOrder("Alpha Own", "Beta Collaboration", "Gamma Group")))
+                .andExpect(jsonPath("$[*].id", containsInAnyOrder(
+                    ownPlaylist.getId().toString(),
+                    editCollab.getId().toString(),
+                    groupPlaylist.getId().toString()
+                )))
+                .andExpect(jsonPath("$[?(@.name == 'Alpha Own')].ownerGroupName", containsInAnyOrder((Object) null)))
+                .andExpect(jsonPath("$[?(@.name == 'Beta Collaboration')].ownerGroupName", containsInAnyOrder((Object) null)))
+                .andExpect(jsonPath("$[?(@.name == 'Gamma Group')].ownerGroupName", containsInAnyOrder("Test Group")));
+        }
+
+        @Test
+        @DisplayName("without auth should return 401")
+        void getEditablePlaylists_withoutAuth_shouldReturn401() throws Exception {
+            mockMvc.perform(get("/api/playlists/editable"))
+                .andExpect(status().isUnauthorized());
+        }
+    }
 }

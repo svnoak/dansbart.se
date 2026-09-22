@@ -11,6 +11,7 @@ import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
 import se.dansbart.domain.user.UserJooqRepository;
 import se.dansbart.dto.CollaboratorDto;
+import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
@@ -49,6 +50,17 @@ public class PlaylistService {
     @Transactional(readOnly = true)
     public List<Playlist> findSharedWithUser(UUID userId) {
         return playlistJooqRepository.findSharedWithUser(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EditablePlaylistDto> findEditableByUserId(UUID userId) {
+        return playlistJooqRepository.findEditableByUserId(userId).stream()
+            .map(record -> EditablePlaylistDto.builder()
+                .id(record.id())
+                .name(record.name())
+                .ownerGroupName(record.groupName())
+                .build())
+            .collect(Collectors.toList());
     }
 
     @Transactional

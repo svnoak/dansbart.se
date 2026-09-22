@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.dto.CollaboratorDto;
+import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
 
@@ -34,6 +35,12 @@ public class PlaylistController {
     @Operation(summary = "Get playlists shared with current user")
     public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal UUID userId) {
         return ResponseEntity.ok(playlistService.findSharedWithUser(userId));
+    }
+
+    @GetMapping("/editable")
+    @Operation(operationId = "getEditablePlaylists", summary = "Get playlists the current user can add tracks to")
+    public ResponseEntity<List<EditablePlaylistDto>> getEditablePlaylists(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(playlistService.findEditableByUserId(userId));
     }
 
     @GetMapping("/{id}")
