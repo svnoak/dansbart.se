@@ -37,6 +37,8 @@ import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.CommunitySuggestions.CommunitySuggestionsPath;
+import se.dansbart.jooq.tables.DanceListCollaborators.DanceListCollaboratorsPath;
+import se.dansbart.jooq.tables.DanceLists.DanceListsPath;
 import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.Dances.DancesPath;
 import se.dansbart.jooq.tables.GroupMembers.GroupMembersPath;
@@ -208,6 +210,47 @@ public class Users extends TableImpl<Record> {
             _communitySuggestions = new CommunitySuggestionsPath(this, null, Keys.COMMUNITY_SUGGESTIONS__COMMUNITY_SUGGESTIONS_REVIEWED_BY_FKEY.getInverseKey());
 
         return _communitySuggestions;
+    }
+
+    private transient DanceListCollaboratorsPath _danceListCollaboratorsInvitedByFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_list_collaborators</code> table, via the
+     * <code>dance_list_collaborators_invited_by_fkey</code> key
+     */
+    public DanceListCollaboratorsPath danceListCollaboratorsInvitedByFkey() {
+        if (_danceListCollaboratorsInvitedByFkey == null)
+            _danceListCollaboratorsInvitedByFkey = new DanceListCollaboratorsPath(this, null, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_INVITED_BY_FKEY.getInverseKey());
+
+        return _danceListCollaboratorsInvitedByFkey;
+    }
+
+    private transient DanceListCollaboratorsPath _danceListCollaboratorsUserIdFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.dance_list_collaborators</code> table, via the
+     * <code>dance_list_collaborators_user_id_fkey</code> key
+     */
+    public DanceListCollaboratorsPath danceListCollaboratorsUserIdFkey() {
+        if (_danceListCollaboratorsUserIdFkey == null)
+            _danceListCollaboratorsUserIdFkey = new DanceListCollaboratorsPath(this, null, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_USER_ID_FKEY.getInverseKey());
+
+        return _danceListCollaboratorsUserIdFkey;
+    }
+
+    private transient DanceListsPath _danceLists;
+
+    /**
+     * Get the implicit to-many join path to the <code>public.dance_lists</code>
+     * table
+     */
+    public DanceListsPath danceLists() {
+        if (_danceLists == null)
+            _danceLists = new DanceListsPath(this, null, Keys.DANCE_LISTS__DANCE_LISTS_USER_ID_FKEY.getInverseKey());
+
+        return _danceLists;
     }
 
     private transient DanceTracksPath _danceTracksAddedByFkey;

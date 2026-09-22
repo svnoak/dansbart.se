@@ -13,6 +13,10 @@ import se.dansbart.jooq.tables.Albums;
 import se.dansbart.jooq.tables.ArtistCrawlLogs;
 import se.dansbart.jooq.tables.Artists;
 import se.dansbart.jooq.tables.CommunitySuggestions;
+import se.dansbart.jooq.tables.DanceListCollaborators;
+import se.dansbart.jooq.tables.DanceListEntries;
+import se.dansbart.jooq.tables.DanceListEntryTracks;
+import se.dansbart.jooq.tables.DanceLists;
 import se.dansbart.jooq.tables.DanceMovementFeedback;
 import se.dansbart.jooq.tables.DanceStyleConfig;
 import se.dansbart.jooq.tables.DanceTrackVotes;
@@ -54,6 +58,15 @@ public class Indexes {
 
     public static final Index IDX_COMMUNITY_SUGGESTIONS_KIND_STATUS = Internal.createIndex(DSL.name("idx_community_suggestions_kind_status"), CommunitySuggestions.COMMUNITY_SUGGESTIONS, new OrderField[] { CommunitySuggestions.COMMUNITY_SUGGESTIONS.KIND, CommunitySuggestions.COMMUNITY_SUGGESTIONS.STATUS }, false);
     public static final Index IDX_COMMUNITY_SUGGESTIONS_VOTER = Internal.createIndex(DSL.name("idx_community_suggestions_voter"), CommunitySuggestions.COMMUNITY_SUGGESTIONS, new OrderField[] { CommunitySuggestions.COMMUNITY_SUGGESTIONS.VOTER_ID }, false);
+    public static final Index IDX_DANCE_LIST_COLLABORATORS_DANCE_LIST = Internal.createIndex(DSL.name("idx_dance_list_collaborators_dance_list"), DanceListCollaborators.DANCE_LIST_COLLABORATORS, new OrderField[] { DanceListCollaborators.DANCE_LIST_COLLABORATORS.DANCE_LIST_ID }, false);
+    public static final Index IDX_DANCE_LIST_COLLABORATORS_STATUS = Internal.createIndex(DSL.name("idx_dance_list_collaborators_status"), DanceListCollaborators.DANCE_LIST_COLLABORATORS, new OrderField[] { DanceListCollaborators.DANCE_LIST_COLLABORATORS.STATUS }, false);
+    public static final Index IDX_DANCE_LIST_COLLABORATORS_USER = Internal.createIndex(DSL.name("idx_dance_list_collaborators_user"), DanceListCollaborators.DANCE_LIST_COLLABORATORS, new OrderField[] { DanceListCollaborators.DANCE_LIST_COLLABORATORS.USER_ID }, false);
+    public static final Index IDX_DANCE_LIST_ENTRIES_DANCE_LIST_ID = Internal.createIndex(DSL.name("idx_dance_list_entries_dance_list_id"), DanceListEntries.DANCE_LIST_ENTRIES, new OrderField[] { DanceListEntries.DANCE_LIST_ENTRIES.DANCE_LIST_ID }, false);
+    public static final Index IDX_DANCE_LIST_ENTRIES_LIST_DANCE = Internal.createIndex(DSL.name("idx_dance_list_entries_list_dance"), DanceListEntries.DANCE_LIST_ENTRIES, new OrderField[] { DanceListEntries.DANCE_LIST_ENTRIES.DANCE_LIST_ID, DanceListEntries.DANCE_LIST_ENTRIES.DANCE_ID }, true);
+    public static final Index IDX_DANCE_LIST_ENTRY_TRACKS_ENTRY_ID = Internal.createIndex(DSL.name("idx_dance_list_entry_tracks_entry_id"), DanceListEntryTracks.DANCE_LIST_ENTRY_TRACKS, new OrderField[] { DanceListEntryTracks.DANCE_LIST_ENTRY_TRACKS.ENTRY_ID }, false);
+    public static final Index IDX_DANCE_LISTS_GROUP_ID = Internal.createIndex(DSL.name("idx_dance_lists_group_id"), DanceLists.DANCE_LISTS, new OrderField[] { DanceLists.DANCE_LISTS.GROUP_ID }, false);
+    public static final Index IDX_DANCE_LISTS_SHARE_TOKEN = Internal.createIndex(DSL.name("idx_dance_lists_share_token"), DanceLists.DANCE_LISTS, new OrderField[] { DanceLists.DANCE_LISTS.SHARE_TOKEN }, true);
+    public static final Index IDX_DANCE_LISTS_USER_ID = Internal.createIndex(DSL.name("idx_dance_lists_user_id"), DanceLists.DANCE_LISTS, new OrderField[] { DanceLists.DANCE_LISTS.USER_ID }, false);
     public static final Index IDX_DANCE_STYLE_CONFIG_MAIN_STYLE = Internal.createIndex(DSL.name("idx_dance_style_config_main_style"), DanceStyleConfig.DANCE_STYLE_CONFIG, new OrderField[] { DanceStyleConfig.DANCE_STYLE_CONFIG.MAIN_STYLE }, false);
     public static final Index IDX_DANCE_TRACKS_CONFIRMED = Internal.createIndex(DSL.name("idx_dance_tracks_confirmed"), DanceTracks.DANCE_TRACKS, new OrderField[] { DanceTracks.DANCE_TRACKS.IS_CONFIRMED }, false);
     public static final Index IDX_DANCE_TRACKS_DANCE_ID = Internal.createIndex(DSL.name("idx_dance_tracks_dance_id"), DanceTracks.DANCE_TRACKS, new OrderField[] { DanceTracks.DANCE_TRACKS.DANCE_ID }, false);

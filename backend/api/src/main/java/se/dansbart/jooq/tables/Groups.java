@@ -31,6 +31,7 @@ import org.jooq.impl.TableImpl;
 
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.DanceLists.DanceListsPath;
 import se.dansbart.jooq.tables.GroupMembers.GroupMembersPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
@@ -157,6 +158,19 @@ public class Groups extends TableImpl<Record> {
     @Override
     public UniqueKey<Record> getPrimaryKey() {
         return Keys.GROUPS_PKEY;
+    }
+
+    private transient DanceListsPath _danceLists;
+
+    /**
+     * Get the implicit to-many join path to the <code>public.dance_lists</code>
+     * table
+     */
+    public DanceListsPath danceLists() {
+        if (_danceLists == null)
+            _danceLists = new DanceListsPath(this, null, Keys.DANCE_LISTS__DANCE_LISTS_GROUP_ID_FKEY.getInverseKey());
+
+        return _danceLists;
     }
 
     private transient GroupMembersPath _groupMembers;
