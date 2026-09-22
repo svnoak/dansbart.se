@@ -55,6 +55,29 @@ describe('Button accessibility', () => {
     root.unmount();
     container.remove();
   });
+
+  it('danger text uses the error-foreground token', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root: Root = createRoot(container);
+
+    await act(async () => {
+      root.render(<Button variant="danger">Test</Button>);
+    });
+
+    const button = container.querySelector('button');
+    expect(
+      button?.classList.contains('text-[rgb(var(--color-error-foreground))]'),
+      'danger variant should use error-foreground token',
+    ).toBe(true);
+    expect(
+      button?.classList.contains('bg-red-600'),
+      'danger variant should not hardcode bg-red-600',
+    ).toBe(false);
+
+    root.unmount();
+    container.remove();
+  });
 });
 
 describe('IconButton accessibility', () => {

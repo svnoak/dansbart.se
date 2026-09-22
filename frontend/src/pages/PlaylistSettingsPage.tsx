@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getPlaylist,
@@ -11,12 +11,12 @@ import {
   removeCollaborator,
   transferOwnership,
 } from '@/api/generated/playlists/playlists';
-import { searchUsers } from '@/api/generated/users/users';
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
 import type { UserSummaryDto } from '@/api/models/userSummaryDto';
 import { BackArrowIcon } from '@/icons';
 import { IconButton, toast } from '@/ui';
+import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -40,21 +40,13 @@ export function PlaylistSettingsPage() {
 
   // Invite form
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [inviteQuery, setInviteQuery] = useState('');
-  const [inviteResults, setInviteResults] = useState<UserSummaryDto[]>([]);
   const [inviteSelected, setInviteSelected] = useState<UserSummaryDto | null>(null);
   const [invitePermission, setInvitePermission] = useState<'edit' | 'view'>('view');
   const [inviting, setInviting] = useState(false);
-  const inviteSearchRef = useRef<HTMLDivElement>(null);
 
   // Transfer ownership
   const [transferTarget, setTransferTarget] = useState('');
   const [transferConfirm, setTransferConfirm] = useState(false);
-
-  // Delete confirm
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const deleteInputRef = useRef<HTMLInputElement>(null);
-  const [deleteText, setDeleteText] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -68,31 +60,6 @@ export function PlaylistSettingsPage() {
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, [id]);
-
-  // Debounced user search
-  useEffect(() => {
-    if (inviteSelected || inviteQuery.trim().length < 2) {
-      setInviteResults([]);
-      return;
-    }
-    const timer = setTimeout(() => {
-      searchUsers({ q: inviteQuery.trim(), limit: 8 })
-        .then(setInviteResults)
-        .catch(() => setInviteResults([]));
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [inviteQuery, inviteSelected]);
-
-  // Close invite dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (inviteSearchRef.current && !inviteSearchRef.current.contains(e.target as Node)) {
-        setInviteResults([]);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   if (loading) return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
   if (!playlist) return <p className="text-[rgb(var(--color-text-muted))]">Spellistan hittades inte.</p>;
@@ -159,7 +126,6 @@ export function PlaylistSettingsPage() {
       const updated = await getPlaylist(id);
       setPlaylist(updated);
       setInviteSelected(null);
-      setInviteQuery('');
       setShowInviteForm(false);
       toast('Inbjudan skickad');
     } catch {
@@ -401,49 +367,12 @@ export function PlaylistSettingsPage() {
         )}
         {isOwner && showInviteForm && (
           <form onSubmit={handleInvite} className="flex gap-2">
-            <div ref={inviteSearchRef} className="relative flex-1">
-              <input
-                type="text"
-                value={inviteQuery}
-                onChange={(e) => {
-                  setInviteQuery(e.target.value);
-                  setInviteSelected(null);
-                }}
-                placeholder="Sök efter användare..."
-                autoComplete="off"
-                className={`w-full rounded-lg border bg-[rgb(var(--color-bg-elevated))] px-3 py-1.5 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none ${
-                  inviteSelected
-                    ? 'border-[rgb(var(--color-accent))]'
-                    : 'border-[rgb(var(--color-border))] focus:border-[rgb(var(--color-accent))]'
-                }`}
+            <div className="flex-1">
+              <UserSearchSelect
+                selected={inviteSelected}
+                onSelect={setInviteSelected}
+                label="Sök användare"
               />
-              {inviteResults.length > 0 && (
-                <ul className="absolute left-0 top-full z-20 mt-1 w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg">
-                  {inviteResults.map((u) => (
-                    <li key={u.id}>
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          setInviteSelected(u);
-                          setInviteQuery(u.displayName ?? u.username ?? '');
-                          setInviteResults([]);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-[rgb(var(--color-border))]/40"
-                      >
-                        <span className="font-medium text-[rgb(var(--color-text))]">
-                          {u.displayName ?? u.username}
-                        </span>
-                        {u.username && u.displayName && (
-                          <span className="ml-1.5 text-xs text-[rgb(var(--color-text-muted))]">
-                            @{u.username}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
             <select
               value={invitePermission}
@@ -464,9 +393,7 @@ export function PlaylistSettingsPage() {
               type="button"
               onClick={() => {
                 setShowInviteForm(false);
-                setInviteQuery('');
                 setInviteSelected(null);
-                setInviteResults([]);
               }}
               className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
             >
@@ -545,49 +472,11 @@ export function PlaylistSettingsPage() {
             <p className="text-xs text-[rgb(var(--color-text-muted))]">
               Det här går inte att ångra. Skriv in spellistans namn för att bekräfta.
             </p>
-            {!deleteConfirm ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteConfirm(true);
-                  setTimeout(() => deleteInputRef.current?.focus(), 50);
-                }}
-                className="rounded-lg border border-red-500/50 px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
-              >
-                Radera spellista
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <input
-                  ref={deleteInputRef}
-                  type="text"
-                  value={deleteText}
-                  onChange={(e) => setDeleteText(e.target.value)}
-                  placeholder={playlist.name}
-                  className="w-full rounded-lg border border-red-500/50 bg-[rgb(var(--color-bg))] px-3 py-1.5 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus:border-red-500"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={deleteText !== playlist.name}
-                    onClick={handleDelete}
-                    className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 hover:opacity-90"
-                  >
-                    Radera permanent
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteConfirm(false);
-                      setDeleteText('');
-                    }}
-                    className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))]"
-                  >
-                    Avbryt
-                  </button>
-                </div>
-              </div>
-            )}
+            <ConfirmDeleteByName
+              name={playlist.name ?? ''}
+              buttonLabel="Radera spellista"
+              onConfirm={handleDelete}
+            />
           </div>
         </section>
       )}

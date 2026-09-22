@@ -14,6 +14,9 @@
   --color-accent-foreground: 255 255 255;
   --color-accent-hover: 38 92 135;
   --color-accent-muted: 224 238 248;
+  --color-error: 185 28 28;
+  --color-error-foreground: 255 255 255;
+  --color-error-hover: 153 27 27;
   --color-pill-bg: 238 242 255;
   --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08);
   --radius: 0.5rem;
@@ -33,6 +36,9 @@ html.dark,
   --color-accent-foreground: 15 23 42;
   --color-accent-hover: 147 197 253;
   --color-accent-muted: 23 37 84;
+  --color-error: 248 113 113;
+  --color-error-foreground: 15 23 42;
+  --color-error-hover: 252 165 165;
   --color-pill-bg: 100 90 180;
   --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
 }

@@ -12,6 +12,7 @@ import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
 import { usePlayer } from '@/player/usePlayer';
+import { useOutsideClick } from '@/hooks/useOutsideClick';
 
 // ── Tempo ────────────────────────────────────────────────────────────────────
 
@@ -66,18 +67,6 @@ function filterTracks(
     if (filterYouTube && !links.some((l) => l.platform === 'YOUTUBE' && l.isWorking)) return false;
     return true;
   });
-}
-
-// ── Shared dropdown wrapper ───────────────────────────────────────────────────
-
-function useOutsideClick(ref: React.RefObject<HTMLDivElement | null>, onClose: () => void) {
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [ref, onClose]);
 }
 
 // ── Main style dropdown ───────────────────────────────────────────────────────

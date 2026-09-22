@@ -1,5 +1,15 @@
 import { generateUuid } from '../utils/uuid';
 
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = 'ApiError';
+  }
+}
+
 /**
  * Unified HTTP client used by all Orval-generated API calls.
  *
@@ -37,7 +47,7 @@ export const httpClient = async <T>(
   }
 
   if (!res.ok) {
-    throw new Error(`Request failed: ${res.status} ${res.statusText}`);
+    throw new ApiError(`Request failed: ${res.status} ${res.statusText}`, res.status);
   }
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
