@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { GroupsPage } from './GroupsPage';
 import { authValue, loggedInAuthValue } from '@/test/authValue';
+import { getInputByLabel } from '@/test/getInputByLabel';
 import { typeInto } from '@/test/typeInto';
 import { ToastContainer } from '@/ui';
 
@@ -65,16 +66,6 @@ describe('GroupsPage', () => {
     return Array.from(document.body.querySelectorAll('button')).find((b) =>
       b.textContent?.includes(text),
     );
-  }
-
-  function getInputByLabel(label: string) {
-    const labelElement = Array.from(document.body.querySelectorAll('label')).find((l) =>
-      l.textContent?.includes(label),
-    );
-    if (labelElement && labelElement.htmlFor) {
-      return document.getElementById(labelElement.htmlFor) as HTMLInputElement;
-    }
-    return null;
   }
 
   it('shows public groups to a visitor who is not logged in', async () => {

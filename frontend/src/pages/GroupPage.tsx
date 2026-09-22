@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getGroup, removeMember } from '@/api/generated/groups/groups';
+import { getGroup, removeMember, createGroupPlaylist } from '@/api/generated/groups/groups';
 import type { GroupDto } from '@/api/models/groupDto';
 import { useAuth } from '@/auth/useAuth';
-import { canOpenGroupSettings } from '@/utils/groupPermissions';
+import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
 import { Badge, Button, Card, IconButton, SectionTitle, toast } from '@/ui';
 import { BackArrowIcon } from '@/icons';
@@ -19,6 +19,9 @@ export function GroupPage() {
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
+  const [creatingPlaylist, setCreatingPlaylist] = useState(false);
+  const [playlistName, setPlaylistName] = useState('');
+  const [savingPlaylist, setSavingPlaylist] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -70,6 +73,23 @@ export function GroupPage() {
       setLeaveError(describeGroupError(error, 'leave'));
       setConfirmingLeave(false);
       setLeaving(false);
+    }
+  }
+
+  async function handleCreatePlaylist() {
+    if (!group?.id || !playlistName.trim()) return;
+    setSavingPlaylist(true);
+    try {
+      const created = await createGroupPlaylist(group.id, { name: playlistName.trim() });
+      setGroup((prev) =>
+        prev ? { ...prev, playlists: [...(prev.playlists ?? []), created] } : prev,
+      );
+      setPlaylistName('');
+      setCreatingPlaylist(false);
+    } catch {
+      toast('Det gick inte att skapa spellistan.', 'error');
+    } finally {
+      setSavingPlaylist(false);
     }
   }
 
@@ -127,6 +147,84 @@ export function GroupPage() {
           </ul>
         </section>
       )}
+
+      <section className="space-y-3">
+        <SectionTitle>Gruppens spellistor</SectionTitle>
+        {group.playlists && group.playlists.length > 0 ? (
+          <ul className="space-y-2">
+            {group.playlists.map((playlist) => (
+              <li key={playlist.id}>
+                <Card className="space-y-1 p-3">
+                  <Link
+                    to={`/playlists/${playlist.id}`}
+                    className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+                  >
+                    {playlist.name}
+                  </Link>
+                  {playlist.description && (
+                    <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">
+                      {playlist.description}
+                    </p>
+                  )}
+                  <p className="text-sm text-[rgb(var(--color-text-muted))]">
+                    {playlist.trackCount ?? 0} {playlist.trackCount === 1 ? 'låt' : 'låtar'}
+                  </p>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            Gruppen har inga spellistor ännu.
+          </p>
+        )}
+
+        {hasGroupPermission(myMembership, 'canManagePlaylists') &&
+          (!creatingPlaylist ? (
+            <Button variant="secondary" onClick={() => setCreatingPlaylist(true)}>
+              Ny spellista
+            </Button>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreatePlaylist();
+              }}
+              className="space-y-2"
+            >
+              <div className="space-y-1">
+                <label
+                  htmlFor="group-playlist-name"
+                  className="block text-sm font-medium text-[rgb(var(--color-text))]"
+                >
+                  Spellistans namn
+                </label>
+                <input
+                  id="group-playlist-name"
+                  value={playlistName}
+                  onChange={(e) => setPlaylistName(e.target.value)}
+                  className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={savingPlaylist || !playlistName.trim()}>
+                  Skapa spellista
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={savingPlaylist}
+                  onClick={() => {
+                    setCreatingPlaylist(false);
+                    setPlaylistName('');
+                  }}
+                >
+                  Avbryt
+                </Button>
+              </div>
+            </form>
+          ))}
+      </section>
 
       {myMembership ? (
         <section className="space-y-2">
