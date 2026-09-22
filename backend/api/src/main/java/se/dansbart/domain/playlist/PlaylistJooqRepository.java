@@ -14,6 +14,8 @@ import java.util.UUID;
 
 import static org.jooq.impl.DSL.count;
 import static org.jooq.impl.DSL.field;
+import static se.dansbart.jooq.Tables.GROUP_MEMBERS;
+import static se.dansbart.jooq.Tables.GROUPS;
 import static se.dansbart.jooq.Tables.PLAYLIST_COLLABORATORS;
 import static se.dansbart.jooq.Tables.PLAYLIST_TRACKS;
 import static se.dansbart.jooq.Tables.PLAYLISTS;
@@ -66,6 +68,27 @@ public class PlaylistJooqRepository {
             ))
             .orderBy(PLAYLISTS.NAME.asc())
             .fetch(this::toPlaylist);
+    }
+
+    public List<EditablePlaylistRecord> findEditableByUserId(UUID userId) {
+        var editCollaborations = dsl.select(PLAYLIST_COLLABORATORS.PLAYLIST_ID)
+            .from(PLAYLIST_COLLABORATORS)
+            .where(PLAYLIST_COLLABORATORS.USER_ID.eq(userId))
+            .and(PLAYLIST_COLLABORATORS.PERMISSION.eq("edit"))
+            .and(PLAYLIST_COLLABORATORS.STATUS.eq("accepted"));
+        var managedGroups = dsl.select(GROUP_MEMBERS.GROUP_ID)
+            .from(GROUP_MEMBERS)
+            .where(GROUP_MEMBERS.USER_ID.eq(userId))
+            .and(GROUP_MEMBERS.STATUS.eq("accepted"))
+            .and(GROUP_MEMBERS.IS_ADMIN.isTrue().or(GROUP_MEMBERS.CAN_MANAGE_PLAYLISTS.isTrue()));
+        return dsl.select(PLAYLISTS.ID, PLAYLISTS.NAME, GROUPS.NAME.as("group_name"))
+            .from(PLAYLISTS)
+            .leftJoin(GROUPS).on(PLAYLISTS.GROUP_ID.eq(GROUPS.ID))
+            .where(PLAYLISTS.USER_ID.eq(userId))
+            .or(PLAYLISTS.ID.in(editCollaborations))
+            .or(PLAYLISTS.GROUP_ID.in(managedGroups))
+            .orderBy(PLAYLISTS.NAME.asc())
+            .fetch(r -> new EditablePlaylistRecord(r.get(PLAYLISTS.ID), r.get(PLAYLISTS.NAME), r.get("group_name", String.class)));
     }
 
     public long countAll() {
@@ -145,4 +168,6 @@ public class PlaylistJooqRepository {
     }
 
     public record PlaylistWithTrackCount(Playlist playlist, int trackCount) {}
+
+    public record EditablePlaylistRecord(UUID id, String name, String groupName) {}
 }
