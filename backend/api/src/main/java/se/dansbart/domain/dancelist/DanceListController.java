@@ -137,6 +137,104 @@ public class DanceListController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/share/{shareToken}")
+    @Operation(summary = "Get dance list by share token")
+    public ResponseEntity<DanceListDto> getDanceListByShareToken(@PathVariable String shareToken) {
+        return danceListService.findByShareTokenAsDto(shareToken)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/collaborators")
+    @Operation(summary = "Invite a collaborator to dance list")
+    public ResponseEntity<?> inviteCollaborator(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody InviteCollaboratorRequest request) {
+        return danceListService.inviteCollaborator(id, userId, request.userId(), request.permission())
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.status(409).build());
+    }
+
+    @GetMapping("/{id}/collaborators")
+    @Operation(summary = "Get dance list collaborators")
+    public ResponseEntity<List<se.dansbart.dto.CollaboratorDto>> getCollaborators(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+        return danceListService.getCollaborators(id, userId)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/collaborators/respond")
+    @Operation(summary = "Accept or reject a dance list invitation")
+    public ResponseEntity<?> respondToInvitation(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody RespondToInvitationRequest request) {
+        boolean hasInvitation = danceListService.respondToInvitation(id, userId, request.accept());
+        if (!hasInvitation) {
+            return ResponseEntity.notFound().build();
+        }
+        if (request.accept()) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.noContent().build();
+        }
+    }
+
+    @PutMapping("/{id}/collaborators/{userId}")
+    @Operation(summary = "Update dance list collaborator permission")
+    public ResponseEntity<?> updateCollaborator(
+            @PathVariable UUID id,
+            @PathVariable("userId") UUID collaboratorId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody UpdateCollaboratorRequest request) {
+        return danceListService.updateCollaborator(id, userId, collaboratorId, request.permission())
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}/collaborators/{userId}")
+    @Operation(summary = "Remove a collaborator from dance list")
+    public ResponseEntity<Void> removeCollaborator(
+            @PathVariable UUID id,
+            @PathVariable("userId") UUID collaboratorId,
+            @AuthenticationPrincipal UUID userId) {
+        if (danceListService.removeCollaborator(id, userId, collaboratorId)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/{id}/share-token")
+    @Operation(summary = "Generate a share token for dance list")
+    public ResponseEntity<?> generateShareToken(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId) {
+        return danceListService.generateShareToken(id, userId)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}/share-token")
+    @Operation(summary = "Invalidate the share token for dance list")
+    public ResponseEntity<Void> invalidateShareToken(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId) {
+        if (danceListService.invalidateShareToken(id, userId)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/transfer-ownership")
+    @Operation(summary = "Transfer dance list ownership to another user")
+    public ResponseEntity<DanceList> transferOwnership(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody TransferOwnershipRequest request) {
+        return ResponseEntity.ok(danceListService.transferOwnership(id, userId, request.newOwnerId()));
+    }
+
     public record CreateDanceListRequest(String name, String description, Boolean isPublic, UUID groupId) {}
     public record UpdateDanceListRequest(String name, String description, Boolean isPublic) {}
     public record AddEntryRequest(UUID danceId, String freeTextName) {}
@@ -144,4 +242,8 @@ public class DanceListController {
     public record SetPlayModeRequest(String playMode) {}
     public record AddTrackRequest(UUID trackId) {}
     public record ReorderTracksRequest(List<UUID> trackIds) {}
+    public record InviteCollaboratorRequest(UUID userId, String permission) {}
+    public record UpdateCollaboratorRequest(String permission) {}
+    public record RespondToInvitationRequest(boolean accept) {}
+    public record TransferOwnershipRequest(UUID newOwnerId) {}
 }

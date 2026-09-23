@@ -19,6 +19,7 @@ public class DanceListDto {
     private String name;
     private String description;
     private Boolean isPublic;
+    private String shareToken;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -26,4 +27,5 @@ public class DanceListDto {
     private GroupSummaryDto ownerGroup;
 
     private List<DanceListEntryDto> entries;
+    private List<CollaboratorDto> collaborators;
 }

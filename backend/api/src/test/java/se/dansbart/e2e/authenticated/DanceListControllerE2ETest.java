@@ -142,6 +142,50 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
+        @DisplayName("owner should see share token in response")
+        void getDanceList_byOwner_showsShareToken() throws Exception {
+            String danceListId = createDanceList("Test Dance List", owner);
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareToken").exists());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should see share token in response")
+        void getDanceList_byEditCollaborator_showsShareToken() throws Exception {
+            String danceListId = createDanceList("Test Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareToken").exists());
+        }
+
+        @Test
+        @DisplayName("view collaborator should not see share token in response")
+        void getDanceList_byViewCollaborator_shouldNotExposeShareToken() throws Exception {
+            String danceListId = createDanceList("Test Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareToken").doesNotExist());
+        }
+
+        @Test
         @DisplayName("should return 404 for non-existent dance list")
         void getDanceList_withInvalidId_shouldReturn404() throws Exception {
             mockMvc.perform(get("/api/dance-lists/{id}", "00000000-0000-0000-0000-000000000000")
@@ -1010,5 +1054,421 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
 
     private String extractIdFromResponse(String responseContent) throws Exception {
         return fromJson(responseContent, java.util.Map.class).get("id").toString();
+    }
+
+    @Nested
+    @DisplayName("POST /api/dance-lists/{id}/collaborators")
+    class Collaborators {
+
+        @Test
+        @DisplayName("owner should be able to invite collaborator")
+        void inviteCollaborator_byOwner_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(otherUser.getId().toString()))
+                .andExpect(jsonPath("$.permission").value("edit"));
+        }
+
+        @Test
+        @DisplayName("edit collaborator should not be able to invite collaborator")
+        void inviteCollaborator_byEditCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+            UUID thirdUserId = UUID.fromString("10000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", thirdUser.getId(), "permission", "edit"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("owner cannot invite self")
+        void inviteCollaborator_invitingSelf_shouldReturn400() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", owner.getId(), "permission", "edit"))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("owner cannot invite same person twice")
+        void inviteCollaborator_invitingSamePerson_shouldReturn409() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "view"))))
+                .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("invite collaborator with unknown permission should return 400")
+        void inviteCollaborator_withUnknownPermission_shouldReturn400() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "admin"))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("owner should see pending collaborator in collaborator list")
+        void getCollaborators_shouldShowPendingInvitation() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].userId", hasItem(otherUser.getId().toString())))
+                .andExpect(jsonPath("$[?(@.userId == '" + otherUser.getId().toString() + "')].status").value("pending"));
+        }
+
+        @Test
+        @DisplayName("invited person should accept invitation")
+        void respondToInvitation_accept_shouldBecomeAcceptedCollaborator() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators/respond", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/dance-lists/{id}/entries", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("danceId", DANCE_ID.toString()))))
+                .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("invited person should decline invitation")
+        void respondToInvitation_decline_shouldRemoveInvitation() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators/respond", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", false))))
+                .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("non-invited person cannot respond to invitation")
+        void respondToInvitation_notInvited_shouldReturn404() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            UUID thirdUserId = UUID.fromString("10000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators/respond", danceListId)
+                    .with(jwt.userToken(thirdUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("owner should be able to update collaborator permission")
+        void updateCollaborator_byOwner_shouldChangesPermission() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{userId}", danceListId, otherUser.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("permission", "edit"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permission").value("edit"));
+        }
+
+        @Test
+        @DisplayName("update collaborator with unknown permission should return 400")
+        void updateCollaborator_withUnknownPermission_shouldReturn400() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{userId}", danceListId, otherUser.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("permission", "admin"))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should not be able to update collaborator permission")
+        void updateCollaborator_byEditCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+            UUID thirdUserId = UUID.fromString("10000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+            testData.addDanceListCollaborator(danceListId, thirdUser, "view");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{userId}", danceListId, thirdUser.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("permission", "edit"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("owner should be able to remove collaborator")
+        void removeCollaborator_byOwner_shouldRemove() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/collaborators/{userId}", danceListId, otherUser.getId())
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should not be able to remove collaborator")
+        void removeCollaborator_byEditCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+            UUID thirdUserId = UUID.fromString("10000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+            testData.addDanceListCollaborator(danceListId, thirdUser, "view");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/collaborators/{userId}", danceListId, thirdUser.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isForbidden());
+        }
+    }
+
+    @Nested
+    @DisplayName("Share link")
+    class Sharing {
+
+        @Test
+        @DisplayName("owner should be able to generate share token")
+        void generateShareToken_byOwner_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareToken").isNotEmpty());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should be able to generate share token")
+        void generateShareToken_byEditCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareToken").isNotEmpty());
+        }
+
+        @Test
+        @DisplayName("view collaborator should not be able to generate share token")
+        void generateShareToken_byViewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("owner should be able to invalidate share token")
+        void invalidateShareToken_byOwner_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            var shareTokenResponse = mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+            String shareToken = fromJson(shareTokenResponse, java.util.Map.class).get("shareToken").toString();
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/dance-lists/share/{shareToken}", shareToken))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("edit collaborator should be able to invalidate share token")
+        void invalidateShareToken_byEditCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+            var shareTokenResponse = mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+            String shareToken = fromJson(shareTokenResponse, java.util.Map.class).get("shareToken").toString();
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/dance-lists/share/{shareToken}", shareToken))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("view collaborator should not be able to invalidate share token")
+        void invalidateShareToken_byViewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("anyone should be able to access dance list by share token without auth")
+        void getByShareToken_shouldReturnDanceList() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            var shareTokenResponse = mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+            String shareToken = fromJson(shareTokenResponse, java.util.Map.class).get("shareToken").toString();
+
+            mockMvc.perform(get("/api/dance-lists/share/{shareToken}", shareToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("My Dance List"))
+                .andExpect(jsonPath("$.shareToken").value(shareToken));
+        }
+
+        @Test
+        @DisplayName("invalid share token should return 404")
+        void getByShareToken_withInvalidToken_shouldReturn404() throws Exception {
+            mockMvc.perform(get("/api/dance-lists/share/{shareToken}", "invalid-token"))
+                .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/dance-lists/{id}/transfer-ownership")
+    class Transfer {
+
+        @Test
+        @DisplayName("owner should be able to transfer ownership to accepted collaborator")
+        void transferOwnership_byOwner_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/transfer-ownership", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(otherUser.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("non-owner should not be able to transfer ownership")
+        void transferOwnership_byNonOwner_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/transfer-ownership", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("group-owned dance list should refuse transfer")
+        void transferOwnership_groupOwnedList_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            String danceListId = createGroupDanceList("Group Dance List", group, owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/transfer-ownership", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("transfer ownership to person who is not an accepted collaborator should return 400")
+        void transferOwnership_toPersonWhoIsNotAnAcceptedCollaborator_shouldReturn400() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/transfer-ownership", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
+                .andExpect(status().isBadRequest());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.owner.id").value(owner.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("transfer ownership to pending invitee should return 400")
+        void transferOwnership_toPendingInvitee_shouldReturn400() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/transfer-ownership", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("newOwnerId", otherUser.getId().toString()))))
+                .andExpect(status().isBadRequest());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.owner.id").value(owner.getId().toString()));
+        }
     }
 }
