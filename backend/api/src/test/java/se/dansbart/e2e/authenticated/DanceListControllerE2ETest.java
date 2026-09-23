@@ -213,6 +213,77 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(danceListId));
         }
+
+        @Test
+        @DisplayName("owner sees viewerCanManage as true")
+        void getDanceList_owner_viewerCanManageIsTrue() throws Exception {
+            String danceListId = createDanceList("Test Dance List", owner);
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCanManage").value(true));
+        }
+
+        @Test
+        @DisplayName("edit collaborator sees viewerCanManage as true")
+        void getDanceList_editCollaborator_viewerCanManageIsTrue() throws Exception {
+            String danceListId = createDanceList("Test Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCanManage").value(true));
+        }
+
+        @Test
+        @DisplayName("view collaborator sees viewerCanManage as false")
+        void getDanceList_viewCollaborator_viewerCanManageIsFalse() throws Exception {
+            String danceListId = createDanceList("Test Dance List", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCanManage").value(false));
+        }
+
+        @Test
+        @DisplayName("group member with manage permission sees viewerCanManage as true")
+        void getDanceList_groupMemberWithPermission_viewerCanManageIsTrue() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            String danceListId = createGroupDanceList("Group Dance List", group, owner);
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.viewerCanManage").value(true));
+        }
+
+        @Test
+        @DisplayName("share token route has viewerCanManage absent or null")
+        void getDanceList_shareToken_viewerCanManageIsNull() throws Exception {
+            String danceListId = createDanceList("Test Dance List", owner);
+            mockMvc.perform(post("/api/dance-lists/{id}/share-token", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk());
+
+            var getResult = mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andReturn();
+            String getContent = getResult.getResponse().getContentAsString();
+            String shareToken = fromJson(getContent, java.util.Map.class).get("shareToken").toString();
+
+            var result = mockMvc.perform(get("/api/dance-lists/share/{shareToken}", shareToken))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            String content = result.getResponse().getContentAsString();
+            Object viewerCanManage = fromJson(content, java.util.Map.class).get("viewerCanManage");
+            org.junit.jupiter.api.Assertions.assertNull(viewerCanManage);
+        }
     }
 
     @Nested
