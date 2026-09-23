@@ -49,6 +49,7 @@ import { AdminDancesPage } from '@/admin/pages/AdminDancesPage';
 import { DancesPage } from '@/pages/DancesPage';
 import { DancePage } from '@/pages/DancePage';
 import { GroupsPage } from '@/pages/GroupsPage';
+import { DanceListsPage } from '@/pages/DanceListsPage';
 import { GroupPage } from '@/pages/GroupPage';
 import { GroupSettingsPage } from '@/pages/GroupSettingsPage';
 
@@ -97,6 +98,7 @@ export function App() {
                         />
                         <Route path="/shared/:token" element={<SharedPlaylistPage />} />
                         <Route path="/groups" element={<GroupsPage />} />
+                        <Route path="/dance-lists" element={<DanceListsPage />} />
                         <Route path="/groups/:id" element={<GroupPage />} />
                         <Route
                           path="/groups/:id/settings"
