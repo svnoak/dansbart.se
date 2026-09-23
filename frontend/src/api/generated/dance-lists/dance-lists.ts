@@ -7,14 +7,23 @@
 import type {
   AddEntryRequest,
   AddTrackRequest,
+  CollaboratorDto,
   CreateDanceListRequest,
   DanceList,
   DanceListDto,
   DanceListEntryDto,
   DanceListEntryTrack,
+  GenerateShareToken1200,
+  InviteCollaborator1200,
+  InviteCollaboratorRequest,
   ReorderEntriesRequest,
   ReorderTracksRequest,
+  RespondToInvitation1200,
+  RespondToInvitationRequest,
   SetPlayModeRequest,
+  TransferOwnershipRequest,
+  UpdateCollaborator1200,
+  UpdateCollaboratorRequest,
   UpdateDanceListRequest
 } from '../../models';
 
@@ -87,6 +96,31 @@ export const deleteDanceList = async (id: string, options?: RequestInit): Promis
     method: 'DELETE'
     
     
+  }
+);}
+  
+
+/**
+ * @summary Transfer dance list ownership to another user
+ */
+export const getTransferOwnership1Url = (id: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/transfer-ownership`
+}
+
+export const transferOwnership1 = async (id: string,
+    transferOwnershipRequest: TransferOwnershipRequest, options?: RequestInit): Promise<DanceList> => {
+  
+  return httpClient<DanceList>(getTransferOwnership1Url(id),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      transferOwnershipRequest,)
   }
 );}
   
@@ -196,6 +230,58 @@ export const reorderEntries = async (id: string,
   
 
 /**
+ * @summary Update dance list collaborator permission
+ */
+export const getUpdateCollaborator1Url = (id: string,
+    userId: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/collaborators/${userId}`
+}
+
+export const updateCollaborator1 = async (id: string,
+    userId: string,
+    updateCollaboratorRequest: UpdateCollaboratorRequest, options?: RequestInit): Promise<UpdateCollaborator1200> => {
+  
+  return httpClient<UpdateCollaborator1200>(getUpdateCollaborator1Url(id,userId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateCollaboratorRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Remove a collaborator from dance list
+ */
+export const getRemoveCollaborator1Url = (id: string,
+    userId: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/collaborators/${userId}`
+}
+
+export const removeCollaborator1 = async (id: string,
+    userId: string, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getRemoveCollaborator1Url(id,userId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+  
+
+/**
  * @summary Get current user's dance lists
  */
 export const getGetMyDanceListsUrl = () => {
@@ -238,6 +324,52 @@ export const createDanceList = async (createDanceListRequest: CreateDanceListReq
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       createDanceListRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Generate a share token for dance list
+ */
+export const getGenerateShareToken1Url = (id: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/share-token`
+}
+
+export const generateShareToken1 = async (id: string, options?: RequestInit): Promise<GenerateShareToken1200> => {
+  
+  return httpClient<GenerateShareToken1200>(getGenerateShareToken1Url(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Invalidate the share token for dance list
+ */
+export const getInvalidateShareToken1Url = (id: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/share-token`
+}
+
+export const invalidateShareToken1 = async (id: string, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getInvalidateShareToken1Url(id),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
   }
 );}
   
@@ -290,6 +422,102 @@ export const addTrackToEntry = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       addTrackRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Get dance list collaborators
+ */
+export const getGetCollaborators1Url = (id: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/collaborators`
+}
+
+export const getCollaborators1 = async (id: string, options?: RequestInit): Promise<CollaboratorDto[]> => {
+  
+  return httpClient<CollaboratorDto[]>(getGetCollaborators1Url(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Invite a collaborator to dance list
+ */
+export const getInviteCollaborator1Url = (id: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/collaborators`
+}
+
+export const inviteCollaborator1 = async (id: string,
+    inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<InviteCollaborator1200> => {
+  
+  return httpClient<InviteCollaborator1200>(getInviteCollaborator1Url(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      inviteCollaboratorRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Accept or reject a dance list invitation
+ */
+export const getRespondToInvitation1Url = (id: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/collaborators/respond`
+}
+
+export const respondToInvitation1 = async (id: string,
+    respondToInvitationRequest: RespondToInvitationRequest, options?: RequestInit): Promise<RespondToInvitation1200> => {
+  
+  return httpClient<RespondToInvitation1200>(getRespondToInvitation1Url(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      respondToInvitationRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Get dance list by share token
+ */
+export const getGetDanceListByShareTokenUrl = (shareToken: string,) => {
+
+
+  
+
+  return `/api/dance-lists/share/${shareToken}`
+}
+
+export const getDanceListByShareToken = async (shareToken: string, options?: RequestInit): Promise<DanceListDto> => {
+  
+  return httpClient<DanceListDto>(getGetDanceListByShareTokenUrl(shareToken),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
   

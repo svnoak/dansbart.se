@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import DanceListPage from './DanceListPage';
+import { typeInto } from '@/test/typeInto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -38,6 +39,7 @@ const mockDanceListFull = {
   updatedAt: '2026-01-01T00:00:00Z',
   owner: { id: 'user-1', username: 'testuser', displayName: 'Test User' },
   ownerGroup: null,
+  viewerCanManage: true,
   entries: [
     {
       id: 'entry-1',
@@ -68,6 +70,7 @@ const mockDanceListEmpty = {
 
 const mockDanceListReadOnly = {
   ...mockDanceListFull,
+  viewerCanManage: false,
   collaborators: [
     {
       id: 'collab-1',
@@ -196,8 +199,7 @@ describe('DanceListPage', () => {
     expect(searchInput).toBeDefined();
 
     await act(async () => {
-      searchInput!.value = 'Fam';
-      searchInput!.dispatchEvent(new Event('input', { bubbles: true }));
+      typeInto(searchInput!, 'Fam');
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
@@ -237,8 +239,7 @@ describe('DanceListPage', () => {
     expect(searchInput).toBeDefined();
 
     await act(async () => {
-      searchInput!.value = 'Egen dans';
-      searchInput!.dispatchEvent(new Event('input', { bubbles: true }));
+      typeInto(searchInput!, 'Egen dans');
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
@@ -273,7 +274,6 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const text = document.body.textContent;
     const hasAddButton = Array.from(document.body.querySelectorAll('button')).some((b) =>
       b.textContent?.includes('Lägg till'),
     );
