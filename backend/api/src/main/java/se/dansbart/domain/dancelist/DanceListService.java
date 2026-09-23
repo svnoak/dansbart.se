@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 public class DanceListService {
 
     private static final Set<String> PLAY_MODES = Set.of("in_order", "random");
+    private static final Set<String> PERMISSIONS = Set.of("view", "edit");
 
     private final DanceListJooqRepository danceListJooqRepository;
     private final DanceListEntryJooqRepository entryJooqRepository;
@@ -93,7 +94,7 @@ public class DanceListService {
     public Optional<DanceListDto> findByIdAsDto(UUID danceListId, UUID viewerId) {
         return danceListJooqRepository.findById(danceListId)
             .filter(danceList -> canView(danceList, viewerId))
-            .map(this::toDanceListDto);
+            .map(danceList -> toDanceListDto(danceList, hasEditAccess(danceList, viewerId)));
     }
 
     @Transactional
@@ -299,7 +300,7 @@ public class DanceListService {
                 .isPresent());
     }
 
-    private DanceListDto toDanceListDto(DanceList danceList) {
+    private DanceListDto toDanceListDto(DanceList danceList, boolean includeShareToken) {
         UserSummaryDto owner = danceList.getUserId() != null
             ? userJooqRepository.findById(danceList.getUserId())
                 .map(u -> UserSummaryDto.builder()
@@ -362,7 +363,7 @@ public class DanceListService {
             .name(danceList.getName())
             .description(danceList.getDescription())
             .isPublic(danceList.getIsPublic())
-            .shareToken(danceList.getShareToken())
+            .shareToken(includeShareToken ? danceList.getShareToken() : null)
             .createdAt(danceList.getCreatedAt())
             .updatedAt(danceList.getUpdatedAt())
             .owner(owner)
@@ -412,11 +413,15 @@ public class DanceListService {
     @Transactional(readOnly = true)
     public Optional<DanceListDto> findByShareTokenAsDto(String shareToken) {
         return danceListJooqRepository.findByShareToken(shareToken)
-            .map(this::toDanceListDto);
+            .map(danceList -> toDanceListDto(danceList, true));
     }
 
     @Transactional
     public Optional<DanceListCollaborator> inviteCollaborator(UUID danceListId, UUID ownerId, UUID inviteeId, String permission) {
+        if (permission != null && !PERMISSIONS.contains(permission)) {
+            throw new BadRequestException("Permission must be 'view' or 'edit'.");
+        }
+
         DanceList danceList = danceListJooqRepository.findById(danceListId)
             .orElseThrow(() -> new ResourceNotFoundException("The dance list does not exist."));
 
@@ -485,6 +490,10 @@ public class DanceListService {
 
     @Transactional
     public Optional<DanceListCollaborator> updateCollaborator(UUID danceListId, UUID userId, UUID collaboratorId, String permission) {
+        if (!PERMISSIONS.contains(permission)) {
+            throw new BadRequestException("Permission must be 'view' or 'edit'.");
+        }
+
         DanceList danceList = danceListJooqRepository.findById(danceListId)
             .orElseThrow(() -> new ResourceNotFoundException("The dance list does not exist."));
 
@@ -546,34 +555,39 @@ public class DanceListService {
     }
 
     @Transactional
-    public Optional<DanceList> transferOwnership(UUID danceListId, UUID userId, UUID newOwnerId) {
-        return danceListJooqRepository.findById(danceListId)
-            .filter(d -> d.getUserId() != null)
-            .filter(d -> userId.equals(d.getUserId()))
-            .filter(d -> !newOwnerId.equals(userId))
-            .map(danceList -> {
-                if (collaboratorRepository.findByDanceListIdAndUserId(danceListId, userId).isEmpty()) {
-                    DanceListCollaborator formerOwnerCollab = DanceListCollaborator.builder()
-                        .danceListId(danceListId)
-                        .userId(userId)
-                        .permission("edit")
-                        .status("accepted")
-                        .invitedBy(userId)
-                        .build();
-                    collaboratorRepository.save(formerOwnerCollab);
-                } else {
-                    collaboratorRepository.findByDanceListIdAndUserId(danceListId, userId)
-                        .ifPresent(c -> {
-                            c.setPermission("edit");
-                            c.setStatus("accepted");
-                            collaboratorRepository.save(c);
-                        });
-                }
-                collaboratorRepository.findByDanceListIdAndUserId(danceListId, newOwnerId)
-                    .ifPresent(collaboratorRepository::delete);
-                danceList.setUserId(newOwnerId);
-                danceList.setUpdatedAt(OffsetDateTime.now());
-                return danceListJooqRepository.update(danceList);
-            });
+    public DanceList transferOwnership(UUID danceListId, UUID userId, UUID newOwnerId) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireFullControl(danceList, userId);
+        if (danceList.getUserId() == null) {
+            throw new ResourceNotFoundException("The dance list does not exist, or you do not have access to it.");
+        }
+        boolean newOwnerIsAcceptedCollaborator = collaboratorRepository.findByDanceListIdAndUserId(danceListId, newOwnerId)
+            .filter(c -> "accepted".equals(c.getStatus()))
+            .isPresent();
+        if (!newOwnerIsAcceptedCollaborator) {
+            throw new BadRequestException("The new owner must be an accepted collaborator on this dance list.");
+        }
+        if (collaboratorRepository.findByDanceListIdAndUserId(danceListId, userId).isEmpty()) {
+            DanceListCollaborator formerOwnerCollab = DanceListCollaborator.builder()
+                .danceListId(danceListId)
+                .userId(userId)
+                .permission("edit")
+                .status("accepted")
+                .invitedBy(userId)
+                .build();
+            collaboratorRepository.save(formerOwnerCollab);
+        } else {
+            collaboratorRepository.findByDanceListIdAndUserId(danceListId, userId)
+                .ifPresent(c -> {
+                    c.setPermission("edit");
+                    c.setStatus("accepted");
+                    collaboratorRepository.save(c);
+                });
+        }
+        collaboratorRepository.findByDanceListIdAndUserId(danceListId, newOwnerId)
+            .ifPresent(collaboratorRepository::delete);
+        danceList.setUserId(newOwnerId);
+        danceList.setUpdatedAt(OffsetDateTime.now());
+        return danceListJooqRepository.update(danceList);
     }
 }

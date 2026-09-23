@@ -9,9 +9,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.DanceListDto;
 import se.dansbart.dto.DanceListEntryDto;
-import se.dansbart.exception.BadRequestException;
-import se.dansbart.exception.ForbiddenException;
-import se.dansbart.exception.ResourceNotFoundException;
 
 import java.net.URI;
 import java.util.List;
@@ -154,15 +151,9 @@ public class DanceListController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody InviteCollaboratorRequest request) {
-        try {
-            return danceListService.inviteCollaborator(id, userId, request.userId(), request.permission())
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(409).build());
-        } catch (ForbiddenException e) {
-            return ResponseEntity.status(403).build();
-        } catch (BadRequestException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return danceListService.inviteCollaborator(id, userId, request.userId(), request.permission())
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.status(409).build());
     }
 
     @GetMapping("/{id}/collaborators")
@@ -179,18 +170,14 @@ public class DanceListController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody RespondToInvitationRequest request) {
-        try {
-            boolean hasInvitation = danceListService.respondToInvitation(id, userId, request.accept());
-            if (!hasInvitation) {
-                return ResponseEntity.notFound().build();
-            }
-            if (request.accept()) {
-                return ResponseEntity.ok().build();
-            } else {
-                return ResponseEntity.noContent().build();
-            }
-        } catch (ResourceNotFoundException e) {
+        boolean hasInvitation = danceListService.respondToInvitation(id, userId, request.accept());
+        if (!hasInvitation) {
             return ResponseEntity.notFound().build();
+        }
+        if (request.accept()) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.noContent().build();
         }
     }
 
@@ -201,13 +188,9 @@ public class DanceListController {
             @PathVariable("userId") UUID collaboratorId,
             @AuthenticationPrincipal UUID userId,
             @RequestBody UpdateCollaboratorRequest request) {
-        try {
-            return danceListService.updateCollaborator(id, userId, collaboratorId, request.permission())
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-        } catch (ForbiddenException e) {
-            return ResponseEntity.status(403).build();
-        }
+        return danceListService.updateCollaborator(id, userId, collaboratorId, request.permission())
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}/collaborators/{userId}")
@@ -216,14 +199,10 @@ public class DanceListController {
             @PathVariable UUID id,
             @PathVariable("userId") UUID collaboratorId,
             @AuthenticationPrincipal UUID userId) {
-        try {
-            if (danceListService.removeCollaborator(id, userId, collaboratorId)) {
-                return ResponseEntity.noContent().build();
-            }
-            return ResponseEntity.notFound().build();
-        } catch (ForbiddenException e) {
-            return ResponseEntity.status(403).build();
+        if (danceListService.removeCollaborator(id, userId, collaboratorId)) {
+            return ResponseEntity.noContent().build();
         }
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping("/{id}/share-token")
@@ -231,13 +210,9 @@ public class DanceListController {
     public ResponseEntity<?> generateShareToken(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId) {
-        try {
-            return danceListService.generateShareToken(id, userId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-        } catch (ForbiddenException e) {
-            return ResponseEntity.status(403).build();
-        }
+        return danceListService.generateShareToken(id, userId)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}/share-token")
@@ -245,25 +220,19 @@ public class DanceListController {
     public ResponseEntity<Void> invalidateShareToken(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId) {
-        try {
-            if (danceListService.invalidateShareToken(id, userId)) {
-                return ResponseEntity.noContent().build();
-            }
-            return ResponseEntity.notFound().build();
-        } catch (ForbiddenException e) {
-            return ResponseEntity.status(403).build();
+        if (danceListService.invalidateShareToken(id, userId)) {
+            return ResponseEntity.noContent().build();
         }
+        return ResponseEntity.notFound().build();
     }
 
     @PutMapping("/{id}/transfer-ownership")
     @Operation(summary = "Transfer dance list ownership to another user")
-    public ResponseEntity<?> transferOwnership(
+    public ResponseEntity<DanceList> transferOwnership(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody TransferOwnershipRequest request) {
-        return danceListService.transferOwnership(id, userId, request.newOwnerId())
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(danceListService.transferOwnership(id, userId, request.newOwnerId()));
     }
 
     public record CreateDanceListRequest(String name, String description, Boolean isPublic, UUID groupId) {}
