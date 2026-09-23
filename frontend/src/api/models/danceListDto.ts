@@ -4,6 +4,7 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { CollaboratorDto } from './collaboratorDto';
 import type { DanceListEntryDto } from './danceListEntryDto';
 import type { GroupSummaryDto } from './groupSummaryDto';
 import type { UserSummaryDto } from './userSummaryDto';
@@ -13,9 +14,12 @@ export interface DanceListDto {
   name?: string;
   description?: string;
   isPublic?: boolean;
+  shareToken?: string;
   createdAt?: string;
   updatedAt?: string;
   owner?: UserSummaryDto;
   ownerGroup?: GroupSummaryDto;
+  viewerCanManage?: boolean;
   entries?: DanceListEntryDto[];
+  collaborators?: CollaboratorDto[];
 }

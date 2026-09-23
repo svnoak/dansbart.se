@@ -25,6 +25,7 @@ public class DanceListDto {
 
     private UserSummaryDto owner;
     private GroupSummaryDto ownerGroup;
+    private Boolean viewerCanManage;
 
     private List<DanceListEntryDto> entries;
     private List<CollaboratorDto> collaborators;

@@ -94,7 +94,7 @@ public class DanceListService {
     public Optional<DanceListDto> findByIdAsDto(UUID danceListId, UUID viewerId) {
         return danceListJooqRepository.findById(danceListId)
             .filter(danceList -> canView(danceList, viewerId))
-            .map(danceList -> toDanceListDto(danceList, hasEditAccess(danceList, viewerId)));
+            .map(danceList -> toDanceListDto(danceList, viewerId));
     }
 
     @Transactional
@@ -300,7 +300,7 @@ public class DanceListService {
                 .isPresent());
     }
 
-    private DanceListDto toDanceListDto(DanceList danceList, boolean includeShareToken) {
+    private DanceListDto toDanceListDto(DanceList danceList, UUID viewerId) {
         UserSummaryDto owner = danceList.getUserId() != null
             ? userJooqRepository.findById(danceList.getUserId())
                 .map(u -> UserSummaryDto.builder()
@@ -316,6 +316,8 @@ public class DanceListService {
                 .map(g -> GroupSummaryDto.builder().id(g.getId()).name(g.getName()).build())
                 .orElse(null)
             : null;
+        Boolean viewerCanManage = viewerId != null ? hasEditAccess(danceList, viewerId) : null;
+        boolean includeShareToken = viewerId == null || hasEditAccess(danceList, viewerId);
         List<DanceListEntry> danceListEntries = entryJooqRepository.findByDanceListIdOrderByPosition(danceList.getId());
 
         List<UUID> danceIds = danceListEntries.stream()
@@ -368,6 +370,7 @@ public class DanceListService {
             .updatedAt(danceList.getUpdatedAt())
             .owner(owner)
             .ownerGroup(ownerGroup)
+            .viewerCanManage(viewerCanManage)
             .entries(entries)
             .collaborators(collaborators)
             .build();
@@ -413,7 +416,7 @@ public class DanceListService {
     @Transactional(readOnly = true)
     public Optional<DanceListDto> findByShareTokenAsDto(String shareToken) {
         return danceListJooqRepository.findByShareToken(shareToken)
-            .map(danceList -> toDanceListDto(danceList, true));
+            .map(danceList -> toDanceListDto(danceList, null));
     }
 
     @Transactional

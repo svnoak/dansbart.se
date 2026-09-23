@@ -677,6 +677,41 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/api/dance-lists/{id}/transfer-ownership": {
+      "put": {
+        "tags": ["Dance Lists"],
+        "summary": "Transfer dance list ownership to another user",
+        "operationId": "transferOwnership_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOwnershipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DanceList" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dance-lists/{id}/entries/{entryId}": {
       "put": {
         "tags": ["Dance Lists"],
@@ -778,6 +813,65 @@
           },
           "required": true
         },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/dance-lists/{id}/collaborators/{userId}": {
+      "put": {
+        "tags": ["Dance Lists"],
+        "summary": "Update dance list collaborator permission",
+        "operationId": "updateCollaborator_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCollaboratorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "type": "object" } }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Dance Lists"],
+        "summary": "Remove a collaborator from dance list",
+        "operationId": "removeCollaborator_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": { "200": { "description": "OK" } }
       }
     },
@@ -1998,6 +2092,43 @@
         }
       }
     },
+    "/api/dance-lists/{id}/share-token": {
+      "post": {
+        "tags": ["Dance Lists"],
+        "summary": "Generate a share token for dance list",
+        "operationId": "generateShareToken_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "type": "object" } }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Dance Lists"],
+        "summary": "Invalidate the share token for dance list",
+        "operationId": "invalidateShareToken_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/dance-lists/{id}/entries": {
       "post": {
         "tags": ["Dance Lists"],
@@ -2065,6 +2196,98 @@
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/DanceListEntryTrack" }
               }
+            }
+          }
+        }
+      }
+    },
+    "/api/dance-lists/{id}/collaborators": {
+      "get": {
+        "tags": ["Dance Lists"],
+        "summary": "Get dance list collaborators",
+        "operationId": "getCollaborators_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CollaboratorDto" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Dance Lists"],
+        "summary": "Invite a collaborator to dance list",
+        "operationId": "inviteCollaborator_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCollaboratorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "type": "object" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/dance-lists/{id}/collaborators/respond": {
+      "post": {
+        "tags": ["Dance Lists"],
+        "summary": "Accept or reject a dance list invitation",
+        "operationId": "respondToInvitation_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "type": "object" } }
             }
           }
         }
@@ -4713,6 +4936,31 @@
                   "type": "array",
                   "items": { "$ref": "#/components/schemas/TrackListDto" }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dance-lists/share/{shareToken}": {
+      "get": {
+        "tags": ["Dance Lists"],
+        "summary": "Get dance list by share token",
+        "operationId": "getDanceListByShareToken",
+        "parameters": [
+          {
+            "name": "shareToken",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DanceListDto" }
               }
             }
           }
@@ -7433,13 +7681,19 @@
           "name": { "type": "string" },
           "description": { "type": "string" },
           "isPublic": { "type": "boolean" },
+          "shareToken": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" },
           "owner": { "$ref": "#/components/schemas/UserSummaryDto" },
           "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" },
+          "viewerCanManage": { "type": "boolean" },
           "entries": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/DanceListEntryDto" }
+          },
+          "collaborators": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CollaboratorDto" }
           }
         }
       },
