@@ -35,6 +35,7 @@ public class TestSecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/share/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/dance-lists/share/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/groups/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/groups/invitations").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/groups/*").permitAll()

@@ -23,6 +23,10 @@ public class DanceListJooqRepository {
         return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.ID.eq(id)).fetchOptional(this::toDanceList);
     }
 
+    public Optional<DanceList> findByShareToken(String shareToken) {
+        return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.SHARE_TOKEN.eq(shareToken)).fetchOptional(this::toDanceList);
+    }
+
     public List<DanceList> findByUserId(UUID userId) {
         return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.USER_ID.eq(userId)).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
     }
