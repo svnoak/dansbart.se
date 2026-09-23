@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getMyPlaylists1, addTrack, createPlaylist } from '@/api/generated/playlists/playlists';
-import type { Playlist } from '@/api/models/playlist';
+import { getEditablePlaylists, addTrack, createPlaylist } from '@/api/generated/playlists/playlists';
+import type { EditablePlaylistDto } from '@/api/models/editablePlaylistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { CloseIcon, PlaylistIcon, PlusIcon } from '@/icons';
 import { toast } from '@/ui';
@@ -13,7 +13,7 @@ interface AddToPlaylistModalProps {
 }
 
 export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalProps) {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [playlists, setPlaylists] = useState<EditablePlaylistDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -25,7 +25,7 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
     setLoading(true);
     setShowNewForm(false);
     setNewName('');
-    getMyPlaylists1()
+    getEditablePlaylists()
       .then(setPlaylists)
       .catch(() => setPlaylists([]))
       .finally(() => setLoading(false));
@@ -109,15 +109,22 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
                     type="button"
                     onClick={() => pl.id && handleAdd(pl.id)}
                     disabled={adding === pl.id}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[rgb(var(--color-border))]/50 disabled:opacity-50"
+                    className="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left hover:bg-[rgb(var(--color-border))]/50 disabled:opacity-50"
                   >
                     <PlaylistIcon
-                      className="h-4 w-4 shrink-0 text-[rgb(var(--color-text-muted))]"
+                      className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))] mt-0.5"
                       aria-hidden
                     />
-                    <span className="flex-1 truncate font-medium text-[rgb(var(--color-text))]">
-                      {pl.name}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-[rgb(var(--color-text))]">
+                        {pl.name}
+                      </div>
+                      {pl.ownerGroupName && (
+                        <div className="text-sm text-[rgb(var(--color-text-muted))]">
+                          Grupp: {pl.ownerGroupName}
+                        </div>
+                      )}
+                    </div>
                   </button>
                 </li>
               ))}

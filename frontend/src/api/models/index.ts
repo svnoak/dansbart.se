@@ -46,6 +46,7 @@ export * from './danceTrack';
 export * from './danceTrackVoteRequest';
 export * from './deleteKeyword200';
 export * from './deleteTrack200';
+export * from './editablePlaylistDto';
 export * from './exportDataset200';
 export * from './exportDatasetParams';
 export * from './exportFeedback200';
