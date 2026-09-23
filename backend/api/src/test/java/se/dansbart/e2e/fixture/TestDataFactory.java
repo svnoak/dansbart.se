@@ -8,6 +8,10 @@ import se.dansbart.domain.album.TrackAlbum;
 import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.artist.ArtistJooqRepository;
 import se.dansbart.domain.artist.TrackArtist;
+import se.dansbart.domain.dance.Dance;
+import se.dansbart.domain.dance.DanceJooqRepository;
+import se.dansbart.domain.dancelist.DanceListCollaborator;
+import se.dansbart.domain.dancelist.DanceListCollaboratorJooqRepository;
 import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
@@ -27,6 +31,7 @@ import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
 import se.dansbart.domain.user.User;
 import se.dansbart.domain.user.UserJooqRepository;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -74,6 +79,12 @@ public class TestDataFactory {
     @Autowired
     private GroupMemberJooqRepository groupMemberJooqRepository;
 
+    @Autowired
+    private DanceJooqRepository danceJooqRepository;
+
+    @Autowired
+    private DanceListCollaboratorJooqRepository danceListCollaboratorJooqRepository;
+
     // Builder factory methods
     public UserBuilder user() {
         return new UserBuilder();
@@ -97,6 +108,10 @@ public class TestDataFactory {
 
     public GroupBuilder group() {
         return new GroupBuilder();
+    }
+
+    public DanceBuilder dance() {
+        return new DanceBuilder();
     }
 
     /**
@@ -484,6 +499,58 @@ public class TestDataFactory {
         }
     }
 
+    public class DanceBuilder {
+        private UUID id = UUID.randomUUID();
+        private String name = "Test Dance";
+        private String slug = "test-dance";
+        private String danceDescriptionUrl;
+        private String danceType;
+        private String music;
+
+        public DanceBuilder withId(UUID id) {
+            this.id = id;
+            return this;
+        }
+
+        public DanceBuilder withName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public DanceBuilder withSlug(String slug) {
+            this.slug = slug;
+            return this;
+        }
+
+        public DanceBuilder withDanceDescriptionUrl(String danceDescriptionUrl) {
+            this.danceDescriptionUrl = danceDescriptionUrl;
+            return this;
+        }
+
+        public DanceBuilder withDanceType(String danceType) {
+            this.danceType = danceType;
+            return this;
+        }
+
+        public DanceBuilder withMusic(String music) {
+            this.music = music;
+            return this;
+        }
+
+        public Dance build() {
+            Dance dance = Dance.builder()
+                .id(id)
+                .name(name)
+                .slug(slug)
+                .danceDescriptionUrl(danceDescriptionUrl)
+                .danceType(danceType)
+                .music(music)
+                .build();
+            danceJooqRepository.upsertDances(List.of(dance));
+            return danceJooqRepository.findBySlug(slug).orElseThrow();
+        }
+    }
+
     /**
      * Add an accepted collaborator to a playlist with the given permission.
      */
@@ -553,5 +620,29 @@ public class TestDataFactory {
             .position(position)
             .build();
         return playlistTrackJooqRepository.insert(pt);
+    }
+
+    /**
+     * Add an accepted collaborator to a dance list with the given permission.
+     */
+    public DanceListCollaborator addDanceListCollaborator(String danceListId, User user, String permission) {
+        return saveDanceListCollaborator(danceListId, user, permission, "accepted");
+    }
+
+    /**
+     * Add a pending collaborator to a dance list with the given permission.
+     */
+    public DanceListCollaborator addPendingDanceListCollaborator(String danceListId, User user, String permission) {
+        return saveDanceListCollaborator(danceListId, user, permission, "pending");
+    }
+
+    private DanceListCollaborator saveDanceListCollaborator(String danceListId, User user, String permission, String status) {
+        DanceListCollaborator collab = DanceListCollaborator.builder()
+            .danceListId(java.util.UUID.fromString(danceListId))
+            .userId(user.getId())
+            .permission(permission)
+            .status(status)
+            .build();
+        return danceListCollaboratorJooqRepository.save(collab);
     }
 }

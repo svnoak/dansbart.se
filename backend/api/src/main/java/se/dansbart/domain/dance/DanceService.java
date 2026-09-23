@@ -219,6 +219,10 @@ public class DanceService {
     @Transactional
     public void withdrawVoteAsVoter(UUID danceId, UUID trackId, UUID voterId) {
         voteRepository.deleteVote(danceId, trackId, voterId);
+        BigDecimal remaining = voteRepository.weightedUpvoteSumByDanceAndTrack(danceId, trackId);
+        if (remaining != null && remaining.compareTo(VoterReputationService.CONFIRMATION_THRESHOLD) < 0) {
+            danceJooqRepository.unconfirmTrack(danceId, trackId);
+        }
     }
 
     public Page<DanceDto> getDancesWithInvalidStyle(Pageable pageable) {

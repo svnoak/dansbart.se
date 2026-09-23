@@ -24,17 +24,11 @@ public class DanceListJooqRepository {
     }
 
     public List<DanceList> findByUserId(UUID userId) {
-        return dsl.selectFrom(DANCE_LISTS)
-            .where(DANCE_LISTS.USER_ID.eq(userId))
-            .orderBy(DANCE_LISTS.NAME.asc())
-            .fetch(this::toDanceList);
+        return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.USER_ID.eq(userId)).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
     }
 
     public List<DanceList> findByGroupId(UUID groupId) {
-        return dsl.selectFrom(DANCE_LISTS)
-            .where(DANCE_LISTS.GROUP_ID.eq(groupId))
-            .orderBy(DANCE_LISTS.NAME.asc())
-            .fetch(this::toDanceList);
+        return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.GROUP_ID.eq(groupId)).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
     }
 
     public DanceList insert(DanceList danceList) {
@@ -45,6 +39,22 @@ public class DanceListJooqRepository {
             .execute();
         danceList.setId(id);
         return danceList;
+    }
+
+    public DanceList update(DanceList danceList) {
+        dsl.update(DANCE_LISTS)
+            .set(DANCE_LISTS.NAME, danceList.getName())
+            .set(DANCE_LISTS.DESCRIPTION, danceList.getDescription())
+            .set(DANCE_LISTS.IS_PUBLIC, danceList.getIsPublic())
+            .set(DANCE_LISTS.SHARE_TOKEN, danceList.getShareToken())
+            .set(DANCE_LISTS.UPDATED_AT, danceList.getUpdatedAt())
+            .where(DANCE_LISTS.ID.eq(danceList.getId()))
+            .execute();
+        return danceList;
+    }
+
+    public void delete(UUID danceListId) {
+        dsl.deleteFrom(DANCE_LISTS).where(DANCE_LISTS.ID.eq(danceListId)).execute();
     }
 
     private DanceList toDanceList(Record r) {
