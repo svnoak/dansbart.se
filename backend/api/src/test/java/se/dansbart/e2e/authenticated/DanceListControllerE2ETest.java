@@ -37,6 +37,7 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         owner = testData.user().withId(OWNER_ID).withUsername("dance_list_owner").build();
         otherUser = testData.user().withId(OTHER_USER_ID).withUsername("other_user").build();
         artist = testData.artist().withName("Test Artist").verified().build();
+        testData.dance().withId(DANCE_ID).withName("Test Dance").withSlug("test-dance").build();
     }
 
     @Nested

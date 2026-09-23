@@ -23,6 +23,12 @@ public class DanceListEntryTrackJooqRepository {
         return dsl.selectFrom(DANCE_LIST_ENTRY_TRACKS).where(DANCE_LIST_ENTRY_TRACKS.ID.eq(id)).fetchOptional(this::toDanceListEntryTrack);
     }
 
+    public Optional<DanceListEntryTrack> findByEntryIdAndTrackId(UUID entryId, UUID trackId) {
+        return dsl.selectFrom(DANCE_LIST_ENTRY_TRACKS)
+            .where(DANCE_LIST_ENTRY_TRACKS.ENTRY_ID.eq(entryId).and(DANCE_LIST_ENTRY_TRACKS.TRACK_ID.eq(trackId)))
+            .fetchOptional(this::toDanceListEntryTrack);
+    }
+
     public List<DanceListEntryTrack> findByEntryIdOrderByPosition(UUID entryId) {
         return dsl.selectFrom(DANCE_LIST_ENTRY_TRACKS)
             .where(DANCE_LIST_ENTRY_TRACKS.ENTRY_ID.eq(entryId))
@@ -30,14 +36,29 @@ public class DanceListEntryTrackJooqRepository {
             .fetch(this::toDanceListEntryTrack);
     }
 
+    public int count(UUID entryId) {
+        return dsl.fetchCount(dsl.selectFrom(DANCE_LIST_ENTRY_TRACKS).where(DANCE_LIST_ENTRY_TRACKS.ENTRY_ID.eq(entryId)));
+    }
+
     public DanceListEntryTrack insert(DanceListEntryTrack link) {
         UUID id = link.getId() != null ? link.getId() : UUID.randomUUID();
         dsl.insertInto(DANCE_LIST_ENTRY_TRACKS)
-            .columns(DANCE_LIST_ENTRY_TRACKS.ID, DANCE_LIST_ENTRY_TRACKS.ENTRY_ID, DANCE_LIST_ENTRY_TRACKS.TRACK_ID, DANCE_LIST_ENTRY_TRACKS.POSITION, DANCE_LIST_ENTRY_TRACKS.VOTER_ID, DANCE_LIST_ENTRY_TRACKS.VOTE_CAST)
+            .columns(DANCE_LIST_ENTRY_TRACKS.ID, DANCE_LIST_ENTRY_TRACKS.ENTRY_ID, DANCE_LIST_ENTRY_TRACKS.TRACK_ID,
+                DANCE_LIST_ENTRY_TRACKS.POSITION, DANCE_LIST_ENTRY_TRACKS.VOTER_ID, DANCE_LIST_ENTRY_TRACKS.VOTE_CAST)
             .values(id, link.getEntryId(), link.getTrackId(), link.getPosition(), link.getVoterId(), link.getVoteCast())
             .execute();
         link.setId(id);
         return link;
+    }
+
+    public void deleteByEntryIdAndTrackId(UUID entryId, UUID trackId) {
+        dsl.deleteFrom(DANCE_LIST_ENTRY_TRACKS)
+            .where(DANCE_LIST_ENTRY_TRACKS.ENTRY_ID.eq(entryId).and(DANCE_LIST_ENTRY_TRACKS.TRACK_ID.eq(trackId)))
+            .execute();
+    }
+
+    public void updatePosition(UUID linkId, int position) {
+        dsl.update(DANCE_LIST_ENTRY_TRACKS).set(DANCE_LIST_ENTRY_TRACKS.POSITION, position).where(DANCE_LIST_ENTRY_TRACKS.ID.eq(linkId)).execute();
     }
 
     private DanceListEntryTrack toDanceListEntryTrack(Record r) {

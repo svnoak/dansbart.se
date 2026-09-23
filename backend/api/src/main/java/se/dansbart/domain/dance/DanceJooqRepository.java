@@ -313,7 +313,7 @@ public class DanceJooqRepository {
             count += dsl.insertInto(DANCES)
                     .columns(DANCES.ID, DANCES.NAME, DANCES.SLUG, DANCES.DANCE_DESCRIPTION_URL,
                             DANCES.DANCE_TYPE, DANCES.MUSIC)
-                    .values(UUID.randomUUID(), dance.getName(), dance.getSlug(),
+                    .values(dance.getId() != null ? dance.getId() : UUID.randomUUID(), dance.getName(), dance.getSlug(),
                             dance.getDanceDescriptionUrl(), dance.getDanceType(), dance.getMusic())
                     .onConflict(DANCES.SLUG)
                     .doUpdate()
@@ -325,6 +325,7 @@ public class DanceJooqRepository {
         }
         return count;
     }
+
 
     private Dance toDance(Record r) {
         return Dance.builder()
