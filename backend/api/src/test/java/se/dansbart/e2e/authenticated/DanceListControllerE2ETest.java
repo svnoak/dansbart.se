@@ -64,6 +64,46 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
                     .content(toJson(Map.of("name", "My Dance List"))))
                 .andExpect(status().isUnauthorized());
         }
+
+        @Test
+        @DisplayName("create dance list for group by member with permission should return 201")
+        void createDanceList_forGroup_byMemberWithPermission_shouldReturn201() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/dance-lists")
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Group Dance List", "groupId", group.getId().toString()))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Group Dance List"))
+                .andExpect(jsonPath("$.groupId").value(group.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("create dance list for group by member without permission should return 403")
+        void createDanceList_forGroup_byMemberWithoutPermission_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.addGroupMember(group, owner, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/dance-lists")
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Group Dance List", "groupId", group.getId().toString()))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("create dance list for group by non-member should return 404")
+        void createDanceList_forGroup_byNonMember_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+
+            mockMvc.perform(post("/api/dance-lists")
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Group Dance List", "groupId", group.getId().toString()))))
+                .andExpect(status().isNotFound());
+        }
     }
 
     @Nested
@@ -222,6 +262,28 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
                     .content(toJson(Map.of("entryIds", List.of(entry2Id, entry1Id)))))
                 .andExpect(status().isOk());
         }
+
+        @Test
+        @DisplayName("should not move entry from another list")
+        void reorderEntries_withEntryFromAnotherList_shouldNotMoveIt() throws Exception {
+            String danceListA = createDanceList("Dance List A", owner);
+            String danceListB = createDanceList("Dance List B", otherUser);
+            String entryA1 = addEntryWithFreeText(danceListA, "Dance A1", owner);
+            String entryA2 = addEntryWithFreeText(danceListA, "Dance A2", owner);
+            String entryB1 = addEntryWithFreeText(danceListB, "Dance B1", otherUser);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/order", danceListA)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("entryIds", List.of(entryB1, entryA1, entryA2)))))
+                .andExpect(status().isNotFound());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListB)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries", hasSize(1)))
+                .andExpect(jsonPath("$.entries[0].id").value(entryB1));
+        }
     }
 
     @Nested
@@ -361,12 +423,17 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             Track track = testData.track().withTitle("Test Track").withArtist(artist).complete()
                 .withDanceStyle("Hambo").build();
 
+            mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(0));
+
             addTrackToEntry(danceListId, entryId, track.getId(), owner);
 
             mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.confirmedTrackCount").value(greaterThanOrEqualTo(0)));
+                .andExpect(jsonPath("$.confirmedTrackCount").value(1));
         }
 
         @Test
@@ -378,11 +445,18 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
                 .withDanceStyle("Hambo").build();
 
             addTrackToEntry(danceListId, entryId, track.getId(), owner);
+
+            mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(1));
+
             removeTrackFromEntry(danceListId, entryId, track.getId(), owner);
 
             mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
                     .with(jwt.userToken(owner.getId())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(0));
         }
 
         @Test
@@ -394,11 +468,18 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
                 .withDanceStyle("Hambo").build();
 
             addTrackToEntry(danceListId, entryId, track.getId(), owner);
+
+            mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(1));
+
             removeEntry(danceListId, entryId, owner);
 
             mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
                     .with(jwt.userToken(owner.getId())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(0));
         }
 
         @Test
@@ -410,11 +491,55 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
                 .withDanceStyle("Hambo").build();
 
             addTrackToEntry(danceListId, entryId, track.getId(), owner);
+
+            mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(1));
+
             deleteDanceList(danceListId, owner);
 
             mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
                     .with(jwt.userToken(owner.getId())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(0));
+        }
+
+        @Test
+        @DisplayName("deleting dance list with multiple links withdraws all votes")
+        void deleteDanceList_withMultipleLinks_withdrawsAllVotes() throws Exception {
+            UUID secondDanceId = UUID.fromString("20000000-0000-0000-0000-000000000002");
+            testData.dance().withId(secondDanceId).withName("Second Dance").withSlug("second-dance").build();
+            String danceListId = createDanceList("My Dance List", owner);
+            String entry1Id = addEntryWithDance(danceListId, DANCE_ID, owner);
+            String entry2Id = addEntryWithDance(danceListId, secondDanceId, owner);
+            Track track1 = testData.track().withTitle("Track 1").withArtist(artist).complete()
+                .withDanceStyle("Hambo").build();
+            Track track2 = testData.track().withTitle("Track 2").withArtist(artist).complete()
+                .withDanceStyle("Hambo").build();
+
+            addTrackToEntry(danceListId, entry1Id, track1.getId(), owner);
+            addTrackToEntry(danceListId, entry2Id, track2.getId(), owner);
+
+            mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(1));
+            mockMvc.perform(get("/api/dances/{id}", secondDanceId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(1));
+
+            deleteDanceList(danceListId, owner);
+
+            mockMvc.perform(get("/api/dances/{id}", DANCE_ID)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(0));
+            mockMvc.perform(get("/api/dances/{id}", secondDanceId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedTrackCount").value(0));
         }
 
         @Test
@@ -459,7 +584,7 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
                     .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("danceId", DANCE_ID.toString()))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         }
 
         @Test
@@ -479,8 +604,8 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         @DisplayName("group member with manage permission may add entries")
         void groupMemberWithManagePermission_canManageEntries() throws Exception {
             Group group = testData.group().withName("Test Group").build();
-            String danceListId = createGroupDanceList("Group Dance List", group);
             testData.addGroupMember(group, owner, false, false, true, false, false);
+            String danceListId = createGroupDanceList("Group Dance List", group, owner);
 
             mockMvc.perform(post("/api/dance-lists/{id}/entries", danceListId)
                     .with(jwt.userToken(owner.getId()))
@@ -493,13 +618,298 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         @DisplayName("group member without manage permission may not add entries")
         void groupMemberWithoutManagePermission_cannotManageEntries() throws Exception {
             Group group = testData.group().withName("Test Group").build();
-            String danceListId = createGroupDanceList("Group Dance List", group);
-            testData.addGroupMember(group, owner, false, false, false, false, false);
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            String danceListId = createGroupDanceList("Group Dance List", group, owner);
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
 
             mockMvc.perform(post("/api/dance-lists/{id}/entries", danceListId)
-                    .with(jwt.userToken(owner.getId()))
+                    .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("danceId", DANCE_ID.toString()))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may update list")
+        void updateList_editCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("Original Name", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Updated Name"))))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not update list")
+        void updateList_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("Original Name", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(put("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Updated Name"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may not delete list")
+        void deleteList_editCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("List To Delete", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not delete list")
+        void deleteList_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("List To Delete", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may remove entry")
+        void removeEntry_editCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/entries/{entryId}", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not remove entry")
+        void removeEntry_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/entries/{entryId}", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may reorder entries")
+        void reorderEntries_editCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entry1Id = addEntryWithFreeText(danceListId, "Dance 1", owner);
+            String entry2Id = addEntryWithFreeText(danceListId, "Dance 2", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/order", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("entryIds", List.of(entry2Id, entry1Id)))))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not reorder entries")
+        void reorderEntries_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entry1Id = addEntryWithFreeText(danceListId, "Dance 1", owner);
+            String entry2Id = addEntryWithFreeText(danceListId, "Dance 2", owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/order", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("entryIds", List.of(entry2Id, entry1Id)))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may set play mode")
+        void setPlayMode_editCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("playMode", "random"))))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not set play mode")
+        void setPlayMode_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("playMode", "random"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may link track")
+        void linkTrack_editCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            Track track = testData.track().withTitle("Test Track").withArtist(artist).complete().build();
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(post("/api/dance-lists/{id}/entries/{entryId}/tracks", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("trackId", track.getId().toString()))))
+                .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not link track")
+        void linkTrack_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            Track track = testData.track().withTitle("Test Track").withArtist(artist).complete().build();
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(post("/api/dance-lists/{id}/entries/{entryId}/tracks", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("trackId", track.getId().toString()))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may unlink track")
+        void unlinkTrack_editCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            Track track = testData.track().withTitle("Test Track").withArtist(artist).complete().build();
+            addTrackToEntry(danceListId, entryId, track.getId(), owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/entries/{entryId}/tracks/{trackId}",
+                        danceListId, entryId, track.getId().toString())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not unlink track")
+        void unlinkTrack_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            Track track = testData.track().withTitle("Test Track").withArtist(artist).complete().build();
+            addTrackToEntry(danceListId, entryId, track.getId(), owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(delete("/api/dance-lists/{id}/entries/{entryId}/tracks/{trackId}",
+                        danceListId, entryId, track.getId().toString())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("edit collaborator may reorder tracks")
+        void reorderTracks_editCollaborator_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            Track track1 = testData.track().withTitle("Track 1").withArtist(artist).complete().build();
+            Track track2 = testData.track().withTitle("Track 2").withArtist(artist).complete().build();
+            addTrackToEntry(danceListId, entryId, track1.getId(), owner);
+            addTrackToEntry(danceListId, entryId, track2.getId(), owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/tracks/order",
+                        danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("trackIds",
+                        List.of(track2.getId().toString(), track1.getId().toString())))))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("view collaborator may not reorder tracks")
+        void reorderTracks_viewCollaborator_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+            Track track1 = testData.track().withTitle("Track 1").withArtist(artist).complete().build();
+            Track track2 = testData.track().withTitle("Track 2").withArtist(artist).complete().build();
+            addTrackToEntry(danceListId, entryId, track1.getId(), owner);
+            addTrackToEntry(danceListId, entryId, track2.getId(), owner);
+            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/tracks/order",
+                        danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("trackIds",
+                        List.of(track2.getId().toString(), track1.getId().toString())))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("group member with manage permission may update list")
+        void updateList_groupMemberWithPermission_shouldSucceed() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            String danceListId = createGroupDanceList("Group Dance List", group, owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Updated Name"))))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("group member without manage permission may not update list")
+        void updateList_groupMemberWithoutPermission_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            String danceListId = createGroupDanceList("Group Dance List", group, owner);
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+
+            mockMvc.perform(put("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Updated Name"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("outsider may not update list")
+        void updateList_outsider_shouldReturn404() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Updated Name"))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("pending collaborator may not update list")
+        void updateList_pendingCollaborator_shouldReturn404() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(put("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Updated Name"))))
                 .andExpect(status().isNotFound());
         }
     }
@@ -531,9 +941,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         return extractIdFromResponse(response);
     }
 
-    private String createGroupDanceList(String name, Group group) throws Exception {
+    private String createGroupDanceList(String name, Group group, User user) throws Exception {
         var response = mockMvc.perform(post("/api/dance-lists")
-                .with(jwt.userToken(UUID.randomUUID()))
+                .with(jwt.userToken(user.getId()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJson(Map.of("name", name, "groupId", group.getId().toString()))))
             .andExpect(status().isCreated())

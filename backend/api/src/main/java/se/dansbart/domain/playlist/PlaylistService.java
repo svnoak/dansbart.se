@@ -3,9 +3,8 @@ package se.dansbart.domain.playlist;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.CollaborationAccess;
 import se.dansbart.domain.group.GroupJooqRepository;
-import se.dansbart.domain.group.GroupMember;
-import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
@@ -34,8 +33,8 @@ public class PlaylistService {
     private final TrackJooqRepository trackJooqRepository;
     private final PlaylistCollaboratorJooqRepository collaboratorRepository;
     private final UserJooqRepository userJooqRepository;
-    private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final GroupJooqRepository groupJooqRepository;
+    private final CollaborationAccess collaborationAccess;
 
     @Transactional(readOnly = true)
     public Optional<Playlist> findById(UUID id) {
@@ -147,16 +146,12 @@ public class PlaylistService {
     }
 
     private boolean hasFullControl(Playlist playlist, UUID userId) {
-        if (playlist.getGroupId() != null) {
-            return groupMemberJooqRepository.findByGroupIdAndUserId(playlist.getGroupId(), userId)
-                .map(GroupMember::canManagePlaylists)
-                .orElse(false);
-        }
-        return userId.equals(playlist.getUserId());
+        return collaborationAccess.hasFullControl(playlist.getUserId(), playlist.getGroupId(), userId);
     }
 
     private boolean hasEditAccess(Playlist playlist, UUID userId) {
-        return hasFullControl(playlist, userId) || hasEditPermission(playlist.getId(), userId);
+        return collaborationAccess.hasEditAccess(playlist.getUserId(), playlist.getGroupId(), userId,
+            () -> hasEditPermission(playlist.getId(), userId));
     }
 
     private void reorderTracks(UUID playlistId) {
@@ -183,23 +178,11 @@ public class PlaylistService {
     }
 
     private boolean canView(Playlist playlist, UUID viewerId) {
-        if (Boolean.TRUE.equals(playlist.getIsPublic())) {
-            return true;
-        }
-        if (hasEditAccess(playlist, viewerId)) {
-            return true;
-        }
-        if (collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), viewerId)
+        return collaborationAccess.canView(Boolean.TRUE.equals(playlist.getIsPublic()), playlist.getGroupId(), viewerId,
+            () -> hasEditAccess(playlist, viewerId),
+            () -> collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), viewerId)
                 .filter(c -> "accepted".equals(c.getStatus()))
-                .isPresent()) {
-            return true;
-        }
-        if (playlist.getGroupId() != null) {
-            return groupMemberJooqRepository.findByGroupIdAndUserId(playlist.getGroupId(), viewerId)
-                .map(GroupMember::isAccepted)
-                .orElse(false);
-        }
-        return false;
+                .isPresent());
     }
 
     /** Playlist by share token with tracks as TrackListDto. */

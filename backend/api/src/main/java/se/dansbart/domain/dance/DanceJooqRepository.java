@@ -57,6 +57,14 @@ public class DanceJooqRepository {
                 .map(this::toDance);
     }
 
+    public Map<UUID, String> findNamesByIds(List<UUID> ids) {
+        if (ids.isEmpty()) return Map.of();
+        return dsl.select(DANCES.ID, DANCES.NAME)
+                .from(DANCES)
+                .where(DANCES.ID.in(ids))
+                .fetchMap(DANCES.ID, DANCES.NAME);
+    }
+
     public Optional<Dance> findBySlug(String slug) {
         return dsl.selectFrom(DANCES)
                 .where(DANCES.SLUG.eq(slug))
@@ -207,6 +215,17 @@ public class DanceJooqRepository {
                 .where(DANCE_TRACKS.DANCE_ID.eq(danceId))
                 .and(DANCE_TRACKS.TRACK_ID.eq(trackId))
                 .fetchOne(this::toDanceTrack);
+    }
+
+    @Transactional
+    public void unconfirmTrack(UUID danceId, UUID trackId) {
+        dsl.update(DANCE_TRACKS)
+                .set(DANCE_TRACKS.IS_CONFIRMED, false)
+                .setNull(DANCE_TRACKS.CONFIRMED_BY)
+                .setNull(DANCE_TRACKS.CONFIRMED_AT)
+                .where(DANCE_TRACKS.DANCE_ID.eq(danceId))
+                .and(DANCE_TRACKS.TRACK_ID.eq(trackId))
+                .execute();
     }
 
     public List<Dance> findDancesWithInvalidStyle(Pageable pageable) {

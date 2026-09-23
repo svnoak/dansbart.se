@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static se.dansbart.jooq.Tables.DANCE_LIST_COLLABORATORS;
 import static se.dansbart.jooq.Tables.DANCE_LISTS;
 
 @Repository
@@ -30,15 +29,6 @@ public class DanceListJooqRepository {
 
     public List<DanceList> findByGroupId(UUID groupId) {
         return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.GROUP_ID.eq(groupId)).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
-    }
-
-    public List<DanceList> findSharedWithUser(UUID userId) {
-        return dsl.selectFrom(DANCE_LISTS)
-            .where(DANCE_LISTS.ID.in(
-                dsl.select(DANCE_LIST_COLLABORATORS.DANCE_LIST_ID).from(DANCE_LIST_COLLABORATORS).where(DANCE_LIST_COLLABORATORS.USER_ID.eq(userId))
-            ))
-            .orderBy(DANCE_LISTS.NAME.asc())
-            .fetch(this::toDanceList);
     }
 
     public DanceList insert(DanceList danceList) {

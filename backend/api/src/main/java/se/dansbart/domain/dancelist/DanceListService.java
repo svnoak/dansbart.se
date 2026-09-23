@@ -3,6 +3,7 @@ package se.dansbart.domain.dancelist;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.CollaborationAccess;
 import se.dansbart.domain.dance.DanceJooqRepository;
 import se.dansbart.domain.dance.DanceService;
 import se.dansbart.domain.group.GroupJooqRepository;
@@ -18,9 +19,13 @@ import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.UserSummaryDto;
 import se.dansbart.exception.BadRequestException;
 import se.dansbart.exception.ConflictException;
+import se.dansbart.exception.ForbiddenException;
+import se.dansbart.exception.ResourceNotFoundException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -42,6 +47,7 @@ public class DanceListService {
     private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final DanceJooqRepository danceJooqRepository;
     private final DanceService danceService;
+    private final CollaborationAccess collaborationAccess;
 
     @Transactional
     public DanceList create(UUID userId, String name, String description, Boolean isPublic) {
@@ -55,7 +61,20 @@ public class DanceListService {
     }
 
     @Transactional
-    public DanceList createForGroup(UUID groupId, String name, String description, Boolean isPublic) {
+    public DanceList createForGroup(UUID groupId, UUID userId, String name, String description, Boolean isPublic) {
+        boolean groupIsVisible = groupJooqRepository.findById(groupId)
+            .map(group -> Boolean.TRUE.equals(group.getIsPublic())
+                || groupMemberJooqRepository.findByGroupIdAndUserId(groupId, userId).map(GroupMember::isAccepted).orElse(false))
+            .orElse(false);
+        if (!groupIsVisible) {
+            throw new ResourceNotFoundException("The group does not exist, or you do not have access to it.");
+        }
+        boolean canManagePlaylists = groupMemberJooqRepository.findByGroupIdAndUserId(groupId, userId)
+            .map(GroupMember::canManagePlaylists)
+            .orElse(false);
+        if (!canManagePlaylists) {
+            throw new ForbiddenException("You do not have permission to create dance lists for this group.");
+        }
         DanceList danceList = DanceList.builder()
             .groupId(groupId)
             .name(name)
@@ -78,167 +97,164 @@ public class DanceListService {
     }
 
     @Transactional
-    public Optional<DanceList> update(UUID danceListId, UUID userId, String name, String description, Boolean isPublic) {
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .map(danceList -> {
-                boolean fullControl = hasFullControl(danceList, userId);
-                if (name != null) danceList.setName(name);
-                if (fullControl) {
-                    if (description != null) danceList.setDescription(description);
-                    if (isPublic != null) danceList.setIsPublic(isPublic);
-                }
-                danceList.setUpdatedAt(OffsetDateTime.now());
-                return danceListJooqRepository.update(danceList);
-            });
+    public DanceList update(UUID danceListId, UUID userId, String name, String description, Boolean isPublic) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        boolean fullControl = hasFullControl(danceList, userId);
+        if (name != null) danceList.setName(name);
+        if (fullControl) {
+            if (description != null) danceList.setDescription(description);
+            if (isPublic != null) danceList.setIsPublic(isPublic);
+        }
+        danceList.setUpdatedAt(OffsetDateTime.now());
+        return danceListJooqRepository.update(danceList);
     }
 
     @Transactional
-    public boolean delete(UUID danceListId, UUID userId) {
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasFullControl(danceList, userId))
-            .map(danceList -> {
-                for (DanceListEntry entry : entryJooqRepository.findByDanceListIdOrderByPosition(danceListId)) {
-                    withdrawVotesForEntry(entry);
-                }
-                danceListJooqRepository.delete(danceListId);
-                return true;
-            })
-            .orElse(false);
+    public void delete(UUID danceListId, UUID userId) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireFullControl(danceList, userId);
+        for (DanceListEntry entry : entryJooqRepository.findByDanceListIdOrderByPosition(danceListId)) {
+            withdrawVotesForEntry(entry);
+        }
+        danceListJooqRepository.delete(danceListId);
     }
 
     @Transactional
-    public Optional<DanceListEntryDto> addEntry(UUID danceListId, UUID userId, UUID danceId, String freeTextName) {
+    public DanceListEntryDto addEntry(UUID danceListId, UUID userId, UUID danceId, String freeTextName) {
         if (danceId == null && (freeTextName == null || freeTextName.isBlank())) {
             throw new BadRequestException("Give a dance from the site, or a name for the dance.");
         }
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .map(danceList -> {
-                if (danceId != null) {
-                    if (entryJooqRepository.existsByDanceListIdAndDanceId(danceListId, danceId)) {
-                        throw new ConflictException("This dance is already in the list.");
-                    }
-                }
-                int nextPosition = entryJooqRepository.count(danceListId);
-                DanceListEntry entry = DanceListEntry.builder()
-                    .danceListId(danceListId)
-                    .danceId(danceId)
-                    .freeTextName(danceId == null ? freeTextName : null)
-                    .position(nextPosition)
-                    .build();
-                entryJooqRepository.insert(entry);
-                return toDanceListEntryDto(entry);
-            });
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        if (danceId != null && entryJooqRepository.existsByDanceListIdAndDanceId(danceListId, danceId)) {
+            throw new ConflictException("This dance is already in the list.");
+        }
+        int nextPosition = entryJooqRepository.count(danceListId);
+        DanceListEntry entry = DanceListEntry.builder()
+            .danceListId(danceListId)
+            .danceId(danceId)
+            .freeTextName(danceId == null ? freeTextName : null)
+            .position(nextPosition)
+            .build();
+        entryJooqRepository.insert(entry);
+        return toDanceListEntryDto(entry);
     }
 
     @Transactional
-    public boolean removeEntry(UUID danceListId, UUID userId, UUID entryId) {
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .flatMap(danceList -> entryJooqRepository.findById(entryId))
-            .filter(entry -> entry.getDanceListId().equals(danceListId))
-            .map(entry -> {
-                withdrawVotesForEntry(entry);
-                entryJooqRepository.delete(entryId);
-                reorderEntryPositions(danceListId);
-                return true;
-            })
-            .orElse(false);
+    public void removeEntry(UUID danceListId, UUID userId, UUID entryId) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        DanceListEntry entry = requireOwnEntry(danceListId, entryId);
+        withdrawVotesForEntry(entry);
+        entryJooqRepository.delete(entryId);
+        reorderEntryPositions(danceListId);
     }
 
     @Transactional
-    public boolean reorderEntries(UUID danceListId, UUID userId, List<UUID> entryIds) {
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .map(danceList -> {
-                for (int i = 0; i < entryIds.size(); i++) {
-                    entryJooqRepository.updatePosition(entryIds.get(i), i);
-                }
-                return true;
-            })
-            .orElse(false);
+    public void reorderEntries(UUID danceListId, UUID userId, List<UUID> entryIds) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        Set<UUID> ownEntryIds = entryJooqRepository.findByDanceListIdOrderByPosition(danceListId).stream()
+            .map(DanceListEntry::getId)
+            .collect(Collectors.toSet());
+        for (UUID entryId : entryIds) {
+            if (!ownEntryIds.contains(entryId)) {
+                throw new ResourceNotFoundException("This entry is not part of the dance list.");
+            }
+        }
+        for (int i = 0; i < entryIds.size(); i++) {
+            entryJooqRepository.updatePosition(entryIds.get(i), i);
+        }
     }
 
     @Transactional
-    public boolean setPlayMode(UUID danceListId, UUID userId, UUID entryId, String playMode) {
+    public void setPlayMode(UUID danceListId, UUID userId, UUID entryId, String playMode) {
         if (!PLAY_MODES.contains(playMode)) {
             throw new BadRequestException("Play mode must be 'in_order' or 'random'.");
         }
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .flatMap(danceList -> entryJooqRepository.findById(entryId))
-            .filter(entry -> entry.getDanceListId().equals(danceListId))
-            .map(entry -> {
-                entryJooqRepository.updatePlayMode(entryId, playMode);
-                return true;
-            })
-            .orElse(false);
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        requireOwnEntry(danceListId, entryId);
+        entryJooqRepository.updatePlayMode(entryId, playMode);
     }
 
     @Transactional
-    public Optional<DanceListEntryTrack> addTrackToEntry(UUID danceListId, UUID userId, UUID entryId, UUID trackId) {
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .flatMap(danceList -> entryJooqRepository.findById(entryId))
-            .filter(entry -> entry.getDanceListId().equals(danceListId))
-            .flatMap(entry -> trackJooqRepository.findById(trackId).map(track -> {
-                int nextPosition = entryTrackJooqRepository.count(entryId);
-                boolean castsVote = entry.getDanceId() != null;
-                DanceListEntryTrack link = DanceListEntryTrack.builder()
-                    .entryId(entryId)
-                    .trackId(trackId)
-                    .position(nextPosition)
-                    .voterId(userId)
-                    .voteCast(castsVote)
-                    .build();
-                entryTrackJooqRepository.insert(link);
-                if (castsVote) {
-                    danceService.castVoteAsVoter(entry.getDanceId(), trackId, userId, 1);
+    public DanceListEntryTrack addTrackToEntry(UUID danceListId, UUID userId, UUID entryId, UUID trackId) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        DanceListEntry entry = requireOwnEntry(danceListId, entryId);
+        trackJooqRepository.findById(trackId)
+            .orElseThrow(() -> new ResourceNotFoundException("The track does not exist."));
+        int nextPosition = entryTrackJooqRepository.count(entryId);
+        boolean castsVote = entry.getDanceId() != null;
+        DanceListEntryTrack link = DanceListEntryTrack.builder()
+            .entryId(entryId)
+            .trackId(trackId)
+            .position(nextPosition)
+            .voterId(userId)
+            .voteCast(castsVote)
+            .build();
+        entryTrackJooqRepository.insert(link);
+        if (castsVote) {
+            danceService.castVoteAsVoter(entry.getDanceId(), trackId, userId, 1);
+        }
+        return link;
+    }
+
+    @Transactional
+    public void removeTrackFromEntry(UUID danceListId, UUID userId, UUID entryId, UUID trackId) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        DanceListEntry entry = requireOwnEntry(danceListId, entryId);
+        entryTrackJooqRepository.findByEntryIdAndTrackId(entryId, trackId).ifPresent(link -> {
+            if (Boolean.TRUE.equals(link.getVoteCast())) {
+                danceService.withdrawVoteAsVoter(entry.getDanceId(), trackId, link.getVoterId());
+            }
+        });
+        entryTrackJooqRepository.deleteByEntryIdAndTrackId(entryId, trackId);
+        reorderEntryTrackPositions(entryId);
+    }
+
+    @Transactional
+    public void reorderEntryTracks(UUID danceListId, UUID userId, UUID entryId, List<UUID> trackIds) {
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        requireOwnEntry(danceListId, entryId);
+        List<DanceListEntryTrack> links = entryTrackJooqRepository.findByEntryIdOrderByPosition(entryId);
+        for (int i = 0; i < trackIds.size(); i++) {
+            UUID trackId = trackIds.get(i);
+            for (DanceListEntryTrack link : links) {
+                if (link.getTrackId().equals(trackId)) {
+                    entryTrackJooqRepository.updatePosition(link.getId(), i);
+                    break;
                 }
-                return link;
-            }));
+            }
+        }
     }
 
-    @Transactional
-    public boolean removeTrackFromEntry(UUID danceListId, UUID userId, UUID entryId, UUID trackId) {
+    private DanceList requireVisible(UUID danceListId, UUID userId) {
         return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .flatMap(danceList -> entryJooqRepository.findById(entryId))
-            .filter(entry -> entry.getDanceListId().equals(danceListId))
-            .map(entry -> {
-                entryTrackJooqRepository.findByEntryIdAndTrackId(entryId, trackId).ifPresent(link -> {
-                    if (Boolean.TRUE.equals(link.getVoteCast())) {
-                        danceService.withdrawVoteAsVoter(entry.getDanceId(), trackId, link.getVoterId());
-                    }
-                });
-                entryTrackJooqRepository.deleteByEntryIdAndTrackId(entryId, trackId);
-                reorderEntryTrackPositions(entryId);
-                return true;
-            })
-            .orElse(false);
+            .filter(danceList -> canView(danceList, userId))
+            .orElseThrow(() -> new ResourceNotFoundException("The dance list does not exist, or you do not have access to it."));
     }
 
-    @Transactional
-    public boolean reorderEntryTracks(UUID danceListId, UUID userId, UUID entryId, List<UUID> trackIds) {
-        return danceListJooqRepository.findById(danceListId)
-            .filter(danceList -> hasEditAccess(danceList, userId))
-            .flatMap(danceList -> entryJooqRepository.findById(entryId))
+    private void requireEditAccess(DanceList danceList, UUID userId) {
+        if (!hasEditAccess(danceList, userId)) {
+            throw new ForbiddenException("You do not have permission to change this dance list.");
+        }
+    }
+
+    private void requireFullControl(DanceList danceList, UUID userId) {
+        if (!hasFullControl(danceList, userId)) {
+            throw new ForbiddenException("You do not have permission to change this dance list.");
+        }
+    }
+
+    private DanceListEntry requireOwnEntry(UUID danceListId, UUID entryId) {
+        return entryJooqRepository.findById(entryId)
             .filter(entry -> entry.getDanceListId().equals(danceListId))
-            .map(entry -> {
-                List<DanceListEntryTrack> links = entryTrackJooqRepository.findByEntryIdOrderByPosition(entryId);
-                for (int i = 0; i < trackIds.size(); i++) {
-                    UUID trackId = trackIds.get(i);
-                    for (DanceListEntryTrack link : links) {
-                        if (link.getTrackId().equals(trackId)) {
-                            entryTrackJooqRepository.updatePosition(link.getId(), i);
-                            break;
-                        }
-                    }
-                }
-                return true;
-            })
-            .orElse(false);
+            .orElseThrow(() -> new ResourceNotFoundException("This entry is not part of the dance list."));
     }
 
     private void withdrawVotesForEntry(DanceListEntry entry) {
@@ -267,37 +283,20 @@ public class DanceListService {
     }
 
     private boolean hasFullControl(DanceList danceList, UUID userId) {
-        if (danceList.getGroupId() != null) {
-            return groupMemberJooqRepository.findByGroupIdAndUserId(danceList.getGroupId(), userId)
-                .map(GroupMember::canManagePlaylists)
-                .orElse(false);
-        }
-        return userId.equals(danceList.getUserId());
+        return collaborationAccess.hasFullControl(danceList.getUserId(), danceList.getGroupId(), userId);
     }
 
     private boolean hasEditAccess(DanceList danceList, UUID userId) {
-        return hasFullControl(danceList, userId)
-            || collaboratorRepository.existsByDanceListIdAndUserIdAndPermission(danceList.getId(), userId, "edit");
+        return collaborationAccess.hasEditAccess(danceList.getUserId(), danceList.getGroupId(), userId,
+            () -> collaboratorRepository.existsByDanceListIdAndUserIdAndPermission(danceList.getId(), userId, "edit"));
     }
 
     private boolean canView(DanceList danceList, UUID viewerId) {
-        if (Boolean.TRUE.equals(danceList.getIsPublic())) {
-            return true;
-        }
-        if (hasEditAccess(danceList, viewerId)) {
-            return true;
-        }
-        if (collaboratorRepository.findByDanceListIdAndUserId(danceList.getId(), viewerId)
+        return collaborationAccess.canView(Boolean.TRUE.equals(danceList.getIsPublic()), danceList.getGroupId(), viewerId,
+            () -> hasEditAccess(danceList, viewerId),
+            () -> collaboratorRepository.findByDanceListIdAndUserId(danceList.getId(), viewerId)
                 .filter(c -> "accepted".equals(c.getStatus()))
-                .isPresent()) {
-            return true;
-        }
-        if (danceList.getGroupId() != null) {
-            return groupMemberJooqRepository.findByGroupIdAndUserId(danceList.getGroupId(), viewerId)
-                .map(GroupMember::isAccepted)
-                .orElse(false);
-        }
-        return false;
+                .isPresent());
     }
 
     private DanceListDto toDanceListDto(DanceList danceList) {
@@ -316,8 +315,30 @@ public class DanceListService {
                 .map(g -> GroupSummaryDto.builder().id(g.getId()).name(g.getName()).build())
                 .orElse(null)
             : null;
-        List<DanceListEntryDto> entries = entryJooqRepository.findByDanceListIdOrderByPosition(danceList.getId()).stream()
-            .map(this::toDanceListEntryDto)
+        List<DanceListEntry> danceListEntries = entryJooqRepository.findByDanceListIdOrderByPosition(danceList.getId());
+
+        List<UUID> danceIds = danceListEntries.stream()
+            .map(DanceListEntry::getDanceId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+        Map<UUID, String> danceNamesById = danceJooqRepository.findNamesByIds(danceIds);
+
+        Map<UUID, List<DanceListEntryTrack>> linksByEntryId = danceListEntries.stream()
+            .collect(Collectors.toMap(DanceListEntry::getId,
+                entry -> entryTrackJooqRepository.findByEntryIdOrderByPosition(entry.getId())));
+        List<UUID> trackIds = linksByEntryId.values().stream()
+            .flatMap(List::stream)
+            .map(DanceListEntryTrack::getTrackId)
+            .distinct()
+            .toList();
+        Map<UUID, TrackListDto> trackDtosById = trackJooqRepository.findTrackListDtosByIds(trackIds).stream()
+            .collect(Collectors.toMap(TrackListDto::getId, trackDto -> trackDto));
+
+        List<DanceListEntryDto> entries = danceListEntries.stream()
+            .map(entry -> buildDanceListEntryDto(entry,
+                entry.getDanceId() != null ? danceNamesById.get(entry.getDanceId()) : null,
+                linksByEntryId.get(entry.getId()), trackDtosById))
             .collect(Collectors.toList());
         return DanceListDto.builder()
             .id(danceList.getId())
@@ -337,19 +358,22 @@ public class DanceListService {
             ? danceJooqRepository.findById(entry.getDanceId()).map(dance -> dance.getName()).orElse(null)
             : null;
         List<DanceListEntryTrack> links = entryTrackJooqRepository.findByEntryIdOrderByPosition(entry.getId());
-        List<UUID> trackIds = links.stream().map(DanceListEntryTrack::getTrackId).toList();
-        List<TrackListDto> trackDtos = trackJooqRepository.findTrackListDtosByIds(trackIds);
-        List<PlaylistTrackDto> trackListDtos = new java.util.ArrayList<>();
-        for (int i = 0; i < links.size(); i++) {
-            DanceListEntryTrack link = links.get(i);
-            TrackListDto trackDto = i < trackDtos.size() ? trackDtos.get(i) : null;
-            trackListDtos.add(PlaylistTrackDto.builder()
+        List<UUID> trackIds = links.stream().map(DanceListEntryTrack::getTrackId).distinct().toList();
+        Map<UUID, TrackListDto> trackDtosById = trackJooqRepository.findTrackListDtosByIds(trackIds).stream()
+            .collect(Collectors.toMap(TrackListDto::getId, trackDto -> trackDto));
+        return buildDanceListEntryDto(entry, danceName, links, trackDtosById);
+    }
+
+    private DanceListEntryDto buildDanceListEntryDto(DanceListEntry entry, String danceName,
+                                                       List<DanceListEntryTrack> links, Map<UUID, TrackListDto> trackDtosById) {
+        List<PlaylistTrackDto> trackListDtos = links.stream()
+            .map(link -> PlaylistTrackDto.builder()
                 .id(link.getId())
                 .position(link.getPosition())
                 .addedAt(link.getCreatedAt())
-                .track(trackDto)
-                .build());
-        }
+                .track(trackDtosById.get(link.getTrackId()))
+                .build())
+            .collect(Collectors.toList());
         return DanceListEntryDto.builder()
             .id(entry.getId())
             .danceId(entry.getDanceId())

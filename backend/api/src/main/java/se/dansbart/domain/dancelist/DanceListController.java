@@ -42,7 +42,7 @@ public class DanceListController {
             @AuthenticationPrincipal UUID userId,
             @RequestBody CreateDanceListRequest request) {
         DanceList danceList = request.groupId() != null
-            ? danceListService.createForGroup(request.groupId(), request.name(), request.description(), request.isPublic())
+            ? danceListService.createForGroup(request.groupId(), userId, request.name(), request.description(), request.isPublic())
             : danceListService.create(userId, request.name(), request.description(), request.isPublic());
         return ResponseEntity.created(URI.create("/api/dance-lists/" + danceList.getId())).body(danceList);
     }
@@ -53,18 +53,14 @@ public class DanceListController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody UpdateDanceListRequest request) {
-        return danceListService.update(id, userId, request.name(), request.description(), request.isPublic())
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(danceListService.update(id, userId, request.name(), request.description(), request.isPublic()));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a dance list")
     public ResponseEntity<Void> deleteDanceList(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
-        if (danceListService.delete(id, userId)) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
+        danceListService.delete(id, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/entries")
@@ -73,9 +69,8 @@ public class DanceListController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody AddEntryRequest request) {
-        return danceListService.addEntry(id, userId, request.danceId(), request.freeTextName())
-            .map(entry -> ResponseEntity.status(201).body(entry))
-            .orElse(ResponseEntity.notFound().build());
+        DanceListEntryDto entry = danceListService.addEntry(id, userId, request.danceId(), request.freeTextName());
+        return ResponseEntity.status(201).body(entry);
     }
 
     @DeleteMapping("/{id}/entries/{entryId}")
@@ -84,10 +79,8 @@ public class DanceListController {
             @PathVariable UUID id,
             @PathVariable UUID entryId,
             @AuthenticationPrincipal UUID userId) {
-        if (danceListService.removeEntry(id, userId, entryId)) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
+        danceListService.removeEntry(id, userId, entryId);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/entries/order")
@@ -96,10 +89,8 @@ public class DanceListController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody ReorderEntriesRequest request) {
-        if (danceListService.reorderEntries(id, userId, request.entryIds())) {
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
+        danceListService.reorderEntries(id, userId, request.entryIds());
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/entries/{entryId}")
@@ -109,10 +100,8 @@ public class DanceListController {
             @PathVariable UUID entryId,
             @AuthenticationPrincipal UUID userId,
             @RequestBody SetPlayModeRequest request) {
-        if (danceListService.setPlayMode(id, userId, entryId, request.playMode())) {
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
+        danceListService.setPlayMode(id, userId, entryId, request.playMode());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/entries/{entryId}/tracks")
@@ -122,9 +111,8 @@ public class DanceListController {
             @PathVariable UUID entryId,
             @AuthenticationPrincipal UUID userId,
             @RequestBody AddTrackRequest request) {
-        return danceListService.addTrackToEntry(id, userId, entryId, request.trackId())
-            .map(link -> ResponseEntity.status(201).body(link))
-            .orElse(ResponseEntity.notFound().build());
+        DanceListEntryTrack link = danceListService.addTrackToEntry(id, userId, entryId, request.trackId());
+        return ResponseEntity.status(201).body(link);
     }
 
     @DeleteMapping("/{id}/entries/{entryId}/tracks/{trackId}")
@@ -134,10 +122,8 @@ public class DanceListController {
             @PathVariable UUID entryId,
             @PathVariable UUID trackId,
             @AuthenticationPrincipal UUID userId) {
-        if (danceListService.removeTrackFromEntry(id, userId, entryId, trackId)) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
+        danceListService.removeTrackFromEntry(id, userId, entryId, trackId);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/entries/{entryId}/tracks/order")
@@ -147,10 +133,8 @@ public class DanceListController {
             @PathVariable UUID entryId,
             @AuthenticationPrincipal UUID userId,
             @RequestBody ReorderTracksRequest request) {
-        if (danceListService.reorderEntryTracks(id, userId, entryId, request.trackIds())) {
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
+        danceListService.reorderEntryTracks(id, userId, entryId, request.trackIds());
+        return ResponseEntity.ok().build();
     }
 
     public record CreateDanceListRequest(String name, String description, Boolean isPublic, UUID groupId) {}
