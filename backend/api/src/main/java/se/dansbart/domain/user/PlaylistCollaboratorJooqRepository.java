@@ -33,6 +33,13 @@ public class PlaylistCollaboratorJooqRepository {
             .fetchOptional(this::toCollaborator);
     }
 
+    public Optional<PlaylistCollaborator> findByPlaylistIdAndGroupId(UUID playlistId, UUID groupId) {
+        return dsl.selectFrom(PLAYLIST_COLLABORATORS)
+            .where(PLAYLIST_COLLABORATORS.PLAYLIST_ID.eq(playlistId)
+                .and(PLAYLIST_COLLABORATORS.GROUP_ID.eq(groupId)))
+            .fetchOptional(this::toCollaborator);
+    }
+
     public boolean existsByPlaylistIdAndUserIdAndPermission(UUID playlistId, UUID userId, String permission) {
         return dsl.fetchExists(
             dsl.selectOne()
@@ -66,6 +73,7 @@ public class PlaylistCollaboratorJooqRepository {
                     PLAYLIST_COLLABORATORS.ID,
                     PLAYLIST_COLLABORATORS.PLAYLIST_ID,
                     PLAYLIST_COLLABORATORS.USER_ID,
+                    PLAYLIST_COLLABORATORS.GROUP_ID,
                     PLAYLIST_COLLABORATORS.PERMISSION,
                     PLAYLIST_COLLABORATORS.STATUS,
                     PLAYLIST_COLLABORATORS.INVITED_BY,
@@ -75,6 +83,7 @@ public class PlaylistCollaboratorJooqRepository {
                     id,
                     collab.getPlaylistId(),
                     collab.getUserId(),
+                    collab.getGroupId(),
                     collab.getPermission(),
                     collab.getStatus(),
                     collab.getInvitedBy(),
@@ -114,6 +123,7 @@ public class PlaylistCollaboratorJooqRepository {
         collab.setId(r.get(PLAYLIST_COLLABORATORS.ID));
         collab.setPlaylistId(r.get(PLAYLIST_COLLABORATORS.PLAYLIST_ID));
         collab.setUserId(r.get(PLAYLIST_COLLABORATORS.USER_ID));
+        collab.setGroupId(r.get(PLAYLIST_COLLABORATORS.GROUP_ID));
         collab.setPermission(r.get(PLAYLIST_COLLABORATORS.PERMISSION));
         collab.setStatus(r.get(PLAYLIST_COLLABORATORS.STATUS));
         collab.setInvitedBy(r.get(PLAYLIST_COLLABORATORS.INVITED_BY));
