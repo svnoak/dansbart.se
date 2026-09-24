@@ -411,7 +411,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(member.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("pending"));
         }
@@ -425,7 +425,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
             UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
@@ -501,7 +501,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
             UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
@@ -533,7 +533,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(member.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isForbidden());
         }
 
@@ -546,7 +546,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(outsider.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", member.getId().toString()))))
+                    .content(toJson(Map.of("username", member.getUsername()))))
                 .andExpect(status().isNotFound());
         }
 
@@ -560,7 +560,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", member.getId().toString()))))
+                    .content(toJson(Map.of("username", member.getUsername()))))
                 .andExpect(status().isConflict());
         }
 
@@ -573,13 +573,13 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk());
 
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isConflict());
         }
 
@@ -592,21 +592,63 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", admin.getId().toString()))))
+                    .content(toJson(Map.of("username", admin.getUsername()))))
                 .andExpect(status().isBadRequest());
         }
 
         @Test
         @DisplayName("cannot invite unknown user")
-        void inviteMember_unknownUser_shouldReturn400() throws Exception {
+        void inviteMember_unknownUsername_shouldReturn422() throws Exception {
             Group group = testData.group().withName("Grupp").build();
             testData.addGroupAdmin(group, admin);
 
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", UUID.randomUUID().toString()))))
-                .andExpect(status().isBadRequest());
+                    .content(toJson(Map.of("username", "no_such_user"))))
+                .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("invite member with username in other case should succeed")
+        void inviteMember_usernameInOtherCase_shouldSucceed() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", outsider.getUsername().toUpperCase()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(outsider.getUsername()));
+        }
+
+        @Test
+        @DisplayName("invite member with blank username should return 400")
+        void inviteMember_blankUsername_shouldReturn400() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "   "))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(not(equalTo("You cannot invite yourself."))));
+        }
+
+        @Test
+        @DisplayName("member without invite permission gets 403 even for an unknown username")
+        void inviteMember_byMemberWithoutInvitePermission_unknownUsername_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/groups/{id}/members", group.getId())
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "no_such_user"))))
+                .andExpect(status().isForbidden());
         }
 
         @Test
@@ -673,7 +715,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
             UUID pendingMemberId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
@@ -730,7 +772,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk());
 
             mockMvc.perform(get("/api/groups/{id}", group.getId())
@@ -753,7 +795,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value(outsider.getUsername()))
                 .andExpect(jsonPath("$.username").isNotEmpty());
@@ -768,7 +810,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
             UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
@@ -826,7 +868,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
             UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
@@ -852,7 +894,7 @@ class GroupControllerE2ETest extends AbstractE2ETest {
             String response = mockMvc.perform(post("/api/groups/{id}/members", group.getId())
                     .with(jwt.userToken(admin.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", outsider.getId().toString()))))
+                    .content(toJson(Map.of("username", outsider.getUsername()))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
             UUID invitationId = UUID.fromString(objectMapper.readTree(response).get("id").asText());
