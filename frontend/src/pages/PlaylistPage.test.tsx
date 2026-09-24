@@ -91,6 +91,12 @@ describe('PlaylistPage', () => {
     );
   }
 
+  function getSortButtonByLabel(text: string) {
+    return Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.startsWith(text),
+    );
+  }
+
   it('a group playlist shows the group as owner', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({
@@ -888,7 +894,7 @@ describe('PlaylistPage', () => {
       });
     }
 
-    const tempoButton = getButtonByText('Tempo');
+    const tempoButton = getSortButtonByLabel('Tempo');
     expect(tempoButton).toBeDefined();
 
     if (tempoButton) {
@@ -909,7 +915,7 @@ describe('PlaylistPage', () => {
     expect(appleIndex).toBeLessThan(mangoIndex);
     expect(mangoIndex).toBeLessThan(zebraIndex);
 
-    const tempoButtonAfterSwitch = getButtonByText('Tempo');
+    const tempoButtonAfterSwitch = getSortButtonByLabel('Tempo');
     expect(tempoButtonAfterSwitch?.textContent).toContain('stigande');
   });
 
@@ -976,7 +982,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const tempoButton = getButtonByText('Tempo');
+    const tempoButton = getSortButtonByLabel('Tempo');
     expect(tempoButton).toBeDefined();
 
     if (tempoButton) {
@@ -1001,7 +1007,7 @@ describe('PlaylistPage', () => {
     expect(zebraIndex).toBeLessThan(mangoIndex);
     expect(mangoIndex).toBeLessThan(appleIndex);
 
-    const tempoButtonAfterClick = getButtonByText('Tempo');
+    const tempoButtonAfterClick = getSortButtonByLabel('Tempo');
     expect(tempoButtonAfterClick?.textContent).toContain('fallande');
   });
 });
