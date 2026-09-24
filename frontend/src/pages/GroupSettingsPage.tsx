@@ -14,7 +14,7 @@ import type { UserSummaryDto } from '@/api/models/userSummaryDto';
 import { useAuth } from '@/auth/useAuth';
 import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
 import { BackArrowIcon } from '@/icons';
-import { Badge, Button, Card, IconButton, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, IconButton, Modal, SectionTitle, toast } from '@/ui';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
 
@@ -51,6 +51,8 @@ export function GroupSettingsPage() {
   const [memberError, setMemberError] = useState<string | null>(null);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
+
+  const [confirmingPublic, setConfirmingPublic] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -122,8 +124,23 @@ export function GroupSettingsPage() {
 
   async function handleToggleVisibility() {
     if (!id || !group) return;
+    if (!group.isPublic) {
+      setConfirmingPublic(true);
+      return;
+    }
     try {
-      const updated = await updateGroup(id, { isPublic: !group.isPublic });
+      const updated = await updateGroup(id, { isPublic: false });
+      setGroup((prev) => (prev ? { ...prev, isPublic: updated.isPublic } : prev));
+    } catch {
+      setInfoError('Det gick inte att ändra synligheten.');
+    }
+  }
+
+  async function handleConfirmMakePublic() {
+    if (!id) return;
+    setConfirmingPublic(false);
+    try {
+      const updated = await updateGroup(id, { isPublic: true });
       setGroup((prev) => (prev ? { ...prev, isPublic: updated.isPublic } : prev));
     } catch {
       setInfoError('Det gick inte att ändra synligheten.');
@@ -255,7 +272,7 @@ export function GroupSettingsPage() {
                 className="h-5 w-5 rounded border-[rgb(var(--color-border))]"
               />
               <label htmlFor="group-settings-visibility" className="text-sm text-[rgb(var(--color-text))]">
-                {group.isPublic ? 'Offentlig grupp' : 'Privat grupp'}
+                Visa gruppen offentligt
               </label>
             </div>
             <Button onClick={handleSaveInfo} disabled={savingInfo || !name.trim()}>
@@ -269,6 +286,18 @@ export function GroupSettingsPage() {
           </Card>
         </section>
       )}
+
+      <Modal open={confirmingPublic} onClose={() => setConfirmingPublic(false)} label="Bekräfta offentlig grupp">
+        <p className="text-sm text-[rgb(var(--color-text))]">
+          Gruppen kommer att visas offentligt. Vill du genomföra ändringen?
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setConfirmingPublic(false)}>
+            Nej
+          </Button>
+          <Button onClick={handleConfirmMakePublic}>Ja</Button>
+        </div>
+      </Modal>
 
       {canInviteMembers && (
         <section className="space-y-3">
