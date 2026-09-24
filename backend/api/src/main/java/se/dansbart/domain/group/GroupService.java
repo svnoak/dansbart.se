@@ -17,6 +17,7 @@ import se.dansbart.exception.BadRequestException;
 import se.dansbart.exception.ConflictException;
 import se.dansbart.exception.ForbiddenException;
 import se.dansbart.exception.ResourceNotFoundException;
+import se.dansbart.exception.UnprocessableEntityException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -124,16 +125,20 @@ public class GroupService {
     }
 
     @Transactional
-    public GroupMemberDto inviteMember(UUID groupId, UUID inviterId, UUID inviteeId) {
+    public GroupMemberDto inviteMember(UUID groupId, UUID inviterId, String username) {
         loadVisibleGroup(groupId, inviterId);
         if (!memberOf(groupId, inviterId).map(GroupMember::canInviteMembers).orElse(false)) {
             throw new ForbiddenException("You do not have permission to do this in the group.");
         }
-        if (inviteeId == null || inviteeId.equals(inviterId)) {
+        if (username == null || username.isBlank()) {
+            throw new BadRequestException("The username is required.");
+        }
+        UUID inviteeId = userJooqRepository.findByUsernameIgnoreCase(username.trim())
+            .map(User::getId)
+            .orElseThrow(() -> new UnprocessableEntityException("No user has that username."));
+        if (inviteeId.equals(inviterId)) {
             throw new BadRequestException("You cannot invite yourself.");
         }
-        userJooqRepository.findById(inviteeId)
-            .orElseThrow(() -> new BadRequestException("The person does not exist."));
         if (groupMemberJooqRepository.findByGroupIdAndUserId(groupId, inviteeId).isPresent()) {
             throw new ConflictException("This person is already invited or a member.");
         }

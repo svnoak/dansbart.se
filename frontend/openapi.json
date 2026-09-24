@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": { "title": "OpenAPI definition", "version": "v0" },
   "servers": [
-    { "url": "http://localhost:8012", "description": "Generated server url" }
+    { "url": "http://localhost:8013", "description": "Generated server url" }
   ],
   "tags": [
     {
@@ -3891,40 +3891,6 @@
         }
       }
     },
-    "/api/users/search": {
-      "get": {
-        "tags": ["Users"],
-        "summary": "Search users by username or display name",
-        "operationId": "searchUsers",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "schema": { "type": "string" }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": { "type": "integer", "format": "int32", "default": 10 }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/UserSummaryDto" }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/users/me/shared-playlists": {
       "get": {
         "tags": ["Users"],
@@ -7290,7 +7256,7 @@
       },
       "InviteMemberRequest": {
         "type": "object",
-        "properties": { "userId": { "type": "string", "format": "uuid" } }
+        "properties": { "username": { "type": "string" } }
       },
       "DanceTrackVoteRequest": {
         "type": "object",

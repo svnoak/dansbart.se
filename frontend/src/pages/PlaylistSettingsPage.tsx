@@ -12,7 +12,7 @@ import {
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
 import { BackArrowIcon } from '@/icons';
-import { IconButton, InlineError, toast, Card, SectionTitle, Button } from '@/ui';
+import { IconButton, InlineError, toast, Card, SectionTitle, Button, TextField } from '@/ui';
 import { ConfirmDeleteByName } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
@@ -407,19 +407,12 @@ export function PlaylistSettingsPage() {
         {isOwner && showInviteForm && (
           <form onSubmit={handleInvite} className="flex items-end gap-2">
             <div className="flex-1">
-              <label
-                htmlFor="invite-username"
-                className="mb-1 block text-sm font-medium text-[rgb(var(--color-text))]"
-              >
-                Användarnamn
-              </label>
-              <input
+              <TextField
                 id="invite-username"
-                type="text"
+                label="Användarnamn"
                 value={inviteUsername}
-                onChange={(e) => setInviteUsername(e.target.value)}
+                onChange={setInviteUsername}
                 autoComplete="off"
-                className="min-h-[44px] w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))] focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-accent))]"
               />
             </div>
             <select

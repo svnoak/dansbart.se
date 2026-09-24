@@ -7,6 +7,7 @@ export { InlineError } from './InlineError';
 export { Modal } from './Modal';
 export { Pill } from './Pill';
 export { SectionTitle } from './SectionTitle';
+export { TextField } from './TextField';
 export { AvatarPlaceholder } from './AvatarPlaceholder';
 export { ToastContainer } from './ToastContainer';
 export { toast } from './toastEmitter';

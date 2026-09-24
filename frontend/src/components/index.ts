@@ -9,4 +9,3 @@ export { SharePlaylistPanel } from './SharePlaylistPanel';
 export { StyleShortcutCard } from './StyleShortcutCard';
 export { TrackCard } from './TrackCard';
 export { TrackRow } from './TrackRow';
-export { UserSearchSelect } from './UserSearchSelect';

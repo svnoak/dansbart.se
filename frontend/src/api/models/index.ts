@@ -208,7 +208,6 @@ export * from './retrainModelParams';
 export * from './searchAlbumsParams';
 export * from './searchArtistsParams';
 export * from './searchTracksParams';
-export * from './searchUsersParams';
 export * from './secondaryStyleRequest';
 export * from './sessionFlagRequest';
 export * from './sessionRequest';
