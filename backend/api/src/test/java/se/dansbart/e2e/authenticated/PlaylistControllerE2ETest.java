@@ -85,6 +85,47 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[*].name", containsInAnyOrder("Playlist 1", "Playlist 2")));
         }
+
+        @Test
+        @DisplayName("should include group playlists for accepted member")
+        void getMyPlaylists_shouldIncludeGroupPlaylistsForAcceptedMember() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name").value("Group Playlist"))
+                .andExpect(jsonPath("$[0].ownerGroup.id").value(group.getId().toString()))
+                .andExpect(jsonPath("$[0].ownerGroup.name").value("Test Group"));
+        }
+
+        @Test
+        @DisplayName("should exclude group playlists for non-member")
+        void getMyPlaylists_shouldExcludePrivateGroupPlaylistsForNonMember() throws Exception {
+            Group group = testData.group().withName("Other Group").build();
+            testData.playlist().withName("Group Playlist").withGroup(group).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("should exclude group playlists for pending member")
+        void getMyPlaylists_shouldExcludeGroupPlaylistsForPendingMember() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addPendingGroupMember(group, owner);
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        }
     }
 
     @Nested

@@ -37,6 +37,21 @@ public class PlaylistJooqRepository {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.USER_ID.eq(userId)).orderBy(PLAYLISTS.NAME.asc()).fetch(this::toPlaylist);
     }
 
+    public List<PlaylistWithGroupName> findOwnedAndGroupPlaylistsByUserId(UUID userId) {
+        var acceptedGroups = dsl.select(GROUP_MEMBERS.GROUP_ID)
+            .from(GROUP_MEMBERS)
+            .where(GROUP_MEMBERS.USER_ID.eq(userId))
+            .and(GROUP_MEMBERS.STATUS.eq("accepted"));
+        return dsl.select(PLAYLISTS.fields())
+            .select(trackCountField(), GROUPS.NAME.as("group_name"))
+            .from(PLAYLISTS)
+            .leftJoin(GROUPS).on(PLAYLISTS.GROUP_ID.eq(GROUPS.ID))
+            .where(PLAYLISTS.USER_ID.eq(userId))
+            .or(PLAYLISTS.GROUP_ID.in(acceptedGroups))
+            .orderBy(PLAYLISTS.NAME.asc())
+            .fetch(r -> new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class)));
+    }
+
     public List<PlaylistWithTrackCount> findByGroupIdWithTrackCount(UUID groupId, boolean includePrivate) {
         var condition = includePrivate
             ? PLAYLISTS.GROUP_ID.eq(groupId)
@@ -168,6 +183,8 @@ public class PlaylistJooqRepository {
     }
 
     public record PlaylistWithTrackCount(Playlist playlist, int trackCount) {}
+
+    public record PlaylistWithGroupName(Playlist playlist, int trackCount, String groupName) {}
 
     public record EditablePlaylistRecord(UUID id, String name, String groupName) {}
 }

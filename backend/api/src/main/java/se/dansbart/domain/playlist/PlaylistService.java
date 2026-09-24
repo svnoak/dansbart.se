@@ -14,6 +14,7 @@ import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
+import se.dansbart.dto.PlaylistListItemDto;
 import se.dansbart.dto.PlaylistTrackDto;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.UserSummaryDto;
@@ -44,6 +45,29 @@ public class PlaylistService {
     @Transactional(readOnly = true)
     public List<Playlist> findByUserId(UUID userId) {
         return playlistJooqRepository.findByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlaylistListItemDto> findOwnedAndGroupPlaylists(UUID userId) {
+        return playlistJooqRepository.findOwnedAndGroupPlaylistsByUserId(userId).stream()
+            .map(record -> {
+                Playlist playlist = record.playlist();
+                GroupSummaryDto ownerGroup = playlist.getGroupId() != null
+                    ? GroupSummaryDto.builder().id(playlist.getGroupId()).name(record.groupName()).build()
+                    : null;
+                return PlaylistListItemDto.builder()
+                    .id(playlist.getId())
+                    .name(playlist.getName())
+                    .description(playlist.getDescription())
+                    .isPublic(playlist.getIsPublic())
+                    .danceStyle(playlist.getDanceStyle())
+                    .subStyle(playlist.getSubStyle())
+                    .tempoCategory(playlist.getTempoCategory())
+                    .trackCount(record.trackCount())
+                    .ownerGroup(ownerGroup)
+                    .build();
+            })
+            .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
