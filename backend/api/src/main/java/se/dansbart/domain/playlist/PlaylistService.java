@@ -308,7 +308,7 @@ public class PlaylistService {
     @Transactional
     public Optional<PlaylistCollaborator> respondToInvitation(UUID invitationId, UUID userId, boolean accept) {
         return collaboratorRepository.findById(invitationId)
-            .filter(collab -> collab.getUserId().equals(userId) && "pending".equals(collab.getStatus()))
+            .filter(collab -> userId.equals(collab.getUserId()) && "pending".equals(collab.getStatus()))
             .map(collab -> {
                 if (accept) {
                     collab.setStatus("accepted");
