@@ -7,7 +7,7 @@ import {
   getInvitations,
   respondToInvitation,
 } from '@/api/generated/playlists/playlists';
-import type { Playlist } from '@/api/models/playlist';
+import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
 import { toast, Card, Badge } from '@/ui';
@@ -28,7 +28,7 @@ export function PlaylistsPage() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistListItemDto[]>([]);
   const [invitations, setInvitations] = useState<InvitationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -219,67 +219,84 @@ export function PlaylistsPage() {
           const styleColor = pl.danceStyle ? getStyleColor(pl.danceStyle) : null;
           const tempoLabel = pl.tempoCategory ? TEMPO_LABELS[pl.tempoCategory] : null;
           return (
-            <li key={pl.id} className="flex items-stretch gap-2">
-              <button
-                type="button"
-                aria-label={`Spela ${pl.name}`}
-                onClick={() => navigate(`/playlists/${pl.id}?autoplay=true`)}
-                className="flex shrink-0 items-center justify-center rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors"
-              >
-                <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
-              </button>
+            <li key={pl.id} className="space-y-1">
+              <div className="flex items-stretch gap-2">
+                <button
+                  type="button"
+                  aria-label={`Spela ${pl.name}`}
+                  onClick={() => navigate(`/playlists/${pl.id}?autoplay=true`)}
+                  className="flex shrink-0 items-center justify-center rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors"
+                >
+                  <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
+                </button>
 
-              <Link
-                to={`/playlists/${pl.id}`}
-                className="flex min-w-0 flex-1"
-              >
-                <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
-                  <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">{pl.name}</p>
-                    {pl.description && (
-                      <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
+                <Link
+                  to={`/playlists/${pl.id}`}
+                  className="flex min-w-0 flex-1"
+                >
+                  <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
+                    <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">{pl.name}</p>
+                      {pl.description && (
+                        <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
+                      )}
+                      {(styleColor || tempoLabel) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {styleColor && pl.danceStyle && (
+                            <Badge
+                              size="md"
+                              style={{
+                                backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                                color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                              }}
+                            >
+                              {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
+                            </Badge>
+                          )}
+                          {styleColor && pl.subStyle && (
+                            <Badge
+                              size="md"
+                              className="opacity-80"
+                              style={{
+                                backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                                color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                              }}
+                            >
+                              {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
+                            </Badge>
+                          )}
+                          {tempoLabel && (
+                            <Badge size="md" variant="muted">
+                              {tempoLabel}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {(pl.trackCount ?? 0) > 0 && (
+                      <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
+                        {pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}
+                      </span>
                     )}
-                    {(styleColor || tempoLabel) && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {styleColor && pl.danceStyle && (
-                          <Badge
-                            size="md"
-                            style={{
-                              backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                              color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                            }}
-                          >
-                            {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
-                          </Badge>
-                        )}
-                        {styleColor && pl.subStyle && (
-                          <Badge
-                            size="md"
-                            className="opacity-80"
-                            style={{
-                              backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                              color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                            }}
-                          >
-                            {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
-                          </Badge>
-                        )}
-                        {tempoLabel && (
-                          <Badge size="md" variant="muted">
-                            {tempoLabel}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {(pl.tracks?.length ?? 0) > 0 && (
-                    <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
-                      {pl.tracks!.length} {pl.tracks!.length === 1 ? 'låt' : 'låtar'}
-                    </span>
-                  )}
-                </Card>
-              </Link>
+                  </Card>
+                </Link>
+              </div>
+              {pl.ownerGroup && (
+                <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">
+                  Ägs av gruppen{' '}
+                  <a
+                    href={`/groups/${pl.ownerGroup.id}`}
+                    className="text-[rgb(var(--color-accent))] hover:underline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(`/groups/${pl.ownerGroup!.id}`);
+                    }}
+                  >
+                    {pl.ownerGroup.name}
+                  </a>
+                </p>
+              )}
             </li>
           );
         })}
