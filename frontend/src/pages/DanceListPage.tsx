@@ -1,25 +1,62 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getDanceList, addEntry, removeEntry } from '@/api/generated/dance-lists/dance-lists';
+import {
+  getDanceList,
+  addEntry,
+  removeEntry,
+  addTrackToEntry,
+  removeTrackFromEntry,
+  setPlayMode,
+} from '@/api/generated/dance-lists/dance-lists';
 import { getDances } from '@/api/generated/dances/dances';
+import { searchTracks } from '@/api/generated/tracks/tracks';
 import type { DanceListDto } from '@/api/models/danceListDto';
+import type { DanceListEntryDto } from '@/api/models/danceListEntryDto';
 import type { Dance } from '@/api/models/dance';
-import { Button, Card } from '@/ui';
-import { PlusIcon } from '@/icons';
+import type { PlaylistTrackDto } from '@/api/models/playlistTrackDto';
+import type { TrackListDto } from '@/api/models/trackListDto';
+import { Button, Card, toast } from '@/ui';
+import { PlusIcon, PlayIcon } from '@/icons';
+import { usePlayer } from '@/player/usePlayer';
+import { SelectableSearchResults } from '@/components';
+
+type ActiveSearch = 'dance' | { entryId: string } | null;
+type ConfirmRemoval = { kind: 'entry'; entryId: string } | { kind: 'track'; entryId: string; trackId: string } | null;
+
+function extractContent<T>(result: unknown): T[] {
+  const content = result && typeof result === 'object' && 'content' in result ? result.content : null;
+  return Array.isArray(content) ? (content as T[]) : [];
+}
+
+const PLAY_MODE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'in_order', label: 'I ordning' },
+  { value: 'random', label: 'Slumpvis' },
+];
 
 export default function DanceListPage() {
   const { id } = useParams<{ id: string }>();
+  const { play } = usePlayer();
   const [danceList, setDanceList] = useState<DanceListDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Dance[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [activeSearch, setActiveSearch] = useState<ActiveSearch>(null);
+  const [confirmRemoval, setConfirmRemoval] = useState<ConfirmRemoval>(null);
+
+  const [danceQuery, setDanceQuery] = useState('');
+  const [danceResults, setDanceResults] = useState<Dance[]>([]);
+  const [danceSearching, setDanceSearching] = useState(false);
+  const [danceSearchFailed, setDanceSearchFailed] = useState(false);
   const [selectedDanceId, setSelectedDanceId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [removing, setRemoving] = useState<string | null>(null);
-  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+  const [addingDance, setAddingDance] = useState(false);
+  const danceSearchDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const [trackQuery, setTrackQuery] = useState('');
+  const [trackResults, setTrackResults] = useState<TrackListDto[]>([]);
+  const [trackSearching, setTrackSearching] = useState(false);
+  const [trackSearchFailed, setTrackSearchFailed] = useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [addingTrack, setAddingTrack] = useState(false);
+  const trackSearchDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const canManage = danceList?.viewerCanManage === true;
 
@@ -43,74 +80,194 @@ export default function DanceListPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
+    if (activeSearch !== 'dance' || !danceQuery.trim()) {
+      setDanceResults([]);
+      setDanceSearching(false);
+      setDanceSearchFailed(false);
       return;
     }
     let cancelled = false;
-    async function search() {
-      setSearching(true);
-      try {
-        const result = await getDances({ search: searchQuery.trim() });
-        if (!cancelled) {
-          const content = (result && typeof result === 'object' && 'content' in result ? result.content : null) ?? [];
-          setSearchResults(Array.isArray(content) ? content : []);
-        }
-      } catch {
-        if (!cancelled) {
-          setSearchResults([]);
-        }
-      } finally {
-        if (!cancelled) setSearching(false);
-      }
-    }
-    search();
+    setDanceSearching(true);
+    setDanceSearchFailed(false);
+    clearTimeout(danceSearchDebounceRef.current);
+    danceSearchDebounceRef.current = setTimeout(() => {
+      getDances({ search: danceQuery.trim() })
+        .then((result) => {
+          if (cancelled) return;
+          setDanceResults(extractContent<Dance>(result));
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setDanceResults([]);
+          setDanceSearchFailed(true);
+        })
+        .finally(() => {
+          if (!cancelled) setDanceSearching(false);
+        });
+    }, 300);
     return () => {
       cancelled = true;
+      clearTimeout(danceSearchDebounceRef.current);
     };
-  }, [searchQuery]);
+  }, [activeSearch, danceQuery]);
+
+  useEffect(() => {
+    if (typeof activeSearch !== 'object' || !activeSearch || !trackQuery.trim()) {
+      setTrackResults([]);
+      setTrackSearching(false);
+      setTrackSearchFailed(false);
+      return;
+    }
+    let cancelled = false;
+    setTrackSearching(true);
+    setTrackSearchFailed(false);
+    clearTimeout(trackSearchDebounceRef.current);
+    trackSearchDebounceRef.current = setTimeout(() => {
+      searchTracks({ q: trackQuery.trim(), pageable: { page: 0, size: 20 } })
+        .then((result) => {
+          if (cancelled) return;
+          setTrackResults(result?.items ?? []);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setTrackResults([]);
+          setTrackSearchFailed(true);
+        })
+        .finally(() => {
+          if (!cancelled) setTrackSearching(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(trackSearchDebounceRef.current);
+    };
+  }, [activeSearch, trackQuery]);
+
+  function openDanceSearch() {
+    setDanceQuery('');
+    setSelectedDanceId(null);
+    setActiveSearch('dance');
+  }
+
+  function openTrackSearch(entryId: string) {
+    setTrackQuery('');
+    setSelectedTrackId(null);
+    setActiveSearch({ entryId });
+  }
+
+  function closeSearch() {
+    setActiveSearch(null);
+    setDanceQuery('');
+    setTrackQuery('');
+  }
 
   async function handleAddDance(danceId: string | null, freeTextName: string | null) {
-    if (!id || adding) return;
-    setAdding(true);
+    if (!id || addingDance) return;
+    setAddingDance(true);
     try {
       const newEntry = await addEntry(id, {
         danceId: danceId || undefined,
         freeTextName: freeTextName || undefined,
       });
       setDanceList((prev) =>
-        prev
-          ? {
-              ...prev,
-              entries: [...(prev.entries ?? []), newEntry],
-            }
-          : prev,
+        prev ? { ...prev, entries: [...(prev.entries ?? []), newEntry] } : prev,
       );
-      setSearchQuery('');
-      setSelectedDanceId(null);
-      setShowAddForm(false);
+      closeSearch();
+    } catch {
+      toast('Det gick inte att lägga till dansen.', 'error');
     } finally {
-      setAdding(false);
+      setAddingDance(false);
     }
   }
 
-  async function handleRemoveDance(entryId: string) {
-    if (!id || removing) return;
-    setRemoving(entryId);
+  async function handleRemoveEntry(entryId: string) {
+    if (!id) return;
     try {
       await removeEntry(id, entryId);
+      setDanceList((prev) =>
+        prev ? { ...prev, entries: (prev.entries ?? []).filter((e) => e.id !== entryId) } : prev,
+      );
+    } catch {
+      toast('Det gick inte att ta bort dansen.', 'error');
+    } finally {
+      setConfirmRemoval(null);
+    }
+  }
+
+  async function handleAddTrack(entryId: string, track: TrackListDto) {
+    if (!id || !track.id || addingTrack) return;
+    setAddingTrack(true);
+    try {
+      const linked = await addTrackToEntry(id, entryId, { trackId: track.id });
+      const newTrack: PlaylistTrackDto = {
+        id: linked.id,
+        position: linked.position,
+        track: { id: track.id, title: track.title, artistName: track.artistName, durationMs: track.durationMs },
+      };
       setDanceList((prev) =>
         prev
           ? {
               ...prev,
-              entries: (prev.entries ?? []).filter((e) => e.id !== entryId),
+              entries: (prev.entries ?? []).map((e) =>
+                e.id === entryId ? { ...e, tracks: [...(e.tracks ?? []), newTrack] } : e,
+              ),
             }
           : prev,
       );
-      setConfirmingRemove(null);
+      closeSearch();
+    } catch {
+      toast('Det gick inte att lägga till låten.', 'error');
     } finally {
-      setRemoving(null);
+      setAddingTrack(false);
     }
+  }
+
+  async function handleRemoveTrack(entryId: string, trackId: string) {
+    if (!id) return;
+    try {
+      await removeTrackFromEntry(id, entryId, trackId);
+      setDanceList((prev) =>
+        prev
+          ? {
+              ...prev,
+              entries: (prev.entries ?? []).map((e) =>
+                e.id === entryId ? { ...e, tracks: (e.tracks ?? []).filter((t) => t.id !== trackId) } : e,
+              ),
+            }
+          : prev,
+      );
+    } catch {
+      toast('Det gick inte att ta bort låten.', 'error');
+    } finally {
+      setConfirmRemoval(null);
+    }
+  }
+
+  async function handlePlayModeChange(entryId: string, nextPlayMode: string) {
+    if (!id) return;
+    try {
+      await setPlayMode(id, entryId, { playMode: nextPlayMode });
+      setDanceList((prev) =>
+        prev
+          ? {
+              ...prev,
+              entries: (prev.entries ?? []).map((e) =>
+                e.id === entryId ? { ...e, playMode: nextPlayMode } : e,
+              ),
+            }
+          : prev,
+      );
+    } catch {
+      toast('Det gick inte att ändra spelläget.', 'error');
+    }
+  }
+
+  function handlePlayEntry(entry: DanceListEntryDto) {
+    const ordered = [...(entry.tracks ?? [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const tracks = ordered.map((t) => t.track).filter((t): t is NonNullable<typeof t> => !!t);
+    if (tracks.length === 0) return;
+    const index = entry.playMode === 'random' ? Math.floor(Math.random() * tracks.length) : 0;
+    play(tracks[index], tracks);
   }
 
   if (loading) {
@@ -118,11 +275,7 @@ export default function DanceListPage() {
   }
 
   if (notFound || !danceList) {
-    return (
-      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-        Danslistan hittades inte.
-      </p>
-    );
+    return <p className="text-sm text-[rgb(var(--color-text-muted))]">Danslistan hittades inte.</p>;
   }
 
   const entries = danceList.entries ?? [];
@@ -130,97 +283,65 @@ export default function DanceListPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-          {danceList.name}
-        </h1>
+        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">{danceList.name}</h1>
         {danceList.description && (
-          <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
-            {danceList.description}
-          </p>
+          <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">{danceList.description}</p>
         )}
       </div>
 
-      {canManage && !showAddForm && (
-        <Button onClick={() => setShowAddForm(true)}>
+      {canManage && activeSearch === null && (
+        <Button onClick={openDanceSearch}>
           <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
           Lägg till dans
         </Button>
       )}
 
-      {showAddForm && canManage && (
+      {canManage && activeSearch === 'dance' && (
         <Card className="p-4">
           <div className="space-y-3">
             <div>
-              <label
-                htmlFor="dance-search"
-                className="block text-sm font-medium text-[rgb(var(--color-text))]"
-              >
+              <label htmlFor="dance-search" className="block text-sm font-medium text-[rgb(var(--color-text))]">
                 Sök efter dans
               </label>
               <input
                 id="dance-search"
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={danceQuery}
+                onChange={(e) => setDanceQuery(e.target.value)}
                 placeholder="Sök..."
                 autoFocus
                 className="mt-1 min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
               />
             </div>
 
-            {searchResults.length > 0 && (
-              <div className="space-y-2">
-                {searchResults.map((dance) => (
-                  <div key={dance.id} className="space-y-2">
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        setSelectedDanceId(
-                          selectedDanceId === dance.id ? null : dance.id ?? null,
-                        )
-                      }
-                      className="w-full text-left"
-                    >
-                      {dance.name}
-                    </Button>
-                    {selectedDanceId === dance.id && dance.id && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddDance(dance.id as string, null)}
-                        disabled={adding}
-                      >
-                        Lägg till
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
+            {danceSearching && <p className="text-sm text-[rgb(var(--color-text-muted))]">Söker...</p>}
+
+            {!danceSearching && (
+              <SelectableSearchResults
+                results={danceResults}
+                getId={(dance) => dance.id}
+                renderResult={(dance) => dance.name}
+                selectedId={selectedDanceId}
+                onSelect={setSelectedDanceId}
+                onConfirm={(dance) => handleAddDance(dance.id as string, null)}
+                confirming={addingDance}
+              />
             )}
 
-            {searchQuery.trim() && searchResults.length === 0 && !searching && (
+            {!danceSearching && danceSearchFailed && (
+              <p className="text-sm text-[rgb(var(--color-text-muted))]">Sökningen misslyckades. Försök igen.</p>
+            )}
+
+            {!danceSearching && !danceSearchFailed && danceQuery.trim() && danceResults.length === 0 && (
               <div className="space-y-2 border-t border-[rgb(var(--color-border))] pt-3">
-                <p className="text-sm text-[rgb(var(--color-text-muted))]">
-                  Dansen finns inte. Lägg till den manuellt:
-                </p>
-                <Button
-                  onClick={() => handleAddDance(null, searchQuery)}
-                  disabled={adding}
-                  variant="secondary"
-                >
+                <p className="text-sm text-[rgb(var(--color-text-muted))]">Dansen finns inte. Lägg till den manuellt:</p>
+                <Button onClick={() => handleAddDance(null, danceQuery)} disabled={addingDance} variant="secondary">
                   Lägg till som egen dans
                 </Button>
               </div>
             )}
 
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setShowAddForm(false);
-                setSearchQuery('');
-              }}
-              disabled={adding}
-            >
+            <Button type="button" variant="ghost" onClick={closeSearch} disabled={addingDance}>
               Avbryt
             </Button>
           </div>
@@ -228,52 +349,203 @@ export default function DanceListPage() {
       )}
 
       {entries.length === 0 ? (
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">
-          Danslistan har inga danser ännu.
-        </p>
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">Danslistan har inga danser ännu.</p>
       ) : (
-        <ul className="space-y-2">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Card className="flex items-center justify-between gap-3 p-3">
-                <span className="text-sm font-medium text-[rgb(var(--color-text))]">
-                  {entry.danceName ?? entry.freeTextName}
-                </span>
-                {canManage && (
-                  <>
-                    {confirmingRemove === entry.id ? (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleRemoveDance(entry.id as string)}
-                          disabled={removing === entry.id}
-                        >
-                          Ja, ta bort
+        <ul className="space-y-3">
+          {entries.map((entry) => {
+            const tracks = [...(entry.tracks ?? [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+            const linkedTrackIds = new Set(
+              tracks.map((t) => t.track?.id).filter((trackId): trackId is string => !!trackId),
+            );
+            const isConfirmingEntryRemoval = confirmRemoval?.kind === 'entry' && confirmRemoval.entryId === entry.id;
+            const isTrackSearchOpen = typeof activeSearch === 'object' && activeSearch?.entryId === entry.id;
+
+            return (
+              <li key={entry.id}>
+                <Card className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-[rgb(var(--color-text))]">
+                      {entry.danceName ?? entry.freeTextName}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {tracks.length > 0 && (
+                        <Button size="sm" variant="secondary" onClick={() => handlePlayEntry(entry)}>
+                          <PlayIcon className="mr-1.5 h-4 w-4" aria-hidden />
+                          Spela
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setConfirmingRemove(null)}
-                          disabled={removing === entry.id}
-                        >
-                          Avbryt
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setConfirmingRemove(entry.id ?? '')}
+                      )}
+                      {canManage &&
+                        (isConfirmingEntryRemoval ? (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => handleRemoveEntry(entry.id as string)}
+                            >
+                              Ja, ta bort
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmRemoval(null)}>
+                              Avbryt
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setConfirmRemoval({ kind: 'entry', entryId: entry.id ?? '' })}
+                          >
+                            Ta bort
+                          </Button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {canManage && (
+                    <div>
+                      <label
+                        htmlFor={`play-mode-${entry.id}`}
+                        className="mr-2 text-sm font-medium text-[rgb(var(--color-text))]"
                       >
-                        Ta bort
+                        Spelläge
+                      </label>
+                      <select
+                        id={`play-mode-${entry.id}`}
+                        value={entry.playMode ?? 'in_order'}
+                        onChange={(e) => handlePlayModeChange(entry.id as string, e.target.value)}
+                        className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                      >
+                        {PLAY_MODE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {tracks.length === 0 ? (
+                    <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga låtar länkade ännu.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {tracks.map((pt) => {
+                        const isConfirmingTrackRemoval =
+                          confirmRemoval?.kind === 'track' &&
+                          confirmRemoval.entryId === entry.id &&
+                          confirmRemoval.trackId === pt.id;
+                        return (
+                          <li
+                            key={pt.id}
+                            className="flex items-center justify-between gap-3 border-t border-[rgb(var(--color-border))]/50 pt-2 first:border-t-0 first:pt-0"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                                {pt.track?.title ?? 'Okänd låt'}
+                              </p>
+                              <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
+                                {pt.track?.artistName ?? 'Okänd artist'}
+                              </p>
+                            </div>
+                            {canManage &&
+                              (isConfirmingTrackRemoval ? (
+                                <div className="flex shrink-0 gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="danger"
+                                    onClick={() => handleRemoveTrack(entry.id as string, pt.id as string)}
+                                  >
+                                    Ja, ta bort
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => setConfirmRemoval(null)}>
+                                    Avbryt
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="shrink-0"
+                                  onClick={() =>
+                                    setConfirmRemoval({ kind: 'track', entryId: entry.id ?? '', trackId: pt.id ?? '' })
+                                  }
+                                >
+                                  Ta bort låt
+                                </Button>
+                              ))}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  {canManage && !isTrackSearchOpen && activeSearch === null && (
+                    <Button size="sm" variant="secondary" onClick={() => openTrackSearch(entry.id as string)}>
+                      <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+                      Lägg till låt
+                    </Button>
+                  )}
+
+                  {canManage && isTrackSearchOpen && (
+                    <Card className="space-y-3 p-3">
+                      <div>
+                        <label
+                          htmlFor={`track-search-${entry.id}`}
+                          className="block text-sm font-medium text-[rgb(var(--color-text))]"
+                        >
+                          Sök efter låt
+                        </label>
+                        <input
+                          id={`track-search-${entry.id}`}
+                          type="text"
+                          value={trackQuery}
+                          onChange={(e) => setTrackQuery(e.target.value)}
+                          placeholder="Sök..."
+                          autoFocus
+                          className="mt-1 min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                        />
+                      </div>
+
+                      {trackSearching && <p className="text-sm text-[rgb(var(--color-text-muted))]">Söker...</p>}
+
+                      {!trackSearching && (
+                        <SelectableSearchResults
+                          results={trackResults}
+                          getId={(track) => track.id}
+                          renderResult={(track) => (
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                                {track.title}
+                              </p>
+                              <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
+                                {track.artistName ?? 'Okänd artist'}
+                              </p>
+                            </div>
+                          )}
+                          selectedId={selectedTrackId}
+                          onSelect={setSelectedTrackId}
+                          onConfirm={(track) => handleAddTrack(entry.id as string, track)}
+                          confirming={addingTrack}
+                          disabledIds={linkedTrackIds}
+                          disabledLabel="Redan tillagd"
+                        />
+                      )}
+
+                      {!trackSearching && trackSearchFailed && (
+                        <p className="text-sm text-[rgb(var(--color-text-muted))]">Sökningen misslyckades. Försök igen.</p>
+                      )}
+
+                      {!trackSearching && !trackSearchFailed && trackQuery.trim() && trackResults.length === 0 && (
+                        <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga låtar hittades.</p>
+                      )}
+
+                      <Button type="button" variant="ghost" onClick={closeSearch} disabled={addingTrack}>
+                        Avbryt
                       </Button>
-                    )}
-                  </>
-                )}
-              </Card>
-            </li>
-          ))}
+                    </Card>
+                  )}
+                </Card>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

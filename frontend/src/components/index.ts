@@ -4,6 +4,7 @@ export { ConfirmDeleteByName } from './ConfirmDeleteByName';
 export { FilterBar } from './FilterBar';
 export { FlagTrackModal } from './FlagTrackModal';
 export { SearchBar } from './SearchBar';
+export { SelectableSearchResults } from './SelectableSearchResults';
 export { SharePlaylistPanel } from './SharePlaylistPanel';
 export { StyleShortcutCard } from './StyleShortcutCard';
 export { TrackCard } from './TrackCard';
