@@ -7,11 +7,9 @@
 import type {
   CheckUsernameAvailabilityParams,
   Playlist,
-  SearchUsersParams,
   UpdateProfileRequest,
   User,
   UserPublicProfile,
-  UserSummaryDto,
   UsernameAvailability
 } from '../../models';
 
@@ -108,36 +106,6 @@ export const getCheckUsernameAvailabilityUrl = (params: CheckUsernameAvailabilit
 export const checkUsernameAvailability = async (params: CheckUsernameAvailabilityParams, options?: RequestInit): Promise<UsernameAvailability> => {
   
   return httpClient<UsernameAvailability>(getCheckUsernameAvailabilityUrl(params),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
-
-/**
- * @summary Search users by username or display name
- */
-export const getSearchUsersUrl = (params: SearchUsersParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-    
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/users/search?${stringifiedParams}` : `/api/users/search`
-}
-
-export const searchUsers = async (params: SearchUsersParams, options?: RequestInit): Promise<UserSummaryDto[]> => {
-  
-  return httpClient<UserSummaryDto[]>(getSearchUsersUrl(params),
   {      
     ...options,
     method: 'GET'

@@ -21,6 +21,10 @@ export function describeGroupError(
     if (error.status === 403) {
       return 'Du har inte behörighet att göra det här i gruppen.';
     }
+
+    if (error.status === 422 && action === 'invite') {
+      return 'Ingen användare heter så. Kontrollera stavningen.';
+    }
   }
 
   return 'Det gick inte att genomföra ändringen. Försök igen.';

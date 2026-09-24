@@ -31,6 +31,13 @@ describe('describeGroupError', () => {
     );
   });
 
+  it('returns correct message for ApiError 422 with invite action', () => {
+    const error = new ApiError('Unprocessable Entity', 422);
+    expect(describeGroupError(error, 'invite')).toBe(
+      'Ingen användare heter så. Kontrollera stavningen.',
+    );
+  });
+
   it('returns correct message for ApiError 403 with any action', () => {
     const error = new ApiError('Forbidden', 403);
     expect(describeGroupError(error, 'leave')).toBe(
