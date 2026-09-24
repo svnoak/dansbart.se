@@ -637,4 +637,176 @@ describe('PlaylistPage', () => {
 
     expect(generateShareToken).toHaveBeenCalledTimes(1);
   });
+
+  it('clicking Namn twice sorts descending', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 3,
+      tracks: [
+        {
+          id: 'pt1',
+          track: {
+            id: 'track1',
+            title: 'Zebra',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 0,
+        },
+        {
+          id: 'pt2',
+          track: {
+            id: 'track2',
+            title: 'Apple',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 1,
+        },
+        {
+          id: 'pt3',
+          track: {
+            id: 'track3',
+            title: 'Mango',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 2,
+        },
+      ],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const sortButton = getButtonByText('Namn');
+    expect(sortButton).toBeDefined();
+
+    if (sortButton) {
+      await act(async () => {
+        sortButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      await act(async () => {
+        sortButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const trackTitles = Array.from(document.body.querySelectorAll('li')).map(
+      (li) => li.textContent
+    );
+    const appleIndex = trackTitles.findIndex((title) => title?.includes('Apple'));
+    const mangoIndex = trackTitles.findIndex((title) => title?.includes('Mango'));
+    const zebraIndex = trackTitles.findIndex((title) => title?.includes('Zebra'));
+
+    expect(zebraIndex).toBeLessThan(mangoIndex);
+    expect(mangoIndex).toBeLessThan(appleIndex);
+  });
+
+  it('clicking Ordning twice keeps the chosen order', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 3,
+      tracks: [
+        {
+          id: 'pt1',
+          track: {
+            id: 'track1',
+            title: 'Zebra',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 0,
+        },
+        {
+          id: 'pt2',
+          track: {
+            id: 'track2',
+            title: 'Apple',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 1,
+        },
+        {
+          id: 'pt3',
+          track: {
+            id: 'track3',
+            title: 'Mango',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 2,
+        },
+      ],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const sortButton = getButtonByText('Ordning');
+    expect(sortButton).toBeDefined();
+
+    if (sortButton) {
+      await act(async () => {
+        sortButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      await act(async () => {
+        sortButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const trackTitles = Array.from(document.body.querySelectorAll('li')).map(
+      (li) => li.textContent
+    );
+    const zebraIndex = trackTitles.findIndex((title) => title?.includes('Zebra'));
+    const appleIndex = trackTitles.findIndex((title) => title?.includes('Apple'));
+    const mangoIndex = trackTitles.findIndex((title) => title?.includes('Mango'));
+
+    expect(zebraIndex).toBeLessThan(appleIndex);
+    expect(appleIndex).toBeLessThan(mangoIndex);
+  });
 });
