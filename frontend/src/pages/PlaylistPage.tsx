@@ -8,7 +8,7 @@ import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
 import { SharePlaylistPanel } from '@/components/SharePlaylistPanel';
 import { BackArrowIcon, ChevronDownIcon, EditIcon, PlayIcon, PlusIcon, SettingsIcon, ShareIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
-import { Button, IconButton, Pill, toast } from '@/ui';
+import { Button, IconButton, Modal, Pill, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -539,8 +539,10 @@ export function PlaylistPage() {
           )}
         </div>
 
-        {showSharePanel && (canEdit || playlist.isPublic) && id && (
-          <SharePlaylistPanel playlistId={id} canEdit={canEdit} shareToken={shareToken} shareUrl={shareUrl} createLink={createLink} copyLink={copyLink} />
+        {(canEdit || playlist.isPublic) && id && (
+          <Modal open={showSharePanel} onClose={() => setShowSharePanel(false)} label="Dela spellista">
+            <SharePlaylistPanel playlistId={id} canEdit={canEdit} shareToken={shareToken} shareUrl={shareUrl} createLink={createLink} copyLink={copyLink} />
+          </Modal>
         )}
 
         {/* Tags row */}

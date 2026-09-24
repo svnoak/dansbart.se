@@ -22,7 +22,7 @@ export function SharePlaylistPanel({ playlistId, canEdit, shareToken, shareUrl, 
 
   if (canEdit && !shareToken) {
     return (
-      <div className="rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-3">
+      <div>
         <Button size="sm" onClick={createLink}>
           Skapa länk
         </Button>
@@ -31,7 +31,7 @@ export function SharePlaylistPanel({ playlistId, canEdit, shareToken, shareUrl, 
   }
 
   return (
-    <div className="space-y-2 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-3">
+    <div className="space-y-2">
       <p className="break-all text-sm text-[rgb(var(--color-text-muted))]">{shareUrl ?? pageUrl}</p>
       <Button size="sm" variant="secondary" onClick={handleCopy}>
         Kopiera länk
