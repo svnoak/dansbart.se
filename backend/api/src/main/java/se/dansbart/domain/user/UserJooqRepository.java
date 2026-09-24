@@ -2,7 +2,6 @@ package se.dansbart.domain.user;
 
 import org.jooq.DSLContext;
 import org.jooq.Record;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
@@ -38,16 +37,6 @@ public class UserJooqRepository {
 
     public Optional<User> findByUsernameIgnoreCase(String username) {
         return dsl.selectFrom(USERS).where(lower(USERS.USERNAME).eq(username.toLowerCase())).fetchOptional().map(this::toUser);
-    }
-
-    public List<User> searchByUsernameOrDisplayName(String query, Pageable pageable) {
-        String pattern = "%" + (query == null ? "" : query).toLowerCase() + "%";
-        return dsl.selectFrom(USERS)
-            .where(lower(USERS.USERNAME).like(pattern).or(lower(USERS.DISPLAY_NAME).like(pattern)))
-            .orderBy(USERS.USERNAME.asc())
-            .offset(pageable.getOffset())
-            .limit(pageable.getPageSize())
-            .fetch(this::toUser);
     }
 
     public long countByUsernameCaseInsensitive(String username) {

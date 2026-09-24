@@ -6,5 +6,5 @@
  */
 
 export interface InviteMemberRequest {
-  userId?: string;
+  username?: string;
 }

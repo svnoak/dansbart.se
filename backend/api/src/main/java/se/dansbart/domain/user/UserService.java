@@ -1,7 +1,6 @@
 package se.dansbart.domain.user;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,11 +61,6 @@ public class UserService {
                 if (avatarUrl != null) user.setAvatarUrl(avatarUrl);
                 return userJooqRepository.update(user);
             });
-    }
-
-    @Transactional(readOnly = true)
-    public List<User> searchUsers(String query, int limit) {
-        return userJooqRepository.searchByUsernameOrDisplayName(query, PageRequest.of(0, limit));
     }
 
     /**

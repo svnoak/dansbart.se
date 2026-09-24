@@ -10,9 +10,8 @@ import {
 } from '@/api/generated/groups/groups';
 import type { GroupDto } from '@/api/models/groupDto';
 import type { GroupMemberDto } from '@/api/models/groupMemberDto';
-import type { UserSummaryDto } from '@/api/models/userSummaryDto';
 import { useAuth } from '@/auth/useAuth';
-import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
+import { ConfirmDeleteByName } from '@/components';
 import { BackArrowIcon } from '@/icons';
 import { Badge, Button, Card, IconButton, Modal, SectionTitle, toast } from '@/ui';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
@@ -44,7 +43,7 @@ export function GroupSettingsPage() {
   const [savingInfo, setSavingInfo] = useState(false);
   const [infoError, setInfoError] = useState<string | null>(null);
 
-  const [inviteSelected, setInviteSelected] = useState<UserSummaryDto | null>(null);
+  const [inviteUsername, setInviteUsername] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -148,14 +147,14 @@ export function GroupSettingsPage() {
   }
 
   async function handleInvite() {
-    if (!id || !inviteSelected?.id) return;
+    if (!id || !inviteUsername.trim()) return;
     setInviting(true);
     setInviteError(null);
     try {
-      await inviteMember(id, { userId: inviteSelected.id });
+      await inviteMember(id, { username: inviteUsername.trim() });
       const updated = await getGroup(id);
       setGroup(updated);
-      setInviteSelected(null);
+      setInviteUsername('');
       toast('Inbjudan är skickad.');
     } catch (error) {
       setInviteError(describeGroupError(error, 'invite'));
@@ -303,12 +302,22 @@ export function GroupSettingsPage() {
         <section className="space-y-3">
           <SectionTitle>Bjud in medlem</SectionTitle>
           <Card className="space-y-3 p-4">
-            <UserSearchSelect
-              selected={inviteSelected}
-              onSelect={setInviteSelected}
-              label="Sök efter en person att bjuda in"
-            />
-            <Button onClick={handleInvite} disabled={inviting || !inviteSelected}>
+            <div className="space-y-1">
+              <label
+                htmlFor="group-invite-username"
+                className="block text-sm font-medium text-[rgb(var(--color-text))]"
+              >
+                Användarnamn
+              </label>
+              <input
+                id="group-invite-username"
+                value={inviteUsername}
+                onChange={(e) => setInviteUsername(e.target.value)}
+                autoComplete="off"
+                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+              />
+            </div>
+            <Button onClick={handleInvite} disabled={inviting || !inviteUsername.trim()}>
               Bjud in
             </Button>
             {inviteError && (
