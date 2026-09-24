@@ -577,6 +577,20 @@ public class TestDataFactory {
     }
 
     /**
+     * Add a collaborator row for a group invitation, with no user_id.
+     */
+    public PlaylistCollaborator addGroupCollaborator(Playlist playlist, Group group, String permission, String status) {
+        PlaylistCollaborator collab = PlaylistCollaborator.builder()
+            .playlistId(playlist.getId())
+            .groupId(group.getId())
+            .permission(permission)
+            .status(status)
+            .invitedBy(playlist.getUserId())
+            .build();
+        return playlistCollaboratorJooqRepository.save(collab);
+    }
+
+    /**
      * Add an accepted admin member to a group.
      */
     public GroupMember addGroupAdmin(Group group, User user) {

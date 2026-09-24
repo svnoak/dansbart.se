@@ -16,6 +16,7 @@ public class PlaylistCollaborator {
     private UUID id;
     private UUID playlistId;
     private UUID userId;
+    private UUID groupId;
 
     @Builder.Default
     private String permission = "view";

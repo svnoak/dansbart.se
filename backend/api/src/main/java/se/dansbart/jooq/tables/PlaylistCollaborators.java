@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.jooq.Check;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
@@ -29,12 +30,14 @@ import org.jooq.TableField;
 import org.jooq.TableOptions;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
+import org.jooq.impl.Internal;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.Groups.GroupsPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
 
@@ -93,12 +96,17 @@ public class PlaylistCollaborators extends TableImpl<Record> {
     /**
      * The column <code>public.playlist_collaborators.user_id</code>.
      */
-    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID, this, "");
 
     /**
      * The column <code>public.playlist_collaborators.invited_by</code>.
      */
     public final TableField<Record, UUID> INVITED_BY = createField(DSL.name("invited_by"), SQLDataType.UUID, this, "");
+
+    /**
+     * The column <code>public.playlist_collaborators.group_id</code>.
+     */
+    public final TableField<Record, UUID> GROUP_ID = createField(DSL.name("group_id"), SQLDataType.UUID, this, "");
 
     private PlaylistCollaborators(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -171,7 +179,7 @@ public class PlaylistCollaborators extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_PLAYLIST_COLLABORATORS_PLAYLIST, Indexes.IDX_PLAYLIST_COLLABORATORS_STATUS, Indexes.IDX_PLAYLIST_COLLABORATORS_USER);
+        return Arrays.asList(Indexes.IDX_PLAYLIST_COLLABORATORS_GROUP, Indexes.IDX_PLAYLIST_COLLABORATORS_PLAYLIST, Indexes.IDX_PLAYLIST_COLLABORATORS_STATUS, Indexes.IDX_PLAYLIST_COLLABORATORS_USER);
     }
 
     @Override
@@ -181,12 +189,12 @@ public class PlaylistCollaborators extends TableImpl<Record> {
 
     @Override
     public List<UniqueKey<Record>> getUniqueKeys() {
-        return Arrays.asList(Keys.UNIQUE_PLAYLIST_USER_COLLABORATION);
+        return Arrays.asList(Keys.UNIQUE_PLAYLIST_GROUP_COLLABORATION, Keys.UNIQUE_PLAYLIST_USER_COLLABORATION);
     }
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_PLAYLIST_ID_FKEY, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_USER_ID_FKEY, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_INVITED_BY_FKEY);
+        return Arrays.asList(Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_PLAYLIST_ID_FKEY, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_USER_ID_FKEY, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_INVITED_BY_FKEY, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_GROUP_ID_FKEY);
     }
 
     private transient PlaylistsPath _playlists;
@@ -225,6 +233,25 @@ public class PlaylistCollaborators extends TableImpl<Record> {
             _playlistCollaboratorsInvitedByFkey = new UsersPath(this, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_INVITED_BY_FKEY, null);
 
         return _playlistCollaboratorsInvitedByFkey;
+    }
+
+    private transient GroupsPath _groups;
+
+    /**
+     * Get the implicit join path to the <code>public.groups</code> table.
+     */
+    public GroupsPath groups() {
+        if (_groups == null)
+            _groups = new GroupsPath(this, Keys.PLAYLIST_COLLABORATORS__PLAYLIST_COLLABORATORS_GROUP_ID_FKEY, null);
+
+        return _groups;
+    }
+
+    @Override
+    public List<Check<Record>> getChecks() {
+        return Arrays.asList(
+            Internal.createCheck(this, DSL.name("playlist_collaborators_collaborator_check"), "(((user_id IS NULL) <> (group_id IS NULL)))", true)
+        );
     }
 
     @Override

@@ -74,4 +74,11 @@ describe('describeGroupError', () => {
       'Det gick inte att genomföra ändringen. Försök igen.',
     );
   });
+
+  it('returns correct message for ApiError 409 with saveName action', () => {
+    const error = new ApiError('Conflict', 409);
+    expect(describeGroupError(error, 'saveName')).toBe(
+      'Det finns redan en grupp som heter så.',
+    );
+  });
 });

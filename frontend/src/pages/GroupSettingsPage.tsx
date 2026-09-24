@@ -8,6 +8,7 @@ import {
   updateMember,
   removeMember,
 } from '@/api/generated/groups/groups';
+import { ApiError } from '@/api/http-client';
 import type { GroupDto } from '@/api/models/groupDto';
 import type { GroupMemberDto } from '@/api/models/groupMemberDto';
 import { useAuth } from '@/auth/useAuth';
@@ -114,8 +115,12 @@ export function GroupSettingsPage() {
       await updateGroup(id, { name: name.trim(), aboutUs: aboutUs.trim() });
       setGroup((prev) => (prev ? { ...prev, name: name.trim(), aboutUs: aboutUs.trim() } : prev));
       toast('Gruppen är uppdaterad.');
-    } catch {
-      setInfoError('Det gick inte att spara ändringarna.');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setInfoError(describeGroupError(error, 'saveName'));
+      } else {
+        setInfoError('Det gick inte att spara ändringarna.');
+      }
     } finally {
       setSavingInfo(false);
     }
@@ -243,7 +248,10 @@ export function GroupSettingsPage() {
               <input
                 id="group-settings-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setInfoError(null);
+                }}
                 className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
               />
             </div>
