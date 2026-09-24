@@ -1,6 +1,5 @@
 package se.dansbart.e2e.fixture;
 
-import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import se.dansbart.domain.album.Album;
@@ -85,9 +84,6 @@ public class TestDataFactory {
 
     @Autowired
     private DanceListCollaboratorJooqRepository danceListCollaboratorJooqRepository;
-
-    @Autowired
-    private DSLContext dsl;
 
     // Builder factory methods
     public UserBuilder user() {
