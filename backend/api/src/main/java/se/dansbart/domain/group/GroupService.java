@@ -37,6 +37,9 @@ public class GroupService {
     @Transactional
     public GroupDto create(UUID creatorId, String name, String aboutUs, Boolean isPublic) {
         String trimmedName = validateAndTrimName(name);
+        if (groupJooqRepository.findByNameIgnoreCase(trimmedName).isPresent()) {
+            throw new ConflictException("A group with that name already exists.");
+        }
         Group group = Group.builder()
             .name(trimmedName)
             .aboutUs(aboutUs)
@@ -108,7 +111,14 @@ public class GroupService {
             throw new ForbiddenException("You do not have permission to change this group.");
         }
         String trimmedName = name != null ? validateAndTrimName(name) : null;
-        if (trimmedName != null) group.setName(trimmedName);
+        if (trimmedName != null) {
+            groupJooqRepository.findByNameIgnoreCase(trimmedName)
+                .filter(other -> !other.getId().equals(groupId))
+                .ifPresent(other -> {
+                    throw new ConflictException("A group with that name already exists.");
+                });
+            group.setName(trimmedName);
+        }
         if (aboutUs != null) group.setAboutUs(aboutUs.isEmpty() ? null : aboutUs);
         if (isPublic != null) group.setIsPublic(isPublic);
         return toGroupDto(groupJooqRepository.update(group), true, membership.canInviteMembers(), Optional.of(membership));

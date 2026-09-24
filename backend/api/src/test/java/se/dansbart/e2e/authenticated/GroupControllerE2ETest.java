@@ -375,6 +375,20 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                     .content(toJson(Map.of("name", "folkdans"))))
                 .andExpect(status().isConflict());
         }
+
+        @Test
+        @DisplayName("renaming to its own name in another case should succeed")
+        void updateGroup_toItsOwnNameInOtherCase_shouldSucceed() throws Exception {
+            Group group = testData.group().withName("Folkdans").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(put("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "FOLKDANS"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("FOLKDANS"));
+        }
     }
 
     @Nested
