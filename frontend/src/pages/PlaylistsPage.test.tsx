@@ -63,6 +63,12 @@ describe('PlaylistsPage playlist cards', () => {
     });
   }
 
+  function getButtonByText(text: string) {
+    return Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes(text),
+    );
+  }
+
   it('a card shows the whole description, clamped to two lines', async () => {
     const longDescription = 'Detta är en väldigt långt beskrivning av spellistan som innehåller många ord och bör visas på två rader utan att klippas av helt.';
     const playlists: PlaylistListItemDto[] = [
@@ -142,6 +148,19 @@ describe('PlaylistsPage playlist cards', () => {
       expect(tag.className).not.toContain('text-[10px]');
       expect(tag.className).not.toContain('text-xs');
     });
+  });
+
+  it('renders the new playlist button as a small Button', async () => {
+    getMyPlaylists1.mockResolvedValue([]);
+
+    await renderPage();
+
+    const newButton = getButtonByText('Ny spellista');
+    expect(newButton).toBeDefined();
+    expect(newButton?.className).toContain('px-3');
+    expect(newButton?.className).toContain('py-1.5');
+    expect(newButton?.className).toContain('text-[rgb(var(--color-accent-foreground))]');
+    expect(newButton?.className).not.toContain('text-white');
   });
 
   it('shows Redigera and Se for pending invitation permissions', async () => {
