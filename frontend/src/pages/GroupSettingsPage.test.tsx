@@ -16,7 +16,6 @@ const deleteGroup = vi.fn();
 const inviteMember = vi.fn();
 const updateMember = vi.fn();
 const removeMember = vi.fn();
-const searchUsers = vi.fn();
 const useAuth = vi.fn();
 
 vi.mock('@/api/generated/groups/groups', () => ({
@@ -26,10 +25,6 @@ vi.mock('@/api/generated/groups/groups', () => ({
   inviteMember: (...args: unknown[]) => inviteMember(...args),
   updateMember: (...args: unknown[]) => updateMember(...args),
   removeMember: (...args: unknown[]) => removeMember(...args),
-}));
-
-vi.mock('@/api/generated/users/users', () => ({
-  searchUsers: (...args: unknown[]) => searchUsers(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -47,7 +42,6 @@ describe('GroupSettingsPage', () => {
     inviteMember.mockReset();
     updateMember.mockReset();
     removeMember.mockReset();
-    searchUsers.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     container = document.createElement('div');
@@ -198,7 +192,6 @@ describe('GroupSettingsPage', () => {
     });
 
     expect(inviteMember).toHaveBeenCalledWith('g1', { username: 'anna' });
-    expect(searchUsers).not.toHaveBeenCalled();
   });
 
   it('inviting someone already invited shows the conflict text', async () => {

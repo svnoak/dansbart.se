@@ -13,7 +13,7 @@ import type { GroupMemberDto } from '@/api/models/groupMemberDto';
 import { useAuth } from '@/auth/useAuth';
 import { ConfirmDeleteByName } from '@/components';
 import { BackArrowIcon } from '@/icons';
-import { Badge, Button, Card, IconButton, Modal, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, IconButton, Modal, SectionTitle, TextField, toast } from '@/ui';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
 
@@ -302,21 +302,13 @@ export function GroupSettingsPage() {
         <section className="space-y-3">
           <SectionTitle>Bjud in medlem</SectionTitle>
           <Card className="space-y-3 p-4">
-            <div className="space-y-1">
-              <label
-                htmlFor="group-invite-username"
-                className="block text-sm font-medium text-[rgb(var(--color-text))]"
-              >
-                Användarnamn
-              </label>
-              <input
-                id="group-invite-username"
-                value={inviteUsername}
-                onChange={(e) => setInviteUsername(e.target.value)}
-                autoComplete="off"
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
-              />
-            </div>
+            <TextField
+              id="group-invite-username"
+              label="Användarnamn"
+              value={inviteUsername}
+              onChange={setInviteUsername}
+              autoComplete="off"
+            />
             <Button onClick={handleInvite} disabled={inviting || !inviteUsername.trim()}>
               Bjud in
             </Button>
