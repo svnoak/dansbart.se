@@ -20,7 +20,7 @@ describe('describePlaylistInviteError', () => {
   it('returns correct message for ApiError 404', () => {
     const error = new ApiError('Not Found', 404);
     expect(describePlaylistInviteError(error)).toBe(
-      'Spellistan finns inte längre.',
+      'Ingen användare heter så. Kontrollera stavningen.',
     );
   });
 

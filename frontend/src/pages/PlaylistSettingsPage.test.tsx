@@ -385,9 +385,6 @@ describe('PlaylistSettingsPage', () => {
         tracks: [],
         collaborators: [],
       });
-      searchUsers.mockResolvedValue([
-        { id: 'u2', username: 'anna', displayName: 'Anna' },
-      ]);
       inviteCollaborator.mockRejectedValue(new ApiError('Bad Request', 400));
 
       await renderPage();
@@ -405,22 +402,11 @@ describe('PlaylistSettingsPage', () => {
         inviteButton?.click();
       });
 
-      const searchInput = document.body.querySelector('input[type="search"]') as HTMLInputElement;
-      typeInto(searchInput, 'an');
+      const usernameInput = getInputByLabel('Användarnamn');
+      expect(usernameInput).toBeTruthy();
 
       await act(async () => {
-        vi.advanceTimersByTime(250);
-      });
-
-      await act(async () => {
-        await Promise.resolve();
-      });
-
-      const annaButton = Array.from(document.body.querySelectorAll('button')).find(
-        (btn) => btn.textContent?.includes('Anna'),
-      );
-      await act(async () => {
-        annaButton?.click();
+        typeInto(usernameInput as HTMLInputElement, 'anna');
       });
 
       const submitButton = Array.from(document.body.querySelectorAll('button')).find(
@@ -434,7 +420,72 @@ describe('PlaylistSettingsPage', () => {
         await Promise.resolve();
       });
 
+      expect(inviteCollaborator).toHaveBeenCalledWith('p1', {
+        username: 'anna',
+        permission: 'view',
+      });
+      expect(searchUsers).not.toHaveBeenCalled();
       expect(document.body.textContent).toContain('Du kan inte bjuda in dig själv.');
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows a message when no user has the name', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+      getPlaylist.mockResolvedValue({
+        id: 'p1',
+        name: 'Min spellista',
+        description: undefined,
+        isPublic: false,
+        owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+        ownerGroup: undefined,
+        viewerCanManage: true,
+        trackCount: 0,
+        tracks: [],
+        collaborators: [],
+      });
+      inviteCollaborator.mockRejectedValue(new ApiError('Not Found', 404));
+
+      await renderPage();
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
+      );
+      expect(inviteButton).toBeTruthy();
+
+      await act(async () => {
+        inviteButton?.click();
+      });
+
+      const usernameInput = getInputByLabel('Användarnamn');
+      expect(usernameInput).toBeTruthy();
+
+      await act(async () => {
+        typeInto(usernameInput as HTMLInputElement, 'spokelse');
+      });
+
+      const submitButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === 'Bjud in',
+      );
+      await act(async () => {
+        submitButton?.click();
+        vi.advanceTimersByTime(100);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(document.body.textContent).toContain(
+        'Ingen användare heter så. Kontrollera stavningen.',
+      );
     } finally {
       vi.runOnlyPendingTimers();
       vi.useRealTimers();
