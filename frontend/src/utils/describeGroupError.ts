@@ -2,7 +2,7 @@ import { ApiError } from '@/api/http-client';
 
 export function describeGroupError(
   error: unknown,
-  action: 'leave' | 'remove' | 'updatePermissions' | 'invite',
+  action: 'leave' | 'remove' | 'updatePermissions' | 'invite' | 'saveName',
 ): string {
   if (error instanceof ApiError) {
     if (error.status === 409) {
@@ -15,6 +15,8 @@ export function describeGroupError(
           return 'Ändringen går inte att spara. Personen har inte tackat ja ännu, eller gruppen skulle sakna administratör.';
         case 'invite':
           return 'Personen är redan inbjuden eller medlem.';
+        case 'saveName':
+          return 'Det finns redan en grupp som heter så.';
       }
     }
 

@@ -8,6 +8,7 @@ import {
   updateMember,
   removeMember,
 } from '@/api/generated/groups/groups';
+import { ApiError } from '@/api/http-client';
 import type { GroupDto } from '@/api/models/groupDto';
 import type { GroupMemberDto } from '@/api/models/groupMemberDto';
 import type { UserSummaryDto } from '@/api/models/userSummaryDto';
@@ -115,8 +116,12 @@ export function GroupSettingsPage() {
       await updateGroup(id, { name: name.trim(), aboutUs: aboutUs.trim() });
       setGroup((prev) => (prev ? { ...prev, name: name.trim(), aboutUs: aboutUs.trim() } : prev));
       toast('Gruppen är uppdaterad.');
-    } catch {
-      setInfoError('Det gick inte att spara ändringarna.');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setInfoError(describeGroupError(error, 'saveName'));
+      } else {
+        setInfoError('Det gick inte att spara ändringarna.');
+      }
     } finally {
       setSavingInfo(false);
     }

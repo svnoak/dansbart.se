@@ -7,11 +7,13 @@ import {
   getGroupInvitations,
   respondToGroupInvitation,
 } from '@/api/generated/groups/groups';
+import { ApiError } from '@/api/http-client';
 import type { GroupSummaryDto } from '@/api/models/groupSummaryDto';
 import type { GroupInvitationDto } from '@/api/models/groupInvitationDto';
 import { GroupIcon, PlusIcon } from '@/icons';
 import { Badge, Button, Card, SectionTitle, toast } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
+import { describeGroupError } from '@/utils/describeGroupError';
 
 export function GroupsPage() {
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
@@ -26,6 +28,7 @@ export function GroupsPage() {
   const [newIsPublic, setNewIsPublic] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,6 +111,7 @@ export function GroupsPage() {
     const name = newGroupName.trim();
     if (!name) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const created = await createGroup({ name, isPublic: newIsPublic });
       setMyGroups((prev) => [
@@ -117,8 +121,12 @@ export function GroupsPage() {
       setNewGroupName('');
       setNewIsPublic(false);
       setShowForm(false);
-    } catch {
-      toast('Det gick inte att skapa gruppen.', 'error');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setCreateError(describeGroupError(error, 'saveName'));
+      } else {
+        setCreateError('Det gick inte att skapa gruppen.');
+      }
     } finally {
       setCreating(false);
     }
@@ -128,6 +136,7 @@ export function GroupsPage() {
     setShowForm(false);
     setNewGroupName('');
     setNewIsPublic(false);
+    setCreateError(null);
   }
 
   const myGroupIds = new Set(myGroups.map((g) => g.id));
@@ -159,7 +168,10 @@ export function GroupsPage() {
                 id="new-group-name"
                 type="text"
                 value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
+                onChange={(e) => {
+                  setNewGroupName(e.target.value);
+                  setCreateError(null);
+                }}
                 autoFocus
                 className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
               />
@@ -173,6 +185,11 @@ export function GroupsPage() {
               />
               Offentlig grupp: alla kan se gruppen och dess offentliga spellistor
             </label>
+            {createError && (
+              <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
+                {createError}
+              </p>
+            )}
             <div className="flex gap-2">
               <Button type="submit" disabled={creating || !newGroupName.trim()}>
                 Skapa grupp
