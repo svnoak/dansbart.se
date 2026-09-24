@@ -90,6 +90,34 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('Escape closes only the topmost modal', async () => {
+    const onCloseFirst = vi.fn();
+    const onCloseSecond = vi.fn();
+    await act(async () => {
+      root.render(
+        <>
+          <Modal open label="First modal" onClose={onCloseFirst}>
+            <p>First content</p>
+          </Modal>
+          <Modal open label="Second modal" onClose={onCloseSecond}>
+            <p>Second content</p>
+          </Modal>
+        </>,
+      );
+    });
+
+    const dialogs = document.body.querySelectorAll('[role="dialog"]');
+    expect(dialogs.length).toBe(2);
+
+    await act(async () => {
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      dialogs[dialogs.length - 1].dispatchEvent(event);
+    });
+
+    expect(onCloseSecond).toHaveBeenCalledTimes(1);
+    expect(onCloseFirst).not.toHaveBeenCalled();
+  });
+
   it('does not call onClose when content inside the dialog is clicked', async () => {
     const onClose = vi.fn();
     await act(async () => {
