@@ -147,4 +147,19 @@ describe('DanceListsPage', () => {
     expect(loginButton).toBeDefined();
     expect(getMyDanceLists).not.toHaveBeenCalled();
   });
+
+  it('renders the new dance list button small', async () => {
+    getMyDanceLists.mockResolvedValue([]);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newButton = getButtonByText('Ny danslista');
+    expect(newButton).toBeDefined();
+    expect(newButton?.className).toContain('px-3');
+    expect(newButton?.className).toContain('py-1.5');
+    expect(newButton?.className).not.toContain('px-4');
+  });
 });

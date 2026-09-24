@@ -302,4 +302,21 @@ describe('GroupsPage', () => {
     expect(getMyGroups).not.toHaveBeenCalled();
     expect(getGroupInvitations).not.toHaveBeenCalled();
   });
+
+  it('renders the new group button small', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({}));
+    getMyGroups.mockResolvedValue([]);
+    getPublicGroups.mockResolvedValue([]);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newButton = getButtonByText('Ny grupp');
+    expect(newButton).toBeDefined();
+    expect(newButton?.className).toContain('px-3');
+    expect(newButton?.className).toContain('py-1.5');
+    expect(newButton?.className).not.toContain('px-4');
+  });
 });
