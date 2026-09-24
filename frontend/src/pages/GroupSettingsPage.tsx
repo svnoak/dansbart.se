@@ -11,11 +11,10 @@ import {
 import { ApiError } from '@/api/http-client';
 import type { GroupDto } from '@/api/models/groupDto';
 import type { GroupMemberDto } from '@/api/models/groupMemberDto';
-import type { UserSummaryDto } from '@/api/models/userSummaryDto';
 import { useAuth } from '@/auth/useAuth';
-import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
+import { ConfirmDeleteByName } from '@/components';
 import { BackArrowIcon } from '@/icons';
-import { Badge, Button, Card, IconButton, Modal, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, IconButton, Modal, SectionTitle, TextField, toast } from '@/ui';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
 
@@ -45,7 +44,7 @@ export function GroupSettingsPage() {
   const [savingInfo, setSavingInfo] = useState(false);
   const [infoError, setInfoError] = useState<string | null>(null);
 
-  const [inviteSelected, setInviteSelected] = useState<UserSummaryDto | null>(null);
+  const [inviteUsername, setInviteUsername] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -153,14 +152,14 @@ export function GroupSettingsPage() {
   }
 
   async function handleInvite() {
-    if (!id || !inviteSelected?.id) return;
+    if (!id || !inviteUsername.trim()) return;
     setInviting(true);
     setInviteError(null);
     try {
-      await inviteMember(id, { userId: inviteSelected.id });
+      await inviteMember(id, { username: inviteUsername.trim() });
       const updated = await getGroup(id);
       setGroup(updated);
-      setInviteSelected(null);
+      setInviteUsername('');
       toast('Inbjudan är skickad.');
     } catch (error) {
       setInviteError(describeGroupError(error, 'invite'));
@@ -308,12 +307,14 @@ export function GroupSettingsPage() {
         <section className="space-y-3">
           <SectionTitle>Bjud in medlem</SectionTitle>
           <Card className="space-y-3 p-4">
-            <UserSearchSelect
-              selected={inviteSelected}
-              onSelect={setInviteSelected}
-              label="Sök efter en person att bjuda in"
+            <TextField
+              id="group-invite-username"
+              label="Användarnamn"
+              value={inviteUsername}
+              onChange={setInviteUsername}
+              autoComplete="off"
             />
-            <Button onClick={handleInvite} disabled={inviting || !inviteSelected}>
+            <Button onClick={handleInvite} disabled={inviting || !inviteUsername.trim()}>
               Bjud in
             </Button>
             {inviteError && (

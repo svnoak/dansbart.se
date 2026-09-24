@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import se.dansbart.domain.playlist.Playlist;
 import se.dansbart.domain.playlist.PlaylistService;
 import se.dansbart.domain.track.TrackStyleVoteJooqRepository;
-import se.dansbart.dto.UserSummaryDto;
-import se.dansbart.mapper.UserMapper;
 
 import java.util.List;
 import java.util.UUID;
@@ -24,7 +22,6 @@ public class UserController {
 
     private final UserService userService;
     private final PlaylistService playlistService;
-    private final UserMapper userMapper;
     private final TrackStyleVoteJooqRepository trackStyleVoteRepository;
 
     @GetMapping("/me")
@@ -68,15 +65,6 @@ public class UserController {
             .map(user -> new UserPublicProfile(user.getId(), user.getDisplayName(), user.getAvatarUrl()))
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/search")
-    @Operation(summary = "Search users by username or display name")
-    public ResponseEntity<List<UserSummaryDto>> searchUsers(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "10") int limit) {
-        List<User> users = userService.searchUsers(q, Math.min(limit, 50));
-        return ResponseEntity.ok(userMapper.toSummaryDtoList(users));
     }
 
     @GetMapping("/username/available")

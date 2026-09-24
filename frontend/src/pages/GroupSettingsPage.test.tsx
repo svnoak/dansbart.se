@@ -16,7 +16,6 @@ const deleteGroup = vi.fn();
 const inviteMember = vi.fn();
 const updateMember = vi.fn();
 const removeMember = vi.fn();
-const searchUsers = vi.fn();
 const useAuth = vi.fn();
 
 vi.mock('@/api/generated/groups/groups', () => ({
@@ -26,10 +25,6 @@ vi.mock('@/api/generated/groups/groups', () => ({
   inviteMember: (...args: unknown[]) => inviteMember(...args),
   updateMember: (...args: unknown[]) => updateMember(...args),
   removeMember: (...args: unknown[]) => removeMember(...args),
-}));
-
-vi.mock('@/api/generated/users/users', () => ({
-  searchUsers: (...args: unknown[]) => searchUsers(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -47,7 +42,6 @@ describe('GroupSettingsPage', () => {
     inviteMember.mockReset();
     updateMember.mockReset();
     removeMember.mockReset();
-    searchUsers.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     container = document.createElement('div');
@@ -167,111 +161,97 @@ describe('GroupSettingsPage', () => {
     expect(getButtonByText('Spara')).toBeUndefined();
     expect(document.body.querySelector('input[type="checkbox"]')).toBeNull();
     expect(getButtonByText('Radera grupp')).toBeUndefined();
-    expect(document.body.textContent).toContain('Sök');
+    expect(getInputByLabel('Användarnamn')).toBeDefined();
   });
 
   it('inviting a person', async () => {
-    vi.useFakeTimers();
-    try {
-      useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
-      getGroup.mockResolvedValue({
-        id: 'g1',
-        name: 'Barngruppen',
-        aboutUs: 'Vi dansar polska',
-        isPublic: true,
-        members: [
-          { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: true, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
-        ],
-      });
-      searchUsers.mockResolvedValue([
-        { id: 'u2', username: 'anna', displayName: 'Anna' },
-      ]);
-      inviteMember.mockResolvedValue(undefined);
-      await renderPage();
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: true, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    inviteMember.mockResolvedValue(undefined);
+    await renderPage();
 
-      await act(async () => {
-        vi.advanceTimersByTime(100);
-      });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
 
-      const searchInput = document.body.querySelector('input[type="search"]') as HTMLInputElement;
-      typeInto(searchInput, 'an');
+    const usernameInput = getInputByLabel('Användarnamn') as HTMLInputElement;
+    typeInto(usernameInput, 'anna');
 
-      await act(async () => {
-        vi.advanceTimersByTime(250);
-      });
+    const inviteButton = getButtonByText('Bjud in');
+    await act(async () => {
+      inviteButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
 
-      await act(async () => {
-        await Promise.resolve();
-      });
-
-      const annaButton = getButtonByText('Anna');
-      await act(async () => {
-        annaButton?.click();
-      });
-
-      const inviteButton = getButtonByText('Bjud in');
-      await act(async () => {
-        inviteButton?.click();
-        vi.advanceTimersByTime(100);
-      });
-
-      expect(inviteMember).toHaveBeenCalledWith('g1', { userId: 'u2' });
-    } finally {
-      vi.runOnlyPendingTimers();
-      vi.useRealTimers();
-    }
+    expect(inviteMember).toHaveBeenCalledWith('g1', { username: 'anna' });
   });
 
   it('inviting someone already invited shows the conflict text', async () => {
-    vi.useFakeTimers();
-    try {
-      useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
-      getGroup.mockResolvedValue({
-        id: 'g1',
-        name: 'Barngruppen',
-        aboutUs: 'Vi dansar polska',
-        isPublic: true,
-        members: [
-          { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: true, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
-        ],
-      });
-      searchUsers.mockResolvedValue([
-        { id: 'u2', username: 'anna', displayName: 'Anna' },
-      ]);
-      inviteMember.mockRejectedValue(new ApiError('Conflict', 409));
-      await renderPage();
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: true, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    inviteMember.mockRejectedValue(new ApiError('Conflict', 409));
+    await renderPage();
 
-      await act(async () => {
-        vi.advanceTimersByTime(100);
-      });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
 
-      const searchInput = document.body.querySelector('input[type="search"]') as HTMLInputElement;
-      typeInto(searchInput, 'an');
+    const usernameInput = getInputByLabel('Användarnamn') as HTMLInputElement;
+    typeInto(usernameInput, 'anna');
 
-      await act(async () => {
-        vi.advanceTimersByTime(250);
-      });
+    const inviteButton = getButtonByText('Bjud in');
+    await act(async () => {
+      inviteButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
 
-      await act(async () => {
-        await Promise.resolve();
-      });
+    expect(document.body.textContent).toContain('Personen är redan inbjuden eller medlem.');
+  });
 
-      const annaButton = getButtonByText('Anna');
-      await act(async () => {
-        annaButton?.click();
-      });
+  it('inviting an unknown username shows the spelling hint', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: true, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    inviteMember.mockRejectedValue(new ApiError('Unprocessable Entity', 422));
+    await renderPage();
 
-      const inviteButton = getButtonByText('Bjud in');
-      await act(async () => {
-        inviteButton?.click();
-        vi.advanceTimersByTime(100);
-      });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
 
-      expect(document.body.textContent).toContain('Personen är redan inbjuden eller medlem.');
-    } finally {
-      vi.runOnlyPendingTimers();
-      vi.useRealTimers();
-    }
+    const usernameInput = getInputByLabel('Användarnamn') as HTMLInputElement;
+    typeInto(usernameInput, 'no_such_user');
+
+    const inviteButton = getButtonByText('Bjud in');
+    await act(async () => {
+      inviteButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Ingen användare heter så. Kontrollera stavningen.');
   });
 
   it("an admin changes a member's permission", async () => {

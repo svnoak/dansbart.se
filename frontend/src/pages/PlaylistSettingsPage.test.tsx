@@ -13,7 +13,6 @@ import { ApiError } from '@/api/http-client';
 const getPlaylist = vi.fn();
 const updatePlaylist = vi.fn();
 const inviteCollaborator = vi.fn();
-const searchUsers = vi.fn();
 const useAuth = vi.fn();
 const toast = vi.fn();
 
@@ -27,10 +26,6 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
   updateCollaborator: vi.fn(),
   removeCollaborator: vi.fn(),
   transferOwnership: vi.fn(),
-}));
-
-vi.mock('@/api/generated/users/users', () => ({
-  searchUsers: (...args: unknown[]) => searchUsers(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -53,7 +48,6 @@ describe('PlaylistSettingsPage', () => {
     getPlaylist.mockReset();
     updatePlaylist.mockReset();
     inviteCollaborator.mockReset();
-    searchUsers.mockReset();
     useAuth.mockReset();
     toast.mockReset();
     useAuth.mockReturnValue(authValue());
@@ -424,7 +418,6 @@ describe('PlaylistSettingsPage', () => {
         username: 'anna',
         permission: 'view',
       });
-      expect(searchUsers).not.toHaveBeenCalled();
       expect(document.body.textContent).toContain('Du kan inte bjuda in dig själv.');
     } finally {
       vi.runOnlyPendingTimers();

@@ -77,7 +77,7 @@ public class GroupController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody InviteMemberRequest request) {
-        return ResponseEntity.ok(groupService.inviteMember(id, userId, request.userId()));
+        return ResponseEntity.ok(groupService.inviteMember(id, userId, request.username()));
     }
 
     @PostMapping("/{id}/playlists")
@@ -141,7 +141,7 @@ public class GroupController {
     public record CreateGroupRequest(String name, String aboutUs, Boolean isPublic) {}
     public record CreateGroupPlaylistRequest(String name, String description) {}
     public record UpdateGroupRequest(String name, String aboutUs, Boolean isPublic) {}
-    public record InviteMemberRequest(UUID userId) {}
+    public record InviteMemberRequest(String username) {}
     public record RespondToInvitationRequest(Boolean accept) {}
     public record UpdateMemberRequest(Boolean isAdmin, Boolean canEditInfo, Boolean canManagePlaylists, Boolean canInviteMembers, Boolean canRemoveMembers) {}
 }
