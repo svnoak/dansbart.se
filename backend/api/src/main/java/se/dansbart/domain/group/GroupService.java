@@ -1,6 +1,7 @@
 package se.dansbart.domain.group;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.playlist.PlaylistJooqRepository;
@@ -46,7 +47,11 @@ public class GroupService {
             .aboutUs(aboutUs)
             .isPublic(isPublic != null && isPublic)
             .build();
-        group = groupJooqRepository.insert(group);
+        try {
+            group = groupJooqRepository.insert(group);
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflictException("A group with that name already exists.");
+        }
 
         GroupMember creator = GroupMember.builder()
             .groupId(group.getId())
@@ -122,7 +127,13 @@ public class GroupService {
         }
         if (aboutUs != null) group.setAboutUs(aboutUs.isEmpty() ? null : aboutUs);
         if (isPublic != null) group.setIsPublic(isPublic);
-        return toGroupDto(groupJooqRepository.update(group), true, membership.canInviteMembers(), Optional.of(membership));
+        Group updated;
+        try {
+            updated = groupJooqRepository.update(group);
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflictException("A group with that name already exists.");
+        }
+        return toGroupDto(updated, true, membership.canInviteMembers(), Optional.of(membership));
     }
 
     @Transactional

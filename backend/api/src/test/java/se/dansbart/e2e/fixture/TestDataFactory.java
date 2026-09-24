@@ -582,21 +582,16 @@ public class TestDataFactory {
 
     /**
      * Add a collaborator row for a group invitation, with no user_id.
-     * Uses a raw SQL insert because PlaylistCollaborator has no groupId field yet.
      */
     public PlaylistCollaborator addGroupCollaborator(Playlist playlist, Group group, String permission, String status) {
-        UUID id = UUID.randomUUID();
-        dsl.execute(
-            "INSERT INTO playlist_collaborators (id, playlist_id, group_id, permission, status, invited_by) "
-                + "VALUES ({0}, {1}, {2}, {3}, {4}, {5})",
-            id, playlist.getId(), group.getId(), permission, status, playlist.getUserId()
-        );
-        PlaylistCollaborator collab = new PlaylistCollaborator();
-        collab.setId(id);
-        collab.setPlaylistId(playlist.getId());
-        collab.setPermission(permission);
-        collab.setStatus(status);
-        return collab;
+        PlaylistCollaborator collab = PlaylistCollaborator.builder()
+            .playlistId(playlist.getId())
+            .groupId(group.getId())
+            .permission(permission)
+            .status(status)
+            .invitedBy(playlist.getUserId())
+            .build();
+        return playlistCollaboratorJooqRepository.save(collab);
     }
 
     /**
