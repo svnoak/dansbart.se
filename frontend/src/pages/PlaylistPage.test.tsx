@@ -809,4 +809,199 @@ describe('PlaylistPage', () => {
     expect(zebraIndex).toBeLessThan(appleIndex);
     expect(appleIndex).toBeLessThan(mangoIndex);
   });
+
+  it('switching to another sort resets the direction to ascending', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 3,
+      tracks: [
+        {
+          id: 'pt1',
+          track: {
+            id: 'track1',
+            title: 'Zebra',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+            effectiveBpm: 120,
+          },
+          position: 0,
+        },
+        {
+          id: 'pt2',
+          track: {
+            id: 'track2',
+            title: 'Apple',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+            effectiveBpm: 100,
+          },
+          position: 1,
+        },
+        {
+          id: 'pt3',
+          track: {
+            id: 'track3',
+            title: 'Mango',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+            effectiveBpm: 110,
+          },
+          position: 2,
+        },
+      ],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const namnButton = getButtonByText('Namn');
+    expect(namnButton).toBeDefined();
+
+    if (namnButton) {
+      await act(async () => {
+        namnButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      await act(async () => {
+        namnButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const tempoButton = getButtonByText('Tempo');
+    expect(tempoButton).toBeDefined();
+
+    if (tempoButton) {
+      await act(async () => {
+        tempoButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+    }
+
+    const trackTitles = Array.from(document.body.querySelectorAll('li')).map(
+      (li) => li.textContent
+    );
+
+    const appleIndex = trackTitles.findIndex((title) => title?.includes('Apple'));
+    const mangoIndex = trackTitles.findIndex((title) => title?.includes('Mango'));
+    const zebraIndex = trackTitles.findIndex((title) => title?.includes('Zebra'));
+
+    expect(appleIndex).toBeLessThan(mangoIndex);
+    expect(mangoIndex).toBeLessThan(zebraIndex);
+
+    const tempoButtonAfterSwitch = getButtonByText('Tempo');
+    expect(tempoButtonAfterSwitch?.textContent).toContain('stigande');
+  });
+
+  it('clicking Tempo twice sorts by tempo descending', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 3,
+      tracks: [
+        {
+          id: 'pt1',
+          track: {
+            id: 'track1',
+            title: 'Zebra',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+            effectiveBpm: 120,
+          },
+          position: 0,
+        },
+        {
+          id: 'pt2',
+          track: {
+            id: 'track2',
+            title: 'Apple',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+            effectiveBpm: 100,
+          },
+          position: 1,
+        },
+        {
+          id: 'pt3',
+          track: {
+            id: 'track3',
+            title: 'Mango',
+            artistName: 'Test Artist',
+            danceStyle: 'Polska',
+            tempoCategory: undefined,
+            confidence: 0.9,
+            durationMs: 180000,
+            effectiveBpm: 110,
+          },
+          position: 2,
+        },
+      ],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const tempoButton = getButtonByText('Tempo');
+    expect(tempoButton).toBeDefined();
+
+    if (tempoButton) {
+      await act(async () => {
+        tempoButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      await act(async () => {
+        tempoButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const trackTitles = Array.from(document.body.querySelectorAll('li')).map(
+      (li) => li.textContent
+    );
+    const appleIndex = trackTitles.findIndex((title) => title?.includes('Apple'));
+    const mangoIndex = trackTitles.findIndex((title) => title?.includes('Mango'));
+    const zebraIndex = trackTitles.findIndex((title) => title?.includes('Zebra'));
+
+    expect(zebraIndex).toBeLessThan(mangoIndex);
+    expect(mangoIndex).toBeLessThan(appleIndex);
+
+    const tempoButtonAfterClick = getButtonByText('Tempo');
+    expect(tempoButtonAfterClick?.textContent).toContain('fallande');
+  });
 });
