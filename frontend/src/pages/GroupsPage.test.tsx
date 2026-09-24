@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { GroupsPage } from './GroupsPage';
+import { ApiError } from '@/api/http-client';
 import { authValue, loggedInAuthValue } from '@/test/authValue';
 import { getInputByLabel } from '@/test/getInputByLabel';
 import { typeInto } from '@/test/typeInto';
@@ -318,5 +319,34 @@ describe('GroupsPage', () => {
     expect(newButton?.className).toContain('px-3');
     expect(newButton?.className).toContain('py-1.5');
     expect(newButton?.className).not.toContain('px-4');
+  });
+
+  it('shows that a group name is taken', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({}));
+    getMyGroups.mockResolvedValue([]);
+    getPublicGroups.mockResolvedValue([]);
+    createGroup.mockRejectedValue(new ApiError('Conflict', 409));
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newGroupButton = getButtonByText('Ny grupp');
+    await act(async () => {
+      newGroupButton?.click();
+    });
+
+    const groupNameInput = getInputByLabel('Gruppens namn');
+    if (groupNameInput) typeInto(groupNameInput, 'Barngruppen');
+
+    const createButton = getButtonByText('Skapa grupp');
+    await act(async () => {
+      createButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const alert = document.body.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Det finns redan en grupp som heter så.');
   });
 });

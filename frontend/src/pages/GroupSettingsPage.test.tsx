@@ -650,4 +650,34 @@ describe('GroupSettingsPage', () => {
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).toBeNull();
   });
+
+  it('shows that a group name is taken', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: true, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    updateGroup.mockRejectedValue(new ApiError('Conflict', 409));
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const nameInput = getInputByLabel('Gruppens namn') as HTMLInputElement;
+    typeInto(nameInput, 'Annan grupp');
+
+    const saveButton = getButtonByText('Spara');
+    await act(async () => {
+      saveButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Det finns redan en grupp som heter så.');
+  });
 });
