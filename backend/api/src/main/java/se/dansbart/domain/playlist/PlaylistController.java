@@ -11,6 +11,7 @@ import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
+import se.dansbart.dto.PlaylistListItemDto;
 
 import java.net.URI;
 import java.util.List;
@@ -27,8 +28,8 @@ public class PlaylistController {
 
     @GetMapping
     @Operation(summary = "Get current user's playlists")
-    public ResponseEntity<List<Playlist>> getMyPlaylists(@AuthenticationPrincipal UUID userId) {
-        return ResponseEntity.ok(playlistService.findByUserId(userId));
+    public ResponseEntity<List<PlaylistListItemDto>> getMyPlaylists(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(playlistService.findOwnedAndGroupPlaylists(userId));
     }
 
     @GetMapping("/shared")

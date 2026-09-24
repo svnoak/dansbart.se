@@ -171,6 +171,7 @@ export * from './playbackLinkDto';
 export * from './playlist';
 export * from './playlistCollaborator';
 export * from './playlistDto';
+export * from './playlistListItemDto';
 export * from './playlistSummaryDto';
 export * from './playlistTrack';
 export * from './playlistTrackDto';
