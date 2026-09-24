@@ -167,7 +167,7 @@ describe('GroupSettingsPage', () => {
     expect(getButtonByText('Spara')).toBeUndefined();
     expect(document.body.querySelector('input[type="checkbox"]')).toBeNull();
     expect(getButtonByText('Radera grupp')).toBeUndefined();
-    expect(document.body.textContent).toContain('Sök');
+    expect(getInputByLabel('Användarnamn')).toBeDefined();
   });
 
   it('inviting a person', async () => {
