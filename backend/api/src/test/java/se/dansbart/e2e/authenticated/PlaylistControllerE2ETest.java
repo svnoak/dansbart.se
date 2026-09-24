@@ -9,6 +9,7 @@ import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.group.Group;
 import se.dansbart.domain.playlist.Playlist;
 import se.dansbart.domain.track.Track;
+import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.User;
 import se.dansbart.e2e.base.AbstractE2ETest;
 
@@ -986,6 +987,25 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         void getEditablePlaylists_withoutAuth_shouldReturn401() throws Exception {
             mockMvc.perform(get("/api/playlists/editable"))
                 .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/playlists/invitations/{invitationId}")
+    class RespondToInvitation {
+
+        @Test
+        @DisplayName("a group invitation should return 404")
+        void respondToInvitation_forAGroupInvitation_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            PlaylistCollaborator invitation = testData.addGroupCollaborator(playlist, group, "edit", "pending");
+
+            mockMvc.perform(put("/api/playlists/invitations/{invitationId}", invitation.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isNotFound());
         }
     }
 }

@@ -91,6 +91,18 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                     .content(toJson(Map.of())))
                 .andExpect(status().isBadRequest());
         }
+
+        @Test
+        @DisplayName("should return 409 with a name that is taken ignoring case")
+        void createGroup_withATakenName_shouldReturn409() throws Exception {
+            testData.group().withName("Folkdans").build();
+
+            mockMvc.perform(post("/api/groups")
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "folkdans"))))
+                .andExpect(status().isConflict());
+        }
     }
 
     @Nested
@@ -348,6 +360,20 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("name", "   "))))
                 .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("should return 409 when renamed to a name that is taken ignoring case")
+        void updateGroup_toATakenName_shouldReturn409() throws Exception {
+            testData.group().withName("Folkdans").build();
+            Group group = testData.group().withName("Original").build();
+            testData.addGroupAdmin(group, admin);
+
+            mockMvc.perform(put("/api/groups/{id}", group.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "folkdans"))))
+                .andExpect(status().isConflict());
         }
     }
 
