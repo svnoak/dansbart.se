@@ -21,6 +21,7 @@ import se.dansbart.dto.UserSummaryDto;
 import se.dansbart.exception.BadRequestException;
 import se.dansbart.exception.ForbiddenException;
 import se.dansbart.exception.ResourceNotFoundException;
+import se.dansbart.exception.UnprocessableEntityException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -354,9 +355,9 @@ public class PlaylistService {
             throw new BadRequestException("The username is required.");
         }
 
-        UUID inviteeId = userJooqRepository.findByUsername(username.trim())
+        UUID inviteeId = userJooqRepository.findByUsernameIgnoreCase(username.trim())
             .map(user -> user.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("No user has that username."));
+            .orElseThrow(() -> new UnprocessableEntityException("No user has that username."));
 
         if (inviteeId.equals(ownerId)) {
             throw new BadRequestException("You cannot invite yourself.");

@@ -851,8 +851,8 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
-        @DisplayName("invite collaborator for unknown username should return 404")
-        void inviteCollaborator_unknownUsername_shouldReturn404() throws Exception {
+        @DisplayName("invite collaborator for unknown username should return 422")
+        void inviteCollaborator_unknownUsername_shouldReturn422() throws Exception {
             Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
             testData.addGroupMember(group, owner, false, false, true, false, false);
 
@@ -860,7 +860,38 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("username", "no_such_user", "permission", "edit"))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("invite collaborator with username in other case should succeed")
+        void inviteCollaborator_usernameInOtherCase_shouldSucceed() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            User invitee = testData.user()
+                .withId(UUID.fromString("00000000-0000-0000-0000-000000000004"))
+                .withUsername("Erik89")
+                .build();
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "erik89", "permission", "edit"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(invitee.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("invite collaborator with blank username should return 400")
+        void inviteCollaborator_blankUsername_shouldReturn400() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "   ", "permission", "edit"))))
+                .andExpect(status().isBadRequest());
         }
 
         @Test

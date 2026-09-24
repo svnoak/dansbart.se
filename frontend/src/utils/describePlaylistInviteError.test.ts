@@ -20,7 +20,7 @@ describe('describePlaylistInviteError', () => {
   it('returns correct message for ApiError 404', () => {
     const error = new ApiError('Not Found', 404);
     expect(describePlaylistInviteError(error)).toBe(
-      'Ingen användare heter så. Kontrollera stavningen.',
+      'Spellistan finns inte längre.',
     );
   });
 
@@ -28,6 +28,13 @@ describe('describePlaylistInviteError', () => {
     const error = new ApiError('Conflict', 409);
     expect(describePlaylistInviteError(error)).toBe(
       'Personen är redan inbjuden.',
+    );
+  });
+
+  it('returns correct message for ApiError 422', () => {
+    const error = new ApiError('Unprocessable Entity', 422);
+    expect(describePlaylistInviteError(error)).toBe(
+      'Ingen användare heter så. Kontrollera stavningen.',
     );
   });
 

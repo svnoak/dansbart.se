@@ -448,7 +448,7 @@ describe('PlaylistSettingsPage', () => {
         tracks: [],
         collaborators: [],
       });
-      inviteCollaborator.mockRejectedValue(new ApiError('Not Found', 404));
+      inviteCollaborator.mockRejectedValue(new ApiError('Unprocessable Entity', 422));
 
       await renderPage();
 
