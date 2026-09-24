@@ -1658,7 +1658,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Playlist" }
+                  "items": {
+                    "$ref": "#/components/schemas/PlaylistListItemDto"
+                  }
                 }
               }
             }
@@ -1814,11 +1816,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaylistCollaborator"
-                }
-              }
+              "application/json": { "schema": { "type": "object" } }
             }
           }
         }
@@ -7607,6 +7605,20 @@
           "queuedTracks": { "type": "integer", "format": "int64" },
           "coveragePercent": { "type": "integer", "format": "int32" },
           "lastAdded": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PlaylistListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "tempoCategory": { "type": "string" },
+          "trackCount": { "type": "integer", "format": "int32" },
+          "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" }
         }
       },
       "InvitationDto": {

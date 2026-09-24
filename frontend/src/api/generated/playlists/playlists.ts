@@ -10,10 +10,12 @@ import type {
   CreatePlaylistRequest,
   EditablePlaylistDto,
   InvitationDto,
+  InviteCollaborator200,
   InviteCollaboratorRequest,
   Playlist,
   PlaylistCollaborator,
   PlaylistDto,
+  PlaylistListItemDto,
   PlaylistTrack,
   ReorderTracksRequest,
   RespondToInvitationRequest,
@@ -233,9 +235,9 @@ export const getGetMyPlaylists1Url = () => {
   return `/api/playlists`
 }
 
-export const getMyPlaylists1 = async ( options?: RequestInit): Promise<Playlist[]> => {
+export const getMyPlaylists1 = async ( options?: RequestInit): Promise<PlaylistListItemDto[]> => {
   
-  return httpClient<Playlist[]>(getGetMyPlaylists1Url(),
+  return httpClient<PlaylistListItemDto[]>(getGetMyPlaylists1Url(),
   {      
     ...options,
     method: 'GET'
@@ -375,9 +377,9 @@ export const getInviteCollaboratorUrl = (id: string,) => {
 }
 
 export const inviteCollaborator = async (id: string,
-    inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
+    inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<InviteCollaborator200> => {
   
-  return httpClient<PlaylistCollaborator>(getInviteCollaboratorUrl(id),
+  return httpClient<InviteCollaborator200>(getInviteCollaboratorUrl(id),
   {      
     ...options,
     method: 'POST',

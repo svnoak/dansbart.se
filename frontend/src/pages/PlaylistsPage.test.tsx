@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { PlaylistsPage } from './PlaylistsPage';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { loggedInAuthValue } from '@/test/authValue';
-import type { Playlist } from '@/api/models/playlist';
+import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -67,12 +67,11 @@ describe('PlaylistsPage playlist cards', () => {
 
   it('a card shows the whole description, clamped to two lines', async () => {
     const longDescription = 'Detta är en väldigt långt beskrivning av spellistan som innehåller många ord och bör visas på två rader utan att klippas av helt.';
-    const playlists: Playlist[] = [
+    const playlists: PlaylistListItemDto[] = [
       {
         id: 'pl1',
         name: 'Långsammare valser',
         description: longDescription,
-        tracks: [],
       },
     ];
 
@@ -93,11 +92,10 @@ describe('PlaylistsPage playlist cards', () => {
   });
 
   it('a card without a description renders no empty description element', async () => {
-    const playlists: Playlist[] = [
+    const playlists: PlaylistListItemDto[] = [
       {
         id: 'pl1',
         name: 'Musik utan beskrivning',
-        tracks: [],
       },
     ];
 
@@ -121,12 +119,11 @@ describe('PlaylistsPage playlist cards', () => {
   });
 
   it('tags render at 14px or larger', async () => {
-    const playlists: Playlist[] = [
+    const playlists: PlaylistListItemDto[] = [
       {
         id: 'pl1',
         name: 'Vals med tags',
         danceStyle: 'Vals',
-        tracks: [],
       },
     ];
 
@@ -160,5 +157,39 @@ describe('PlaylistsPage playlist cards', () => {
     expect(newButton?.className).toContain('py-1.5');
     expect(newButton?.className).toContain('text-[rgb(var(--color-accent-foreground))]');
     expect(newButton?.className).not.toContain('text-white');
+  });
+
+  it('shows the owning group of a group playlist', async () => {
+    const playlists: PlaylistListItemDto[] = [
+      {
+        id: 'pl1',
+        name: 'Grupp spellista',
+        ownerGroup: { id: 'g1', name: 'Testgruppen' },
+      },
+      {
+        id: 'pl2',
+        name: 'Min spellista',
+      },
+    ];
+
+    getMyPlaylists1.mockResolvedValue(playlists);
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const ownershipTexts = Array.from(document.body.querySelectorAll('*')).filter(
+      (el) => el.textContent?.includes('Ägs av gruppen') &&
+              !Array.from(el.children).some(child => child.textContent?.includes('Ägs av gruppen'))
+    );
+    expect(ownershipTexts.length).toBe(1);
+
+    const groupLinks = Array.from(document.body.querySelectorAll('a')).filter(
+      (a) => a.textContent?.includes('Testgruppen'),
+    );
+    expect(groupLinks.length).toBeGreaterThan(0);
+    expect(groupLinks[0]?.href).toMatch(/\/groups\/g1$/);
   });
 });

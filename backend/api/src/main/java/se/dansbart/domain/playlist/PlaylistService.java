@@ -14,9 +14,13 @@ import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
+import se.dansbart.dto.PlaylistListItemDto;
 import se.dansbart.dto.PlaylistTrackDto;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.UserSummaryDto;
+import se.dansbart.exception.BadRequestException;
+import se.dansbart.exception.ForbiddenException;
+import se.dansbart.exception.ResourceNotFoundException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -44,6 +48,29 @@ public class PlaylistService {
     @Transactional(readOnly = true)
     public List<Playlist> findByUserId(UUID userId) {
         return playlistJooqRepository.findByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlaylistListItemDto> findOwnedAndGroupPlaylists(UUID userId) {
+        return playlistJooqRepository.findOwnedAndGroupPlaylistsByUserId(userId).stream()
+            .map(record -> {
+                Playlist playlist = record.playlist();
+                GroupSummaryDto ownerGroup = playlist.getGroupId() != null
+                    ? GroupSummaryDto.builder().id(playlist.getGroupId()).name(record.groupName()).build()
+                    : null;
+                return PlaylistListItemDto.builder()
+                    .id(playlist.getId())
+                    .name(playlist.getName())
+                    .description(playlist.getDescription())
+                    .isPublic(playlist.getIsPublic())
+                    .danceStyle(playlist.getDanceStyle())
+                    .subStyle(playlist.getSubStyle())
+                    .tempoCategory(playlist.getTempoCategory())
+                    .trackCount(record.trackCount())
+                    .ownerGroup(ownerGroup)
+                    .build();
+            })
+            .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -316,20 +343,29 @@ public class PlaylistService {
 
     @Transactional
     public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, UUID inviteeId, String permission) {
-        return playlistJooqRepository.findById(playlistId)
-            .filter(p -> hasFullControl(p, ownerId))
-            .filter(p -> !inviteeId.equals(ownerId))
-            .filter(p -> collaboratorRepository.findByPlaylistIdAndUserId(playlistId, inviteeId).isEmpty())
-            .map(playlist -> {
-                PlaylistCollaborator collab = PlaylistCollaborator.builder()
-                    .playlistId(playlistId)
-                    .userId(inviteeId)
-                    .permission(permission != null ? permission : "view")
-                    .status("pending")
-                    .invitedBy(ownerId)
-                    .build();
-                return collaboratorRepository.save(collab);
-            });
+        Playlist playlist = playlistJooqRepository.findById(playlistId)
+            .orElseThrow(() -> new ResourceNotFoundException("The playlist does not exist."));
+
+        if (!hasFullControl(playlist, ownerId)) {
+            throw new ForbiddenException("You do not have permission to manage collaborators.");
+        }
+
+        if (inviteeId.equals(ownerId)) {
+            throw new BadRequestException("You cannot invite yourself.");
+        }
+
+        if (collaboratorRepository.findByPlaylistIdAndUserId(playlistId, inviteeId).isPresent()) {
+            return Optional.empty();
+        }
+
+        PlaylistCollaborator collab = PlaylistCollaborator.builder()
+            .playlistId(playlistId)
+            .userId(inviteeId)
+            .permission(permission != null ? permission : "view")
+            .status("pending")
+            .invitedBy(ownerId)
+            .build();
+        return Optional.of(collaboratorRepository.save(collab));
     }
 
     @Transactional(readOnly = true)

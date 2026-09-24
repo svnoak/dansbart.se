@@ -10,10 +10,10 @@
   --color-border: 229 231 235;
   --color-text: 17 24 39;
   --color-text-muted: 107 114 128;
-  --color-accent: 47 111 159;
+  --color-accent: 28 66 136;
   --color-accent-foreground: 255 255 255;
-  --color-accent-hover: 38 92 135;
-  --color-accent-muted: 224 238 248;
+  --color-accent-hover: 22 53 109;
+  --color-accent-muted: 226 233 246;
   --color-error: 185 28 28;
   --color-error-foreground: 255 255 255;
   --color-error-hover: 153 27 27;
@@ -32,9 +32,9 @@ html.dark,
   --color-border: 75 85 99;
   --color-text: 243 244 246;
   --color-text-muted: 156 163 175;
-  --color-accent: 96 165 250;
+  --color-accent: 122 160 230;
   --color-accent-foreground: 15 23 42;
-  --color-accent-hover: 147 197 253;
+  --color-accent-hover: 160 188 240;
   --color-accent-muted: 23 37 84;
   --color-error: 248 113 113;
   --color-error-foreground: 15 23 42;

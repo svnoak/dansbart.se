@@ -6,11 +6,14 @@ import { PlaylistSettingsPage } from './PlaylistSettingsPage';
 import { authValue, loggedInAuthValue } from '@/test/authValue';
 import { typeInto } from '@/test/typeInto';
 import { getInputByLabel } from '@/test/getInputByLabel';
+import { ApiError } from '@/api/http-client';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const getPlaylist = vi.fn();
 const updatePlaylist = vi.fn();
+const inviteCollaborator = vi.fn();
+const searchUsers = vi.fn();
 const useAuth = vi.fn();
 const toast = vi.fn();
 
@@ -20,10 +23,14 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
   deletePlaylist: vi.fn(),
   generateShareToken: vi.fn(),
   invalidateShareToken: vi.fn(),
-  inviteCollaborator: vi.fn(),
+  inviteCollaborator: (...args: unknown[]) => inviteCollaborator(...args),
   updateCollaborator: vi.fn(),
   removeCollaborator: vi.fn(),
   transferOwnership: vi.fn(),
+}));
+
+vi.mock('@/api/generated/users/users', () => ({
+  searchUsers: (...args: unknown[]) => searchUsers(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -45,6 +52,8 @@ describe('PlaylistSettingsPage', () => {
   beforeEach(() => {
     getPlaylist.mockReset();
     updatePlaylist.mockReset();
+    inviteCollaborator.mockReset();
+    searchUsers.mockReset();
     useAuth.mockReset();
     toast.mockReset();
     useAuth.mockReturnValue(authValue());
@@ -314,5 +323,77 @@ describe('PlaylistSettingsPage', () => {
 
     expect(toast).toHaveBeenCalledWith('Det gick inte att spara beskrivningen.', 'error');
     expect(saveButton?.disabled).toBe(false);
+  });
+
+  it('when inviteCollaborator rejects with ApiError 400, the page shows the error inline', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+      getPlaylist.mockResolvedValue({
+        id: 'p1',
+        name: 'Min spellista',
+        description: undefined,
+        isPublic: false,
+        owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+        ownerGroup: undefined,
+        viewerCanManage: true,
+        trackCount: 0,
+        tracks: [],
+        collaborators: [],
+      });
+      searchUsers.mockResolvedValue([
+        { id: 'u2', username: 'anna', displayName: 'Anna' },
+      ]);
+      inviteCollaborator.mockRejectedValue(new ApiError('Bad Request', 400));
+
+      await renderPage();
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
+      );
+      expect(inviteButton).toBeTruthy();
+
+      await act(async () => {
+        inviteButton?.click();
+      });
+
+      const searchInput = document.body.querySelector('input[type="search"]') as HTMLInputElement;
+      typeInto(searchInput, 'an');
+
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const annaButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.includes('Anna'),
+      );
+      await act(async () => {
+        annaButton?.click();
+      });
+
+      const submitButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === 'Bjud in',
+      );
+      await act(async () => {
+        submitButton?.click();
+        vi.advanceTimersByTime(100);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(document.body.textContent).toContain('Du kan inte bjuda in dig själv.');
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    }
   });
 });
