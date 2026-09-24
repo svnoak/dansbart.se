@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": { "title": "OpenAPI definition", "version": "v0" },
   "servers": [
-    { "url": "http://localhost:8010", "description": "Generated server url" }
+    { "url": "http://localhost:8012", "description": "Generated server url" }
   ],
   "tags": [
     {
@@ -7169,7 +7169,7 @@
       "InviteCollaboratorRequest": {
         "type": "object",
         "properties": {
-          "userId": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
           "permission": { "type": "string" }
         }
       },

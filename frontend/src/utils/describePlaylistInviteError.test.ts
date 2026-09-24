@@ -31,6 +31,13 @@ describe('describePlaylistInviteError', () => {
     );
   });
 
+  it('returns correct message for ApiError 422', () => {
+    const error = new ApiError('Unprocessable Entity', 422);
+    expect(describePlaylistInviteError(error)).toBe(
+      'Ingen användare heter så. Kontrollera stavningen.',
+    );
+  });
+
   it('returns fallback message for ApiError 500', () => {
     const error = new ApiError('Internal Server Error', 500);
     expect(describePlaylistInviteError(error)).toBe(

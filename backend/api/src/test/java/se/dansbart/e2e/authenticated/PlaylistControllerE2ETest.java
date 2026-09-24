@@ -752,7 +752,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(otherUser.getId().toString()))
                 .andExpect(jsonPath("$.permission").value("edit"));
@@ -767,7 +767,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", owner.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", owner.getUsername(), "permission", "edit"))))
                 .andExpect(status().isForbidden());
         }
 
@@ -777,7 +777,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/playlists/{id}/collaborators", "00000000-0000-0000-0000-000000000000")
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isNotFound());
         }
 
@@ -792,7 +792,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", thirdUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", thirdUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isForbidden());
         }
 
@@ -805,7 +805,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", owner.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", owner.getUsername(), "permission", "edit"))))
                 .andExpect(status().isBadRequest());
         }
 
@@ -818,13 +818,13 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isOk());
 
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "view"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "view"))))
                 .andExpect(status().isConflict());
         }
 
@@ -840,13 +840,70 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isOk());
 
             mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
                     .with(jwt.userToken(thirdUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "view"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "view"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("invite collaborator for unknown username should return 422")
+        void inviteCollaborator_unknownUsername_shouldReturn422() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "no_such_user", "permission", "edit"))))
+                .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("invite collaborator with username in other case should succeed")
+        void inviteCollaborator_usernameInOtherCase_shouldSucceed() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            User invitee = testData.user()
+                .withId(UUID.fromString("00000000-0000-0000-0000-000000000004"))
+                .withUsername("Erik89")
+                .build();
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "erik89", "permission", "edit"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(invitee.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("invite collaborator with blank username should return 400")
+        void inviteCollaborator_blankUsername_shouldReturn400() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "   ", "permission", "edit"))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("invite collaborator by non-manager with unknown username should return 403")
+        void inviteCollaborator_byNonManagerWithUnknownUsername_shouldReturn403() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "no_such_user", "permission", "edit"))))
                 .andExpect(status().isForbidden());
         }
 

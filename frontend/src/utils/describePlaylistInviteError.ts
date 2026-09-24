@@ -11,6 +11,8 @@ export function describePlaylistInviteError(error: unknown): string {
         return 'Spellistan finns inte längre.';
       case 409:
         return 'Personen är redan inbjuden.';
+      case 422:
+        return 'Ingen användare heter så. Kontrollera stavningen.';
     }
   }
 

@@ -6,6 +6,6 @@
  */
 
 export interface InviteCollaboratorRequest {
-  userId?: string;
+  username?: string;
   permission?: string;
 }

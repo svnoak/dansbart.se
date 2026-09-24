@@ -151,7 +151,7 @@ public class PlaylistController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody InviteCollaboratorRequest request) {
-        return playlistService.inviteCollaborator(id, userId, request.userId(), request.permission())
+        return playlistService.inviteCollaborator(id, userId, request.username(), request.permission())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.status(409).build());
     }
@@ -226,7 +226,7 @@ public class PlaylistController {
     public record AddTrackRequest(UUID trackId) {}
     public record RespondToInvitationRequest(boolean accept) {}
     public record ReorderTracksRequest(List<UUID> trackIds) {}
-    public record InviteCollaboratorRequest(UUID userId, String permission) {}
+    public record InviteCollaboratorRequest(String username, String permission) {}
     public record UpdateCollaboratorRequest(String permission) {}
     public record TransferOwnershipRequest(UUID newOwnerId) {}
 }

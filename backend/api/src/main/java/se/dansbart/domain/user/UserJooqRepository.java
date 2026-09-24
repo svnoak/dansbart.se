@@ -36,6 +36,10 @@ public class UserJooqRepository {
         return dsl.selectFrom(USERS).where(USERS.USERNAME.eq(username)).fetchOptional().map(this::toUser);
     }
 
+    public Optional<User> findByUsernameIgnoreCase(String username) {
+        return dsl.selectFrom(USERS).where(lower(USERS.USERNAME).eq(username.toLowerCase())).fetchOptional().map(this::toUser);
+    }
+
     public List<User> searchByUsernameOrDisplayName(String query, Pageable pageable) {
         String pattern = "%" + (query == null ? "" : query).toLowerCase() + "%";
         return dsl.selectFrom(USERS)

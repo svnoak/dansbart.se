@@ -21,6 +21,7 @@ import se.dansbart.dto.UserSummaryDto;
 import se.dansbart.exception.BadRequestException;
 import se.dansbart.exception.ForbiddenException;
 import se.dansbart.exception.ResourceNotFoundException;
+import se.dansbart.exception.UnprocessableEntityException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -342,13 +343,21 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, UUID inviteeId, String permission) {
+    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, String username, String permission) {
         Playlist playlist = playlistJooqRepository.findById(playlistId)
             .orElseThrow(() -> new ResourceNotFoundException("The playlist does not exist."));
 
         if (!hasFullControl(playlist, ownerId)) {
             throw new ForbiddenException("You do not have permission to manage collaborators.");
         }
+
+        if (username == null || username.isBlank()) {
+            throw new BadRequestException("The username is required.");
+        }
+
+        UUID inviteeId = userJooqRepository.findByUsernameIgnoreCase(username.trim())
+            .map(user -> user.getId())
+            .orElseThrow(() -> new UnprocessableEntityException("No user has that username."));
 
         if (inviteeId.equals(ownerId)) {
             throw new BadRequestException("You cannot invite yourself.");
