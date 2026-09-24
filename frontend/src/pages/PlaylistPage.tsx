@@ -7,7 +7,7 @@ import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
 import { SharePlaylistPanel } from '@/components/SharePlaylistPanel';
-import { BackArrowIcon, EditIcon, PlayIcon, PlusIcon, SettingsIcon, ShareIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
+import { BackArrowIcon, ChevronDownIcon, EditIcon, PlayIcon, PlusIcon, SettingsIcon, ShareIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
 import { Button, IconButton, Pill, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
@@ -34,25 +34,28 @@ function tempoLabel(value: string | undefined): string {
 // ── Sort / Filter ─────────────────────────────────────────────────────────────
 
 type SortKey = 'position' | 'name' | 'duration' | 'tempo';
+type SortDirection = 'asc' | 'desc';
 
 function sortTracks(
   tracks: PlaylistDto['tracks'],
   sort: SortKey,
+  direction: SortDirection = 'asc',
 ): NonNullable<PlaylistDto['tracks']> {
   if (!tracks) return [];
   const copy = [...tracks];
+  const sign = direction === 'desc' ? -1 : 1;
   switch (sort) {
     case 'name':
-      return copy.sort((a, b) =>
-        (a.track?.title ?? '').localeCompare(b.track?.title ?? '', 'sv'),
+      return copy.sort(
+        (a, b) => sign * (a.track?.title ?? '').localeCompare(b.track?.title ?? '', 'sv'),
       );
     case 'duration':
       return copy.sort(
-        (a, b) => (a.track?.durationMs ?? 0) - (b.track?.durationMs ?? 0),
+        (a, b) => sign * ((a.track?.durationMs ?? 0) - (b.track?.durationMs ?? 0)),
       );
     case 'tempo':
       return copy.sort(
-        (a, b) => (a.track?.effectiveBpm ?? 0) - (b.track?.effectiveBpm ?? 0),
+        (a, b) => sign * ((a.track?.effectiveBpm ?? 0) - (b.track?.effectiveBpm ?? 0)),
       );
     default:
       return copy.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -232,6 +235,7 @@ export function PlaylistPage() {
 
   // Sort / filter
   const [sort, setSort] = useState<SortKey>('position');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [filterSpotify, setFilterSpotify] = useState(false);
   const [filterYouTube, setFilterYouTube] = useState(false);
 
@@ -282,7 +286,7 @@ export function PlaylistPage() {
     play(tracks[0], tracks);
   }, [playlist, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const rawSorted = sortTracks(playlist?.tracks, sort);
+  const rawSorted = sortTracks(playlist?.tracks, sort, sortDirection);
   const displayTracks = filterTracks(rawSorted, filterSpotify, filterYouTube);
   const contextTracks: TrackListDto[] = playlist ? buildContextTracks(playlist) : [];
 
@@ -332,6 +336,15 @@ export function PlaylistPage() {
     if (field === 'danceStyle') setShowStyleDropdown(false);
     else if (field === 'subStyle') setShowSubStyleDropdown(false);
     else setShowTempoDropdown(false);
+  }
+
+  function handleSortClick(key: SortKey) {
+    if (key === sort && key !== 'position') {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSort(key);
+    setSortDirection('asc');
   }
 
   // ── Drag reorder ────────────────────────────────────────────────────────────
@@ -685,14 +698,28 @@ export function PlaylistPage() {
         <div className="flex flex-wrap items-center gap-2">
           {(
             [
-              { key: 'position', label: 'Ordning' },
-              { key: 'name', label: 'Namn' },
-              { key: 'duration', label: 'Längd' },
-              { key: 'tempo', label: 'Tempo' },
-            ] as { key: SortKey; label: string }[]
-          ).map(({ key, label }) => (
-            <Pill key={key} active={sort === key} onClick={() => setSort(key)} className="min-h-11">
+              { key: 'position', label: 'Ordning', reversible: false },
+              { key: 'name', label: 'Namn', reversible: true },
+              { key: 'duration', label: 'Längd', reversible: true },
+              { key: 'tempo', label: 'Tempo', reversible: true },
+            ] as { key: SortKey; label: string; reversible: boolean }[]
+          ).map(({ key, label, reversible }) => (
+            <Pill
+              key={key}
+              active={sort === key}
+              onClick={() => handleSortClick(key)}
+              className="flex items-center gap-1 min-h-11"
+            >
               {label}
+              {reversible && sort === key && (
+                <>
+                  <ChevronDownIcon
+                    aria-hidden
+                    className={`h-3.5 w-3.5 transition-transform ${sortDirection === 'desc' ? '' : 'rotate-180'}`}
+                  />
+                  <span className="sr-only">{sortDirection === 'desc' ? 'fallande' : 'stigande'}</span>
+                </>
+              )}
             </Pill>
           ))}
 
