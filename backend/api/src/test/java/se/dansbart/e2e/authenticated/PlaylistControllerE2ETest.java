@@ -788,6 +788,28 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
+        @DisplayName("invite collaborator for existing collaborator by non-manager should return 403")
+        void inviteCollaborator_byNonManagerForExistingCollaborator_shouldReturn403() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            UUID thirdUserId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+            testData.addGroupMember(group, thirdUser, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(thirdUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "view"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
         @DisplayName("generate share token by group manager should succeed")
         void generateShareToken_groupPlaylist_byManager_shouldSucceed() throws Exception {
             Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();

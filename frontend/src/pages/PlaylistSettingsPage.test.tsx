@@ -13,6 +13,7 @@ import { ApiError } from '@/api/http-client';
 const getPlaylist = vi.fn();
 const updatePlaylist = vi.fn();
 const inviteCollaborator = vi.fn();
+const searchUsers = vi.fn();
 const useAuth = vi.fn();
 const toast = vi.fn();
 
@@ -26,6 +27,10 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
   updateCollaborator: vi.fn(),
   removeCollaborator: vi.fn(),
   transferOwnership: vi.fn(),
+}));
+
+vi.mock('@/api/generated/users/users', () => ({
+  searchUsers: (...args: unknown[]) => searchUsers(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -48,6 +53,7 @@ describe('PlaylistSettingsPage', () => {
     getPlaylist.mockReset();
     updatePlaylist.mockReset();
     inviteCollaborator.mockReset();
+    searchUsers.mockReset();
     useAuth.mockReset();
     toast.mockReset();
     useAuth.mockReturnValue(authValue());
@@ -320,37 +326,74 @@ describe('PlaylistSettingsPage', () => {
   });
 
   it('when inviteCollaborator rejects with ApiError 400, the page shows the error inline', async () => {
-    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
-    getPlaylist.mockResolvedValue({
-      id: 'p1',
-      name: 'Min spellista',
-      description: undefined,
-      isPublic: false,
-      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
-      ownerGroup: undefined,
-      viewerCanManage: true,
-      trackCount: 0,
-      tracks: [],
-      collaborators: [],
-    });
-    inviteCollaborator.mockRejectedValue(new ApiError('Bad Request', 400));
+    vi.useFakeTimers();
+    try {
+      useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+      getPlaylist.mockResolvedValue({
+        id: 'p1',
+        name: 'Min spellista',
+        description: undefined,
+        isPublic: false,
+        owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+        ownerGroup: undefined,
+        viewerCanManage: true,
+        trackCount: 0,
+        tracks: [],
+        collaborators: [],
+      });
+      searchUsers.mockResolvedValue([
+        { id: 'u2', username: 'anna', displayName: 'Anna' },
+      ]);
+      inviteCollaborator.mockRejectedValue(new ApiError('Bad Request', 400));
 
-    await renderPage();
+      await renderPage();
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
 
-    const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
-    );
-    expect(inviteButton).toBeTruthy();
+      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
+      );
+      expect(inviteButton).toBeTruthy();
 
-    await act(async () => {
-      inviteButton?.click();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+      await act(async () => {
+        inviteButton?.click();
+      });
 
-    expect(document.body.textContent).toContain('Sök användare');
+      const searchInput = document.body.querySelector('input[type="search"]') as HTMLInputElement;
+      typeInto(searchInput, 'an');
+
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const annaButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.includes('Anna'),
+      );
+      await act(async () => {
+        annaButton?.click();
+      });
+
+      const submitButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === 'Bjud in',
+      );
+      await act(async () => {
+        submitButton?.click();
+        vi.advanceTimersByTime(100);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(document.body.textContent).toContain('Du kan inte bjuda in dig själv.');
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    }
   });
 });
