@@ -6,6 +6,7 @@ import { PlaylistsPage } from './PlaylistsPage';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { loggedInAuthValue } from '@/test/authValue';
 import type { Playlist } from '@/api/models/playlist';
+import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -141,5 +142,39 @@ describe('PlaylistsPage playlist cards', () => {
       expect(tag.className).not.toContain('text-[10px]');
       expect(tag.className).not.toContain('text-xs');
     });
+  });
+
+  it('shows the owning group of a group playlist', async () => {
+    const playlists: PlaylistListItemDto[] = [
+      {
+        id: 'pl1',
+        name: 'Grupp spellista',
+        ownerGroup: { id: 'g1', name: 'Testgruppen' },
+      },
+      {
+        id: 'pl2',
+        name: 'Min spellista',
+        ownerGroup: null,
+      },
+    ];
+
+    getMyPlaylists1.mockResolvedValue(playlists);
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const ownershipTexts = Array.from(document.body.querySelectorAll('*')).filter(
+      (el) => el.textContent?.includes('Ägs av gruppen'),
+    );
+    expect(ownershipTexts.length).toBe(1);
+
+    const groupLinks = Array.from(document.body.querySelectorAll('a')).filter(
+      (a) => a.textContent?.includes('Testgruppen'),
+    );
+    expect(groupLinks.length).toBeGreaterThan(0);
+    expect(groupLinks[0]?.href).toMatch(/\/groups\/g1$/);
   });
 });
