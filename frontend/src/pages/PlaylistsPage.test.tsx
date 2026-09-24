@@ -6,17 +6,19 @@ import { PlaylistsPage } from './PlaylistsPage';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { loggedInAuthValue } from '@/test/authValue';
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
+import type { InvitationDto } from '@/api/models/invitationDto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const getMyPlaylists1 = vi.fn();
+const getInvitations = vi.fn();
 const useAnalyticsFlag = vi.fn();
 const useAuth = vi.fn();
 
 vi.mock('@/api/generated/playlists/playlists', () => ({
   getMyPlaylists1: (...args: unknown[]) => getMyPlaylists1(...args),
   createPlaylist: vi.fn(),
-  getInvitations: vi.fn(() => Promise.resolve([])),
+  getInvitations: (...args: unknown[]) => getInvitations(...args),
   respondToInvitation: vi.fn(),
 }));
 
@@ -34,9 +36,11 @@ describe('PlaylistsPage playlist cards', () => {
 
   beforeEach(() => {
     getMyPlaylists1.mockReset();
+    getInvitations.mockReset();
     useAnalyticsFlag.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getInvitations.mockResolvedValue([]);
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -138,6 +142,37 @@ describe('PlaylistsPage playlist cards', () => {
       expect(tag.className).not.toContain('text-[10px]');
       expect(tag.className).not.toContain('text-xs');
     });
+  });
+
+  it('shows Redigera and Se for pending invitation permissions', async () => {
+    const invitations: InvitationDto[] = [
+      {
+        id: 'inv1',
+        playlistName: 'Gemensam spellista',
+        invitedByDisplayName: 'Anna',
+        permission: 'edit',
+      },
+      {
+        id: 'inv2',
+        playlistName: 'Läspellista',
+        invitedByDisplayName: 'Britt',
+        permission: 'view',
+      },
+    ];
+
+    getMyPlaylists1.mockResolvedValue([]);
+    getInvitations.mockResolvedValue(invitations);
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Redigera');
+    expect(document.body.textContent).toContain('Se');
+    expect(document.body.textContent).not.toContain('Redaktör');
+    expect(document.body.textContent).not.toContain('Visare');
   });
 
   it('shows the owning group of a group playlist', async () => {

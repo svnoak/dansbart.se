@@ -166,7 +166,7 @@ export function PlaylistsPage() {
                     {inv.permission && (
                       <span className="ml-1.5">
                         &middot;{' '}
-                        {inv.permission === 'edit' ? 'Redaktör' : 'Visare'}
+                        {inv.permission === 'edit' ? 'Redigera' : 'Se'}
                       </span>
                     )}
                   </p>
