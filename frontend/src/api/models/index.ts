@@ -150,6 +150,7 @@ export * from './ingestTrackRequest';
 export * from './invalidateCache200';
 export * from './invitationDto';
 export * from './inviteCollaborator1200';
+export * from './inviteCollaborator200';
 export * from './inviteCollaboratorRequest';
 export * from './inviteMemberRequest';
 export * from './mergeAllDuplicates200';

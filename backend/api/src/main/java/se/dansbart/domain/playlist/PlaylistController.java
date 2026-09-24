@@ -146,13 +146,13 @@ public class PlaylistController {
 
     @PostMapping("/{id}/collaborators")
     @Operation(summary = "Invite a collaborator to playlist")
-    public ResponseEntity<PlaylistCollaborator> inviteCollaborator(
+    public ResponseEntity<?> inviteCollaborator(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody InviteCollaboratorRequest request) {
         return playlistService.inviteCollaborator(id, userId, request.userId(), request.permission())
             .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.badRequest().build());
+            .orElse(ResponseEntity.status(409).build());
     }
 
     @GetMapping("/{id}/collaborators")

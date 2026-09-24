@@ -10,6 +10,7 @@ import type {
   CreatePlaylistRequest,
   EditablePlaylistDto,
   InvitationDto,
+  InviteCollaborator200,
   InviteCollaboratorRequest,
   Playlist,
   PlaylistCollaborator,
@@ -375,9 +376,9 @@ export const getInviteCollaboratorUrl = (id: string,) => {
 }
 
 export const inviteCollaborator = async (id: string,
-    inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
+    inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<InviteCollaborator200> => {
   
-  return httpClient<PlaylistCollaborator>(getInviteCollaboratorUrl(id),
+  return httpClient<InviteCollaborator200>(getInviteCollaboratorUrl(id),
   {      
     ...options,
     method: 'POST',
