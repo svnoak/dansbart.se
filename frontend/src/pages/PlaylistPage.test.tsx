@@ -637,4 +637,62 @@ describe('PlaylistPage', () => {
 
     expect(generateShareToken).toHaveBeenCalledTimes(1);
   });
+
+  it('Dela spellista opens the share panel in a dialog', async () => {
+    generateShareToken.mockResolvedValue({ shareToken: 'new-token' });
+
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Test Playlist',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 1,
+      shareToken: undefined,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const shareButton = getButtonByText('Dela spellista');
+    expect(shareButton).toBeDefined();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+
+    await act(async () => {
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      document.body.querySelector('[role="dialog"]')?.dispatchEvent(event);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const dialogAfterEscape = document.body.querySelector('[role="dialog"]');
+    expect(dialogAfterEscape).toBeNull();
+  });
 });
