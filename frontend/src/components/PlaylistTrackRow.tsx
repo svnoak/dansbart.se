@@ -33,7 +33,7 @@ export function PlaylistTrackRow({
       onDragOver={showGrip ? onDragOver : undefined}
       onDrop={showGrip ? onDrop : undefined}
       onDragEnd={showGrip ? onDragEnd : undefined}
-      className={`group relative flex items-center border-t-2 ${
+      className={`group flex items-center border-t-2 ${
         isDragOver ? 'border-[rgb(var(--color-accent))]' : 'border-transparent'
       }`}
     >
@@ -55,7 +55,7 @@ export function PlaylistTrackRow({
         <button
           type="button"
           onClick={onRemove}
-          className="absolute right-10 top-1/2 -translate-y-1/2 hidden rounded px-2 py-1 text-xs text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))] group-hover:block"
+          className="invisible shrink-0 rounded px-2 py-1 text-xs text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))] group-hover:visible group-focus-within:visible"
           aria-label="Ta bort från spellista"
         >
           Ta bort
