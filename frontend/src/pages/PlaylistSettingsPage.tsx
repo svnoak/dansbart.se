@@ -11,10 +11,9 @@ import {
 } from '@/api/generated/playlists/playlists';
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
-import type { UserSummaryDto } from '@/api/models/userSummaryDto';
 import { BackArrowIcon } from '@/icons';
 import { IconButton, toast, Card, SectionTitle, Button } from '@/ui';
-import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
+import { ConfirmDeleteByName } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
 import { describePlaylistInviteError } from '@/utils/describePlaylistInviteError';
@@ -40,7 +39,7 @@ export function PlaylistSettingsPage() {
 
   // Invite form
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [inviteSelected, setInviteSelected] = useState<UserSummaryDto | null>(null);
+  const [inviteUsername, setInviteUsername] = useState('');
   const [invitePermission, setInvitePermission] = useState<'edit' | 'view'>('view');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -117,14 +116,14 @@ export function PlaylistSettingsPage() {
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!id || !inviteSelected?.id) return;
+    if (!id || !inviteUsername.trim()) return;
     setInviting(true);
     setInviteError(null);
     try {
-      await inviteCollaborator(id, { userId: inviteSelected.id, permission: invitePermission });
+      await inviteCollaborator(id, { username: inviteUsername.trim(), permission: invitePermission });
       const updated = await getPlaylist(id);
       setPlaylist(updated);
-      setInviteSelected(null);
+      setInviteUsername('');
       setShowInviteForm(false);
       toast('Inbjudan skickad');
     } catch (error) {
@@ -408,10 +407,19 @@ export function PlaylistSettingsPage() {
         {isOwner && showInviteForm && (
           <form onSubmit={handleInvite} className="flex items-end gap-2">
             <div className="flex-1">
-              <UserSearchSelect
-                selected={inviteSelected}
-                onSelect={setInviteSelected}
-                label="Sök användare"
+              <label
+                htmlFor="invite-username"
+                className="mb-1 block text-sm font-medium text-[rgb(var(--color-text))]"
+              >
+                Användarnamn
+              </label>
+              <input
+                id="invite-username"
+                type="text"
+                value={inviteUsername}
+                onChange={(e) => setInviteUsername(e.target.value)}
+                autoComplete="off"
+                className="min-h-[44px] w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))] focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-accent))]"
               />
             </div>
             <select
@@ -424,7 +432,7 @@ export function PlaylistSettingsPage() {
             </select>
             <button
               type="submit"
-              disabled={inviting || !inviteSelected}
+              disabled={inviting || !inviteUsername.trim()}
               className="min-h-[44px] rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Bjud in
@@ -433,7 +441,8 @@ export function PlaylistSettingsPage() {
               type="button"
               onClick={() => {
                 setShowInviteForm(false);
-                setInviteSelected(null);
+                setInviteUsername('');
+                setInviteError(null);
               }}
               className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
             >

@@ -342,13 +342,21 @@ public class PlaylistService {
     }
 
     @Transactional
-    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, UUID inviteeId, String permission) {
+    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, String username, String permission) {
         Playlist playlist = playlistJooqRepository.findById(playlistId)
             .orElseThrow(() -> new ResourceNotFoundException("The playlist does not exist."));
 
         if (!hasFullControl(playlist, ownerId)) {
             throw new ForbiddenException("You do not have permission to manage collaborators.");
         }
+
+        if (username == null || username.isBlank()) {
+            throw new BadRequestException("The username is required.");
+        }
+
+        UUID inviteeId = userJooqRepository.findByUsername(username.trim())
+            .map(user -> user.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("No user has that username."));
 
         if (inviteeId.equals(ownerId)) {
             throw new BadRequestException("You cannot invite yourself.");

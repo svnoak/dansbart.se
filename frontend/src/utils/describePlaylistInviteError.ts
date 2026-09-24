@@ -8,7 +8,7 @@ export function describePlaylistInviteError(error: unknown): string {
       case 403:
         return 'Du har inte behörighet att bjuda in till den här spellistan.';
       case 404:
-        return 'Spellistan finns inte längre.';
+        return 'Ingen användare heter så. Kontrollera stavningen.';
       case 409:
         return 'Personen är redan inbjuden.';
     }
