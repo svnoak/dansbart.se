@@ -103,19 +103,15 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
-        @DisplayName("should include private group playlists for accepted member")
-        void getMyPlaylists_shouldIncludePrivateGroupPlaylistsForAcceptedMember() throws Exception {
-            Group group = testData.group().withName("Private Test Group").build();
-            testData.playlist().withName("Private Group Playlist").withGroup(group).build();
-            testData.addGroupMember(group, owner, false, false, false, false, false);
+        @DisplayName("should exclude group playlists for non-member")
+        void getMyPlaylists_shouldExcludePrivateGroupPlaylistsForNonMember() throws Exception {
+            Group group = testData.group().withName("Other Group").build();
+            testData.playlist().withName("Group Playlist").withGroup(group).build();
 
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Private Group Playlist"))
-                .andExpect(jsonPath("$[0].ownerGroup.id").value(group.getId().toString()))
-                .andExpect(jsonPath("$[0].ownerGroup.name").value("Private Test Group"));
+                .andExpect(jsonPath("$", hasSize(0)));
         }
 
         @Test

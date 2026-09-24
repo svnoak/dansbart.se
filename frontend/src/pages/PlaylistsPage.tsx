@@ -285,16 +285,12 @@ export function PlaylistsPage() {
               {pl.ownerGroup && (
                 <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">
                   Ägs av gruppen{' '}
-                  <a
-                    href={`/groups/${pl.ownerGroup.id}`}
+                  <Link
+                    to={`/groups/${pl.ownerGroup.id}`}
                     className="text-[rgb(var(--color-accent))] hover:underline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(`/groups/${pl.ownerGroup!.id}`);
-                    }}
                   >
                     {pl.ownerGroup.name}
-                  </a>
+                  </Link>
                 </p>
               )}
             </li>
