@@ -17,6 +17,7 @@ import { IconButton, toast, Card, SectionTitle, Button } from '@/ui';
 import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
+import { describePlaylistInviteError } from '@/utils/describePlaylistInviteError';
 
 const PERMISSION_LABELS: Record<string, string> = {
   edit: 'Redaktör',
@@ -42,6 +43,7 @@ export function PlaylistSettingsPage() {
   const [inviteSelected, setInviteSelected] = useState<UserSummaryDto | null>(null);
   const [invitePermission, setInvitePermission] = useState<'edit' | 'view'>('view');
   const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   // Transfer ownership
   const [transferTarget, setTransferTarget] = useState('');
@@ -117,6 +119,7 @@ export function PlaylistSettingsPage() {
     e.preventDefault();
     if (!id || !inviteSelected?.id) return;
     setInviting(true);
+    setInviteError(null);
     try {
       await inviteCollaborator(id, { userId: inviteSelected.id, permission: invitePermission });
       const updated = await getPlaylist(id);
@@ -124,8 +127,8 @@ export function PlaylistSettingsPage() {
       setInviteSelected(null);
       setShowInviteForm(false);
       toast('Inbjudan skickad');
-    } catch {
-      toast('Kunde inte bjuda in', 'error');
+    } catch (error) {
+      setInviteError(describePlaylistInviteError(error));
     } finally {
       setInviting(false);
     }
@@ -403,39 +406,50 @@ export function PlaylistSettingsPage() {
           </button>
         )}
         {isOwner && showInviteForm && (
-          <form onSubmit={handleInvite} className="flex gap-2">
-            <div className="flex-1">
-              <UserSearchSelect
-                selected={inviteSelected}
-                onSelect={setInviteSelected}
-                label="Sök användare"
-              />
+          <form onSubmit={handleInvite} className="space-y-3">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <UserSearchSelect
+                  selected={inviteSelected}
+                  onSelect={(user) => {
+                    setInviteSelected(user);
+                    setInviteError(null);
+                  }}
+                  label="Sök användare"
+                />
+              </div>
+              <select
+                value={invitePermission}
+                onChange={(e) => setInvitePermission(e.target.value as 'edit' | 'view')}
+                className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
+              >
+                <option value="view">Visare</option>
+                <option value="edit">Redaktör</option>
+              </select>
+              <button
+                type="submit"
+                disabled={inviting || !inviteSelected}
+                className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Bjud in
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInviteForm(false);
+                  setInviteSelected(null);
+                  setInviteError(null);
+                }}
+                className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
+              >
+                Avbryt
+              </button>
             </div>
-            <select
-              value={invitePermission}
-              onChange={(e) => setInvitePermission(e.target.value as 'edit' | 'view')}
-              className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
-            >
-              <option value="view">Visare</option>
-              <option value="edit">Redaktör</option>
-            </select>
-            <button
-              type="submit"
-              disabled={inviting || !inviteSelected}
-              className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-            >
-              Bjud in
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowInviteForm(false);
-                setInviteSelected(null);
-              }}
-              className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
-            >
-              Avbryt
-            </button>
+            {inviteError && (
+              <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
+                {inviteError}
+              </p>
+            )}
           </form>
         )}
       </section>

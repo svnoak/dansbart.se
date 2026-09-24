@@ -6,11 +6,13 @@ import { PlaylistSettingsPage } from './PlaylistSettingsPage';
 import { authValue, loggedInAuthValue } from '@/test/authValue';
 import { typeInto } from '@/test/typeInto';
 import { getInputByLabel } from '@/test/getInputByLabel';
+import { ApiError } from '@/api/http-client';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const getPlaylist = vi.fn();
 const updatePlaylist = vi.fn();
+const inviteCollaborator = vi.fn();
 const useAuth = vi.fn();
 const toast = vi.fn();
 
@@ -20,7 +22,7 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
   deletePlaylist: vi.fn(),
   generateShareToken: vi.fn(),
   invalidateShareToken: vi.fn(),
-  inviteCollaborator: vi.fn(),
+  inviteCollaborator: (...args: unknown[]) => inviteCollaborator(...args),
   updateCollaborator: vi.fn(),
   removeCollaborator: vi.fn(),
   transferOwnership: vi.fn(),
@@ -45,6 +47,7 @@ describe('PlaylistSettingsPage', () => {
   beforeEach(() => {
     getPlaylist.mockReset();
     updatePlaylist.mockReset();
+    inviteCollaborator.mockReset();
     useAuth.mockReset();
     toast.mockReset();
     useAuth.mockReturnValue(authValue());
@@ -314,5 +317,40 @@ describe('PlaylistSettingsPage', () => {
 
     expect(toast).toHaveBeenCalledWith('Det gick inte att spara beskrivningen.', 'error');
     expect(saveButton?.disabled).toBe(false);
+  });
+
+  it('when inviteCollaborator rejects with ApiError 400, the page shows the error inline', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: undefined,
+      isPublic: false,
+      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+      ownerGroup: undefined,
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+    inviteCollaborator.mockRejectedValue(new ApiError('Bad Request', 400));
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
+    );
+    expect(inviteButton).toBeTruthy();
+
+    await act(async () => {
+      inviteButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Sök användare');
   });
 });
