@@ -315,4 +315,48 @@ describe('PlaylistSettingsPage', () => {
     expect(toast).toHaveBeenCalledWith('Det gick inte att spara beskrivningen.', 'error');
     expect(saveButton?.disabled).toBe(false);
   });
+
+  it('invite form offers the permissions Se and Redigera', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: undefined,
+      isPublic: false,
+      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+      ownerGroup: undefined,
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.includes('Bjud in till spellista'),
+    );
+    expect(inviteButton).toBeTruthy();
+
+    await act(async () => {
+      inviteButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const permissionSelects = Array.from(document.body.querySelectorAll('select'));
+    const permissionSelect = permissionSelects[permissionSelects.length - 1];
+    expect(permissionSelect).toBeTruthy();
+
+    const options = Array.from(permissionSelect?.querySelectorAll('option') ?? []);
+    const optionTexts = options.map((opt) => opt.textContent);
+
+    expect(optionTexts).toContain('Se');
+    expect(optionTexts).toContain('Redigera');
+    expect(optionTexts).not.toContain('Visare');
+    expect(optionTexts).not.toContain('Redaktör');
+  });
 });

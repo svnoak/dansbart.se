@@ -19,8 +19,8 @@ import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
 
 const PERMISSION_LABELS: Record<string, string> = {
-  edit: 'Redaktör',
-  view: 'Visare',
+  edit: 'Redigera',
+  view: 'Se',
 };
 
 function statusLabel(status: string | undefined): string {
@@ -370,8 +370,8 @@ export function PlaylistSettingsPage() {
                     onChange={(e) => handleChangePermission(collab.id!, e.target.value)}
                     className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1 text-xs text-[rgb(var(--color-text))] focus:outline-none"
                   >
-                    <option value="edit">Redaktör</option>
-                    <option value="view">Visare</option>
+                    <option value="edit">Redigera</option>
+                    <option value="view">Se</option>
                   </select>
                 ) : (
                   <span className="text-xs text-[rgb(var(--color-text-muted))]">
@@ -403,7 +403,7 @@ export function PlaylistSettingsPage() {
           </button>
         )}
         {isOwner && showInviteForm && (
-          <form onSubmit={handleInvite} className="flex gap-2">
+          <form onSubmit={handleInvite} className="flex items-end gap-2">
             <div className="flex-1">
               <UserSearchSelect
                 selected={inviteSelected}
@@ -414,15 +414,15 @@ export function PlaylistSettingsPage() {
             <select
               value={invitePermission}
               onChange={(e) => setInvitePermission(e.target.value as 'edit' | 'view')}
-              className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
+              className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
             >
-              <option value="view">Visare</option>
-              <option value="edit">Redaktör</option>
+              <option value="view">Se</option>
+              <option value="edit">Redigera</option>
             </select>
             <button
               type="submit"
               disabled={inviting || !inviteSelected}
-              className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Bjud in
             </button>
@@ -432,7 +432,7 @@ export function PlaylistSettingsPage() {
                 setShowInviteForm(false);
                 setInviteSelected(null);
               }}
-              className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
+              className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
             >
               Avbryt
             </button>
