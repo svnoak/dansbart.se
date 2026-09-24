@@ -10,7 +10,7 @@ import {
 import type { Playlist } from '@/api/models/playlist';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
-import { toast, Card, Badge } from '@/ui';
+import { toast, Card, Badge, Button } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -102,14 +102,10 @@ export function PlaylistsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Spellistor</h1>
         {isAuthenticated && (
-          <button
-            type="button"
-            onClick={() => setShowForm((s) => !s)}
-            className="flex items-center gap-1.5 rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
-            <PlusIcon className="h-4 w-4" aria-hidden />
+          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
+            <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
             Ny spellista
-          </button>
+          </Button>
         )}
       </div>
 

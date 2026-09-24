@@ -138,7 +138,7 @@ export function GroupsPage() {
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Grupper</h1>
         {isAuthenticated && (
-          <Button onClick={() => setShowForm((s) => !s)}>
+          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
             <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
             Ny grupp
           </Button>
