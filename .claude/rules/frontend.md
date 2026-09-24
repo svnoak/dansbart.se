@@ -31,8 +31,8 @@ Many users are older and non-technical. Apply these rules to each component you 
 - Give every control a strong clickability cue: a button shape and a visible icon or word.
 - Use a visible word when the action is new or has no widely known icon.
 - Give every control an accessible name with a verb.
-- Give each control one behaviour in all states.
-- Show every status with a word. An icon or a colour alone is not sufficient.
+- Give each control one behaviour in all states. If the look of the control shows its next behaviour, for example a sort button with a direction arrow, a second behaviour is allowed.
+- Show every status with a word. A widely known icon, for example a sort direction arrow, may stand alone if it has an accessible name.
 - Do not remove content on a timer.
 
 ## Components

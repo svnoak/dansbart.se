@@ -17,6 +17,7 @@ import { IconButton, toast, Card, SectionTitle, Button } from '@/ui';
 import { ConfirmDeleteByName, UserSearchSelect } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
+import { describePlaylistInviteError } from '@/utils/describePlaylistInviteError';
 
 const PERMISSION_LABELS: Record<string, string> = {
   edit: 'Redigera',
@@ -42,6 +43,7 @@ export function PlaylistSettingsPage() {
   const [inviteSelected, setInviteSelected] = useState<UserSummaryDto | null>(null);
   const [invitePermission, setInvitePermission] = useState<'edit' | 'view'>('view');
   const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   // Transfer ownership
   const [transferTarget, setTransferTarget] = useState('');
@@ -117,6 +119,7 @@ export function PlaylistSettingsPage() {
     e.preventDefault();
     if (!id || !inviteSelected?.id) return;
     setInviting(true);
+    setInviteError(null);
     try {
       await inviteCollaborator(id, { userId: inviteSelected.id, permission: invitePermission });
       const updated = await getPlaylist(id);
@@ -124,8 +127,8 @@ export function PlaylistSettingsPage() {
       setInviteSelected(null);
       setShowInviteForm(false);
       toast('Inbjudan skickad');
-    } catch {
-      toast('Kunde inte bjuda in', 'error');
+    } catch (error) {
+      setInviteError(describePlaylistInviteError(error));
     } finally {
       setInviting(false);
     }
@@ -437,6 +440,11 @@ export function PlaylistSettingsPage() {
               Avbryt
             </button>
           </form>
+        )}
+        {isOwner && showInviteForm && inviteError && (
+          <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
+            {inviteError}
+          </p>
         )}
       </section>
 
