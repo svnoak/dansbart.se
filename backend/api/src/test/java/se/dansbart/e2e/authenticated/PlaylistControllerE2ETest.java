@@ -759,8 +759,8 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
-        @DisplayName("invite collaborator by plain member should return 400")
-        void inviteCollaborator_groupPlaylist_byPlainMember_shouldReturn400() throws Exception {
+        @DisplayName("invite collaborator by plain member should return 403")
+        void inviteCollaborator_groupPlaylist_byPlainMember_shouldReturn403() throws Exception {
             Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
             testData.addGroupMember(group, otherUser, false, false, false, false, false);
 
@@ -768,7 +768,86 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                     .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("userId", owner.getId(), "permission", "edit"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("invite collaborator for missing playlist should return 404")
+        void inviteCollaborator_missingPlaylist_shouldReturn404() throws Exception {
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", "00000000-0000-0000-0000-000000000000")
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("invite collaborator by non-manager should return 403")
+        void inviteCollaborator_byNonManager_shouldReturn403() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, false, false, false);
+            UUID thirdUserId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", thirdUser.getId(), "permission", "edit"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("invite collaborator inviting self should return 400")
+        void inviteCollaborator_invitingSelf_shouldReturn400() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", owner.getId(), "permission", "edit"))))
                 .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("invite collaborator inviting same person twice should return 409")
+        void inviteCollaborator_invitingSamePersonTwice_shouldReturn409() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "view"))))
+                .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("invite collaborator for existing collaborator by non-manager should return 403")
+        void inviteCollaborator_byNonManagerForExistingCollaborator_shouldReturn403() throws Exception {
+            Playlist playlist = testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, true, false, false);
+            UUID thirdUserId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+            testData.addGroupMember(group, thirdUser, false, false, false, false, false);
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(thirdUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "view"))))
+                .andExpect(status().isForbidden());
         }
 
         @Test
