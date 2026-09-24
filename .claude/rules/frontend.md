@@ -33,7 +33,11 @@ Many users are older and non-technical. Apply these rules to each component you 
 - Give every control an accessible name with a verb.
 - Give each control one behaviour in all states. If the look of the control shows its next behaviour, for example a sort button with a direction arrow, a second behaviour is allowed.
 - Show every status with a word. A widely known icon, for example a sort direction arrow, may stand alone if it has an accessible name.
-- Do not remove content on a timer.
+- Show a success after an action as a toast that fades.
+- Show an error that a person must act on next to the control it concerns, and keep it until the person retries or changes the input.
+- If the action came from a menu item that closes, show its error as a toast.
+- If a page cannot load its content, show the error above the content with a "Försök igen" button.
+- Keep a prompt for a contribution, and the acknowledgment after a vote, visible until the person closes it or moves on.
 
 ## Components
 

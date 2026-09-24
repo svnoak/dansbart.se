@@ -13,7 +13,7 @@ import type { GroupMemberDto } from '@/api/models/groupMemberDto';
 import { useAuth } from '@/auth/useAuth';
 import { ConfirmDeleteByName } from '@/components';
 import { BackArrowIcon } from '@/icons';
-import { Badge, Button, Card, IconButton, Modal, SectionTitle, TextField, toast } from '@/ui';
+import { Badge, Button, Card, IconButton, InlineError, Modal, SectionTitle, TextField, toast } from '@/ui';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
 
@@ -277,11 +277,7 @@ export function GroupSettingsPage() {
             <Button onClick={handleSaveInfo} disabled={savingInfo || !name.trim()}>
               Spara
             </Button>
-            {infoError && (
-              <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
-                {infoError}
-              </p>
-            )}
+            <InlineError>{infoError}</InlineError>
           </Card>
         </section>
       )}
@@ -312,11 +308,7 @@ export function GroupSettingsPage() {
             <Button onClick={handleInvite} disabled={inviting || !inviteUsername.trim()}>
               Bjud in
             </Button>
-            {inviteError && (
-              <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
-                {inviteError}
-              </p>
-            )}
+            <InlineError>{inviteError}</InlineError>
           </Card>
         </section>
       )}
@@ -391,11 +383,7 @@ export function GroupSettingsPage() {
             );
           })}
         </ul>
-        {memberError && (
-          <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
-            {memberError}
-          </p>
-        )}
+        <InlineError>{memberError}</InlineError>
       </section>
 
       {isAdmin && (
