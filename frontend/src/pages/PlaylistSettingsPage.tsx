@@ -12,7 +12,7 @@ import {
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
 import { BackArrowIcon } from '@/icons';
-import { IconButton, toast, Card, SectionTitle, Button } from '@/ui';
+import { IconButton, InlineError, toast, Card, SectionTitle, Button } from '@/ui';
 import { ConfirmDeleteByName } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
@@ -450,11 +450,7 @@ export function PlaylistSettingsPage() {
             </button>
           </form>
         )}
-        {isOwner && showInviteForm && inviteError && (
-          <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
-            {inviteError}
-          </p>
-        )}
+        {isOwner && showInviteForm && <InlineError>{inviteError}</InlineError>}
       </section>
 
       {/* Överlåt ägarskap — owner only */}
