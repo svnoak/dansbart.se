@@ -5,7 +5,7 @@ import type { GroupDto } from '@/api/models/groupDto';
 import { useAuth } from '@/auth/useAuth';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
-import { Badge, Button, Card, IconButton, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, IconButton, InlineError, SectionTitle, toast } from '@/ui';
 import { BackArrowIcon } from '@/icons';
 
 export function GroupPage() {
@@ -22,6 +22,7 @@ export function GroupPage() {
   const [creatingPlaylist, setCreatingPlaylist] = useState(false);
   const [playlistName, setPlaylistName] = useState('');
   const [savingPlaylist, setSavingPlaylist] = useState(false);
+  const [createPlaylistError, setCreatePlaylistError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -79,6 +80,7 @@ export function GroupPage() {
   async function handleCreatePlaylist() {
     if (!group?.id || !playlistName.trim()) return;
     setSavingPlaylist(true);
+    setCreatePlaylistError(null);
     try {
       const created = await createGroupPlaylist(group.id, { name: playlistName.trim() });
       setGroup((prev) =>
@@ -87,7 +89,7 @@ export function GroupPage() {
       setPlaylistName('');
       setCreatingPlaylist(false);
     } catch {
-      toast('Det gick inte att skapa spellistan.', 'error');
+      setCreatePlaylistError('Det gick inte att skapa spellistan.');
     } finally {
       setSavingPlaylist(false);
     }
@@ -202,10 +204,14 @@ export function GroupPage() {
                 <input
                   id="group-playlist-name"
                   value={playlistName}
-                  onChange={(e) => setPlaylistName(e.target.value)}
+                  onChange={(e) => {
+                    setPlaylistName(e.target.value);
+                    setCreatePlaylistError(null);
+                  }}
                   className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
                 />
               </div>
+              <InlineError>{createPlaylistError}</InlineError>
               <div className="flex gap-2">
                 <Button type="submit" disabled={savingPlaylist || !playlistName.trim()}>
                   Skapa spellista
@@ -217,6 +223,7 @@ export function GroupPage() {
                   onClick={() => {
                     setCreatingPlaylist(false);
                     setPlaylistName('');
+                    setCreatePlaylistError(null);
                   }}
                 >
                   Avbryt

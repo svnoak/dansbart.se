@@ -8,7 +8,7 @@ import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
 import { SharePlaylistPanel } from '@/components/SharePlaylistPanel';
 import { BackArrowIcon, ChevronDownIcon, EditIcon, PlayIcon, PlusIcon, SettingsIcon, ShareIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
-import { Button, IconButton, Modal, Pill, toast } from '@/ui';
+import { Button, IconButton, InlineError, Modal, Pill, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -227,6 +227,8 @@ export function PlaylistPage() {
   // Inline editing state
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
+  const [saveNameError, setSaveNameError] = useState<string | null>(null);
+  const [removeTrackError, setRemoveTrackError] = useState<{ id: string; message: string } | null>(null);
 
   // Tag dropdown state
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
@@ -294,6 +296,7 @@ export function PlaylistPage() {
 
   async function handleRemoveTrack(playlistTrackId: string, trackId: string) {
     if (!id) return;
+    setRemoveTrackError(null);
     try {
       await removeTrack(id, trackId);
       setPlaylist((prev) =>
@@ -301,19 +304,20 @@ export function PlaylistPage() {
       );
       toast('Låt borttagen från spellista');
     } catch {
-      toast('Kunde inte ta bort låt', 'error');
+      setRemoveTrackError({ id: playlistTrackId, message: 'Kunde inte ta bort låt' });
     }
   }
 
   async function handleSaveName() {
     if (!id || !nameValue.trim()) return;
+    setSaveNameError(null);
     try {
       await updatePlaylist(id, { name: nameValue.trim() });
       setPlaylist((prev) => (prev ? { ...prev, name: nameValue.trim() } : prev));
       setEditingName(false);
       toast('Namn sparat');
     } catch {
-      toast('Kunde inte spara namn', 'error');
+      setSaveNameError('Kunde inte spara namn');
     }
   }
 
@@ -429,38 +433,44 @@ export function PlaylistPage() {
                 e.preventDefault();
                 handleSaveName();
               }}
-              className="flex flex-1 items-center gap-2"
+              className="flex-1 space-y-1"
             >
-              <input
-                autoFocus
-                type="text"
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={nameValue}
+                  onChange={(e) => {
+                    setNameValue(e.target.value);
+                    setSaveNameError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setEditingName(false);
+                      setNameValue(playlist.name ?? '');
+                    }
+                  }}
+                  className="flex-1 rounded-lg border border-[rgb(var(--color-accent))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1 text-2xl font-bold text-[rgb(var(--color-text))] focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!nameValue.trim()}
+                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  Spara
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     setEditingName(false);
                     setNameValue(playlist.name ?? '');
-                  }
-                }}
-                className="flex-1 rounded-lg border border-[rgb(var(--color-accent))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1 text-2xl font-bold text-[rgb(var(--color-text))] focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={!nameValue.trim()}
-                className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-              >
-                Spara
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingName(false);
-                  setNameValue(playlist.name ?? '');
-                }}
-                className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))]"
-              >
-                Avbryt
-              </button>
+                  }}
+                  className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))]"
+                >
+                  Avbryt
+                </button>
+              </div>
+              <InlineError>{saveNameError}</InlineError>
             </form>
           ) : (
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -771,6 +781,7 @@ export function PlaylistPage() {
               contextTracks={contextTracks}
               showGrip={sort === 'position' && canEdit}
               isDragOver={dragOverIndex === i}
+              error={removeTrackError && removeTrackError.id === pt.id ? removeTrackError.message : null}
               onRemove={canEdit && pt.id ? () => handleRemoveTrack(pt.id!, pt.track!.id!) : undefined}
               onDragStart={() => handleDragStart(i)}
               onDragOver={(e) => handleDragOver(e, i)}
