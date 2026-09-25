@@ -1088,4 +1088,115 @@ class GroupControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isUnauthorized());
         }
     }
+
+    @Nested
+    @DisplayName("Group playlist invitations")
+    class PlaylistInvitations {
+
+        @Test
+        @DisplayName("admin lists a pending invitation with playlistName filled in")
+        void listInvitations_byAdmin_shouldReturnPendingInvitationWithPlaylistName() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            se.dansbart.domain.playlist.Playlist playlist =
+                testData.playlist().withName("Spellista").withOwner(outsider).build();
+            testData.addGroupCollaborator(playlist, group, "edit", "pending");
+
+            mockMvc.perform(get("/api/groups/{id}/playlist-invitations", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].playlistName").value("Spellista"));
+        }
+
+        @Test
+        @DisplayName("accepted non-admin member gets 403 on the list")
+        void listInvitations_byNonAdminMember_shouldReturn403() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            testData.addGroupMember(group, member, false, false, false, false, false);
+            se.dansbart.domain.playlist.Playlist playlist =
+                testData.playlist().withName("Spellista").withOwner(outsider).build();
+            testData.addGroupCollaborator(playlist, group, "edit", "pending");
+
+            mockMvc.perform(get("/api/groups/{id}/playlist-invitations", group.getId())
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("admin accepts an invitation and it no longer appears as pending")
+        void respondToPlaylistInvitation_accept_byAdmin_shouldNoLongerBePending() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            se.dansbart.domain.playlist.Playlist playlist =
+                testData.playlist().withName("Spellista").withOwner(outsider).build();
+            var collaborator = testData.addGroupCollaborator(playlist, group, "edit", "pending");
+
+            mockMvc.perform(put("/api/groups/{id}/playlist-invitations/{invitationId}", group.getId(), collaborator.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/groups/{id}/playlist-invitations", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("admin declines an invitation and it disappears")
+        void respondToPlaylistInvitation_decline_byAdmin_shouldRemoveInvitation() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            se.dansbart.domain.playlist.Playlist playlist =
+                testData.playlist().withName("Spellista").withOwner(outsider).build();
+            var collaborator = testData.addGroupCollaborator(playlist, group, "edit", "pending");
+
+            mockMvc.perform(put("/api/groups/{id}/playlist-invitations/{invitationId}", group.getId(), collaborator.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", false))))
+                .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/groups/{id}/playlist-invitations", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("an invitation id that belongs to another group gives 404")
+        void respondToPlaylistInvitation_belongingToAnotherGroup_shouldReturn404() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            Group otherGroup = testData.group().withName("Annan grupp").build();
+            testData.addGroupAdmin(otherGroup, admin);
+            se.dansbart.domain.playlist.Playlist playlist =
+                testData.playlist().withName("Spellista").withOwner(outsider).build();
+            var collaborator = testData.addGroupCollaborator(playlist, otherGroup, "edit", "pending");
+
+            mockMvc.perform(put("/api/groups/{id}/playlist-invitations/{invitationId}", group.getId(), collaborator.getId())
+                    .with(jwt.userToken(admin.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("an accepted invitation does not appear in the list")
+        void listInvitations_shouldNotIncludeAcceptedInvitation() throws Exception {
+            Group group = testData.group().withName("Grupp").build();
+            testData.addGroupAdmin(group, admin);
+            se.dansbart.domain.playlist.Playlist playlist =
+                testData.playlist().withName("Spellista").withOwner(outsider).build();
+            testData.addGroupCollaborator(playlist, group, "edit", "accepted");
+
+            mockMvc.perform(get("/api/groups/{id}/playlist-invitations", group.getId())
+                    .with(jwt.userToken(admin.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        }
+    }
 }
