@@ -1133,5 +1133,22 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                     .content(toJson(Map.of("accept", true))))
                 .andExpect(status().isNotFound());
         }
+
+        @Test
+        @DisplayName("declining an invitation should return 204 and remove the invitation")
+        void respondToInvitation_decline_shouldReturn204AndRemoveTheInvitation() throws Exception {
+            Playlist playlist = testData.playlist().withName("My Playlist").withOwner(owner).build();
+            PlaylistCollaborator invitation = testData.addPendingCollaborator(playlist, otherUser, "edit");
+
+            mockMvc.perform(put("/api/playlists/invitations/{invitationId}", invitation.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", false))))
+                .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
     }
 }

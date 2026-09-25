@@ -11,9 +11,12 @@ import type {
   GroupInvitationDto,
   GroupMemberDto,
   GroupSummaryDto,
+  InvitationDto,
   InviteMemberRequest,
+  PlaylistCollaborator,
   PlaylistDto,
   RespondToInvitationRequest,
+  RespondToPlaylistInvitationRequest,
   UpdateGroupRequest,
   UpdateMemberRequest
 } from '../../models';
@@ -87,6 +90,33 @@ export const deleteGroup = async (id: string, options?: RequestInit): Promise<vo
     method: 'DELETE'
     
     
+  }
+);}
+  
+
+/**
+ * @summary Accept or reject a playlist invitation sent to the group
+ */
+export const getRespondToGroupPlaylistInvitationUrl = (id: string,
+    invitationId: string,) => {
+
+
+  
+
+  return `/api/groups/${id}/playlist-invitations/${invitationId}`
+}
+
+export const respondToGroupPlaylistInvitation = async (id: string,
+    invitationId: string,
+    respondToPlaylistInvitationRequest: RespondToPlaylistInvitationRequest, options?: RequestInit): Promise<PlaylistCollaborator> => {
+  
+  return httpClient<PlaylistCollaborator>(getRespondToGroupPlaylistInvitationUrl(id,invitationId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      respondToPlaylistInvitationRequest,)
   }
 );}
   
@@ -261,6 +291,29 @@ export const inviteMember = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       inviteMemberRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Get pending playlist invitations for the group
+ */
+export const getGetGroupPlaylistInvitationsUrl = (id: string,) => {
+
+
+  
+
+  return `/api/groups/${id}/playlist-invitations`
+}
+
+export const getGroupPlaylistInvitations = async (id: string, options?: RequestInit): Promise<InvitationDto[]> => {
+  
+  return httpClient<InvitationDto[]>(getGetGroupPlaylistInvitationsUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
   
