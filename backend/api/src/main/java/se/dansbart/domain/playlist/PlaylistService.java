@@ -120,9 +120,6 @@ public class PlaylistService {
         }
         Playlist playlist = maybePlaylist.get();
         if (!hasEditAccess(playlist, userId)) {
-            if (hasAcceptedCollaboration(playlist, userId)) {
-                throw new ForbiddenException("You do not have permission to edit this playlist.");
-            }
             return Optional.empty();
         }
         boolean fullControl = hasFullControl(playlist, userId);
