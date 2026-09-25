@@ -56,6 +56,19 @@ export function PlaylistSettingsPage() {
   // Description
   const [description, setDescription] = useState('');
   const [savingDescription, setSavingDescription] = useState(false);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+
+  // Visibility
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
+
+  // Collaborator row errors, keyed by collaborator id
+  const [collaboratorErrors, setCollaboratorErrors] = useState<Record<string, string>>({});
+
+  // Transfer ownership error
+  const [transferError, setTransferError] = useState<string | null>(null);
+
+  // Delete error
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -89,11 +102,12 @@ export function PlaylistSettingsPage() {
   async function handleSaveDescription() {
     if (!id) return;
     setSavingDescription(true);
+    setDescriptionError(null);
     try {
       await updatePlaylist(id, { description });
       toast('Beskrivningen är sparad.');
     } catch {
-      toast('Det gick inte att spara beskrivningen.', 'error');
+      setDescriptionError('Det gick inte att spara beskrivningen.');
     } finally {
       setSavingDescription(false);
     }
@@ -103,12 +117,13 @@ export function PlaylistSettingsPage() {
 
   async function handleTogglePublic() {
     if (!id) return;
+    setVisibilityError(null);
     try {
       await updatePlaylist(id, { isPublic: !playlist!.isPublic });
       setPlaylist((prev) => (prev ? { ...prev, isPublic: !prev.isPublic } : prev));
       toast(playlist!.isPublic ? 'Spellistan är nu privat' : 'Spellistan är nu offentlig');
     } catch {
-      toast('Kunde inte ändra synlighet', 'error');
+      setVisibilityError('Kunde inte ändra synlighet');
     }
   }
 
@@ -135,6 +150,11 @@ export function PlaylistSettingsPage() {
 
   async function handleChangePermission(collaboratorId: string, permission: string) {
     if (!id) return;
+    setCollaboratorErrors((prev) => {
+      const next = { ...prev };
+      delete next[collaboratorId];
+      return next;
+    });
     try {
       await updateCollaborator(id, collaboratorId, { permission });
       setPlaylist((prev) =>
@@ -148,12 +168,17 @@ export function PlaylistSettingsPage() {
           : prev,
       );
     } catch {
-      toast('Kunde inte ändra behörighet', 'error');
+      setCollaboratorErrors((prev) => ({ ...prev, [collaboratorId]: 'Kunde inte ändra behörighet' }));
     }
   }
 
   async function handleRemoveCollaborator(collaboratorId: string) {
     if (!id) return;
+    setCollaboratorErrors((prev) => {
+      const next = { ...prev };
+      delete next[collaboratorId];
+      return next;
+    });
     try {
       await removeCollaborator(id, collaboratorId);
       setPlaylist((prev) =>
@@ -163,7 +188,7 @@ export function PlaylistSettingsPage() {
       );
       toast('Användare borttagen');
     } catch {
-      toast('Kunde inte ta bort samarbetare', 'error');
+      setCollaboratorErrors((prev) => ({ ...prev, [collaboratorId]: 'Kunde inte ta bort samarbetare' }));
     }
   }
 
@@ -171,12 +196,13 @@ export function PlaylistSettingsPage() {
 
   async function handleTransferOwnership() {
     if (!id || !transferTarget) return;
+    setTransferError(null);
     try {
       await transferOwnership(id, { newOwnerId: transferTarget });
       toast('Ägarskap överlåtet');
       navigate(`/playlists/${id}`);
     } catch {
-      toast('Kunde inte överlåta ägarskap', 'error');
+      setTransferError('Kunde inte överlåta ägarskap');
     }
   }
 
@@ -184,12 +210,13 @@ export function PlaylistSettingsPage() {
 
   async function handleDelete() {
     if (!id) return;
+    setDeleteError(null);
     try {
       await deletePlaylist(id);
       toast('Spellista raderad');
       navigate('/playlists');
     } catch {
-      toast('Kunde inte radera spellista', 'error');
+      setDeleteError('Kunde inte radera spellista');
     }
   }
 
@@ -222,7 +249,10 @@ export function PlaylistSettingsPage() {
               <textarea
                 id="playlist-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  setDescriptionError(null);
+                }}
                 rows={4}
                 className="w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
               />
@@ -230,6 +260,7 @@ export function PlaylistSettingsPage() {
             <Button onClick={handleSaveDescription} disabled={savingDescription}>
               Spara
             </Button>
+            <InlineError>{descriptionError}</InlineError>
           </Card>
         </section>
       )}
@@ -259,6 +290,7 @@ export function PlaylistSettingsPage() {
               {playlist.isPublic ? 'Gör privat' : 'Gör offentlig'}
             </button>
           </div>
+          <InlineError>{visibilityError}</InlineError>
         </section>
       )}
 
@@ -351,45 +383,48 @@ export function PlaylistSettingsPage() {
           </div>
 
           {(playlist.collaborators ?? []).map((collab) => (
-            <div key={collab.id} className="flex items-center justify-between px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                  {collab.displayName ?? collab.username ?? collab.userId}
-                </p>
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                  {collab.username}
-                  {collab.status === 'pending' && (
-                    <span className="ml-1.5 rounded-full bg-[rgb(var(--color-border))] px-1.5 py-0.5 text-[10px]">
-                      {statusLabel(collab.status)}
+            <div key={collab.id} className="px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[rgb(var(--color-text))]">
+                    {collab.displayName ?? collab.username ?? collab.userId}
+                  </p>
+                  <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                    {collab.username}
+                    {collab.status === 'pending' && (
+                      <span className="ml-1.5 rounded-full bg-[rgb(var(--color-border))] px-1.5 py-0.5 text-[10px]">
+                        {statusLabel(collab.status)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isOwner ? (
+                    <select
+                      value={collab.permission ?? 'view'}
+                      onChange={(e) => handleChangePermission(collab.id!, e.target.value)}
+                      className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1 text-xs text-[rgb(var(--color-text))] focus:outline-none"
+                    >
+                      <option value="edit">Redigera</option>
+                      <option value="view">Se</option>
+                    </select>
+                  ) : (
+                    <span className="text-xs text-[rgb(var(--color-text-muted))]">
+                      {PERMISSION_LABELS[collab.permission ?? ''] ?? collab.permission}
                     </span>
                   )}
-                </p>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCollaborator(collab.id!)}
+                      className="text-xs text-[rgb(var(--color-text-muted))] hover:text-red-500"
+                    >
+                      Ta bort
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {isOwner ? (
-                  <select
-                    value={collab.permission ?? 'view'}
-                    onChange={(e) => handleChangePermission(collab.id!, e.target.value)}
-                    className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1 text-xs text-[rgb(var(--color-text))] focus:outline-none"
-                  >
-                    <option value="edit">Redigera</option>
-                    <option value="view">Se</option>
-                  </select>
-                ) : (
-                  <span className="text-xs text-[rgb(var(--color-text-muted))]">
-                    {PERMISSION_LABELS[collab.permission ?? ''] ?? collab.permission}
-                  </span>
-                )}
-                {isOwner && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCollaborator(collab.id!)}
-                    className="text-xs text-[rgb(var(--color-text-muted))] hover:text-red-500"
-                  >
-                    Ta bort
-                  </button>
-                )}
-              </div>
+              <InlineError>{collaboratorErrors[collab.id!]}</InlineError>
             </div>
           ))}
         </div>
@@ -462,6 +497,7 @@ export function PlaylistSettingsPage() {
                 onChange={(e) => {
                   setTransferTarget(e.target.value);
                   setTransferConfirm(false);
+                  setTransferError(null);
                 }}
                 className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
               >
@@ -500,6 +536,7 @@ export function PlaylistSettingsPage() {
                 </div>
               )}
             </div>
+            <InlineError>{transferError}</InlineError>
           </div>
         </section>
       )}
@@ -520,6 +557,7 @@ export function PlaylistSettingsPage() {
               buttonLabel="Radera spellista"
               onConfirm={handleDelete}
             />
+            <InlineError>{deleteError}</InlineError>
           </div>
         </section>
       )}
