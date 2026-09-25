@@ -89,7 +89,7 @@ describe('TrackActionsModal', () => {
       );
     });
 
-    const buttons = Array.from(container.querySelectorAll('button'));
+    const buttons = Array.from(document.body.querySelectorAll('button'));
     const addToQueueButton = buttons.find(btn => btn.textContent?.includes('Lägg i kö'));
 
     expect(addToQueueButton).toBeTruthy();
@@ -121,7 +121,7 @@ describe('TrackActionsModal', () => {
       );
     });
 
-    const links = Array.from(container.querySelectorAll('a'));
+    const links = Array.from(document.body.querySelectorAll('a'));
     const artistLink = links.find(a => a.textContent?.includes('Gå till artist'));
 
     expect(artistLink).toBeTruthy();
