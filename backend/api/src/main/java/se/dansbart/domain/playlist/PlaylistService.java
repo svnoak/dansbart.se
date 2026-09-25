@@ -118,21 +118,25 @@ public class PlaylistService {
 
     @Transactional
     public Optional<Playlist> update(UUID playlistId, UUID userId, String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {
-        return playlistJooqRepository.findById(playlistId)
-            .filter(p -> hasEditAccess(p, userId))
-            .map(playlist -> {
-                boolean fullControl = hasFullControl(playlist, userId);
-                if (name != null) playlist.setName(name);
-                if (fullControl) {
-                    if (description != null) playlist.setDescription(description);
-                    if (isPublic != null) playlist.setIsPublic(isPublic);
-                    if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
-                    if (subStyle != null) playlist.setSubStyle(subStyle.isEmpty() ? null : subStyle);
-                    if (tempoCategory != null) playlist.setTempoCategory(tempoCategory.isEmpty() ? null : tempoCategory);
-                }
-                playlist.setUpdatedAt(OffsetDateTime.now());
-                return playlistJooqRepository.update(playlist);
-            });
+        Optional<Playlist> maybePlaylist = playlistJooqRepository.findById(playlistId);
+        if (maybePlaylist.isEmpty()) {
+            return Optional.empty();
+        }
+        Playlist playlist = maybePlaylist.get();
+        if (!hasEditAccess(playlist, userId)) {
+            return Optional.empty();
+        }
+        boolean fullControl = hasFullControl(playlist, userId);
+        if (name != null) playlist.setName(name);
+        if (fullControl) {
+            if (description != null) playlist.setDescription(description);
+            if (isPublic != null) playlist.setIsPublic(isPublic);
+            if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
+            if (subStyle != null) playlist.setSubStyle(subStyle.isEmpty() ? null : subStyle);
+            if (tempoCategory != null) playlist.setTempoCategory(tempoCategory.isEmpty() ? null : tempoCategory);
+        }
+        playlist.setUpdatedAt(OffsetDateTime.now());
+        return Optional.of(playlistJooqRepository.update(playlist));
     }
 
     @Transactional
@@ -174,7 +178,8 @@ public class PlaylistService {
     }
 
     private boolean hasEditPermission(UUID playlistId, UUID userId) {
-        return playlistJooqRepository.existsByPlaylistIdAndUserIdAndPermission(playlistId, userId, "edit");
+        return playlistJooqRepository.existsByPlaylistIdAndUserIdAndPermission(playlistId, userId, "edit")
+            || playlistJooqRepository.hasAcceptedGroupCollaborationWithPermission(playlistId, userId, "edit");
     }
 
     private boolean hasFullControl(Playlist playlist, UUID userId) {
@@ -184,6 +189,13 @@ public class PlaylistService {
     private boolean hasEditAccess(Playlist playlist, UUID userId) {
         return collaborationAccess.hasEditAccess(playlist.getUserId(), playlist.getGroupId(), userId,
             () -> hasEditPermission(playlist.getId(), userId));
+    }
+
+    private boolean hasAcceptedCollaboration(Playlist playlist, UUID userId) {
+        return collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), userId)
+            .filter(c -> "accepted".equals(c.getStatus()))
+            .isPresent()
+            || playlistJooqRepository.hasAcceptedGroupCollaboration(playlist.getId(), userId);
     }
 
     private void reorderTracks(UUID playlistId) {
@@ -212,9 +224,7 @@ public class PlaylistService {
     private boolean canView(Playlist playlist, UUID viewerId) {
         return collaborationAccess.canView(Boolean.TRUE.equals(playlist.getIsPublic()), playlist.getGroupId(), viewerId,
             () -> hasEditAccess(playlist, viewerId),
-            () -> collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), viewerId)
-                .filter(c -> "accepted".equals(c.getStatus()))
-                .isPresent());
+            () -> hasAcceptedCollaboration(playlist, viewerId));
     }
 
     /** Playlist by share token with tracks as TrackListDto. */

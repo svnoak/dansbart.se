@@ -991,6 +991,132 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
     }
 
     @Nested
+    @DisplayName("Group collaborator access")
+    class GroupCollaboratorAccess {
+
+        private Group group;
+
+        @BeforeEach
+        void setUp() {
+            group = testData.group().withName("Collaborator Group").build();
+        }
+
+        @Test
+        @DisplayName("private playlist by accepted member of view-collaborator group should return 200")
+        void getPlaylist_byAcceptedMemberOfViewCollaboratorGroup_shouldReturn200() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "view", "accepted");
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(playlist.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("edit collaborator group member should be able to update playlist name")
+        void updatePlaylist_byAcceptedMemberOfEditCollaboratorGroup_canUpdateName() throws Exception {
+            Playlist playlist = testData.playlist().withName("Original Name").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "edit", "accepted");
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+
+            mockMvc.perform(put("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Collaborator Group Renamed"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Collaborator Group Renamed"));
+        }
+
+        @Test
+        @DisplayName("view collaborator group member should not be able to update playlist")
+        void updatePlaylist_byAcceptedMemberOfViewCollaboratorGroup_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Original Name").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "view", "accepted");
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+
+            mockMvc.perform(put("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Hacked Name"))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("private playlist by pending member of accepted collaborator group should return 404")
+        void getPlaylist_byPendingMemberOfCollaboratorGroup_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "view", "accepted");
+            testData.addPendingGroupMember(group, otherUser);
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("private playlist by member of pending collaborator group should return 404")
+        void getPlaylist_byMemberOfPendingCollaboratorGroup_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Private Playlist").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "view", "pending");
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/playlists/{id}", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("edit collaborator group member should not be able to invite another collaborator")
+        void inviteCollaborator_byAcceptedMemberOfEditCollaboratorGroup_shouldReturn403() throws Exception {
+            Playlist playlist = testData.playlist().withName("Owner's Playlist").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "edit", "accepted");
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+            UUID thirdUserId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+            User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", thirdUser.getUsername(), "permission", "edit"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("add track by accepted member of edit-collaborator group should succeed")
+        void addTrack_byAcceptedMemberOfEditCollaboratorGroup_shouldSucceed() throws Exception {
+            Playlist playlist = testData.playlist().withName("Owner's Playlist").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "edit", "accepted");
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+            Track track = testData.track().withTitle("Test Track").withArtist(artist).complete().build();
+
+            mockMvc.perform(post("/api/playlists/{id}/tracks", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("trackId", track.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackId").value(track.getId().toString()))
+                .andExpect(jsonPath("$.playlistId").value(playlist.getId().toString()));
+        }
+
+        @Test
+        @DisplayName("add track by accepted member of view-collaborator group should return 404")
+        void addTrack_byAcceptedMemberOfViewCollaboratorGroup_shouldReturn404() throws Exception {
+            Playlist playlist = testData.playlist().withName("Owner's Playlist").withOwner(owner).build();
+            testData.addGroupCollaborator(playlist, group, "view", "accepted");
+            testData.addGroupMember(group, otherUser, false, false, false, false, false);
+            Track track = testData.track().withTitle("Test Track").withArtist(artist).complete().build();
+
+            mockMvc.perform(post("/api/playlists/{id}/tracks", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("trackId", track.getId()))))
+                .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
     @DisplayName("PUT /api/playlists/invitations/{invitationId}")
     class RespondToInvitation {
 
