@@ -112,4 +112,54 @@ describe('PlaylistTrackRow', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
+
+  it('shows Ta bort in place of the heart', async () => {
+    const onRemove = vi.fn();
+
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <ul>
+            <PlaylistTrackRow
+              track={track}
+              contextTracks={[track]}
+              isDragOver={false}
+              onRemove={onRemove}
+              onDragStart={() => {}}
+              onDragOver={() => {}}
+              onDrop={() => {}}
+              onDragEnd={() => {}}
+            />
+          </ul>
+        </ThemeProvider>,
+      );
+    });
+
+    const heartButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => {
+        const label = btn.getAttribute('aria-label');
+        return label === 'Favoritmarkera' || label === 'Sluta favoritmarkera';
+      },
+    );
+    expect(heartButton).toBeFalsy();
+
+    const menuButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Mer',
+    );
+    expect(menuButton).toBeTruthy();
+    const menuWrapper = menuButton!.parentElement;
+    const rightGroup = menuWrapper!.parentElement;
+
+    const removeButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Ta bort från spellista',
+    );
+    expect(removeButton).toBeTruthy();
+
+    // The remove button sits in the row's right-hand group, directly before the menu trigger.
+    expect(removeButton!.parentElement).toBe(rightGroup);
+    expect(removeButton!.nextElementSibling).toBe(menuWrapper);
+
+    // The remove button is always visible, also on touch screens.
+    expect(removeButton!.classList.contains('invisible')).toBe(false);
+  });
 });
