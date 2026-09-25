@@ -15,7 +15,7 @@ import type { DanceListEntryDto } from '@/api/models/danceListEntryDto';
 import type { Dance } from '@/api/models/dance';
 import type { PlaylistTrackDto } from '@/api/models/playlistTrackDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import { Button, Card, toast } from '@/ui';
+import { Button, Card, InlineError } from '@/ui';
 import { PlusIcon, PlayIcon } from '@/icons';
 import { usePlayer } from '@/player/usePlayer';
 import { SelectableSearchResults } from '@/components';
@@ -57,6 +57,12 @@ export default function DanceListPage() {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [addingTrack, setAddingTrack] = useState(false);
   const trackSearchDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const [addDanceError, setAddDanceError] = useState<string | null>(null);
+  const [addTrackError, setAddTrackError] = useState<string | null>(null);
+  const [entryRemoveErrors, setEntryRemoveErrors] = useState<Record<string, string>>({});
+  const [trackRemoveErrors, setTrackRemoveErrors] = useState<Record<string, string>>({});
+  const [playModeErrors, setPlayModeErrors] = useState<Record<string, string>>({});
 
   const canManage = danceList?.viewerCanManage === true;
 
@@ -159,6 +165,8 @@ export default function DanceListPage() {
     setActiveSearch(null);
     setDanceQuery('');
     setTrackQuery('');
+    setAddDanceError(null);
+    setAddTrackError(null);
   }
 
   async function handleAddDance(danceId: string | null, freeTextName: string | null) {
@@ -174,7 +182,7 @@ export default function DanceListPage() {
       );
       closeSearch();
     } catch {
-      toast('Det gick inte att lägga till dansen.', 'error');
+      setAddDanceError('Det gick inte att lägga till dansen.');
     } finally {
       setAddingDance(false);
     }
@@ -182,13 +190,18 @@ export default function DanceListPage() {
 
   async function handleRemoveEntry(entryId: string) {
     if (!id) return;
+    setEntryRemoveErrors((prev) => {
+      const next = { ...prev };
+      delete next[entryId];
+      return next;
+    });
     try {
       await removeEntry(id, entryId);
       setDanceList((prev) =>
         prev ? { ...prev, entries: (prev.entries ?? []).filter((e) => e.id !== entryId) } : prev,
       );
     } catch {
-      toast('Det gick inte att ta bort dansen.', 'error');
+      setEntryRemoveErrors((prev) => ({ ...prev, [entryId]: 'Det gick inte att ta bort dansen.' }));
     } finally {
       setConfirmRemoval(null);
     }
@@ -216,7 +229,7 @@ export default function DanceListPage() {
       );
       closeSearch();
     } catch {
-      toast('Det gick inte att lägga till låten.', 'error');
+      setAddTrackError('Det gick inte att lägga till låten.');
     } finally {
       setAddingTrack(false);
     }
@@ -224,6 +237,11 @@ export default function DanceListPage() {
 
   async function handleRemoveTrack(entryId: string, trackId: string) {
     if (!id) return;
+    setTrackRemoveErrors((prev) => {
+      const next = { ...prev };
+      delete next[trackId];
+      return next;
+    });
     try {
       await removeTrackFromEntry(id, entryId, trackId);
       setDanceList((prev) =>
@@ -237,7 +255,7 @@ export default function DanceListPage() {
           : prev,
       );
     } catch {
-      toast('Det gick inte att ta bort låten.', 'error');
+      setTrackRemoveErrors((prev) => ({ ...prev, [trackId]: 'Det gick inte att ta bort låten.' }));
     } finally {
       setConfirmRemoval(null);
     }
@@ -245,6 +263,11 @@ export default function DanceListPage() {
 
   async function handlePlayModeChange(entryId: string, nextPlayMode: string) {
     if (!id) return;
+    setPlayModeErrors((prev) => {
+      const next = { ...prev };
+      delete next[entryId];
+      return next;
+    });
     try {
       await setPlayMode(id, entryId, { playMode: nextPlayMode });
       setDanceList((prev) =>
@@ -258,7 +281,7 @@ export default function DanceListPage() {
           : prev,
       );
     } catch {
-      toast('Det gick inte att ändra spelläget.', 'error');
+      setPlayModeErrors((prev) => ({ ...prev, [entryId]: 'Det gick inte att ändra spelläget.' }));
     }
   }
 
@@ -307,7 +330,10 @@ export default function DanceListPage() {
                 id="dance-search"
                 type="text"
                 value={danceQuery}
-                onChange={(e) => setDanceQuery(e.target.value)}
+                onChange={(e) => {
+                  setDanceQuery(e.target.value);
+                  setAddDanceError(null);
+                }}
                 placeholder="Sök..."
                 autoFocus
                 className="mt-1 min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
@@ -340,6 +366,8 @@ export default function DanceListPage() {
                 </Button>
               </div>
             )}
+
+            <InlineError>{addDanceError}</InlineError>
 
             <Button type="button" variant="ghost" onClick={closeSearch} disabled={addingDance}>
               Avbryt
@@ -400,6 +428,8 @@ export default function DanceListPage() {
                     </div>
                   </div>
 
+                  <InlineError>{entryRemoveErrors[entry.id ?? '']}</InlineError>
+
                   {canManage && (
                     <div>
                       <label
@@ -420,6 +450,7 @@ export default function DanceListPage() {
                           </option>
                         ))}
                       </select>
+                      <InlineError>{playModeErrors[entry.id ?? '']}</InlineError>
                     </div>
                   )}
 
@@ -444,6 +475,7 @@ export default function DanceListPage() {
                               <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
                                 {pt.track?.artistName ?? 'Okänd artist'}
                               </p>
+                              <InlineError>{trackRemoveErrors[pt.id ?? '']}</InlineError>
                             </div>
                             {canManage &&
                               (isConfirmingTrackRemoval ? (
@@ -497,7 +529,10 @@ export default function DanceListPage() {
                           id={`track-search-${entry.id}`}
                           type="text"
                           value={trackQuery}
-                          onChange={(e) => setTrackQuery(e.target.value)}
+                          onChange={(e) => {
+                            setTrackQuery(e.target.value);
+                            setAddTrackError(null);
+                          }}
                           placeholder="Sök..."
                           autoFocus
                           className="mt-1 min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
@@ -536,6 +571,8 @@ export default function DanceListPage() {
                       {!trackSearching && !trackSearchFailed && trackQuery.trim() && trackResults.length === 0 && (
                         <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga låtar hittades.</p>
                       )}
+
+                      <InlineError>{addTrackError}</InlineError>
 
                       <Button type="button" variant="ghost" onClick={closeSearch} disabled={addingTrack}>
                         Avbryt

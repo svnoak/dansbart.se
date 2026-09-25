@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": { "title": "OpenAPI definition", "version": "v0" },
   "servers": [
-    { "url": "http://localhost:8013", "description": "Generated server url" }
+    { "url": "http://localhost:8014", "description": "Generated server url" }
   ],
   "tags": [
     {
@@ -446,6 +446,49 @@
           }
         ],
         "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/groups/{id}/playlist-invitations/{invitationId}": {
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Accept or reject a playlist invitation sent to the group",
+        "operationId": "respondToGroupPlaylistInvitation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToPlaylistInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistCollaborator"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/groups/{id}/members/{memberId}": {
@@ -4450,6 +4493,34 @@
         }
       }
     },
+    "/api/groups/{id}/playlist-invitations": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get pending playlist invitations for the group",
+        "operationId": "getGroupPlaylistInvitations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/InvitationDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/groups/public": {
       "get": {
         "tags": ["Groups"],
@@ -6721,6 +6792,7 @@
           "id": { "type": "string", "format": "uuid" },
           "playlistId": { "type": "string", "format": "uuid" },
           "userId": { "type": "string", "format": "uuid" },
+          "groupId": { "type": "string", "format": "uuid" },
           "permission": { "type": "string" },
           "status": { "type": "string" },
           "invitedBy": { "type": "string", "format": "uuid" },
@@ -6891,6 +6963,10 @@
           "trackCount": { "type": "integer", "format": "int32" },
           "ownerDisplayName": { "type": "string" }
         }
+      },
+      "RespondToPlaylistInvitationRequest": {
+        "type": "object",
+        "properties": { "accept": { "type": "boolean" } }
       },
       "UpdateMemberRequest": {
         "type": "object",

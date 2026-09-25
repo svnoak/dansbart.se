@@ -4,10 +4,12 @@ import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static se.dansbart.jooq.Tables.PLAYLISTS;
 import static se.dansbart.jooq.Tables.PLAYLIST_COLLABORATORS;
 import static se.dansbart.jooq.Tables.USERS;
 
@@ -64,6 +66,29 @@ public class PlaylistCollaboratorJooqRepository {
                 .and(PLAYLIST_COLLABORATORS.STATUS.eq(status)))
             .fetch(this::toCollaborator);
     }
+
+    public List<GroupInvitation> findByGroupIdAndStatus(UUID groupId, String status) {
+        var inviter = USERS.as("inviter");
+        return dsl.select(PLAYLIST_COLLABORATORS.ID, PLAYLIST_COLLABORATORS.PLAYLIST_ID, PLAYLISTS.NAME,
+                PLAYLIST_COLLABORATORS.INVITED_BY, inviter.DISPLAY_NAME, PLAYLIST_COLLABORATORS.PERMISSION,
+                PLAYLIST_COLLABORATORS.INVITED_AT)
+            .from(PLAYLIST_COLLABORATORS)
+            .join(PLAYLISTS).on(PLAYLISTS.ID.eq(PLAYLIST_COLLABORATORS.PLAYLIST_ID))
+            .leftJoin(inviter).on(inviter.ID.eq(PLAYLIST_COLLABORATORS.INVITED_BY))
+            .where(PLAYLIST_COLLABORATORS.GROUP_ID.eq(groupId).and(PLAYLIST_COLLABORATORS.STATUS.eq(status)))
+            .fetch(r -> new GroupInvitation(
+                r.get(PLAYLIST_COLLABORATORS.ID),
+                r.get(PLAYLIST_COLLABORATORS.PLAYLIST_ID),
+                r.get(PLAYLISTS.NAME),
+                r.get(PLAYLIST_COLLABORATORS.INVITED_BY),
+                r.get(inviter.DISPLAY_NAME),
+                r.get(PLAYLIST_COLLABORATORS.PERMISSION),
+                r.get(PLAYLIST_COLLABORATORS.INVITED_AT)
+            ));
+    }
+
+    public record GroupInvitation(UUID id, UUID playlistId, String playlistName,
+            UUID invitedByUserId, String invitedByDisplayName, String permission, OffsetDateTime invitedAt) {}
 
     public PlaylistCollaborator save(PlaylistCollaborator collab) {
         if (collab.getId() == null) {

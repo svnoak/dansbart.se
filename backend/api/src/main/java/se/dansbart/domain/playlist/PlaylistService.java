@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.CollaborationAccess;
+import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
+import se.dansbart.domain.group.GroupMember;
+import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
@@ -39,6 +42,7 @@ public class PlaylistService {
     private final PlaylistCollaboratorJooqRepository collaboratorRepository;
     private final UserJooqRepository userJooqRepository;
     private final GroupJooqRepository groupJooqRepository;
+    private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final CollaborationAccess collaborationAccess;
 
     @Transactional(readOnly = true)
@@ -317,18 +321,60 @@ public class PlaylistService {
 
     @Transactional
     public Optional<PlaylistCollaborator> respondToInvitation(UUID invitationId, UUID userId, boolean accept) {
-        return collaboratorRepository.findById(invitationId)
-            .filter(collab -> userId.equals(collab.getUserId()) && "pending".equals(collab.getStatus()))
-            .map(collab -> {
-                if (accept) {
-                    collab.setStatus("accepted");
-                    collab.setAcceptedAt(OffsetDateTime.now());
-                    return collaboratorRepository.save(collab);
-                } else {
-                    collaboratorRepository.delete(collab);
-                    return null;
-                }
-            });
+        PlaylistCollaborator collab = collaboratorRepository.findById(invitationId)
+            .filter(c -> userId.equals(c.getUserId()) && "pending".equals(c.getStatus()))
+            .orElseThrow(() -> new ResourceNotFoundException("This invitation does not exist."));
+        if (accept) {
+            collab.setStatus("accepted");
+            collab.setAcceptedAt(OffsetDateTime.now());
+            return Optional.of(collaboratorRepository.save(collab));
+        }
+        collaboratorRepository.delete(collab);
+        return Optional.empty();
+    }
+
+    @Transactional(readOnly = true)
+    public List<InvitationDto> getPendingInvitationsForGroup(UUID groupId, UUID viewerId) {
+        requireGroupAdmin(groupId, viewerId);
+        return collaboratorRepository.findByGroupIdAndStatus(groupId, "pending").stream()
+            .map(invitation -> InvitationDto.builder()
+                .id(invitation.id())
+                .playlistId(invitation.playlistId())
+                .playlistName(invitation.playlistName())
+                .invitedByUserId(invitation.invitedByUserId())
+                .invitedByDisplayName(invitation.invitedByDisplayName())
+                .permission(invitation.permission())
+                .invitedAt(invitation.invitedAt())
+                .build())
+            .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Optional<PlaylistCollaborator> respondToGroupInvitation(UUID groupId, UUID invitationId, UUID viewerId, boolean accept) {
+        requireGroupAdmin(groupId, viewerId);
+        PlaylistCollaborator collab = collaboratorRepository.findById(invitationId)
+            .filter(c -> groupId.equals(c.getGroupId()) && "pending".equals(c.getStatus()))
+            .orElseThrow(() -> new ResourceNotFoundException("This invitation does not exist."));
+        if (accept) {
+            collab.setStatus("accepted");
+            collab.setAcceptedAt(OffsetDateTime.now());
+            return Optional.of(collaboratorRepository.save(collab));
+        }
+        collaboratorRepository.delete(collab);
+        return Optional.empty();
+    }
+
+    private void requireGroupAdmin(UUID groupId, UUID viewerId) {
+        Group group = groupJooqRepository.findById(groupId)
+            .orElseThrow(() -> new ResourceNotFoundException("The group does not exist, or you do not have access to it."));
+        var membership = groupMemberJooqRepository.findByGroupIdAndUserId(groupId, viewerId)
+            .filter(GroupMember::isAccepted);
+        if (membership.isEmpty() && !Boolean.TRUE.equals(group.getIsPublic())) {
+            throw new ResourceNotFoundException("The group does not exist, or you do not have access to it.");
+        }
+        if (membership.isEmpty() || !Boolean.TRUE.equals(membership.get().getIsAdmin())) {
+            throw new ForbiddenException("You do not have permission to do this in the group.");
+        }
     }
 
     @Transactional

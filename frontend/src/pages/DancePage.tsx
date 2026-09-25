@@ -10,7 +10,7 @@ import {
 import { getVoterId } from '@/utils/voter';
 import { useAuth } from '@/auth/useAuth';
 import { usePlayer } from '@/player/usePlayer';
-import { IconButton, SectionTitle, Button, toast } from '@/ui';
+import { IconButton, InlineError, SectionTitle, Button } from '@/ui';
 import { BackArrowIcon, StarIcon, StarFilledIcon } from '@/icons';
 import { TrackRow } from '@/components/TrackRow';
 import { PlayButton } from '@/components/TrackRow/PlayButton';
@@ -81,6 +81,8 @@ export function DancePage() {
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestedIds, setSuggestedIds] = useState<Set<string>>(new Set());
   const [votes, setVotes] = useState<Record<string, 'up' | 'down'>>({});
+  const [voteErrors, setVoteErrors] = useState<Record<string, string>>({});
+  const [votingTrackIds, setVotingTrackIds] = useState<Set<string>>(new Set());
   const [primaryTrackId, setPrimaryTrackId] = useState<string | null>(null);
 
   if (prevId !== id) {
@@ -148,7 +150,23 @@ export function DancePage() {
   const handleVote = useCallback(
     (track: TrackListDto, newVote: 'up' | 'down') => {
       if (!dance?.id || !track.id) return;
-      const currentVote = votes[track.id];
+      const trackId = track.id;
+      if (votingTrackIds.has(trackId)) return;
+      const currentVote = votes[trackId];
+
+      setVoteErrors((prev) => {
+        const next = { ...prev };
+        delete next[trackId];
+        return next;
+      });
+      setVotingTrackIds((prev) => new Set(prev).add(trackId));
+      const stopVoting = () => {
+        setVotingTrackIds((prev) => {
+          const next = new Set(prev);
+          next.delete(trackId);
+          return next;
+        });
+      };
 
       if (currentVote === newVote) {
         // Toggle off — move back from matching tracks to recommendations
@@ -157,39 +175,41 @@ export function DancePage() {
           setMatchingTracks((prev) => prev.filter((t) => t.id !== track.id));
           setRecommendations((prev) => [track, ...prev]);
         }
-        deleteVote(dance.id!, track.id).catch(() => {
-          // Revert: the vote was not actually removed
-          setVotes((prev) => ({ ...prev, [track.id!]: newVote }));
-          if (newVote === 'up') {
-            setRecommendations((prev) => prev.filter((t) => t.id !== track.id));
-            setMatchingTracks((prev) => [track, ...prev]);
-          }
-          toast('Kunde inte ta bort rösten, försök igen.', 'error');
-        });
+        deleteVote(dance.id!, track.id)
+          .catch(() => {
+            // Revert: the vote was not actually removed
+            setVotes((prev) => ({ ...prev, [track.id!]: newVote }));
+            if (newVote === 'up') {
+              setRecommendations((prev) => prev.filter((t) => t.id !== track.id));
+              setMatchingTracks((prev) => [track, ...prev]);
+            }
+            setVoteErrors((prev) => ({ ...prev, [trackId]: 'Kunde inte ta bort rösten, försök igen.' }));
+          })
+          .finally(stopVoting);
       } else {
         setVotes((prev) => ({ ...prev, [track.id!]: newVote }));
-        if (newVote === 'up') {
-          // Promote to matching dance tracks (shown in Låtar)
-          setRecommendations((prev) => prev.filter((t) => t.id !== track.id));
-          setMatchingTracks((prev) => [track, ...prev]);
-        }
-        postVote(dance.id!, track.id, newVote).catch(() => {
-          // Revert: the vote was not actually saved
-          setVotes((prev) => {
-            const n = { ...prev };
-            if (currentVote === undefined) delete n[track.id!];
-            else n[track.id!] = currentVote;
-            return n;
-          });
-          if (newVote === 'up') {
-            setMatchingTracks((prev) => prev.filter((t) => t.id !== track.id));
-            setRecommendations((prev) => [track, ...prev]);
-          }
-          toast('Kunde inte spara rösten, försök igen.', 'error');
-        });
+        postVote(dance.id!, track.id, newVote)
+          .then(() => {
+            if (newVote === 'up') {
+              // Promote to matching dance tracks (shown in Låtar)
+              setRecommendations((prev) => prev.filter((t) => t.id !== track.id));
+              setMatchingTracks((prev) => [track, ...prev]);
+            }
+          })
+          .catch(() => {
+            // Revert: the vote was not actually saved
+            setVotes((prev) => {
+              const n = { ...prev };
+              if (currentVote === undefined) delete n[track.id!];
+              else n[track.id!] = currentVote;
+              return n;
+            });
+            setVoteErrors((prev) => ({ ...prev, [trackId]: 'Kunde inte spara rösten, försök igen.' }));
+          })
+          .finally(stopVoting);
       }
     },
-    [dance, votes],
+    [dance, votes, votingTrackIds],
   );
 
   async function handleSetPrimary(trackId: string) {
@@ -320,6 +340,8 @@ export function DancePage() {
                     key={track.id}
                     track={track}
                     vote={votes[track.id ?? '']}
+                    voteError={voteErrors[track.id ?? '']}
+                    voting={votingTrackIds.has(track.id ?? '')}
                     currentTrackId={currentTrack?.id}
                     isPlaying={isPlaying}
                     contextTracks={recommendations}
@@ -364,6 +386,8 @@ export function DancePage() {
 interface RecommendationRowProps {
   track: TrackListDto;
   vote: 'up' | 'down' | undefined;
+  voteError: string | undefined;
+  voting: boolean;
   currentTrackId: string | undefined;
   isPlaying: boolean;
   contextTracks: TrackListDto[];
@@ -374,6 +398,8 @@ interface RecommendationRowProps {
 function RecommendationRow({
   track,
   vote,
+  voteError,
+  voting,
   currentTrackId,
   isPlaying,
   contextTracks,
@@ -404,8 +430,10 @@ function RecommendationRow({
         <button
           type="button"
           aria-label="Bra förslag"
+          aria-busy={voting}
+          disabled={voting}
           onClick={() => onVote(track, 'up')}
-          className={`rounded p-1 transition-colors hover:bg-[rgb(var(--color-border))]/40 ${vote === 'up' ? 'text-green-500' : 'text-[rgb(var(--color-text-muted))]'}`}
+          className={`rounded p-1 transition-colors hover:bg-[rgb(var(--color-border))]/40 disabled:opacity-50 ${vote === 'up' ? 'text-green-500' : 'text-[rgb(var(--color-text-muted))]'}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
             <path d="M1 8.25a1.25 1.25 0 112.5 0v7.5a1.25 1.25 0 11-2.5 0v-7.5zM11 3V1.7c0-.268.14-.526.395-.607A2 2 0 0114 3c0 .995-.182 1.948-.514 2.826-.204.54.166 1.174.744 1.174h2.52c1.243 0 2.261 1.01 2.146 2.247a23.864 23.864 0 01-1.341 5.974C17.153 16.323 16.07 17 14.9 17h-3.192a3 3 0 01-1.341-.317l-2.734-1.366A3 3 0 006.292 15H5V8h.963c.685 0 1.258-.483 1.612-1.068a4.011 4.011 0 012.166-1.73c.432-.143.853-.386 1.011-.814.16-.432.248-.9.248-1.388z" />
@@ -414,14 +442,17 @@ function RecommendationRow({
         <button
           type="button"
           aria-label="Dåligt förslag"
+          aria-busy={voting}
+          disabled={voting}
           onClick={() => onVote(track, 'down')}
-          className={`rounded p-1 transition-colors hover:bg-[rgb(var(--color-border))]/40 ${vote === 'down' ? 'text-red-500' : 'text-[rgb(var(--color-text-muted))]'}`}
+          className={`rounded p-1 transition-colors hover:bg-[rgb(var(--color-border))]/40 disabled:opacity-50 ${vote === 'down' ? 'text-red-500' : 'text-[rgb(var(--color-text-muted))]'}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
             <path d="M18.905 12.75a1.25 1.25 0 11-2.5 0v-7.5a1.25 1.25 0 012.5 0v7.5zM8.905 17v1.3c0 .268-.14.526-.395.607A2 2 0 015.905 17c0-.995.182-1.948.514-2.826.204-.54-.166-1.174-.744-1.174h-2.52c-1.243 0-2.261-1.01-2.146-2.247.193-2.016.76-3.957 1.341-5.974C2.752 3.678 3.835 3 5.005 3h3.192a3 3 0 011.341.317l2.734 1.366A3 3 0 0013.613 5h1.292v7h-.963c-.685 0-1.258.483-1.612 1.068a4.011 4.011 0 01-2.166 1.73c-.432.143-.853.386-1.011.814-.16.432-.248.9-.248 1.388z" />
           </svg>
         </button>
       </div>
+      <InlineError>{voteError}</InlineError>
     </li>
   );
 }
