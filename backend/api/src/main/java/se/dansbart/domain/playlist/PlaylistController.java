@@ -130,7 +130,7 @@ public class PlaylistController {
             @RequestBody RespondToInvitationRequest request) {
         return playlistService.respondToInvitation(invitationId, userId, request.accept())
             .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+            .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PutMapping("/{id}/tracks/reorder")
