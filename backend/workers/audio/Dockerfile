@@ -3,7 +3,7 @@
 # AGPL-3.0 Licensed - Heavy ML models for audio analysis
 # ====================================================
 
-FROM python:3.10-slim
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.source="https://github.com/svnoak/dansbart.se-audio-worker"
 LABEL org.opencontainers.image.description="Dansbart Audio Worker - AGPL-3.0"
