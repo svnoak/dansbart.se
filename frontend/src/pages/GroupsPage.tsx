@@ -11,7 +11,7 @@ import { ApiError } from '@/api/http-client';
 import type { GroupSummaryDto } from '@/api/models/groupSummaryDto';
 import type { GroupInvitationDto } from '@/api/models/groupInvitationDto';
 import { GroupIcon, PlusIcon } from '@/icons';
-import { Badge, Button, Card, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, InlineError, SectionTitle, toast } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 import { describeGroupError } from '@/utils/describeGroupError';
 
@@ -30,6 +30,7 @@ export function GroupsPage() {
   const [showForm, setShowForm] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +89,11 @@ export function GroupsPage() {
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
+    setRespondErrors((prev) => {
+      const next = { ...prev };
+      delete next[invitationId];
+      return next;
+    });
     try {
       await respondToGroupInvitation(invitationId, { accept });
       setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
@@ -100,7 +106,7 @@ export function GroupsPage() {
         }
       }
     } catch {
-      toast('Det gick inte att svara på inbjudan.', 'error');
+      setRespondErrors((prev) => ({ ...prev, [invitationId]: 'Det gick inte att svara på inbjudan.' }));
     } finally {
       setRespondingId(null);
     }
@@ -185,11 +191,7 @@ export function GroupsPage() {
               />
               Offentlig grupp: alla kan se gruppen och dess offentliga spellistor
             </label>
-            {createError && (
-              <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
-                {createError}
-              </p>
-            )}
+            <InlineError>{createError}</InlineError>
             <div className="flex gap-2">
               <Button type="submit" disabled={creating || !newGroupName.trim()}>
                 Skapa grupp
@@ -207,7 +209,7 @@ export function GroupsPage() {
           <SectionTitle>Inbjudningar</SectionTitle>
           <ul className="space-y-2">
             {invitations.map((inv) => (
-              <li key={inv.id}>
+              <li key={inv.id} className="space-y-1">
                 <Card className="flex items-center justify-between gap-3 p-4">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
@@ -237,6 +239,7 @@ export function GroupsPage() {
                     </Button>
                   </div>
                 </Card>
+                {respondErrors[inv.id!] && <InlineError>{respondErrors[inv.id!]}</InlineError>}
               </li>
             ))}
           </ul>
