@@ -331,6 +331,136 @@ describe('PlaylistSettingsPage', () => {
     expect(saveButton?.disabled).toBe(false);
   });
 
+  it('clears the description error when the text changes', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: 'Gamla texten',
+      isPublic: false,
+      owner: { id: 'u2', username: 'user2', displayName: 'User 2' },
+      ownerGroup: undefined,
+      viewerCanManage: false,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [
+        { id: 'c1', userId: 'u1', username: 'user1', displayName: 'User 1', permission: 'edit', status: 'accepted' },
+      ],
+    });
+    updatePlaylist.mockRejectedValue(new Error('Save failed'));
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const descriptionField = getInputByLabel('Beskrivning');
+    expect(descriptionField).toBeTruthy();
+
+    await act(async () => {
+      typeInto(descriptionField as HTMLTextAreaElement, 'Ny beskrivning');
+    });
+
+    const saveButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Spara' && btn.closest('section')?.textContent?.includes('Om spellistan'),
+    );
+
+    await act(async () => {
+      saveButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const errorAlert = Array.from(document.body.querySelectorAll('[role="alert"]')).find((el) =>
+      el.closest('section')?.textContent?.includes('Om spellistan'),
+    );
+    expect(errorAlert?.textContent).toBe('Det gick inte att spara beskrivningen.');
+
+    await act(async () => {
+      typeInto(descriptionField as HTMLTextAreaElement, 'Ännu en ny beskrivning');
+    });
+
+    const errorAlertAfterChange = Array.from(document.body.querySelectorAll('[role="alert"]')).find((el) =>
+      el.closest('section')?.textContent?.includes('Om spellistan'),
+    );
+    expect(errorAlertAfterChange).toBeUndefined();
+  });
+
+  it('clears the description error after a successful retry', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: 'Gamla texten',
+      isPublic: false,
+      owner: { id: 'u2', username: 'user2', displayName: 'User 2' },
+      ownerGroup: undefined,
+      viewerCanManage: false,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [
+        { id: 'c1', userId: 'u1', username: 'user1', displayName: 'User 1', permission: 'edit', status: 'accepted' },
+      ],
+    });
+    updatePlaylist.mockRejectedValueOnce(new Error('Save failed'));
+    updatePlaylist.mockResolvedValueOnce({
+      id: 'p1',
+      name: 'Min spellista',
+      description: 'Lyckat sparad',
+      isPublic: false,
+      owner: { id: 'u2', username: 'user2', displayName: 'User 2' },
+      ownerGroup: undefined,
+      viewerCanManage: false,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [
+        { id: 'c1', userId: 'u1', username: 'user1', displayName: 'User 1', permission: 'edit', status: 'accepted' },
+      ],
+    });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const descriptionField = getInputByLabel('Beskrivning');
+    expect(descriptionField).toBeTruthy();
+
+    await act(async () => {
+      typeInto(descriptionField as HTMLTextAreaElement, 'Första försök');
+    });
+
+    const saveButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Spara' && btn.closest('section')?.textContent?.includes('Om spellistan'),
+    );
+
+    await act(async () => {
+      saveButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const errorAlert = Array.from(document.body.querySelectorAll('[role="alert"]')).find((el) =>
+      el.closest('section')?.textContent?.includes('Om spellistan'),
+    );
+    expect(errorAlert?.textContent).toBe('Det gick inte att spara beskrivningen.');
+
+    await act(async () => {
+      typeInto(descriptionField as HTMLTextAreaElement, 'Lyckat sparad');
+    });
+
+    await act(async () => {
+      saveButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const errorAlertAfterRetry = Array.from(document.body.querySelectorAll('[role="alert"]')).find((el) =>
+      el.closest('section')?.textContent?.includes('Om spellistan'),
+    );
+    expect(errorAlertAfterRetry).toBeUndefined();
+    expect(toast).toHaveBeenCalledWith('Beskrivningen är sparad.');
+  });
+
   it('a failed visibility change shows an error inline near the toggle', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({
