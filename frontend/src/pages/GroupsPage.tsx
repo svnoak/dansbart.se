@@ -30,7 +30,7 @@ export function GroupsPage() {
   const [showForm, setShowForm] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
-  const [respondError, setRespondError] = useState<{ id: string; message: string } | null>(null);
+  const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -89,7 +89,11 @@ export function GroupsPage() {
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
-    setRespondError(null);
+    setRespondErrors((prev) => {
+      const next = { ...prev };
+      delete next[invitationId];
+      return next;
+    });
     try {
       await respondToGroupInvitation(invitationId, { accept });
       setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
@@ -102,7 +106,7 @@ export function GroupsPage() {
         }
       }
     } catch {
-      setRespondError({ id: invitationId, message: 'Det gick inte att svara på inbjudan.' });
+      setRespondErrors((prev) => ({ ...prev, [invitationId]: 'Det gick inte att svara på inbjudan.' }));
     } finally {
       setRespondingId(null);
     }
@@ -187,11 +191,7 @@ export function GroupsPage() {
               />
               Offentlig grupp: alla kan se gruppen och dess offentliga spellistor
             </label>
-            {createError && (
-              <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
-                {createError}
-              </p>
-            )}
+            <InlineError>{createError}</InlineError>
             <div className="flex gap-2">
               <Button type="submit" disabled={creating || !newGroupName.trim()}>
                 Skapa grupp
@@ -239,9 +239,7 @@ export function GroupsPage() {
                     </Button>
                   </div>
                 </Card>
-                {respondError && respondError.id === inv.id && (
-                  <InlineError>{respondError.message}</InlineError>
-                )}
+                {respondErrors[inv.id!] && <InlineError>{respondErrors[inv.id!]}</InlineError>}
               </li>
             ))}
           </ul>

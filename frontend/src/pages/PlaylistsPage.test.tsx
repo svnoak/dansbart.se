@@ -268,6 +268,59 @@ describe('PlaylistsPage playlist cards', () => {
     toastSpy.mockRestore();
   });
 
+  it('acting on one invitation does not clear another invitation\'s error', async () => {
+    const invitations: InvitationDto[] = [
+      {
+        id: 'inv1',
+        playlistName: 'Spellista A',
+        invitedByDisplayName: 'Anna',
+      },
+      {
+        id: 'inv2',
+        playlistName: 'Spellista B',
+        invitedByDisplayName: 'Britt',
+      },
+    ];
+    getMyPlaylists1.mockResolvedValue([]);
+    getInvitations.mockResolvedValue(invitations);
+    respondToInvitation.mockImplementation((id: string) =>
+      id === 'inv1' ? Promise.reject(new Error('Network error')) : Promise.resolve(undefined),
+    );
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const rowA = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Spellista A'),
+    );
+    const rowB = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Spellista B'),
+    );
+    const declineA = Array.from(rowA?.querySelectorAll('button') ?? []).find((b) =>
+      b.textContent?.includes('Avböj'),
+    );
+    const declineB = Array.from(rowB?.querySelectorAll('button') ?? []).find((b) =>
+      b.textContent?.includes('Avböj'),
+    );
+
+    await act(async () => {
+      declineA?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Kunde inte svara på inbjudan');
+
+    await act(async () => {
+      declineB?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Kunde inte svara på inbjudan');
+  });
+
   it('a failed playlist creation shows the error in the form, not as a toast', async () => {
     getMyPlaylists1.mockResolvedValue([]);
     createPlaylist.mockRejectedValue(new Error('Network error'));

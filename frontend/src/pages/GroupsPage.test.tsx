@@ -385,4 +385,58 @@ describe('GroupsPage', () => {
 
     toastSpy.mockRestore();
   });
+
+  it('acting on one invitation does not clear another invitation\'s error', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({}));
+    getGroupInvitations.mockResolvedValue([
+      {
+        id: 'i1',
+        groupId: 'g1',
+        groupName: 'Grupp A',
+        invitedByDisplayName: 'Anna',
+      },
+      {
+        id: 'i2',
+        groupId: 'g2',
+        groupName: 'Grupp B',
+        invitedByDisplayName: 'Britt',
+      },
+    ]);
+    getMyGroups.mockResolvedValue([]);
+    respondToGroupInvitation.mockImplementation((id: string) =>
+      id === 'i1' ? Promise.reject(new Error('Network error')) : Promise.resolve(undefined),
+    );
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const rowA = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Grupp A'),
+    );
+    const rowB = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Grupp B'),
+    );
+    const declineA = Array.from(rowA?.querySelectorAll('button') ?? []).find((b) =>
+      b.textContent?.includes('Avböj'),
+    );
+    const declineB = Array.from(rowB?.querySelectorAll('button') ?? []).find((b) =>
+      b.textContent?.includes('Avböj'),
+    );
+
+    await act(async () => {
+      declineA?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Det gick inte att svara på inbjudan.');
+
+    await act(async () => {
+      declineB?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Det gick inte att svara på inbjudan.');
+  });
 });

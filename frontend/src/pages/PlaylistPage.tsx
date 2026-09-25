@@ -228,7 +228,7 @@ export function PlaylistPage() {
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
   const [saveNameError, setSaveNameError] = useState<string | null>(null);
-  const [removeTrackError, setRemoveTrackError] = useState<{ id: string; message: string } | null>(null);
+  const [removeTrackErrors, setRemoveTrackErrors] = useState<Record<string, string>>({});
 
   // Tag dropdown state
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
@@ -296,7 +296,11 @@ export function PlaylistPage() {
 
   async function handleRemoveTrack(playlistTrackId: string, trackId: string) {
     if (!id) return;
-    setRemoveTrackError(null);
+    setRemoveTrackErrors((prev) => {
+      const next = { ...prev };
+      delete next[playlistTrackId];
+      return next;
+    });
     try {
       await removeTrack(id, trackId);
       setPlaylist((prev) =>
@@ -304,7 +308,7 @@ export function PlaylistPage() {
       );
       toast('Låt borttagen från spellista');
     } catch {
-      setRemoveTrackError({ id: playlistTrackId, message: 'Kunde inte ta bort låt' });
+      setRemoveTrackErrors((prev) => ({ ...prev, [playlistTrackId]: 'Kunde inte ta bort låt' }));
     }
   }
 
@@ -781,7 +785,7 @@ export function PlaylistPage() {
               contextTracks={contextTracks}
               showGrip={sort === 'position' && canEdit}
               isDragOver={dragOverIndex === i}
-              error={removeTrackError && removeTrackError.id === pt.id ? removeTrackError.message : null}
+              error={pt.id ? (removeTrackErrors[pt.id] ?? null) : null}
               onRemove={canEdit && pt.id ? () => handleRemoveTrack(pt.id!, pt.track!.id!) : undefined}
               onDragStart={() => handleDragStart(i)}
               onDragOver={(e) => handleDragOver(e, i)}

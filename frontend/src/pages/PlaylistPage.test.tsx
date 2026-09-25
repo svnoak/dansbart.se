@@ -1127,6 +1127,78 @@ describe('PlaylistPage', () => {
     toastSpy.mockRestore();
   });
 
+  it('removing one track does not clear another track\'s error', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 2,
+      tracks: [
+        {
+          id: 'pt1',
+          track: {
+            id: 'track1',
+            title: 'Track A',
+            artistName: 'Artist A',
+            danceStyle: 'Polska',
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 0,
+        },
+        {
+          id: 'pt2',
+          track: {
+            id: 'track2',
+            title: 'Track B',
+            artistName: 'Artist B',
+            danceStyle: 'Polska',
+            confidence: 0.9,
+            durationMs: 180000,
+          },
+          position: 1,
+        },
+      ],
+      collaborators: [],
+    });
+    removeTrack.mockImplementation((_playlistId: string, trackId: string) =>
+      trackId === 'track1' ? Promise.reject(new Error('Network error')) : Promise.resolve(undefined),
+    );
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const removeButtons = Array.from(document.body.querySelectorAll('button')).filter(
+      (b) => b.getAttribute('aria-label') === 'Ta bort från spellista',
+    );
+    const rowA = removeButtons.find((b) => b.closest('li')?.textContent?.includes('Track A'))?.closest('li');
+    const rowB = removeButtons.find((b) => b.closest('li')?.textContent?.includes('Track B'))?.closest('li');
+    const removeA = rowA?.querySelector('button[aria-label="Ta bort från spellista"]');
+    const removeB = rowB?.querySelector('button[aria-label="Ta bort från spellista"]');
+
+    await act(async () => {
+      (removeA as HTMLButtonElement)?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Kunde inte ta bort låt');
+
+    await act(async () => {
+      (removeB as HTMLButtonElement)?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Kunde inte ta bort låt');
+  });
+
   it('a failed name save shows the error in the name form, not as a toast', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({

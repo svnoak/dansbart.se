@@ -35,7 +35,7 @@ export function PlaylistsPage() {
   const [newName, setNewName] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
-  const [respondError, setRespondError] = useState<{ id: string; message: string } | null>(null);
+  const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,7 +64,11 @@ export function PlaylistsPage() {
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
-    setRespondError(null);
+    setRespondErrors((prev) => {
+      const next = { ...prev };
+      delete next[invitationId];
+      return next;
+    });
     try {
       await respondToInvitation(invitationId, { accept });
       setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
@@ -77,7 +81,7 @@ export function PlaylistsPage() {
         toast('Inbjudan avböjd');
       }
     } catch {
-      setRespondError({ id: invitationId, message: 'Kunde inte svara på inbjudan' });
+      setRespondErrors((prev) => ({ ...prev, [invitationId]: 'Kunde inte svara på inbjudan' }));
     } finally {
       setRespondingId(null);
     }
@@ -198,9 +202,7 @@ export function PlaylistsPage() {
                     </button>
                   </div>
                 </div>
-                {respondError && respondError.id === inv.id && (
-                  <InlineError>{respondError.message}</InlineError>
-                )}
+                {respondErrors[inv.id!] && <InlineError>{respondErrors[inv.id!]}</InlineError>}
               </li>
             ))}
           </ul>
