@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { getMyDanceLists, createDanceList } from '@/api/generated/dance-lists/dance-lists';
 import type { DanceList } from '@/api/models/danceList';
 import { QueueListIcon, PlusIcon } from '@/icons';
-import { Button, Card, SectionTitle, toast } from '@/ui';
+import { Button, Card, InlineError, SectionTitle } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 
 export function DanceListsPage() {
@@ -14,6 +14,7 @@ export function DanceListsPage() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -55,7 +56,7 @@ export function DanceListsPage() {
       setNewName('');
       setShowForm(false);
     } catch {
-      toast('Det gick inte att skapa danslistan.', 'error');
+      setCreateError('Det gick inte att skapa danslistan.');
     } finally {
       setCreating(false);
     }
@@ -64,6 +65,7 @@ export function DanceListsPage() {
   function handleCancelForm() {
     setShowForm(false);
     setNewName('');
+    setCreateError(null);
   }
 
   return (
@@ -92,7 +94,10 @@ export function DanceListsPage() {
                 id="new-dance-list-name"
                 type="text"
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={(e) => {
+                  setNewName(e.target.value);
+                  setCreateError(null);
+                }}
                 autoFocus
                 className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
               />
@@ -105,6 +110,7 @@ export function DanceListsPage() {
                 Avbryt
               </Button>
             </div>
+            <InlineError>{createError}</InlineError>
           </form>
         </Card>
       )}

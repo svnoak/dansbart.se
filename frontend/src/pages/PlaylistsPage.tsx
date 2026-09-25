@@ -10,7 +10,7 @@ import {
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
-import { toast, Card, Badge, Button } from '@/ui';
+import { toast, Card, Badge, Button, InlineError } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -35,6 +35,8 @@ export function PlaylistsPage() {
   const [newName, setNewName] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,6 +64,11 @@ export function PlaylistsPage() {
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
+    setRespondErrors((prev) => {
+      const next = { ...prev };
+      delete next[invitationId];
+      return next;
+    });
     try {
       await respondToInvitation(invitationId, { accept });
       setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
@@ -74,7 +81,7 @@ export function PlaylistsPage() {
         toast('Inbjudan avböjd');
       }
     } catch {
-      toast('Kunde inte svara på inbjudan', 'error');
+      setRespondErrors((prev) => ({ ...prev, [invitationId]: 'Kunde inte svara på inbjudan' }));
     } finally {
       setRespondingId(null);
     }
@@ -84,6 +91,7 @@ export function PlaylistsPage() {
     e.preventDefault();
     if (!newName.trim()) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const created = await createPlaylist({ name: newName.trim() });
       setPlaylists((prev) => [created, ...prev]);
@@ -91,7 +99,7 @@ export function PlaylistsPage() {
       setShowForm(false);
       toast('Spellista skapad');
     } catch {
-      toast('Kunde inte skapa spellista', 'error');
+      setCreateError('Kunde inte skapa spellista');
     } finally {
       setCreating(false);
     }
@@ -110,32 +118,39 @@ export function PlaylistsPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="flex gap-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Namn på spellistan"
-            autoFocus
-            className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={creating || !newName.trim()}
-            className="rounded-lg bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Skapa
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowForm(false);
-              setNewName('');
-            }}
-            className="rounded-lg border border-[rgb(var(--color-border))] px-4 py-2 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
-          >
-            Avbryt
-          </button>
+        <form onSubmit={handleCreate} className="space-y-1">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setCreateError(null);
+              }}
+              placeholder="Namn på spellistan"
+              autoFocus
+              className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={creating || !newName.trim()}
+              className="rounded-lg bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Skapa
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowForm(false);
+                setNewName('');
+                setCreateError(null);
+              }}
+              className="rounded-lg border border-[rgb(var(--color-border))] px-4 py-2 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
+            >
+              Avbryt
+            </button>
+          </div>
+          <InlineError>{createError}</InlineError>
         </form>
       )}
 
@@ -151,40 +166,43 @@ export function PlaylistsPage() {
             {invitations.map((inv) => (
               <li
                 key={inv.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3"
+                className="space-y-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                    {inv.playlistName ?? 'Okänd spellista'}
-                  </p>
-                  <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                    Inbjuden av {inv.invitedByDisplayName ?? inv.invitedByUserId}
-                    {inv.permission && (
-                      <span className="ml-1.5">
-                        &middot;{' '}
-                        {inv.permission === 'edit' ? 'Redigera' : 'Se'}
-                      </span>
-                    )}
-                  </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                      {inv.playlistName ?? 'Okänd spellista'}
+                    </p>
+                    <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                      Inbjuden av {inv.invitedByDisplayName ?? inv.invitedByUserId}
+                      {inv.permission && (
+                        <span className="ml-1.5">
+                          &middot;{' '}
+                          {inv.permission === 'edit' ? 'Redigera' : 'Se'}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      disabled={respondingId === inv.id}
+                      onClick={() => handleRespond(inv.id!, true)}
+                      className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 hover:opacity-90"
+                    >
+                      Acceptera
+                    </button>
+                    <button
+                      type="button"
+                      disabled={respondingId === inv.id}
+                      onClick={() => handleRespond(inv.id!, false)}
+                      className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-xs text-[rgb(var(--color-text-muted))] disabled:opacity-50 hover:bg-[rgb(var(--color-border))]/50"
+                    >
+                      Avböj
+                    </button>
+                  </div>
                 </div>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    disabled={respondingId === inv.id}
-                    onClick={() => handleRespond(inv.id!, true)}
-                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 hover:opacity-90"
-                  >
-                    Acceptera
-                  </button>
-                  <button
-                    type="button"
-                    disabled={respondingId === inv.id}
-                    onClick={() => handleRespond(inv.id!, false)}
-                    className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-xs text-[rgb(var(--color-text-muted))] disabled:opacity-50 hover:bg-[rgb(var(--color-border))]/50"
-                  >
-                    Avböj
-                  </button>
-                </div>
+                {respondErrors[inv.id!] && <InlineError>{respondErrors[inv.id!]}</InlineError>}
               </li>
             ))}
           </ul>
