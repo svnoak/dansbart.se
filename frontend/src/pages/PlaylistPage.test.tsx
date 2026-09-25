@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PlaylistPage } from './PlaylistPage';
 import { authValue, loggedInAuthValue } from '@/test/authValue';
+import * as ui from '@/ui';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -12,11 +13,13 @@ const getStyleTree = vi.fn();
 const useAuth = vi.fn();
 const generateShareToken = vi.fn();
 const invalidateShareToken = vi.fn();
+const removeTrack = vi.fn();
+const updatePlaylist = vi.fn();
 
 vi.mock('@/api/generated/playlists/playlists', () => ({
   getPlaylist: (...args: unknown[]) => getPlaylist(...args),
-  removeTrack: vi.fn(),
-  updatePlaylist: vi.fn(),
+  removeTrack: (...args: unknown[]) => removeTrack(...args),
+  updatePlaylist: (...args: unknown[]) => updatePlaylist(...args),
   reorderTracks: vi.fn(),
   generateShareToken: (...args: unknown[]) => generateShareToken(...args),
   invalidateShareToken: (...args: unknown[]) => invalidateShareToken(...args),
@@ -55,6 +58,8 @@ describe('PlaylistPage', () => {
     useAuth.mockReset();
     generateShareToken.mockReset();
     invalidateShareToken.mockReset();
+    removeTrack.mockReset();
+    updatePlaylist.mockReset();
     useAuth.mockReturnValue(authValue());
     getStyleTree.mockResolvedValue([]);
     container = document.createElement('div');
@@ -1067,5 +1072,106 @@ describe('PlaylistPage', () => {
 
     const tempoButtonAfterClick = getSortButtonByLabel('Tempo');
     expect(tempoButtonAfterClick?.textContent).toContain('fallande');
+  });
+
+  it('a failed track removal shows the error next to the track, not as a toast', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 1,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    removeTrack.mockRejectedValue(new Error('Network error'));
+    const toastSpy = vi.spyOn(ui, 'toast');
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const removeButton = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.getAttribute('aria-label') === 'Ta bort från spellista',
+    );
+    expect(removeButton).toBeDefined();
+
+    await act(async () => {
+      removeButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const trackRow = removeButton?.closest('li');
+    const alert = trackRow?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Kunde inte ta bort låt');
+    expect(toastSpy).not.toHaveBeenCalledWith('Kunde inte ta bort låt', 'error');
+
+    toastSpy.mockRestore();
+  });
+
+  it('a failed name save shows the error in the name form, not as a toast', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+    updatePlaylist.mockRejectedValue(new Error('Network error'));
+    const toastSpy = vi.spyOn(ui, 'toast');
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const editButton = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.getAttribute('aria-label') === 'Ändra namn',
+    );
+    expect(editButton).toBeDefined();
+
+    await act(async () => {
+      editButton?.click();
+    });
+
+    const saveButton = getButtonByText('Spara');
+    expect(saveButton).toBeDefined();
+
+    await act(async () => {
+      saveButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const nameForm = saveButton?.closest('form');
+    const alert = nameForm?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Kunde inte spara namn');
+    expect(toastSpy).not.toHaveBeenCalledWith('Kunde inte spara namn', 'error');
+
+    toastSpy.mockRestore();
   });
 });

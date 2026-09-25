@@ -7,19 +7,22 @@ import { ThemeProvider } from '@/theme/ThemeContext';
 import { loggedInAuthValue } from '@/test/authValue';
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
+import * as ui from '@/ui';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const getMyPlaylists1 = vi.fn();
 const getInvitations = vi.fn();
+const createPlaylist = vi.fn();
+const respondToInvitation = vi.fn();
 const useAnalyticsFlag = vi.fn();
 const useAuth = vi.fn();
 
 vi.mock('@/api/generated/playlists/playlists', () => ({
   getMyPlaylists1: (...args: unknown[]) => getMyPlaylists1(...args),
-  createPlaylist: vi.fn(),
+  createPlaylist: (...args: unknown[]) => createPlaylist(...args),
   getInvitations: (...args: unknown[]) => getInvitations(...args),
-  respondToInvitation: vi.fn(),
+  respondToInvitation: (...args: unknown[]) => respondToInvitation(...args),
 }));
 
 vi.mock('@/analytics/useAnalyticsFlag', () => ({
@@ -37,6 +40,8 @@ describe('PlaylistsPage playlist cards', () => {
   beforeEach(() => {
     getMyPlaylists1.mockReset();
     getInvitations.mockReset();
+    createPlaylist.mockReset();
+    respondToInvitation.mockReset();
     useAnalyticsFlag.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
@@ -226,5 +231,75 @@ describe('PlaylistsPage playlist cards', () => {
     );
     expect(groupLinks.length).toBeGreaterThan(0);
     expect(groupLinks[0]?.href).toMatch(/\/groups\/g1$/);
+  });
+
+  it('a failed invitation response shows the error next to the invitation, not as a toast', async () => {
+    const invitations: InvitationDto[] = [
+      {
+        id: 'inv1',
+        playlistName: 'Gemensam spellista',
+        invitedByDisplayName: 'Anna',
+      },
+    ];
+    getMyPlaylists1.mockResolvedValue([]);
+    getInvitations.mockResolvedValue(invitations);
+    respondToInvitation.mockRejectedValue(new Error('Network error'));
+    const toastSpy = vi.spyOn(ui, 'toast');
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const declineButton = getButtonByText('Avböj');
+    expect(declineButton).toBeDefined();
+
+    await act(async () => {
+      declineButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const invitationRow = declineButton?.closest('li');
+    const alert = invitationRow?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Kunde inte svara på inbjudan');
+    expect(toastSpy).not.toHaveBeenCalledWith('Kunde inte svara på inbjudan', 'error');
+
+    toastSpy.mockRestore();
+  });
+
+  it('a failed playlist creation shows the error in the form, not as a toast', async () => {
+    getMyPlaylists1.mockResolvedValue([]);
+    createPlaylist.mockRejectedValue(new Error('Network error'));
+    const toastSpy = vi.spyOn(ui, 'toast');
+
+    await renderPage();
+
+    const newButton = getButtonByText('Ny spellista');
+    await act(async () => {
+      newButton?.click();
+    });
+
+    const nameInput = document.body.querySelector('input[placeholder="Namn på spellistan"]') as HTMLInputElement;
+    expect(nameInput).toBeTruthy();
+
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(nameInput), 'value')!.set!;
+      setter.call(nameInput, 'Ny spellista');
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const createButton = getButtonByText('Skapa');
+    await act(async () => {
+      createButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const form = nameInput.closest('form');
+    const alert = form?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Kunde inte skapa spellista');
+    expect(toastSpy).not.toHaveBeenCalledWith('Kunde inte skapa spellista', 'error');
+
+    toastSpy.mockRestore();
   });
 });

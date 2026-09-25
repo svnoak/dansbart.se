@@ -8,6 +8,7 @@ import { authValue, loggedInAuthValue } from '@/test/authValue';
 import { getInputByLabel } from '@/test/getInputByLabel';
 import { typeInto } from '@/test/typeInto';
 import { ToastContainer } from '@/ui';
+import * as ui from '@/ui';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -348,5 +349,40 @@ describe('GroupsPage', () => {
 
     const alert = document.body.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Det finns redan en grupp som heter så.');
+  });
+
+  it('a failed invitation response shows the error next to the invitation, not as a toast', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({}));
+    getGroupInvitations.mockResolvedValue([
+      {
+        id: 'i1',
+        groupId: 'g3',
+        groupName: 'Barngruppen',
+        invitedByDisplayName: 'Anna',
+      },
+    ]);
+    getMyGroups.mockResolvedValue([]);
+    respondToGroupInvitation.mockRejectedValue(new Error('Network error'));
+    const toastSpy = vi.spyOn(ui, 'toast');
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const declineButton = getButtonByText('Avböj');
+    expect(declineButton).toBeDefined();
+
+    await act(async () => {
+      declineButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const invitationRow = declineButton?.closest('li');
+    const alert = invitationRow?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Det gick inte att svara på inbjudan.');
+    expect(toastSpy).not.toHaveBeenCalledWith('Det gick inte att svara på inbjudan.', 'error');
+
+    toastSpy.mockRestore();
   });
 });
