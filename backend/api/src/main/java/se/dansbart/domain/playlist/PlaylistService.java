@@ -311,18 +311,16 @@ public class PlaylistService {
 
     @Transactional
     public Optional<PlaylistCollaborator> respondToInvitation(UUID invitationId, UUID userId, boolean accept) {
-        return collaboratorRepository.findById(invitationId)
-            .filter(collab -> userId.equals(collab.getUserId()) && "pending".equals(collab.getStatus()))
-            .map(collab -> {
-                if (accept) {
-                    collab.setStatus("accepted");
-                    collab.setAcceptedAt(OffsetDateTime.now());
-                    return collaboratorRepository.save(collab);
-                } else {
-                    collaboratorRepository.delete(collab);
-                    return null;
-                }
-            });
+        PlaylistCollaborator collab = collaboratorRepository.findById(invitationId)
+            .filter(c -> userId.equals(c.getUserId()) && "pending".equals(c.getStatus()))
+            .orElseThrow(() -> new ResourceNotFoundException("This invitation does not exist."));
+        if (accept) {
+            collab.setStatus("accepted");
+            collab.setAcceptedAt(OffsetDateTime.now());
+            return Optional.of(collaboratorRepository.save(collab));
+        }
+        collaboratorRepository.delete(collab);
+        return Optional.empty();
     }
 
     @Transactional(readOnly = true)
@@ -356,7 +354,6 @@ public class PlaylistService {
         return Optional.empty();
     }
 
-    /** The group must exist and be visible to the viewer, and the viewer must be an accepted admin. */
     private void requireGroupAdmin(UUID groupId, UUID viewerId) {
         Group group = groupJooqRepository.findById(groupId)
             .orElseThrow(() -> new ResourceNotFoundException("The group does not exist, or you do not have access to it."));
