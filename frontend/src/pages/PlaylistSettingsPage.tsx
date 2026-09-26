@@ -354,7 +354,7 @@ export function PlaylistSettingsPage() {
             <div key={collab.id} className="flex items-center justify-between px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                  {collab.displayName ?? collab.username ?? collab.userId}
+                  {collab.groupId ? collab.groupName : (collab.displayName ?? collab.username ?? collab.userId)}
                 </p>
                 <p className="text-xs text-[rgb(var(--color-text-muted))]">
                   {collab.username}

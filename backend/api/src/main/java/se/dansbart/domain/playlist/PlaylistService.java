@@ -263,22 +263,7 @@ public class PlaylistService {
                 .build());
         }
         List<CollaboratorDto> collaborators = collaboratorRepository.findByPlaylistId(playlist.getId()).stream()
-            .map(c -> {
-                var user = c.getUser();
-                var group = c.getGroup();
-                return CollaboratorDto.builder()
-                    .id(c.getId())
-                    .userId(c.getUserId())
-                    .username(user != null ? user.getUsername() : null)
-                    .displayName(user != null ? user.getDisplayName() : null)
-                    .groupId(group != null ? group.getId() : null)
-                    .groupName(group != null ? group.getName() : null)
-                    .permission(c.getPermission())
-                    .status(c.getStatus())
-                    .invitedAt(c.getInvitedAt())
-                    .acceptedAt(c.getAcceptedAt())
-                    .build();
-            })
+            .map(this::toCollaboratorDto)
             .collect(Collectors.toList());
         return PlaylistDto.builder()
             .id(playlist.getId())
@@ -297,6 +282,23 @@ public class PlaylistService {
             .trackCount(playlistTrackDtos.size())
             .tracks(playlistTrackDtos)
             .collaborators(collaborators)
+            .build();
+    }
+
+    private CollaboratorDto toCollaboratorDto(PlaylistCollaborator collab) {
+        var user = collab.getUser();
+        var group = collab.getGroup();
+        return CollaboratorDto.builder()
+            .id(collab.getId())
+            .userId(collab.getUserId())
+            .username(user != null ? user.getUsername() : null)
+            .displayName(user != null ? user.getDisplayName() : null)
+            .groupId(group != null ? group.getId() : null)
+            .groupName(group != null ? group.getName() : null)
+            .permission(collab.getPermission())
+            .status(collab.getStatus())
+            .invitedAt(collab.getInvitedAt())
+            .acceptedAt(collab.getAcceptedAt())
             .build();
     }
 
@@ -353,6 +355,27 @@ public class PlaylistService {
                 return true;
             })
             .orElse(false);
+    }
+
+    @Transactional
+    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, String username, String groupName, String permission) {
+        Playlist playlist = playlistJooqRepository.findById(playlistId)
+            .orElseThrow(() -> new ResourceNotFoundException("The playlist does not exist."));
+
+        if (!hasFullControl(playlist, ownerId)) {
+            throw new ForbiddenException("You do not have permission to manage collaborators.");
+        }
+
+        boolean hasUsername = username != null && !username.isBlank();
+        boolean hasGroupName = groupName != null && !groupName.isBlank();
+        if (hasUsername == hasGroupName) {
+            throw new BadRequestException("Invite exactly one of a username or a group name.");
+        }
+
+        if (hasGroupName) {
+            return inviteGroupCollaborator(playlistId, ownerId, groupName, permission);
+        }
+        return inviteCollaborator(playlistId, ownerId, username, permission);
     }
 
     @Transactional
@@ -426,22 +449,7 @@ public class PlaylistService {
         return playlistJooqRepository.findById(playlistId)
             .filter(playlist -> canView(playlist, viewerId))
             .map(playlist -> collaboratorRepository.findByPlaylistId(playlistId).stream()
-                .map(collab -> {
-                    var user = collab.getUser();
-                    var group = collab.getGroup();
-                    return CollaboratorDto.builder()
-                        .id(collab.getId())
-                        .userId(collab.getUserId())
-                        .username(user != null ? user.getUsername() : null)
-                        .displayName(user != null ? user.getDisplayName() : null)
-                        .groupId(group != null ? group.getId() : null)
-                        .groupName(group != null ? group.getName() : null)
-                        .permission(collab.getPermission())
-                        .status(collab.getStatus())
-                        .invitedAt(collab.getInvitedAt())
-                        .acceptedAt(collab.getAcceptedAt())
-                        .build();
-                })
+                .map(this::toCollaboratorDto)
                 .collect(Collectors.toList()));
     }
 

@@ -12,7 +12,6 @@ import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.dto.PlaylistListItemDto;
-import se.dansbart.exception.BadRequestException;
 
 import java.net.URI;
 import java.util.List;
@@ -152,17 +151,7 @@ public class PlaylistController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody InviteCollaboratorRequest request) {
-        boolean hasUsername = request.username() != null && !request.username().isBlank();
-        boolean hasGroupName = request.groupName() != null && !request.groupName().isBlank();
-        if (hasUsername == hasGroupName) {
-            throw new BadRequestException("Invite exactly one of a username or a group name.");
-        }
-        if (hasGroupName) {
-            return playlistService.inviteGroupCollaborator(id, userId, request.groupName(), request.permission())
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(409).build());
-        }
-        return playlistService.inviteCollaborator(id, userId, request.username(), request.permission())
+        return playlistService.inviteCollaborator(id, userId, request.username(), request.groupName(), request.permission())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.status(409).build());
     }

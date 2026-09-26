@@ -1064,6 +1064,32 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
+        @DisplayName("neither name set on a non-existent playlist should return 404")
+        void invite_neitherNameSet_onMissingPlaylist_shouldReturn404() throws Exception {
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", "00000000-0000-0000-0000-000000000000")
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("permission", "edit"))))
+                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("both names set by a non-manager should return 403")
+        void invite_bothNamesSet_byNonManager_shouldReturn403() throws Exception {
+            Playlist playlist = testData.playlist().withName("Owner's Playlist").withOwner(owner).build();
+            Group group = testData.group().withName("Public Group").isPublic().build();
+
+            mockMvc.perform(post("/api/playlists/{id}/collaborators", playlist.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of(
+                        "username", otherUser.getUsername(),
+                        "groupName", group.getName(),
+                        "permission", "edit"))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
         @DisplayName("collaborators list shows a group collaborator with its group id and name")
         void getCollaborators_showsGroupCollaboratorWithGroupIdAndName() throws Exception {
             Playlist playlist = testData.playlist().withName("My Playlist").withOwner(owner).build();
