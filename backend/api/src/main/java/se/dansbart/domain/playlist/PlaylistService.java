@@ -265,11 +265,14 @@ public class PlaylistService {
         List<CollaboratorDto> collaborators = collaboratorRepository.findByPlaylistId(playlist.getId()).stream()
             .map(c -> {
                 var user = c.getUser();
+                var group = c.getGroup();
                 return CollaboratorDto.builder()
                     .id(c.getId())
                     .userId(c.getUserId())
                     .username(user != null ? user.getUsername() : null)
                     .displayName(user != null ? user.getDisplayName() : null)
+                    .groupId(group != null ? group.getId() : null)
+                    .groupName(group != null ? group.getName() : null)
                     .permission(c.getPermission())
                     .status(c.getStatus())
                     .invitedAt(c.getInvitedAt())
@@ -387,6 +390,37 @@ public class PlaylistService {
         return Optional.of(collaboratorRepository.save(collab));
     }
 
+    @Transactional
+    public Optional<PlaylistCollaborator> inviteGroupCollaborator(UUID playlistId, UUID ownerId, String groupName, String permission) {
+        Playlist playlist = playlistJooqRepository.findById(playlistId)
+            .orElseThrow(() -> new ResourceNotFoundException("The playlist does not exist."));
+
+        if (!hasFullControl(playlist, ownerId)) {
+            throw new ForbiddenException("You do not have permission to manage collaborators.");
+        }
+
+        if (groupName == null || groupName.isBlank()) {
+            throw new BadRequestException("The group name is required.");
+        }
+
+        UUID groupId = groupJooqRepository.findByNameIgnoreCase(groupName.trim())
+            .map(group -> group.getId())
+            .orElseThrow(() -> new UnprocessableEntityException("No group has that name."));
+
+        if (collaboratorRepository.findByPlaylistIdAndGroupId(playlistId, groupId).isPresent()) {
+            return Optional.empty();
+        }
+
+        PlaylistCollaborator collab = PlaylistCollaborator.builder()
+            .playlistId(playlistId)
+            .groupId(groupId)
+            .permission(permission != null ? permission : "view")
+            .status("pending")
+            .invitedBy(ownerId)
+            .build();
+        return Optional.of(collaboratorRepository.save(collab));
+    }
+
     @Transactional(readOnly = true)
     public Optional<List<CollaboratorDto>> getCollaborators(UUID playlistId, UUID viewerId) {
         return playlistJooqRepository.findById(playlistId)
@@ -394,11 +428,14 @@ public class PlaylistService {
             .map(playlist -> collaboratorRepository.findByPlaylistId(playlistId).stream()
                 .map(collab -> {
                     var user = collab.getUser();
+                    var group = collab.getGroup();
                     return CollaboratorDto.builder()
                         .id(collab.getId())
                         .userId(collab.getUserId())
                         .username(user != null ? user.getUsername() : null)
                         .displayName(user != null ? user.getDisplayName() : null)
+                        .groupId(group != null ? group.getId() : null)
+                        .groupName(group != null ? group.getName() : null)
                         .permission(collab.getPermission())
                         .status(collab.getStatus())
                         .invitedAt(collab.getInvitedAt())

@@ -11,6 +11,7 @@ export interface PlaylistCollaborator {
   id?: string;
   playlistId?: string;
   userId?: string;
+  groupId?: string;
   permission?: string;
   status?: string;
   invitedBy?: string;

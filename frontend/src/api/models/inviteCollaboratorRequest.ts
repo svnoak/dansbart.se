@@ -7,5 +7,6 @@
 
 export interface InviteCollaboratorRequest {
   username?: string;
+  groupName?: string;
   permission?: string;
 }

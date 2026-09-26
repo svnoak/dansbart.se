@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": { "title": "OpenAPI definition", "version": "v0" },
   "servers": [
-    { "url": "http://localhost:8013", "description": "Generated server url" }
+    { "url": "http://localhost:8015", "description": "Generated server url" }
   ],
   "tags": [
     {
@@ -6721,6 +6721,7 @@
           "id": { "type": "string", "format": "uuid" },
           "playlistId": { "type": "string", "format": "uuid" },
           "userId": { "type": "string", "format": "uuid" },
+          "groupId": { "type": "string", "format": "uuid" },
           "permission": { "type": "string" },
           "status": { "type": "string" },
           "invitedBy": { "type": "string", "format": "uuid" },
@@ -7136,6 +7137,7 @@
         "type": "object",
         "properties": {
           "username": { "type": "string" },
+          "groupName": { "type": "string" },
           "permission": { "type": "string" }
         }
       },
@@ -7161,6 +7163,8 @@
           "userId": { "type": "string", "format": "uuid" },
           "username": { "type": "string" },
           "displayName": { "type": "string" },
+          "groupId": { "type": "string", "format": "uuid" },
+          "groupName": { "type": "string" },
           "permission": { "type": "string" },
           "status": { "type": "string" },
           "invitedAt": { "type": "string", "format": "date-time" },
