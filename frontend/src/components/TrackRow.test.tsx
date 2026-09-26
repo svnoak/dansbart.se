@@ -144,3 +144,72 @@ describe('TrackRow add to playlist', () => {
     expect(vi.mocked(toast)).toHaveBeenCalledWith('Det gick inte att lägga till låten.', 'error');
   });
 });
+
+describe('TrackRow heart replacement', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    root.unmount();
+    container.remove();
+    vi.clearAllMocks();
+  });
+
+  it('shows Lägg till in place of the heart when adding to a playlist', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={track} addToPlaylistId="p1" />
+        </ThemeProvider>,
+      );
+    });
+
+    const heartButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => {
+        const label = btn.getAttribute('aria-label');
+        return label === 'Favoritmarkera' || label === 'Sluta favoritmarkera';
+      },
+    );
+    expect(heartButton).toBeFalsy();
+
+    const menuButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Mer',
+    );
+    expect(menuButton).toBeTruthy();
+    const menuWrapper = menuButton!.parentElement;
+    const rightGroup = menuWrapper!.parentElement;
+
+    const addButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.includes('Lägg till'),
+    );
+    expect(addButton).toBeTruthy();
+
+    // The add button sits in the row's right-hand group, directly before the menu trigger.
+    expect(addButton!.parentElement).toBe(rightGroup);
+    expect(addButton!.nextElementSibling).toBe(menuWrapper);
+  });
+
+  it('shows the heart when the row has no action', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={track} />
+        </ThemeProvider>,
+      );
+    });
+
+    const heartButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => {
+        const label = btn.getAttribute('aria-label');
+        return label === 'Favoritmarkera' || label === 'Sluta favoritmarkera';
+      },
+    );
+    expect(heartButton).toBeTruthy();
+  });
+});

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
 import { useFavorites } from '@/favorites/useFavorites';
@@ -35,12 +35,14 @@ interface TrackRowProps {
   track: TrackListDto;
   contextTracks?: TrackListDto[];
   addToPlaylistId?: string;
+  action?: ReactNode;
 }
 
 export function TrackRow({
   track,
   contextTracks,
   addToPlaylistId,
+  action,
 }: TrackRowProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
   const { isAuthenticated } = useAuth();
@@ -70,6 +72,18 @@ export function TrackRow({
   const styleColor = getStyleColor(track.danceStyle);
   const tempo = tempoLabel(track);
   const hasDuration = !!track.durationMs && track.durationMs > 0;
+
+  const addToPlaylistAction = addToPlaylistId && (
+    <Button
+      variant="secondary"
+      size="sm"
+      disabled={adding || added}
+      onClick={handleAddToPlaylist}
+    >
+      {added ? 'Tillagd' : 'Lägg till'}
+    </Button>
+  );
+  const rowAction = action ?? addToPlaylistAction;
 
   return (
     <>
@@ -110,18 +124,6 @@ export function TrackRow({
           <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">
             {track.artistName ?? 'Okänd artist'}
           </p>
-
-          {addToPlaylistId && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-1.5 self-start"
-              disabled={adding || added}
-              onClick={handleAddToPlaylist}
-            >
-              {added ? 'Tillagd' : 'Lägg till'}
-            </Button>
-          )}
         </div>
 
         {/* Right: Duration + Heart + Menu */}
@@ -131,19 +133,21 @@ export function TrackRow({
             {formatDurationMs(track.durationMs!)}
           </span>
         )}
-        <IconButton
-          aria-label={favorited ? 'Sluta favoritmarkera' : 'Favoritmarkera'}
-          onClick={() => {
-            if (!isAuthenticated) setLoginModalOpen(true);
-            else if (track.id != null) toggleFavorite(track.id);
-          }}
-        >
-          {favorited ? (
-            <HeartFilledIcon className="h-5 w-5 text-red-500" aria-hidden />
-          ) : (
-            <HeartIcon className="h-5 w-5" aria-hidden />
-          )}
-        </IconButton>
+        {rowAction ?? (
+          <IconButton
+            aria-label={favorited ? 'Sluta favoritmarkera' : 'Favoritmarkera'}
+            onClick={() => {
+              if (!isAuthenticated) setLoginModalOpen(true);
+              else if (track.id != null) toggleFavorite(track.id);
+            }}
+          >
+            {favorited ? (
+              <HeartFilledIcon className="h-5 w-5 text-red-500" aria-hidden />
+            ) : (
+              <HeartIcon className="h-5 w-5" aria-hidden />
+            )}
+          </IconButton>
+        )}
         <TrackRowMenu
           track={track}
           open={menuOpen}
