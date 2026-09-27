@@ -4,6 +4,7 @@ import { Card, IconButton, toast } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
 import { useFavorites } from '@/favorites/useFavorites';
+import { useLongPress } from '@/hooks/useLongPress';
 import {
   PauseIcon,
   PlayIcon,
@@ -18,6 +19,7 @@ import type { TrackListDto } from '@/api/models/trackListDto';
 import { formatDurationMs } from '@/utils/formatDuration';
 import { FlagTrackModal } from './FlagTrackModal';
 import { LoginRequiredModal } from './LoginRequiredModal';
+import { TrackActionsModal } from './TrackRow/TrackActionsModal';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -44,6 +46,8 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
   const [menuOpen, setMenuOpen] = useState(false);
   const [flagModalOpen, setFlagModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const longPress = useLongPress(() => setOptionsOpen(true));
   const isCurrent = currentTrack?.id === track.id;
   const favorited = track.id != null && isFavorited(track.id);
 
@@ -58,7 +62,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
   const isMlLow = hasValidStyle && !isHumanVerified && !isMlHigh;
 
   return (
-    <Card className="flex items-center gap-3 p-4 shadow-sm">
+    <Card className="flex items-center gap-3 p-4 shadow-sm select-none [-webkit-touch-callout:none]" {...longPress}>
       {/* Left: Play button */}
       <button
         type="button"
@@ -317,6 +321,13 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
         message="Du behöver skapa ett konto eller logga in för att favoritmarkera en låt."
+      />
+      <TrackActionsModal
+        open={optionsOpen}
+        onClose={() => setOptionsOpen(false)}
+        track={track}
+        onAddToQueue={() => addToQueue(track)}
+        onFlag={() => setFlagModalOpen(true)}
       />
     </Card>
   );
