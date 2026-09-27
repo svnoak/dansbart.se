@@ -6,7 +6,7 @@ import {
   mergeAllDuplicates,
 } from '@/api/generated/admin-duplicates/admin-duplicates';
 import { Modal } from '@/admin/components/Modal';
-import { Button } from '@/ui';
+import { Button, InlineError, LoadError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface DuplicateGroup {
@@ -18,9 +18,12 @@ interface DuplicateGroup {
 export function AdminDuplicatesPage() {
   const [groups, setGroups] = useState<DuplicateGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [analyzeResult, setAnalyzeResult] = useState<Record<string, unknown> | null>(null);
   const [analyzeIsrc, setAnalyzeIsrc] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [mergeAllModal, setMergeAllModal] = useState(false);
+  const [mergeAllError, setMergeAllError] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -35,8 +38,9 @@ export function AdminDuplicatesPage() {
           trackTitles: item.trackTitles as string[] | undefined,
         })),
       );
+      setLoadError(null);
     } catch {
-      toast('Kunde inte hämta dubbletter', 'error');
+      setLoadError('Kunde inte hämta dubbletter');
     } finally {
       setLoading(false);
     }
@@ -47,23 +51,33 @@ export function AdminDuplicatesPage() {
   }, [fetchData]);
 
   const handleAnalyze = async (isrc: string) => {
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[isrc];
+      return next;
+    });
     try {
       const result = await analyzeDuplicates(isrc);
       setAnalyzeResult(result as Record<string, unknown>);
       setAnalyzeIsrc(isrc);
     } catch {
-      toast('Kunde inte analysera dubbletter', 'error');
+      setRowErrors((prev) => ({ ...prev, [isrc]: 'Kunde inte analysera dubbletter' }));
     }
   };
 
   const handleMerge = async (isrc: string) => {
     setMerging(true);
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[isrc];
+      return next;
+    });
     try {
       await mergeDuplicates(isrc, {});
       toast(`Dubbletter med ISRC ${isrc} sammanfogade`);
       fetchData();
     } catch {
-      toast('Sammanslagning misslyckades', 'error');
+      setRowErrors((prev) => ({ ...prev, [isrc]: 'Sammanslagning misslyckades' }));
     } finally {
       setMerging(false);
     }
@@ -71,13 +85,14 @@ export function AdminDuplicatesPage() {
 
   const handleMergeAll = async () => {
     setMerging(true);
+    setMergeAllError(null);
     try {
       await mergeAllDuplicates({});
       toast('Alla dubbletter sammanfogade');
       setMergeAllModal(false);
       fetchData();
     } catch {
-      toast('Masssammanslagning misslyckades', 'error');
+      setMergeAllError('Masssammanslagning misslyckades');
     } finally {
       setMerging(false);
     }
@@ -100,7 +115,7 @@ export function AdminDuplicatesPage() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setMergeAllModal(true)}
+            onClick={() => { setMergeAllModal(true); setMergeAllError(null); }}
             disabled={merging}
           >
             Sammanfoga alla
@@ -108,7 +123,9 @@ export function AdminDuplicatesPage() {
         )}
       </div>
 
-      {groups.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={fetchData} />}
+
+      {!loadError && (groups.length === 0 ? (
         <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-8 text-center">
           <p className="text-[rgb(var(--color-text-muted))]">Inga sammanfogningsbara dubbletter hittades.</p>
         </div>
@@ -128,23 +145,26 @@ export function AdminDuplicatesPage() {
                   {g.trackTitles?.length ? ` - ${g.trackTitles[0]}` : ''}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => handleAnalyze(g.isrc)}>
-                  Analysera
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleMerge(g.isrc)}
-                  disabled={merging}
-                >
-                  Sammanfoga
-                </Button>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleAnalyze(g.isrc)}>
+                    Analysera
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleMerge(g.isrc)}
+                    disabled={merging}
+                  >
+                    Sammanfoga
+                  </Button>
+                </div>
+                {rowErrors[g.isrc] && <InlineError>{rowErrors[g.isrc]}</InlineError>}
               </div>
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       {/* Analysis result modal */}
       <Modal
@@ -165,14 +185,15 @@ export function AdminDuplicatesPage() {
       {/* Merge all confirmation */}
       <Modal
         open={mergeAllModal}
-        onClose={() => setMergeAllModal(false)}
+        onClose={() => { setMergeAllModal(false); setMergeAllError(null); }}
         title="Sammanfoga alla dubbletter"
       >
         <p className="text-sm text-[rgb(var(--color-text))]">
           Detta sammanfogar alla {groups.length} grupper med dubbletter. Fortsätt?
         </p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setMergeAllModal(false)}>Avbryt</Button>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {mergeAllError && <InlineError>{mergeAllError}</InlineError>}
+          <Button variant="ghost" onClick={() => { setMergeAllModal(false); setMergeAllError(null); }}>Avbryt</Button>
           <Button variant="primary" onClick={handleMergeAll} disabled={merging}>
             {merging ? 'Sammanfogar...' : 'Sammanfoga alla'}
           </Button>
