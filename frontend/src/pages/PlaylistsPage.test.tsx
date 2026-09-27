@@ -74,7 +74,7 @@ describe('PlaylistsPage playlist cards', () => {
     );
   }
 
-  it('a card shows the whole description, clamped to two lines', async () => {
+  it('a card shows the description on one line', async () => {
     const longDescription = 'Detta är en väldigt långt beskrivning av spellistan som innehåller många ord och bör visas på två rader utan att klippas av helt.';
     const playlists: PlaylistListItemDto[] = [
       {
@@ -97,7 +97,8 @@ describe('PlaylistsPage playlist cards', () => {
       (p) => p.textContent?.includes(longDescription),
     );
     expect(descriptionElement).toBeTruthy();
-    expect(descriptionElement?.className).toContain('line-clamp-2');
+    expect(descriptionElement?.className).toContain('truncate');
+    expect(descriptionElement?.className).not.toContain('line-clamp-2');
   });
 
   it('a card without a description renders no empty description element', async () => {
@@ -220,17 +221,37 @@ describe('PlaylistsPage playlist cards', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const ownershipTexts = Array.from(document.body.querySelectorAll('*')).filter(
-      (el) => el.textContent?.includes('Ägs av gruppen') &&
-              !Array.from(el.children).some(child => child.textContent?.includes('Ägs av gruppen'))
-    );
-    expect(ownershipTexts.length).toBe(1);
+    expect(document.body.textContent).not.toContain('Ägs av gruppen');
 
-    const groupLinks = Array.from(document.body.querySelectorAll('a')).filter(
-      (a) => a.textContent?.includes('Testgruppen'),
+    const groupLink = document.body.querySelector('a[href="/groups/g1"]');
+    expect(groupLink).toBeTruthy();
+    expect(groupLink?.textContent).toContain('Testgruppen');
+
+    const nameElement = groupLink?.closest('p');
+    expect(nameElement?.textContent).toContain('Grupp spellista');
+  });
+
+  it('shows Du for a playlist the user owns', async () => {
+    const playlists: PlaylistListItemDto[] = [
+      {
+        id: 'pl1',
+        name: 'Min spellista',
+      },
+    ];
+
+    getMyPlaylists1.mockResolvedValue(playlists);
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const nameElement = Array.from(document.body.querySelectorAll('p')).find(
+      (p) => p.textContent?.includes('Min spellista'),
     );
-    expect(groupLinks.length).toBeGreaterThan(0);
-    expect(groupLinks[0]?.href).toMatch(/\/groups\/g1$/);
+    expect(nameElement).toBeTruthy();
+    expect(nameElement?.textContent).toContain('Du');
   });
 
   it('a failed invitation response shows the error next to the invitation, not as a toast', async () => {
