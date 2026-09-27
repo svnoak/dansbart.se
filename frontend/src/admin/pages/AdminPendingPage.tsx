@@ -229,24 +229,28 @@ export function AdminPendingPage() {
       {tab === 'artists' ? (
         <>
           {artistsLoadError && <LoadError message={artistsLoadError} onRetry={fetchArtists} />}
-          <DataTable
-            columns={artistColumns}
-            data={artists}
-            keyFn={(a) => a.id}
-            loading={loading}
-            emptyMessage="Inga väntande artister."
-          />
+          {!artistsLoadError && (
+            <DataTable
+              columns={artistColumns}
+              data={artists}
+              keyFn={(a) => a.id}
+              loading={loading}
+              emptyMessage="Inga väntande artister."
+            />
+          )}
         </>
       ) : (
         <>
           {albumsLoadError && <LoadError message={albumsLoadError} onRetry={fetchAlbums} />}
-          <DataTable
-            columns={albumColumns}
-            data={albums}
-            keyFn={(a) => a.id}
-            loading={loading}
-            emptyMessage="Inga väntande album."
-          />
+          {!albumsLoadError && (
+            <DataTable
+              columns={albumColumns}
+              data={albums}
+              keyFn={(a) => a.id}
+              loading={loading}
+              emptyMessage="Inga väntande album."
+            />
+          )}
         </>
       )}
 

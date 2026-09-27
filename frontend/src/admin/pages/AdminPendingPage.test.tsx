@@ -92,6 +92,7 @@ describe('AdminPendingPage', () => {
     const alert = document.body.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Kunde inte hämta väntande artister');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(document.body.textContent).not.toContain('Inga väntande artister.');
 
     await click(clickButton('Försök igen'));
 
@@ -108,6 +109,7 @@ describe('AdminPendingPage', () => {
     const alert = document.body.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Kunde inte hämta väntande album');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(document.body.textContent).not.toContain('Inga väntande album.');
 
     await click(clickButton('Försök igen'));
 

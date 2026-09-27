@@ -155,13 +155,15 @@ export function AdminAlbumsPage() {
 
       {loadError && <LoadError message={loadError} onRetry={fetchData} />}
 
-      <DataTable
-        columns={columns}
-        data={data?.items ?? []}
-        keyFn={(a) => a.id}
-        loading={loading}
-        emptyMessage="Inga album hittades."
-      />
+      {!loadError && (
+        <DataTable
+          columns={columns}
+          data={data?.items ?? []}
+          keyFn={(a) => a.id}
+          loading={loading}
+          emptyMessage="Inga album hittades."
+        />
+      )}
 
       {(data?.total ?? 0) > 0 && (
         <Pagination

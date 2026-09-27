@@ -179,13 +179,15 @@ export function AdminArtistsPage() {
 
       {loadError && <LoadError message={loadError} onRetry={fetchData} />}
 
-      <DataTable
-        columns={columns}
-        data={data?.items ?? []}
-        keyFn={(a) => a.id}
-        loading={loading}
-        emptyMessage="Inga artister hittades."
-      />
+      {!loadError && (
+        <DataTable
+          columns={columns}
+          data={data?.items ?? []}
+          keyFn={(a) => a.id}
+          loading={loading}
+          emptyMessage="Inga artister hittades."
+        />
+      )}
 
       {(data?.total ?? 0) > 0 && (
         <Pagination

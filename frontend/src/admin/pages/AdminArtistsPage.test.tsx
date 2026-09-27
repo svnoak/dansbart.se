@@ -85,6 +85,7 @@ describe('AdminArtistsPage', () => {
     const alert = document.body.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Kunde inte hämta artister');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(document.body.textContent).not.toContain('Inga artister hittades.');
 
     await click(clickButton('Försök igen'));
 

@@ -76,6 +76,7 @@ describe('AdminAlbumsPage', () => {
     const alert = document.body.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Kunde inte hämta album');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(document.body.textContent).not.toContain('Inga album hittades.');
 
     await click(clickButton('Försök igen'));
 
