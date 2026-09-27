@@ -25,7 +25,7 @@ import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { Select } from '@/admin/components/forms/Select';
-import { Button } from '@/ui';
+import { Button, InlineError, LoadError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 import { formatDurationMs } from '@/utils/formatDuration';
 import { usePlayer } from '@/player/usePlayer';
@@ -51,6 +51,7 @@ export function AdminLibraryPage() {
 
   const [data, setData] = useState<AdminTrackPageResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [statusCounts, setStatusCounts] = useState<StatusCounts>({});
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -59,10 +60,13 @@ export function AdminLibraryPage() {
     done: number;
     total: number;
   } | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const [deleteModal, setDeleteModal] = useState<AdminTrackDto | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<AdminTrackDto | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState<string | null>(null);
 
   const [bulkRejectModal, setBulkRejectModal] = useState(false);
   const [bulkRejectReason, setBulkRejectReason] = useState('');
@@ -73,6 +77,7 @@ export function AdminLibraryPage() {
   const [styleEditMain, setStyleEditMain] = useState('');
   const [styleEditSub, setStyleEditSub] = useState('');
   const [styleEditTempo, setStyleEditTempo] = useState('');
+  const [styleEditError, setStyleEditError] = useState<string | null>(null);
   const [styleTree, setStyleTree] = useState<Record<string, string[]>>({});
 
   // Sorting (persisted in URL params)
@@ -121,8 +126,9 @@ export function AdminLibraryPage() {
         } as Record<string, unknown>,
       );
       setData(result);
+      setLoadError(null);
     } catch {
-      toast('Kunde inte hämta spår', 'error');
+      setLoadError('Kunde inte hämta spår');
     } finally {
       setLoading(false);
     }
@@ -174,10 +180,12 @@ export function AdminLibraryPage() {
     setStyleEditMain(track.danceStyle ?? '');
     setStyleEditSub(track.subStyle ?? '');
     setStyleEditTempo(track.tempoCategory ?? '');
+    setStyleEditError(null);
   };
 
   const handleStyleEditSave = async () => {
     if (!styleEditTrack?.id || !styleEditMain) return;
+    setStyleEditError(null);
     try {
       await apiFetch(`/api/admin/tracks/${styleEditTrack.id}/dance-style`, {
         method: 'PUT',
@@ -192,7 +200,7 @@ export function AdminLibraryPage() {
       setStyleEditTrack(null);
       fetchData();
     } catch {
-      toast('Kunde inte uppdatera dansstil', 'error');
+      setStyleEditError('Kunde inte uppdatera dansstil');
     }
   };
 
@@ -233,6 +241,7 @@ export function AdminLibraryPage() {
 
   const handleDelete = async () => {
     if (!deleteModal) return;
+    setDeleteError(null);
     try {
       await deleteTrack(deleteModal.id!);
       toast('Spår raderat');
@@ -240,12 +249,13 @@ export function AdminLibraryPage() {
       fetchData();
       loadStatusCounts();
     } catch {
-      toast('Kunde inte radera spår', 'error');
+      setDeleteError('Kunde inte radera spår');
     }
   };
 
   const handleReject = async () => {
     if (!rejectModal) return;
+    setRejectError(null);
     try {
       await rejectTrack(
         rejectModal.id!,
@@ -257,7 +267,7 @@ export function AdminLibraryPage() {
       fetchData();
       loadStatusCounts();
     } catch {
-      toast('Kunde inte avvisa spår', 'error');
+      setRejectError('Kunde inte avvisa spår');
     }
   };
 
@@ -278,6 +288,7 @@ export function AdminLibraryPage() {
     action: (id: string) => Promise<unknown>,
   ) => {
     const ids = Array.from(selectedIds);
+    setBulkError(null);
     setBulkOp({ label, done: 0, total: ids.length });
     let failed = 0;
     for (let i = 0; i < ids.length; i++) {
@@ -289,12 +300,12 @@ export function AdminLibraryPage() {
       setBulkOp({ label, done: i + 1, total: ids.length });
     }
     setBulkOp(null);
-    setSelectedIds(new Set());
     fetchData();
     loadStatusCounts();
     if (failed > 0) {
-      toast(`${label}: ${failed} av ${ids.length} misslyckades`, 'error');
+      setBulkError(`${label}: ${failed} av ${ids.length} misslyckades`);
     } else {
+      setSelectedIds(new Set());
       toast(`${label}: ${ids.length} klara`);
     }
   };
@@ -335,8 +346,8 @@ export function AdminLibraryPage() {
       items.push({ label: 'Ta bort flagga', onClick: () => handleUnflag(track) });
     }
     items.push(
-      { label: 'Radera & blockera', onClick: () => setRejectModal(track), variant: 'danger' },
-      { label: 'Radera', onClick: () => setDeleteModal(track), variant: 'danger' },
+      { label: 'Radera & blockera', onClick: () => { setRejectModal(track); setRejectError(null); }, variant: 'danger' },
+      { label: 'Radera', onClick: () => { setDeleteModal(track); setDeleteError(null); }, variant: 'danger' },
     );
     return items;
   };
@@ -417,7 +428,7 @@ export function AdminLibraryPage() {
           type="button"
           onClick={(e) => { e.stopPropagation(); openStyleEdit(t); }}
           className="text-left group cursor-pointer"
-          title="Klicka for att redigera"
+          title="Klicka för att redigera"
         >
           <span className="text-xs text-[rgb(var(--color-text))] group-hover:underline">
             {t.danceStyle ?? '-'}
@@ -573,6 +584,7 @@ export function AdminLibraryPage() {
               Radera
             </Button>
           </div>
+          {bulkError && <InlineError>{bulkError}</InlineError>}
           <button
             onClick={() => setSelectedIds(new Set())}
             className="ml-auto text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
@@ -592,18 +604,22 @@ export function AdminLibraryPage() {
         </div>
       )}
 
-      <DataTable
-        columns={columns}
-        data={tracks}
-        keyFn={(t) => t.id!}
-        loading={loading}
-        emptyMessage="Inga spår hittades. Prova att ändra filter."
-        selectable
-        selectedKeys={selectedIds}
-        onSelectionChange={setSelectedIds}
-        sort={sort}
-        onSortChange={handleSortChange}
-      />
+      {loadError && <LoadError message={loadError} onRetry={fetchData} />}
+
+      {!loadError && (
+        <DataTable
+          columns={columns}
+          data={tracks}
+          keyFn={(t) => t.id!}
+          loading={loading}
+          emptyMessage="Inga spår hittades. Prova att ändra filter."
+          selectable
+          selectedKeys={selectedIds}
+          onSelectionChange={setSelectedIds}
+          sort={sort}
+          onSortChange={handleSortChange}
+        />
+      )}
 
       {total > 0 && (
         <Pagination
@@ -617,15 +633,16 @@ export function AdminLibraryPage() {
       {/* Delete confirmation modal */}
       <Modal
         open={!!deleteModal}
-        onClose={() => setDeleteModal(null)}
+        onClose={() => { setDeleteModal(null); setDeleteError(null); }}
         title="Radera spår"
       >
         <p className="text-sm text-[rgb(var(--color-text))]">
           Vill du verkligen radera{' '}
           <strong>{deleteModal?.title}</strong>? Denna åtgärd kan inte ångras.
         </p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setDeleteModal(null)}>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {deleteError && <InlineError>{deleteError}</InlineError>}
+          <Button variant="ghost" onClick={() => { setDeleteModal(null); setDeleteError(null); }}>
             Avbryt
           </Button>
           <Button
@@ -641,7 +658,7 @@ export function AdminLibraryPage() {
       {/* Reject confirmation modal */}
       <Modal
         open={!!rejectModal}
-        onClose={() => { setRejectModal(null); setRejectReason(''); }}
+        onClose={() => { setRejectModal(null); setRejectReason(''); setRejectError(null); }}
         title="Radera & blockera spår"
       >
         <p className="text-sm text-[rgb(var(--color-text))]">
@@ -651,11 +668,12 @@ export function AdminLibraryPage() {
           <TextInput
             placeholder="Orsak (valfritt)"
             value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
+            onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
           />
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {rejectError && <InlineError>{rejectError}</InlineError>}
+          <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); setRejectError(null); }}>
             Avbryt
           </Button>
           <Button
@@ -724,7 +742,7 @@ export function AdminLibraryPage() {
       {/* Style edit modal */}
       <Modal
         open={!!styleEditTrack}
-        onClose={() => setStyleEditTrack(null)}
+        onClose={() => { setStyleEditTrack(null); setStyleEditError(null); }}
         title="Redigera dansstil"
       >
         <p className="text-sm text-[rgb(var(--color-text))] mb-4">
@@ -762,7 +780,7 @@ export function AdminLibraryPage() {
                 value={styleEditSub}
                 onChange={(e) => setStyleEditSub(e.target.value)}
               >
-                <option value="">Ingen / Allman {styleEditMain}</option>
+                <option value="">Ingen / Allmän {styleEditMain}</option>
                 {styleTree[styleEditMain]?.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -786,8 +804,9 @@ export function AdminLibraryPage() {
             </Select>
           </div>
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setStyleEditTrack(null)}>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {styleEditError && <InlineError>{styleEditError}</InlineError>}
+          <Button variant="ghost" onClick={() => { setStyleEditTrack(null); setStyleEditError(null); }}>
             Avbryt
           </Button>
           <Button
