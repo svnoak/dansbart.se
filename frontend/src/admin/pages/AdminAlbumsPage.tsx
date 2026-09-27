@@ -10,7 +10,7 @@ import { FilterBar } from '@/admin/components/FilterBar';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button } from '@/ui';
+import { Button, InlineError, LoadError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface AlbumRow {
@@ -35,8 +35,10 @@ export function AdminAlbumsPage() {
 
   const [data, setData] = useState<AlbumPageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<AlbumRow | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -54,8 +56,9 @@ export function AdminAlbumsPage() {
         items: Array.isArray(r?.items) ? r.items : [],
         total: r?.total ?? 0,
       });
+      setLoadError(null);
     } catch {
-      toast('Kunde inte hämta album', 'error');
+      setLoadError('Kunde inte hämta album');
     } finally {
       setLoading(false);
     }
@@ -75,6 +78,7 @@ export function AdminAlbumsPage() {
 
   const handleReject = async () => {
     if (!rejectModal) return;
+    setRejectError(null);
     try {
       await rejectAlbum(
         rejectModal.id,
@@ -85,7 +89,7 @@ export function AdminAlbumsPage() {
       setRejectReason('');
       fetchData();
     } catch {
-      toast('Kunde inte avvisa album', 'error');
+      setRejectError('Kunde inte avvisa album');
     }
   };
 
@@ -124,7 +128,7 @@ export function AdminAlbumsPage() {
       render: (a) => (
         <button
           type="button"
-          onClick={() => setRejectModal(a)}
+          onClick={() => { setRejectModal(a); setRejectError(null); }}
           className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
         >
           Radera & blockera
@@ -148,6 +152,8 @@ export function AdminAlbumsPage() {
           />
         </div>
       </FilterBar>
+
+      {loadError && <LoadError message={loadError} onRetry={fetchData} />}
 
       <DataTable
         columns={columns}
@@ -178,10 +184,11 @@ export function AdminAlbumsPage() {
           <TextInput
             placeholder="Orsak (valfritt)"
             value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
+            onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
           />
         </div>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {rejectError && <InlineError>{rejectError}</InlineError>}
           <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
             Avbryt
           </Button>
