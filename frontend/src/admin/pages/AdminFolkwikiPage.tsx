@@ -5,7 +5,7 @@ import { Pagination } from '@/admin/components/Pagination';
 import { ConfidenceBadge } from '@/admin/components/ConfidenceBadge';
 import { Modal } from '@/admin/components/Modal';
 import { toast } from '@/admin/components/toastEmitter';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import { PlayIcon, PauseIcon } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
@@ -57,11 +57,8 @@ export function AdminFolkwikiPage() {
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState<StatusCounts | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [importing, setImporting] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const listRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const player = usePlayer();
@@ -77,7 +74,6 @@ export function AdminFolkwikiPage() {
   const [selectedMainStyle, setSelectedMainStyle] = useState('');
   const [newMainStyle, setNewMainStyle] = useState('');
   const [addingKeyword, setAddingKeyword] = useState(false);
-  const [styleModalError, setStyleModalError] = useState<string | null>(null);
 
   // Reject modal state (override style)
   const [rejectModal, setRejectModal] = useState<{
@@ -86,9 +82,6 @@ export function AdminFolkwikiPage() {
   } | null>(null);
   const [overrideStyle, setOverrideStyle] = useState('');
   const [rejecting, setRejecting] = useState(false);
-  const [rejectModalError, setRejectModalError] = useState<string | null>(null);
-
-  const matchKey = (m: FolkwikiMatch) => `${m.trackId}-${m.folkwikiTuneId}`;
 
   const handlePlay = (m: FolkwikiMatch) => {
     const asTrackList: TrackListDto = {
@@ -112,14 +105,13 @@ export function AdminFolkwikiPage() {
       const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
       if (status) query.set('status', status);
       const res = await apiFetch(`/api/admin/folkwiki/matches?${query}`);
-      if (!res.ok) throw new Error('Kunde inte hämta matchningar');
+      if (!res.ok) throw new Error('Kunde inte hamta matchningar');
       const data = await res.json();
       setMatches(data.items);
       setTotal(data.total);
       setActiveIndex(0);
-      setLoadError(null);
     } catch {
-      setLoadError('Kunde inte hämta folkwiki-matchningar');
+      toast('Kunde inte hamta folkwiki-matchningar', 'error');
     } finally {
       setLoading(false);
     }
@@ -137,7 +129,6 @@ export function AdminFolkwikiPage() {
 
   const handleImport = async (file: File) => {
     setImporting(true);
-    setImportError(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -157,7 +148,7 @@ export function AdminFolkwikiPage() {
       fetchMatches();
       fetchCounts();
     } catch (e) {
-      setImportError(e instanceof Error ? e.message : 'Import misslyckades');
+      toast(e instanceof Error ? e.message : 'Import misslyckades', 'error');
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -188,11 +179,6 @@ export function AdminFolkwikiPage() {
     action: 'confirm' | 'reject',
     force = false,
   ) => {
-    setRowErrors((prev) => {
-      const next = { ...prev };
-      delete next[matchKey(match)];
-      return next;
-    });
     try {
       const query = force ? '?force=true' : '';
       const res = await apiFetch(
@@ -213,7 +199,6 @@ export function AdminFolkwikiPage() {
         setCorrectedStyle(data.folkwikiStyle);
         setSelectedMainStyle('');
         setNewMainStyle('');
-        setStyleModalError(null);
         return;
       }
 
@@ -225,17 +210,13 @@ export function AdminFolkwikiPage() {
         toast(`Avvisad: ${match.trackTitle}`, 'success');
       }
     } catch (e) {
-      setRowErrors((prev) => ({
-        ...prev,
-        [matchKey(match)]: e instanceof Error ? e.message : 'Misslyckades',
-      }));
+      toast(e instanceof Error ? e.message : 'Misslyckades', 'error');
     }
   };
 
   const handleAddKeywordAndConfirm = async (mainStyle: string, subStyle: string | null) => {
     if (!styleModal) return;
     setAddingKeyword(true);
-    setStyleModalError(null);
     try {
       // Create the keyword
       const kwRes = await apiFetch('/api/admin/style-keywords', {
@@ -257,7 +238,7 @@ export function AdminFolkwikiPage() {
       setStyleModal(null);
       await handleAction(match, 'confirm', true);
     } catch (e) {
-      setStyleModalError(e instanceof Error ? e.message : 'Misslyckades');
+      toast(e instanceof Error ? e.message : 'Misslyckades', 'error');
     } finally {
       setAddingKeyword(false);
     }
@@ -266,7 +247,6 @@ export function AdminFolkwikiPage() {
   const handleCorrectStyleAndConfirm = async () => {
     if (!styleModal || !correctedStyle.trim()) return;
     setAddingKeyword(true);
-    setStyleModalError(null);
     try {
       const res = await apiFetch(`/api/admin/folkwiki/tunes/${styleModal.match.folkwikiTuneId}/style`, {
         method: 'PUT',
@@ -281,25 +261,19 @@ export function AdminFolkwikiPage() {
       setStyleModal(null);
       await handleAction(match, 'confirm', false);
     } catch (e) {
-      setStyleModalError(e instanceof Error ? e.message : 'Misslyckades');
+      toast(e instanceof Error ? e.message : 'Misslyckades', 'error');
     } finally {
       setAddingKeyword(false);
     }
   };
 
   const openRejectModal = async (match: FolkwikiMatch) => {
-    setRowErrors((prev) => {
-      const next = { ...prev };
-      delete next[matchKey(match)];
-      return next;
-    });
     try {
       const tree = await getStyleTree();
       setRejectModal({ match, styleTree: tree });
       setOverrideStyle('');
-      setRejectModalError(null);
     } catch {
-      setRowErrors((prev) => ({ ...prev, [matchKey(match)]: 'Kunde inte hämta stilar' }));
+      toast('Kunde inte hamta stilar', 'error');
     }
   };
 
@@ -311,7 +285,6 @@ export function AdminFolkwikiPage() {
   const handleRejectWithOverride = async () => {
     if (!rejectModal || !overrideStyle) return;
     setRejecting(true);
-    setRejectModalError(null);
     try {
       const query = `?overrideStyle=${encodeURIComponent(overrideStyle)}`;
       const res = await apiFetch(
@@ -328,7 +301,7 @@ export function AdminFolkwikiPage() {
       removeMatch(match);
       toast(`Avvisad: ${match.trackTitle} -> ${data.appliedStyle ?? overrideStyle}`, 'success');
     } catch (e) {
-      setRejectModalError(e instanceof Error ? e.message : 'Misslyckades');
+      toast(e instanceof Error ? e.message : 'Misslyckades', 'error');
     } finally {
       setRejecting(false);
     }
@@ -409,7 +382,6 @@ export function AdminFolkwikiPage() {
           >
             {importing ? 'Importerar...' : 'Importera JSON'}
           </Button>
-          {importError && <InlineError>{importError}</InlineError>}
         </div>
       </div>
 
@@ -446,9 +418,7 @@ export function AdminFolkwikiPage() {
       </div>
 
       {/* Match list */}
-      {loadError && <LoadError message={loadError} onRetry={fetchMatches} />}
-
-      {!loadError && (loading ? (
+      {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="h-16 animate-pulse rounded-lg bg-[rgb(var(--color-bg-elevated))]" />
@@ -559,14 +529,11 @@ export function AdminFolkwikiPage() {
                     {m.matchStatus === 'confirmed' ? 'Bekraftad' : 'Avvisad'}
                   </span>
                 )}
-                {rowErrors[matchKey(m)] && (
-                  <InlineError>{rowErrors[matchKey(m)]}</InlineError>
-                )}
               </div>
             );
           })}
         </div>
-      ))}
+      )}
 
       {total > limit && (
         <Pagination
@@ -580,7 +547,7 @@ export function AdminFolkwikiPage() {
       {/* Style resolution modal */}
       <Modal
         open={styleModal !== null}
-        onClose={() => { setStyleModal(null); setStyleModalError(null); }}
+        onClose={() => setStyleModal(null)}
         title="Okand stil"
       >
         {styleModal && (
@@ -601,7 +568,7 @@ export function AdminFolkwikiPage() {
               ).map((tab) => (
                 <button
                   key={tab.value}
-                  onClick={() => { setStyleModalMode(tab.value); setStyleModalError(null); }}
+                  onClick={() => setStyleModalMode(tab.value)}
                   className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                     styleModalMode === tab.value
                       ? 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] shadow-sm'
@@ -621,15 +588,14 @@ export function AdminFolkwikiPage() {
                 <input
                   type="text"
                   value={correctedStyle}
-                  onChange={(e) => { setCorrectedStyle(e.target.value); setStyleModalError(null); }}
+                  onChange={(e) => setCorrectedStyle(e.target.value)}
                   className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
                 />
                 <p className="text-xs text-[rgb(var(--color-text-muted))]">
                   Sparar <span className="font-medium">{correctedStyle || '...'}</span> direkt i folkwiki-tabellen och bekräftar sedan matchningen.
                 </p>
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  {styleModalError && <InlineError>{styleModalError}</InlineError>}
-                  <Button variant="ghost" size="sm" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setStyleModal(null)}>
                     Avbryt
                   </Button>
                   <Button
@@ -673,9 +639,8 @@ export function AdminFolkwikiPage() {
                     till som substil under <span className="font-medium">{selectedMainStyle}</span>
                   </p>
                 )}
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  {styleModalError && <InlineError>{styleModalError}</InlineError>}
-                  <Button variant="ghost" size="sm" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setStyleModal(null)}>
                     Avbryt
                   </Button>
                   <Button
@@ -696,7 +661,7 @@ export function AdminFolkwikiPage() {
                 <input
                   type="text"
                   value={newMainStyle}
-                  onChange={(e) => { setNewMainStyle(e.target.value); setStyleModalError(null); }}
+                  onChange={(e) => setNewMainStyle(e.target.value)}
                   placeholder={styleModal.folkwikiStyle}
                   className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
                 />
@@ -704,9 +669,8 @@ export function AdminFolkwikiPage() {
                   Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> laggs
                   till som ny huvudstil <span className="font-medium">{newMainStyle || styleModal.folkwikiStyle}</span>
                 </p>
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  {styleModalError && <InlineError>{styleModalError}</InlineError>}
-                  <Button variant="ghost" size="sm" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setStyleModal(null)}>
                     Avbryt
                   </Button>
                   <Button
@@ -730,7 +694,7 @@ export function AdminFolkwikiPage() {
       {/* Reject modal */}
       <Modal
         open={rejectModal !== null}
-        onClose={() => { setRejectModal(null); setRejectModalError(null); }}
+        onClose={() => setRejectModal(null)}
         title="Avvisa matchning"
       >
         {rejectModal && (
@@ -758,7 +722,7 @@ export function AdminFolkwikiPage() {
               <span className="block text-sm font-medium">Det ar en annan stil:</span>
               <select
                 value={overrideStyle}
-                onChange={(e) => { setOverrideStyle(e.target.value); setRejectModalError(null); }}
+                onChange={(e) => setOverrideStyle(e.target.value)}
                 className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
               >
                 <option value="">Valj stil...</option>
@@ -773,9 +737,8 @@ export function AdminFolkwikiPage() {
                   </optgroup>
                 ))}
               </select>
-              <div className="flex items-center justify-end gap-2 pt-1">
-                {rejectModalError && <InlineError>{rejectModalError}</InlineError>}
-                <Button variant="ghost" size="sm" onClick={() => { setRejectModal(null); setRejectModalError(null); }}>
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="ghost" size="sm" onClick={() => setRejectModal(null)}>
                   Avbryt
                 </Button>
                 <Button
