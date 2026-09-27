@@ -6,7 +6,7 @@ import {
   ingestSpotifyTrack,
 } from '@/api/generated/spotify-ingest/spotify-ingest';
 import { ingest } from '@/api/generated/admin-maintenance/admin-maintenance';
-import { Button, InlineError } from '@/ui';
+import { Button } from '@/ui';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { toast } from '@/admin/components/toastEmitter';
 
@@ -52,9 +52,6 @@ export function AdminIngestPage() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [history, setHistory] = useState<IngestHistoryItem[]>([]);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [ingestError, setIngestError] = useState<string | null>(null);
-  const [albumErrors, setAlbumErrors] = useState<Record<string, string>>({});
 
   const addHistory = (url: string, type: string, status: 'success' | 'error') => {
     setHistory((prev) => [
@@ -65,9 +62,8 @@ export function AdminIngestPage() {
 
   const handlePreview = async () => {
     const parsed = parseSpotifyUrl(url);
-    setPreviewError(null);
     if (!parsed.id) {
-      setPreviewError('Ogiltig Spotify-URL');
+      toast('Ogiltig Spotify-URL', 'error');
       return;
     }
 
@@ -103,10 +99,10 @@ export function AdminIngestPage() {
         // Playlists go through general ingest, no preview
         setPreview([{ name: 'Spellista', id: parsed.id }]);
       } else {
-        setPreviewError('Kunde inte identifiera resurstyp. Ange fullständig URL.');
+        toast('Kunde inte identifiera resurstyp. Ange fullständig URL.', 'error');
       }
     } catch {
-      setPreviewError('Kunde inte hämta förhandsgranskning');
+      toast('Kunde inte hämta förhandsgranskning', 'error');
     } finally {
       setLoadingPreview(false);
     }
@@ -115,7 +111,6 @@ export function AdminIngestPage() {
   const handleIngest = async () => {
     if (!previewId) return;
     setIngesting(true);
-    setIngestError(null);
 
     try {
       if (previewType === 'track') {
@@ -132,7 +127,7 @@ export function AdminIngestPage() {
       setPreview([]);
       setUrl('');
     } catch {
-      setIngestError('Import misslyckades');
+      toast('Import misslyckades', 'error');
       addHistory(url, previewType ?? 'unknown', 'error');
     } finally {
       setIngesting(false);
@@ -141,17 +136,12 @@ export function AdminIngestPage() {
 
   const handleIngestSingleAlbum = async (albumId: string) => {
     setIngesting(true);
-    setAlbumErrors((prev) => {
-      const next = { ...prev };
-      delete next[albumId];
-      return next;
-    });
     try {
       await ingestSpotifyAlbum({ spotifyAlbumId: albumId });
       toast('Album-import startad');
       addHistory(`album:${albumId}`, 'album', 'success');
     } catch {
-      setAlbumErrors((prev) => ({ ...prev, [albumId]: 'Album-import misslyckades' }));
+      toast('Album-import misslyckades', 'error');
       addHistory(`album:${albumId}`, 'album', 'error');
     } finally {
       setIngesting(false);
@@ -177,11 +167,7 @@ export function AdminIngestPage() {
           <div className="flex-1">
             <TextInput
               value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                setPreviewError(null);
-                setIngestError(null);
-              }}
+              onChange={(e) => setUrl(e.target.value)}
               placeholder="https://open.spotify.com/artist/... eller spotify:album:..."
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handlePreview();
@@ -197,12 +183,6 @@ export function AdminIngestPage() {
           </Button>
         </div>
 
-        {previewError && (
-          <div className="mt-2">
-            <InlineError>{previewError}</InlineError>
-          </div>
-        )}
-
         {previewType && (
           <p className="mt-2 text-xs text-[rgb(var(--color-text-muted))]">
             Typ: {typeLabel[previewType] ?? previewType} | ID: {previewId}
@@ -217,7 +197,6 @@ export function AdminIngestPage() {
             <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
               Förhandsgranskning ({preview.length} objekt)
             </h2>
-            {ingestError && <InlineError>{ingestError}</InlineError>}
             {(previewType === 'track' || previewType === 'album' || previewType === 'playlist') && (
               <Button
                 variant="primary"
@@ -251,17 +230,14 @@ export function AdminIngestPage() {
                   )}
                 </div>
                 {previewType === 'artist' && item.id && (
-                  <div className="flex flex-col items-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleIngestSingleAlbum(item.id)}
-                      disabled={ingesting}
-                    >
-                      Importera album
-                    </Button>
-                    {albumErrors[item.id] && <InlineError>{albumErrors[item.id]}</InlineError>}
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleIngestSingleAlbum(item.id)}
+                    disabled={ingesting}
+                  >
+                    Importera album
+                  </Button>
                 )}
               </div>
             ))}
