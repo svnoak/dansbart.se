@@ -253,20 +253,12 @@ export function PlaylistsPage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
                             {pl.name}
-                            {pl.ownerGroup && (
-                            <span className="px-1 text-sm text-[rgb(var(--color-text-muted))]">
-                              av{' '}
-                              <Link
-                                to={`/groups/${pl.ownerGroup.id}`}
-                                className="text-[rgb(var(--color-accent))] hover:underline"
-                              >
-                                {pl.ownerGroup.name}
-                              </Link>
+                            <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">
+                              &middot; {pl.ownerGroup ? pl.ownerGroup.name : 'Du'}
                             </span>
-                          )}
-                            </p>
+                          </p>
                           {pl.description && (
-                            <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
+                            <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
                           )}
                           {(styleColor || tempoLabel) && (
                             <div className="mt-1 flex flex-wrap gap-1">

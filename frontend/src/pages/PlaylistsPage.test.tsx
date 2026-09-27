@@ -223,12 +223,16 @@ describe('PlaylistsPage playlist cards', () => {
 
     expect(document.body.textContent).not.toContain('Ägs av gruppen');
 
-    const groupLink = document.body.querySelector('a[href="/groups/g1"]');
-    expect(groupLink).toBeTruthy();
-    expect(groupLink?.textContent).toContain('Testgruppen');
+    const nameElement = Array.from(document.body.querySelectorAll('p')).find(
+      (p) => p.textContent?.includes('Grupp spellista'),
+    );
+    expect(nameElement).toBeTruthy();
+    expect(nameElement?.textContent).toContain('Testgruppen');
 
-    const nameElement = groupLink?.closest('p');
-    expect(nameElement?.textContent).toContain('Grupp spellista');
+    const nestedAnchors = Array.from(document.body.querySelectorAll('a')).filter((a) =>
+      a.querySelector('a'),
+    );
+    expect(nestedAnchors.length).toBe(0);
   });
 
   it('shows Du for a playlist the user owns', async () => {
