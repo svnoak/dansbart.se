@@ -224,3 +224,5 @@ __marimo__/
 # personal Claude Code settings
 .claude/settings.local.json
 CLAUDE.local.md
+
+node_modules/
