@@ -73,6 +73,7 @@ public class PlaylistService {
                     .tempoCategory(playlist.getTempoCategory())
                     .trackCount(record.trackCount())
                     .ownerGroup(ownerGroup)
+                    .ownerDisplayName(record.ownerDisplayName())
                     .build();
             })
             .collect(Collectors.toList());

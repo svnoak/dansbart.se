@@ -20,4 +20,5 @@ public class PlaylistListItemDto {
     private String tempoCategory;
     private Integer trackCount;
     private GroupSummaryDto ownerGroup;
+    private String ownerDisplayName;
 }

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.jooq.impl.DSL.coalesce;
 import static org.jooq.impl.DSL.count;
 import static org.jooq.impl.DSL.field;
 import static se.dansbart.jooq.Tables.GROUP_MEMBERS;
@@ -23,6 +24,7 @@ import static se.dansbart.jooq.Tables.GROUPS;
 import static se.dansbart.jooq.Tables.PLAYLIST_COLLABORATORS;
 import static se.dansbart.jooq.Tables.PLAYLIST_TRACKS;
 import static se.dansbart.jooq.Tables.PLAYLISTS;
+import static se.dansbart.jooq.Tables.USERS;
 
 @Repository
 public class PlaylistJooqRepository {
@@ -44,14 +46,22 @@ public class PlaylistJooqRepository {
     public List<PlaylistWithGroupName> findOwnedAndGroupPlaylistsByUserId(UUID userId) {
         var acceptedGroups = acceptedGroupsSubquery(userId);
         return dsl.select(PLAYLISTS.fields())
-            .select(trackCountField(), GROUPS.NAME.as("group_name"))
+            .select(trackCountField(), GROUPS.NAME.as("group_name"), ownerDisplayNameField(userId))
             .from(PLAYLISTS)
             .leftJoin(GROUPS).on(PLAYLISTS.GROUP_ID.eq(GROUPS.ID))
+            .leftJoin(USERS).on(PLAYLISTS.USER_ID.eq(USERS.ID))
             .where(PLAYLISTS.USER_ID.eq(userId))
             .or(PLAYLISTS.GROUP_ID.in(acceptedGroups))
             .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, null)))
+            .or(PLAYLISTS.ID.in(acceptedIndividualPlaylistsSubquery(userId)))
             .orderBy(PLAYLISTS.NAME.asc())
-            .fetch(r -> new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class)));
+            .fetch(r -> new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class), r.get("owner_display_name", String.class)));
+    }
+
+    private Field<String> ownerDisplayNameField(UUID viewerId) {
+        return DSL.when(PLAYLISTS.USER_ID.eq(viewerId), (String) null)
+            .otherwise(coalesce(USERS.DISPLAY_NAME, USERS.USERNAME))
+            .as("owner_display_name");
     }
 
     public List<PlaylistWithTrackCount> findByGroupIdWithTrackCount(UUID groupId, boolean includePrivate) {
@@ -80,9 +90,7 @@ public class PlaylistJooqRepository {
 
     public List<Playlist> findSharedWithUser(UUID userId) {
         return dsl.selectFrom(PLAYLISTS)
-            .where(PLAYLISTS.ID.in(
-                dsl.select(PLAYLIST_COLLABORATORS.PLAYLIST_ID).from(PLAYLIST_COLLABORATORS).where(PLAYLIST_COLLABORATORS.USER_ID.eq(userId))
-            ))
+            .where(PLAYLISTS.ID.in(acceptedIndividualPlaylistsSubquery(userId)))
             .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, null)))
             .orderBy(PLAYLISTS.NAME.asc())
             .fetch(this::toPlaylist);
@@ -108,6 +116,13 @@ public class PlaylistJooqRepository {
             .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, "edit")))
             .orderBy(PLAYLISTS.NAME.asc())
             .fetch(r -> new EditablePlaylistRecord(r.get(PLAYLISTS.ID), r.get(PLAYLISTS.NAME), r.get("group_name", String.class)));
+    }
+
+    private SelectConditionStep<Record1<UUID>> acceptedIndividualPlaylistsSubquery(UUID userId) {
+        return dsl.select(PLAYLIST_COLLABORATORS.PLAYLIST_ID)
+            .from(PLAYLIST_COLLABORATORS)
+            .where(PLAYLIST_COLLABORATORS.USER_ID.eq(userId))
+            .and(PLAYLIST_COLLABORATORS.STATUS.eq("accepted"));
     }
 
     private SelectConditionStep<Record1<UUID>> acceptedGroupsSubquery(UUID userId) {
@@ -231,7 +246,7 @@ public class PlaylistJooqRepository {
 
     public record PlaylistWithTrackCount(Playlist playlist, int trackCount) {}
 
-    public record PlaylistWithGroupName(Playlist playlist, int trackCount, String groupName) {}
+    public record PlaylistWithGroupName(Playlist playlist, int trackCount, String groupName, String ownerDisplayName) {}
 
     public record EditablePlaylistRecord(UUID id, String name, String groupName) {}
 }
