@@ -1,6 +1,8 @@
 package se.dansbart.domain.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import se.dansbart.domain.group.Group;
 import se.dansbart.domain.playlist.Playlist;
 
 import java.time.OffsetDateTime;
@@ -30,4 +32,7 @@ public class PlaylistCollaborator {
 
     private Playlist playlist;
     private User user;
+
+    @JsonIgnore
+    private Group group;
 }

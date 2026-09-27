@@ -7212,6 +7212,7 @@
         "type": "object",
         "properties": {
           "username": { "type": "string" },
+          "groupName": { "type": "string" },
           "permission": { "type": "string" }
         }
       },
@@ -7237,6 +7238,8 @@
           "userId": { "type": "string", "format": "uuid" },
           "username": { "type": "string" },
           "displayName": { "type": "string" },
+          "groupId": { "type": "string", "format": "uuid" },
+          "groupName": { "type": "string" },
           "permission": { "type": "string" },
           "status": { "type": "string" },
           "invitedAt": { "type": "string", "format": "date-time" },

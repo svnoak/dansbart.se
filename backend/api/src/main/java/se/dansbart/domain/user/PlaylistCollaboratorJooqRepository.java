@@ -3,12 +3,14 @@ package se.dansbart.domain.user;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
+import se.dansbart.domain.group.Group;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static se.dansbart.jooq.Tables.GROUPS;
 import static se.dansbart.jooq.Tables.PLAYLISTS;
 import static se.dansbart.jooq.Tables.PLAYLIST_COLLABORATORS;
 import static se.dansbart.jooq.Tables.USERS;
@@ -56,6 +58,7 @@ public class PlaylistCollaboratorJooqRepository {
         return dsl.select()
             .from(PLAYLIST_COLLABORATORS)
             .leftJoin(USERS).on(USERS.ID.eq(PLAYLIST_COLLABORATORS.USER_ID))
+            .leftJoin(GROUPS).on(GROUPS.ID.eq(PLAYLIST_COLLABORATORS.GROUP_ID))
             .where(PLAYLIST_COLLABORATORS.PLAYLIST_ID.eq(playlistId))
             .fetch(this::toCollaboratorWithUser);
     }
@@ -167,6 +170,14 @@ public class PlaylistCollaboratorJooqRepository {
             user.setDisplayName(r.get(USERS.DISPLAY_NAME));
             user.setAvatarUrl(r.get(USERS.AVATAR_URL));
             collab.setUser(user);
+        }
+        String groupName = r.get(GROUPS.NAME);
+        if (groupName != null) {
+            Group group = Group.builder()
+                .id(r.get(GROUPS.ID))
+                .name(groupName)
+                .build();
+            collab.setGroup(group);
         }
         return collab;
     }

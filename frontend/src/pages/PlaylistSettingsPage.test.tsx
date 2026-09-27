@@ -139,6 +139,31 @@ describe('PlaylistSettingsPage', () => {
     expect(document.body.textContent).toContain('Överlåt ägarskap');
   });
 
+  it('shows a group collaborator by its group name', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: undefined,
+      isPublic: false,
+      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+      ownerGroup: undefined,
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [
+        { id: 'c1', groupId: 'g1', groupName: 'Barngruppen', permission: 'edit', status: 'accepted' },
+      ],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Barngruppen');
+  });
+
   it('an editor can save a new description', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({
