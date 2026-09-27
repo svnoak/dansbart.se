@@ -19,9 +19,11 @@ vi.mock('@/ui', async () => {
   };
 });
 
+const { playMock } = vi.hoisted(() => ({ playMock: vi.fn() }));
+
 vi.mock('@/player/usePlayer', () => ({
   usePlayer: () => ({
-    play: vi.fn(),
+    play: playMock,
     addToQueue: vi.fn(),
     currentTrack: null,
     isPlaying: false,
@@ -41,6 +43,22 @@ vi.mock('@/favorites/useFavorites', () => ({
     toggleFavorite: vi.fn(),
   }),
 }));
+
+function firePointerEvent(
+  target: EventTarget,
+  type: string,
+  options: { pointerType: string; clientX?: number; clientY?: number },
+) {
+  const { pointerType, clientX = 0, clientY = 0 } = options;
+  let event: Event;
+  if (typeof PointerEvent === 'function') {
+    event = new PointerEvent(type, { bubbles: true, cancelable: true, clientX, clientY, pointerType });
+  } else {
+    event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX, clientY });
+    Object.defineProperty(event, 'pointerType', { value: pointerType });
+  }
+  target.dispatchEvent(event);
+}
 
 const track: TrackListDto = {
   id: 'track-1',
@@ -211,5 +229,112 @@ describe('TrackRow heart replacement', () => {
       },
     );
     expect(heartButton).toBeTruthy();
+  });
+});
+
+describe('TrackRow long press', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+    root.unmount();
+    container.remove();
+    vi.clearAllMocks();
+  });
+
+  it('opens the track options after a touch long press', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={track} />
+        </ThemeProvider>,
+      );
+    });
+
+    // The row's outer element has no dedicated selector, so this uses the root DOM node TrackRow renders.
+    const row = container.firstElementChild as HTMLElement;
+
+    act(() => {
+      firePointerEvent(row, 'pointerdown', { pointerType: 'touch' });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    act(() => {
+      firePointerEvent(row, 'pointerup', { pointerType: 'touch' });
+    });
+
+    const dialog = document.querySelector('[role="dialog"][aria-label="Test Track"]');
+    expect(dialog).toBeTruthy();
+  });
+
+  it('does not open the options for a mouse press', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={track} />
+        </ThemeProvider>,
+      );
+    });
+
+    const row = container.firstElementChild as HTMLElement;
+
+    act(() => {
+      firePointerEvent(row, 'pointerdown', { pointerType: 'mouse' });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    act(() => {
+      firePointerEvent(row, 'pointerup', { pointerType: 'mouse' });
+    });
+
+    const dialog = document.querySelector('[role="dialog"][aria-label="Test Track"]');
+    expect(dialog).toBeFalsy();
+  });
+
+  it('a long press does not start playback', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={track} />
+        </ThemeProvider>,
+      );
+    });
+
+    const row = container.firstElementChild as HTMLElement;
+
+    act(() => {
+      firePointerEvent(row, 'pointerdown', { pointerType: 'touch' });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    act(() => {
+      firePointerEvent(row, 'pointerup', { pointerType: 'touch' });
+    });
+
+    const playButton = row.querySelector<HTMLButtonElement>('button[aria-label="Spela"]');
+
+    act(() => {
+      playButton?.click();
+    });
+
+    expect(playMock).not.toHaveBeenCalled();
   });
 });

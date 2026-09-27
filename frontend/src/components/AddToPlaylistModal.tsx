@@ -4,7 +4,7 @@ import { getEditablePlaylists, addTrack, createPlaylist } from '@/api/generated/
 import type { EditablePlaylistDto } from '@/api/models/editablePlaylistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { CloseIcon, PlaylistIcon, PlusIcon } from '@/icons';
-import { toast } from '@/ui';
+import { InlineError, toast } from '@/ui';
 
 interface AddToPlaylistModalProps {
   open: boolean;
@@ -19,12 +19,16 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
   const [showNewForm, setShowNewForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setShowNewForm(false);
     setNewName('');
+    setAddError(null);
+    setCreateError(null);
     getEditablePlaylists()
       .then(setPlaylists)
       .catch(() => setPlaylists([]))
@@ -43,12 +47,13 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
   async function handleAdd(playlistId: string) {
     if (!track.id) return;
     setAdding(playlistId);
+    setAddError(null);
     try {
       await addTrack(playlistId, { trackId: track.id });
       toast('Låt tillagd i spellista');
       onClose();
     } catch {
-      toast('Kunde inte lägga till låt', 'error');
+      setAddError('Kunde inte lägga till låt');
     } finally {
       setAdding(null);
     }
@@ -58,6 +63,7 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
     e.preventDefault();
     if (!newName.trim() || !track.id) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const created = await createPlaylist({ name: newName.trim() });
       if (created.id) {
@@ -66,7 +72,7 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
       toast('Spellista skapad och låt tillagd');
       onClose();
     } catch {
-      toast('Kunde inte skapa spellista', 'error');
+      setCreateError('Kunde inte skapa spellista');
     } finally {
       setCreating(false);
     }
@@ -136,6 +142,7 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
                 </li>
               )}
             </ul>
+            <InlineError>{addError}</InlineError>
 
             {!showNewForm && (
               <button
@@ -149,23 +156,29 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
             )}
 
             {showNewForm && (
-              <form onSubmit={handleCreate} className="flex gap-2">
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Namn på spellistan"
-                  autoFocus
-                  className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={creating || !newName.trim()}
-                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  Skapa
-                </button>
-              </form>
+              <>
+                <form onSubmit={handleCreate} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => {
+                      setNewName(e.target.value);
+                      setCreateError(null);
+                    }}
+                    placeholder="Namn på spellistan"
+                    autoFocus
+                    className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={creating || !newName.trim()}
+                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    Skapa
+                  </button>
+                </form>
+                <InlineError>{createError}</InlineError>
+              </>
             )}
           </>
         )}

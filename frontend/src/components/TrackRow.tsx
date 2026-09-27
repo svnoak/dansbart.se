@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
 import { useFavorites } from '@/favorites/useFavorites';
+import { useLongPress } from '@/hooks/useLongPress';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { formatDurationMs } from '@/utils/formatDuration';
 import type { TrackListDto } from '@/api/models/trackListDto';
@@ -10,6 +11,7 @@ import { FlagTrackModal } from './FlagTrackModal';
 import { LoginRequiredModal } from './LoginRequiredModal';
 import { PlayButton } from './TrackRow/PlayButton';
 import { StyleBadge } from './TrackRow/StyleBadge';
+import { TrackActionsModal } from './TrackRow/TrackActionsModal';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
 import { Button, IconButton, toast } from '@/ui';
 import { HeartIcon, HeartFilledIcon } from '@/icons';
@@ -51,8 +53,10 @@ export function TrackRow({
   const [flagModalOpen, setFlagModalOpen] = useState(false);
   const [addToPlaylistOpen, setAddToPlaylistOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
+  const longPress = useLongPress(() => setOptionsOpen(true));
   const favorited = track.id != null && isFavorited(track.id);
 
   const handleAddToPlaylist = async () => {
@@ -87,7 +91,10 @@ export function TrackRow({
 
   return (
     <>
-      <div className="flex items-center gap-3 px-2 py-2.5 border-b border-[rgb(var(--color-border))]/30">
+      <div
+        className="flex items-center gap-3 px-2 py-2.5 border-b border-[rgb(var(--color-border))]/30 select-none [-webkit-touch-callout:none]"
+        {...longPress}
+      >
         {/* Left: Play button (fixed, spans all lines) */}
         <PlayButton
           track={track}
@@ -174,6 +181,14 @@ export function TrackRow({
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
         message="Du behöver skapa ett konto eller logga in för att favoritmarkera en låt."
+      />
+      <TrackActionsModal
+        open={optionsOpen}
+        onClose={() => setOptionsOpen(false)}
+        track={track}
+        onAddToQueue={() => addToQueue(track)}
+        onFlag={() => setFlagModalOpen(true)}
+        onAddToPlaylist={isAuthenticated ? () => setAddToPlaylistOpen(true) : undefined}
       />
     </>
   );

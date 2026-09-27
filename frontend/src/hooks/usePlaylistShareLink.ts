@@ -8,6 +8,10 @@ export interface UsePlaylistShareLinkResult {
   createLink: () => Promise<void>;
   removeLink: () => Promise<void>;
   copyLink: () => void;
+  clearErrors: () => void;
+  createLinkError: string | null;
+  copyLinkError: string | null;
+  removeLinkError: string | null;
 }
 
 /** Owns the share token for a playlist and the actions that create, remove, and copy its link. */
@@ -22,35 +26,58 @@ export function usePlaylistShareLink(
     setShareToken(initialShareToken ?? null);
   }
 
+  const [createLinkError, setCreateLinkError] = useState<string | null>(null);
+  const [copyLinkError, setCopyLinkError] = useState<string | null>(null);
+  const [removeLinkError, setRemoveLinkError] = useState<string | null>(null);
+
   const createLink = useCallback(async () => {
     if (!playlistId) return;
+    setCreateLinkError(null);
     try {
       const updated = await generateShareToken(playlistId);
       setShareToken(updated.shareToken ?? null);
       toast('Delningslänk skapad');
     } catch {
-      toast('Kunde inte skapa delningslänk', 'error');
+      setCreateLinkError('Kunde inte skapa delningslänk');
     }
   }, [playlistId]);
 
   const removeLink = useCallback(async () => {
     if (!playlistId) return;
+    setRemoveLinkError(null);
     try {
       await invalidateShareToken(playlistId);
       setShareToken(null);
       toast('Delningslänk ogiltigförklarad');
     } catch {
-      toast('Kunde inte ogiltigförklara länk', 'error');
+      setRemoveLinkError('Kunde inte ogiltigförklara länk');
     }
   }, [playlistId]);
 
   const copyLink = useCallback(() => {
     if (!shareToken) return;
+    setCopyLinkError(null);
     const url = `${window.location.origin}/shared/${shareToken}`;
-    navigator.clipboard.writeText(url).then(() => toast('Länk kopierad')).catch(() => toast('Det gick inte att kopiera länken.', 'error'));
+    navigator.clipboard.writeText(url).then(() => toast('Länk kopierad')).catch(() => setCopyLinkError('Det gick inte att kopiera länken.'));
   }, [shareToken]);
+
+  const clearErrors = useCallback(() => {
+    setCreateLinkError(null);
+    setCopyLinkError(null);
+    setRemoveLinkError(null);
+  }, []);
 
   const shareUrl = shareToken ? `${window.location.origin}/shared/${shareToken}` : null;
 
-  return { shareToken, shareUrl, createLink, removeLink, copyLink };
+  return {
+    shareToken,
+    shareUrl,
+    createLink,
+    removeLink,
+    copyLink,
+    clearErrors,
+    createLinkError,
+    copyLinkError,
+    removeLinkError,
+  };
 }

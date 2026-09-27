@@ -11,7 +11,7 @@ import type { Column } from '@/admin/components/DataTable';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button } from '@/ui';
+import { Button, InlineError, LoadError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface PendingArtistRow {
@@ -38,11 +38,15 @@ export function AdminPendingPage() {
 
   const [artists, setArtists] = useState<PendingArtistRow[]>([]);
   const [artistsTotal, setArtistsTotal] = useState(0);
+  const [artistsLoadError, setArtistsLoadError] = useState<string | null>(null);
   const [albums, setAlbums] = useState<PendingAlbumRow[]>([]);
   const [albumsTotal, setAlbumsTotal] = useState(0);
+  const [albumsLoadError, setAlbumsLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [rejectModal, setRejectModal] = useState<PendingArtistRow | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState<string | null>(null);
 
   const fetchArtists = useCallback(async () => {
     setLoading(true);
@@ -53,8 +57,9 @@ export function AdminPendingPage() {
       const r = result as unknown as { items: PendingArtistRow[]; total: number };
       setArtists(Array.isArray(r?.items) ? r.items : []);
       setArtistsTotal(r?.total ?? 0);
+      setArtistsLoadError(null);
     } catch {
-      toast('Kunde inte hämta väntande artister', 'error');
+      setArtistsLoadError('Kunde inte hämta väntande artister');
     } finally {
       setLoading(false);
     }
@@ -69,8 +74,9 @@ export function AdminPendingPage() {
       const r = result as unknown as { items: PendingAlbumRow[]; total: number };
       setAlbums(Array.isArray(r?.items) ? r.items : []);
       setAlbumsTotal(r?.total ?? 0);
+      setAlbumsLoadError(null);
     } catch {
-      toast('Kunde inte hämta väntande album', 'error');
+      setAlbumsLoadError('Kunde inte hämta väntande album');
     } finally {
       setLoading(false);
     }
@@ -90,17 +96,23 @@ export function AdminPendingPage() {
   };
 
   const handleApprove = async (artist: PendingArtistRow) => {
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[artist.id];
+      return next;
+    });
     try {
       await approvePendingArtist(artist.id);
       toast(`${artist.name} godkänd, importerar diskografi`);
       fetchArtists();
     } catch {
-      toast('Kunde inte godkänna', 'error');
+      setRowErrors((prev) => ({ ...prev, [artist.id]: 'Kunde inte godkänna' }));
     }
   };
 
   const handleReject = async () => {
     if (!rejectModal) return;
+    setRejectError(null);
     try {
       await rejectPendingArtist(
         rejectModal.id,
@@ -111,7 +123,7 @@ export function AdminPendingPage() {
       setRejectReason('');
       fetchArtists();
     } catch {
-      toast('Kunde inte avvisa', 'error');
+      setRejectError('Kunde inte avvisa');
     }
   };
 
@@ -136,18 +148,21 @@ export function AdminPendingPage() {
       key: 'actions',
       header: '',
       render: (a) => (
-        <div className="flex items-center gap-2">
-          <Button variant="primary" size="sm" onClick={() => handleApprove(a)}>
-            Godkänn & importera
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-600 dark:text-red-400"
-            onClick={() => setRejectModal(a)}
-          >
-            Avvisa
-          </Button>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={() => handleApprove(a)}>
+              Godkänn & importera
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 dark:text-red-400"
+              onClick={() => { setRejectModal(a); setRejectError(null); }}
+            >
+              Avvisa
+            </Button>
+          </div>
+          {rowErrors[a.id] && <InlineError>{rowErrors[a.id]}</InlineError>}
         </div>
       ),
       className: 'w-48',
@@ -212,21 +227,31 @@ export function AdminPendingPage() {
       </div>
 
       {tab === 'artists' ? (
-        <DataTable
-          columns={artistColumns}
-          data={artists}
-          keyFn={(a) => a.id}
-          loading={loading}
-          emptyMessage="Inga väntande artister."
-        />
+        <>
+          {artistsLoadError && <LoadError message={artistsLoadError} onRetry={fetchArtists} />}
+          {!artistsLoadError && (
+            <DataTable
+              columns={artistColumns}
+              data={artists}
+              keyFn={(a) => a.id}
+              loading={loading}
+              emptyMessage="Inga väntande artister."
+            />
+          )}
+        </>
       ) : (
-        <DataTable
-          columns={albumColumns}
-          data={albums}
-          keyFn={(a) => a.id}
-          loading={loading}
-          emptyMessage="Inga väntande album."
-        />
+        <>
+          {albumsLoadError && <LoadError message={albumsLoadError} onRetry={fetchAlbums} />}
+          {!albumsLoadError && (
+            <DataTable
+              columns={albumColumns}
+              data={albums}
+              keyFn={(a) => a.id}
+              loading={loading}
+              emptyMessage="Inga väntande album."
+            />
+          )}
+        </>
       )}
 
       {total > 0 && (
@@ -250,10 +275,11 @@ export function AdminPendingPage() {
           <TextInput
             placeholder="Orsak (valfritt)"
             value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
+            onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
           />
         </div>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {rejectError && <InlineError>{rejectError}</InlineError>}
           <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
             Avbryt
           </Button>

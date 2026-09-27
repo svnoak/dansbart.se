@@ -13,7 +13,7 @@ import { Modal } from '@/admin/components/Modal';
 import { ActionMenu } from '@/admin/components/ActionMenu';
 import type { ActionItem } from '@/admin/components/ActionMenu';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button } from '@/ui';
+import { Button, InlineError, LoadError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface ArtistRow {
@@ -38,8 +38,11 @@ export function AdminArtistsPage() {
 
   const [data, setData] = useState<ArtistPageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [rejectModal, setRejectModal] = useState<ArtistRow | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -52,8 +55,9 @@ export function AdminArtistsPage() {
         items: Array.isArray(r?.items) ? r.items : [],
         total: r?.total ?? 0,
       });
+      setLoadError(null);
     } catch {
-      toast('Kunde inte hämta artister', 'error');
+      setLoadError('Kunde inte hämta artister');
     } finally {
       setLoading(false);
     }
@@ -72,17 +76,23 @@ export function AdminArtistsPage() {
   };
 
   const handleApprove = async (artist: ArtistRow) => {
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[artist.id];
+      return next;
+    });
     try {
       await approveArtist(artist.id);
       toast(`${artist.name} godkänd`);
       fetchData();
     } catch {
-      toast('Kunde inte godkänna artist', 'error');
+      setRowErrors((prev) => ({ ...prev, [artist.id]: 'Kunde inte godkänna artist' }));
     }
   };
 
   const handleReject = async () => {
     if (!rejectModal) return;
+    setRejectError(null);
     try {
       await rejectArtist(
         rejectModal.id,
@@ -93,13 +103,17 @@ export function AdminArtistsPage() {
       setRejectReason('');
       fetchData();
     } catch {
-      toast('Kunde inte avvisa artist', 'error');
+      setRejectError('Kunde inte avvisa artist');
     }
   };
 
   const actionsFor = (artist: ArtistRow): ActionItem[] => [
     { label: 'Godkänn & analysera', onClick: () => handleApprove(artist) },
-    { label: 'Radera & blockera', onClick: () => setRejectModal(artist), variant: 'danger' },
+    {
+      label: 'Radera & blockera',
+      onClick: () => { setRejectModal(artist); setRejectError(null); },
+      variant: 'danger',
+    },
   ];
 
   const columns: Column<ArtistRow>[] = [
@@ -138,7 +152,12 @@ export function AdminArtistsPage() {
     {
       key: 'actions',
       header: '',
-      render: (a) => <ActionMenu actions={actionsFor(a)} />,
+      render: (a) => (
+        <div className="flex flex-col items-end gap-1">
+          <ActionMenu actions={actionsFor(a)} />
+          {rowErrors[a.id] && <InlineError>{rowErrors[a.id]}</InlineError>}
+        </div>
+      ),
       className: 'w-10',
     },
   ];
@@ -158,13 +177,17 @@ export function AdminArtistsPage() {
         </div>
       </FilterBar>
 
-      <DataTable
-        columns={columns}
-        data={data?.items ?? []}
-        keyFn={(a) => a.id}
-        loading={loading}
-        emptyMessage="Inga artister hittades."
-      />
+      {loadError && <LoadError message={loadError} onRetry={fetchData} />}
+
+      {!loadError && (
+        <DataTable
+          columns={columns}
+          data={data?.items ?? []}
+          keyFn={(a) => a.id}
+          loading={loading}
+          emptyMessage="Inga artister hittades."
+        />
+      )}
 
       {(data?.total ?? 0) > 0 && (
         <Pagination
@@ -187,10 +210,11 @@ export function AdminArtistsPage() {
           <TextInput
             placeholder="Orsak (valfritt)"
             value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
+            onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
           />
         </div>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {rejectError && <InlineError>{rejectError}</InlineError>}
           <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
             Avbryt
           </Button>
