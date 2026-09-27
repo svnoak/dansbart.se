@@ -249,70 +249,63 @@ export function PlaylistsPage() {
                   className="flex min-w-0 flex-1"
                 >
                   <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
-                    <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">{pl.name}</p>
-                      {pl.description && (
-                        <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
-                      )}
-                      {(styleColor || tempoLabel) && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {styleColor && pl.danceStyle && (
-                            <Badge
-                              size="md"
-                              style={{
-                                backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                              }}
-                            >
-                              {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
-                            </Badge>
+                      <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                            {pl.name}
+                            <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">
+                              &middot;{' '}
+                              {pl.ownerGroup
+                                ? pl.ownerGroup.name
+                                : pl.ownerDisplayName
+                                  ? `Delad av ${pl.ownerDisplayName}`
+                                  : 'Du'}
+                            </span>
+                          </p>
+                          {pl.description && (
+                            <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
                           )}
-                          {styleColor && pl.subStyle && (
-                            <Badge
-                              size="md"
-                              className="opacity-80"
-                              style={{
-                                backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                              }}
-                            >
-                              {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
-                            </Badge>
-                          )}
-                          {tempoLabel && (
-                            <Badge size="md" variant="muted">
-                              {tempoLabel}
-                            </Badge>
+                          {(styleColor || tempoLabel) && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {styleColor && pl.danceStyle && (
+                                <Badge
+                                  size="md"
+                                  style={{
+                                    backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                                    color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                                  }}
+                                >
+                                  {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
+                                </Badge>
+                              )}
+                              {styleColor && pl.subStyle && (
+                                <Badge
+                                  size="md"
+                                  className="opacity-80"
+                                  style={{
+                                    backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                                    color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                                  }}
+                                >
+                                  {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
+                                </Badge>
+                              )}
+                              {tempoLabel && (
+                                <Badge size="md" variant="muted">
+                                  {tempoLabel}
+                                </Badge>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                    {(pl.trackCount ?? 0) > 0 && (
-                      <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
-                        {pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}
-                      </span>
-                    )}
+                        {(pl.trackCount ?? 0) > 0 && (
+                          <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
+                            {pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}
+                          </span>
+                        )}
                   </Card>
                 </Link>
               </div>
-              {pl.ownerGroup ? (
-                <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">
-                  Ägs av gruppen{' '}
-                  <Link
-                    to={`/groups/${pl.ownerGroup.id}`}
-                    className="text-[rgb(var(--color-accent))] hover:underline"
-                  >
-                    {pl.ownerGroup.name}
-                  </Link>
-                </p>
-              ) : pl.ownerDisplayName ? (
-                <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">
-                  Delad av {pl.ownerDisplayName}
-                </p>
-              ) : (
-                <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">Du</p>
-              )}
             </li>
           );
         })}
