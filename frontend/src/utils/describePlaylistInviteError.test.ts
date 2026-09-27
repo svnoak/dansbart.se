@@ -57,4 +57,18 @@ describe('describePlaylistInviteError', () => {
       'Det gick inte att skicka inbjudan. Försök igen.',
     );
   });
+
+  it('returns the group message for ApiError 422 when inviting a group', () => {
+    const error = new ApiError('Unprocessable Entity', 422);
+    expect(describePlaylistInviteError(error, 'group')).toBe(
+      'Ingen grupp heter så. Kontrollera stavningen.',
+    );
+  });
+
+  it('returns the group message for ApiError 409 when inviting a group', () => {
+    const error = new ApiError('Conflict', 409);
+    expect(describePlaylistInviteError(error, 'group')).toBe(
+      'Gruppen är redan inbjuden.',
+    );
+  });
 });
