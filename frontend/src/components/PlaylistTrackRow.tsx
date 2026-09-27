@@ -1,5 +1,6 @@
 import { GripIcon } from '@/icons';
 import { TrackRow } from './TrackRow';
+import { InlineError } from '@/ui';
 import type { TrackListDto } from '@/api/models/trackListDto';
 
 interface PlaylistTrackRowProps {
@@ -8,6 +9,7 @@ interface PlaylistTrackRowProps {
   isDragOver: boolean;
   /** When false, the grip handle is invisible but still reserves its space so layout stays stable. */
   showGrip?: boolean;
+  error?: string | null;
   onRemove?: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -20,6 +22,7 @@ export function PlaylistTrackRow({
   contextTracks,
   isDragOver,
   showGrip = true,
+  error,
   onRemove,
   onDragStart,
   onDragOver,
@@ -33,7 +36,7 @@ export function PlaylistTrackRow({
       onDragOver={showGrip ? onDragOver : undefined}
       onDrop={showGrip ? onDrop : undefined}
       onDragEnd={showGrip ? onDragEnd : undefined}
-      className={`group flex items-center border-t-2 ${
+      className={`group flex flex-wrap items-center border-t-2 ${
         isDragOver ? 'border-[rgb(var(--color-accent))]' : 'border-transparent'
       }`}
     >
@@ -61,6 +64,7 @@ export function PlaylistTrackRow({
           Ta bort
         </button>
       )}
+      {error && <InlineError>{error}</InlineError>}
     </li>
   );
 }

@@ -8,6 +8,7 @@ import { authValue, loggedInAuthValue } from '@/test/authValue';
 import { getInputByLabel } from '@/test/getInputByLabel';
 import { typeInto } from '@/test/typeInto';
 import { ToastContainer } from '@/ui';
+import * as ui from '@/ui';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -363,5 +364,55 @@ describe('GroupPage', () => {
 
     const newPlaylistButton = getButtonByText('Ny spellista');
     expect(newPlaylistButton).toBeUndefined();
+  });
+
+  it('a failed playlist creation shows the error in the form, not as a toast', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: true, status: 'accepted' },
+      ],
+      playlists: [],
+    });
+    createGroupPlaylist.mockRejectedValue(new Error('Network error'));
+    const toastSpy = vi.spyOn(ui, 'toast');
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newPlaylistButton = getButtonByText('Ny spellista');
+    expect(newPlaylistButton).toBeDefined();
+
+    await act(async () => {
+      newPlaylistButton?.click();
+    });
+
+    const nameInput = getInputByLabel('Spellistans namn');
+    expect(nameInput).toBeDefined();
+
+    await act(async () => {
+      await typeInto(nameInput!, 'Höstens danser');
+    });
+
+    const createButton = getButtonByText('Skapa spellista');
+    expect(createButton).toBeDefined();
+
+    await act(async () => {
+      createButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const form = createButton?.closest('form');
+    const alert = form?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Det gick inte att skapa spellistan.');
+    expect(toastSpy).not.toHaveBeenCalledWith('Det gick inte att skapa spellistan.', 'error');
+
+    toastSpy.mockRestore();
   });
 });

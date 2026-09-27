@@ -7,6 +7,7 @@ import { authValue, loggedInAuthValue } from '@/test/authValue';
 import { getInputByLabel } from '@/test/getInputByLabel';
 import { typeInto } from '@/test/typeInto';
 import { ToastContainer } from '@/ui';
+import * as toastEmitter from '@/ui/toastEmitter';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -26,8 +27,10 @@ vi.mock('@/auth/useAuth', () => ({
 describe('DanceListsPage', () => {
   let container: HTMLDivElement;
   let root: Root;
+  let toastSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    toastSpy = vi.spyOn(toastEmitter, 'toast');
     getMyDanceLists.mockReset();
     createDanceList.mockReset();
     useAuth.mockReset();
@@ -38,6 +41,7 @@ describe('DanceListsPage', () => {
   });
 
   afterEach(() => {
+    toastSpy.mockRestore();
     root.unmount();
     container.remove();
   });
@@ -161,5 +165,35 @@ describe('DanceListsPage', () => {
     expect(newButton?.className).toContain('px-3');
     expect(newButton?.className).toContain('py-1.5');
     expect(newButton?.className).not.toContain('px-4');
+  });
+
+  it('shows the create error inline next to the create button, not as a toast', async () => {
+    getMyDanceLists.mockResolvedValue([]);
+    createDanceList.mockRejectedValue(new Error('Server error'));
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newButton = getButtonByText('Ny danslista');
+    await act(async () => {
+      newButton?.click();
+    });
+
+    const nameInput = getInputByLabel('Danslistans namn');
+    if (nameInput) typeInto(nameInput, 'Sommarens danser');
+
+    const createButton = getButtonByText('Skapa danslista');
+    await act(async () => {
+      createButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const form = createButton!.closest('form');
+    expect(form).toBeDefined();
+    const alert = form!.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Det gick inte att skapa danslistan.');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
   });
 });

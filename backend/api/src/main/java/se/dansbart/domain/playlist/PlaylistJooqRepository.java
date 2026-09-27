@@ -4,6 +4,8 @@ import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
+import org.jooq.Record1;
+import org.jooq.SelectConditionStep;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
@@ -40,16 +42,14 @@ public class PlaylistJooqRepository {
     }
 
     public List<PlaylistWithGroupName> findOwnedAndGroupPlaylistsByUserId(UUID userId) {
-        var acceptedGroups = dsl.select(GROUP_MEMBERS.GROUP_ID)
-            .from(GROUP_MEMBERS)
-            .where(GROUP_MEMBERS.USER_ID.eq(userId))
-            .and(GROUP_MEMBERS.STATUS.eq("accepted"));
+        var acceptedGroups = acceptedGroupsSubquery(userId);
         return dsl.select(PLAYLISTS.fields())
             .select(trackCountField(), GROUPS.NAME.as("group_name"))
             .from(PLAYLISTS)
             .leftJoin(GROUPS).on(PLAYLISTS.GROUP_ID.eq(GROUPS.ID))
             .where(PLAYLISTS.USER_ID.eq(userId))
             .or(PLAYLISTS.GROUP_ID.in(acceptedGroups))
+            .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, null)))
             .orderBy(PLAYLISTS.NAME.asc())
             .fetch(r -> new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class)));
     }
@@ -83,6 +83,7 @@ public class PlaylistJooqRepository {
             .where(PLAYLISTS.ID.in(
                 dsl.select(PLAYLIST_COLLABORATORS.PLAYLIST_ID).from(PLAYLIST_COLLABORATORS).where(PLAYLIST_COLLABORATORS.USER_ID.eq(userId))
             ))
+            .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, null)))
             .orderBy(PLAYLISTS.NAME.asc())
             .fetch(this::toPlaylist);
     }
@@ -104,8 +105,27 @@ public class PlaylistJooqRepository {
             .where(PLAYLISTS.USER_ID.eq(userId))
             .or(PLAYLISTS.ID.in(editCollaborations))
             .or(PLAYLISTS.GROUP_ID.in(managedGroups))
+            .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, "edit")))
             .orderBy(PLAYLISTS.NAME.asc())
             .fetch(r -> new EditablePlaylistRecord(r.get(PLAYLISTS.ID), r.get(PLAYLISTS.NAME), r.get("group_name", String.class)));
+    }
+
+    private SelectConditionStep<Record1<UUID>> acceptedGroupsSubquery(UUID userId) {
+        return dsl.select(GROUP_MEMBERS.GROUP_ID)
+            .from(GROUP_MEMBERS)
+            .where(GROUP_MEMBERS.USER_ID.eq(userId))
+            .and(GROUP_MEMBERS.STATUS.eq("accepted"));
+    }
+
+    private SelectConditionStep<Record1<UUID>> groupCollaboratorPlaylistsSubquery(UUID userId, String permission) {
+        Condition condition = PLAYLIST_COLLABORATORS.GROUP_ID.in(acceptedGroupsSubquery(userId))
+            .and(PLAYLIST_COLLABORATORS.STATUS.eq("accepted"));
+        if (permission != null) {
+            condition = condition.and(PLAYLIST_COLLABORATORS.PERMISSION.eq(permission));
+        }
+        return dsl.select(PLAYLIST_COLLABORATORS.PLAYLIST_ID)
+            .from(PLAYLIST_COLLABORATORS)
+            .where(condition);
     }
 
     public long countAll() {

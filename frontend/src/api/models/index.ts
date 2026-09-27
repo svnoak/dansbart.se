@@ -201,6 +201,7 @@ export * from './resetCrawlData200';
 export * from './resetStructure200';
 export * from './respondToInvitation1200';
 export * from './respondToInvitationRequest';
+export * from './respondToPlaylistInvitationRequest';
 export * from './resume200';
 export * from './resumeParams';
 export * from './retrainModel200';

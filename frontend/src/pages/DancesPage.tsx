@@ -26,7 +26,7 @@ function getDances(
   });
   return httpClient(`/api/dances?${q}`, opts);
 }
-import { IconButton, toast } from '@/ui';
+import { IconButton, InlineError } from '@/ui';
 import { BackArrowIcon, PlayIcon } from '@/icons';
 import { usePlayer } from '@/player/usePlayer';
 
@@ -41,6 +41,7 @@ export function DancesPage() {
   const offset = Number(searchParams.get('offset') ?? '0');
 
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [playErrors, setPlayErrors] = useState<Record<string, string>>({});
   const [dances, setDances] = useState<DanceDto[]>([]);
   const [total, setTotal] = useState(0);
   const [styles, setStyles] = useState<string[]>([]);
@@ -164,6 +165,11 @@ export function DancesPage() {
   async function handlePlayDance(danceId: string) {
     if (playingId === danceId) return;
     setPlayingId(danceId);
+    setPlayErrors((prev) => {
+      const next = { ...prev };
+      delete next[danceId];
+      return next;
+    });
     try {
       try {
         const track = await getPrimaryTrack(danceId);
@@ -176,10 +182,10 @@ export function DancesPage() {
       if (tracks.length > 0) {
         play(tracks[0]);
       } else {
-        toast('Inga låtar länkade till denna dans', 'error');
+        setPlayErrors((prev) => ({ ...prev, [danceId]: 'Inga låtar länkade till denna dans' }));
       }
     } catch {
-      toast('Kunde inte spela', 'error');
+      setPlayErrors((prev) => ({ ...prev, [danceId]: 'Kunde inte spela' }));
     } finally {
       setPlayingId(null);
     }
@@ -265,6 +271,7 @@ export function DancesPage() {
                 </a>
               )}
             </div>
+            <InlineError>{playErrors[dance.id ?? '']}</InlineError>
           </li>
         ))}
       </ul>
