@@ -4,6 +4,7 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { IconButton } from './IconButton';
 export { InlineError } from './InlineError';
+export { LoadError } from './LoadError';
 export { Modal } from './Modal';
 export { Pill } from './Pill';
 export { SectionTitle } from './SectionTitle';
