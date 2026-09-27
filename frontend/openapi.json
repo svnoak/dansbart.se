@@ -7663,7 +7663,8 @@
           "subStyle": { "type": "string" },
           "tempoCategory": { "type": "string" },
           "trackCount": { "type": "integer", "format": "int32" },
-          "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" }
+          "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" },
+          "ownerDisplayName": { "type": "string" }
         }
       },
       "InvitationDto": {

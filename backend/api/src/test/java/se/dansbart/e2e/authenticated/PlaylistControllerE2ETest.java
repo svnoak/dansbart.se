@@ -127,6 +127,66 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
         }
+
+        @Test
+        @DisplayName("should include a playlist shared with an accepted individual collaborator, with the owner's display name")
+        void getMyPlaylists_shouldIncludeAcceptedIndividuallySharedPlaylistWithOwnerDisplayName() throws Exception {
+            User shareOwner = testData.user()
+                .withUsername("share_owner")
+                .withDisplayName("Shared Playlist Owner")
+                .build();
+            Playlist playlist = testData.playlist().withName("Shared With Me").withOwner(shareOwner).build();
+            testData.addCollaborator(playlist, owner, "view");
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name").value("Shared With Me"))
+                .andExpect(jsonPath("$[0].ownerDisplayName").value("Shared Playlist Owner"));
+        }
+
+        @Test
+        @DisplayName("should exclude a playlist shared with a pending individual collaborator")
+        void getMyPlaylists_shouldExcludePendingIndividuallySharedPlaylist() throws Exception {
+            Playlist playlist = testData.playlist().withName("Pending Share").withOwner(otherUser).build();
+            testData.addPendingCollaborator(playlist, owner, "view");
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("should have a null owner display name for own playlists and group playlists")
+        void getMyPlaylists_shouldHaveNullOwnerDisplayNameForOwnAndGroupPlaylists() throws Exception {
+            testData.playlist().withName("My Own Playlist").withOwner(owner).build();
+            Group group = testData.group().withName("Test Group").build();
+            testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.addGroupMember(group, owner, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[*].ownerDisplayName", everyItem(nullValue())));
+        }
+
+        @Test
+        @DisplayName("should list a playlist once when shared both individually and through a group")
+        void getMyPlaylists_shouldListPlaylistOnceWhenSharedIndividuallyAndThroughGroup() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            Playlist playlist = testData.playlist().withName("Double Shared").withOwner(otherUser).build();
+            testData.addCollaborator(playlist, owner, "view");
+            testData.addGroupCollaborator(playlist, group, "view", "accepted");
+            testData.addGroupMember(group, owner, false, false, false, false, false);
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+        }
     }
 
     @Nested
@@ -1391,6 +1451,18 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                     .with(jwt.userToken(otherUser.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+        }
+
+        @Test
+        @DisplayName("GET /api/playlists/shared excludes a playlist when the individual invitation is pending")
+        void getSharedPlaylists_shouldExcludePlaylistWhenIndividualInvitationPending() throws Exception {
+            Playlist playlist = testData.playlist().withName("Pending Individual Invitation").withOwner(owner).build();
+            testData.addPendingCollaborator(playlist, otherUser, "view");
+
+            mockMvc.perform(get("/api/playlists/shared")
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
         }
 
         @Test

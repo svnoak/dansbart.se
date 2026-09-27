@@ -16,4 +16,5 @@ export interface PlaylistListItemDto {
   tempoCategory?: string;
   trackCount?: number;
   ownerGroup?: GroupSummaryDto;
+  ownerDisplayName?: string;
 }

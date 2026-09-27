@@ -254,7 +254,12 @@ export function PlaylistsPage() {
                           <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
                             {pl.name}
                             <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">
-                              &middot; {pl.ownerGroup ? pl.ownerGroup.name : 'Du'}
+                              &middot;{' '}
+                              {pl.ownerGroup
+                                ? pl.ownerGroup.name
+                                : pl.ownerDisplayName
+                                  ? `Delad av ${pl.ownerDisplayName}`
+                                  : 'Du'}
                             </span>
                           </p>
                           {pl.description && (
