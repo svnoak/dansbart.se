@@ -159,6 +159,7 @@ describe('AdminSuggestionsPage', () => {
     const alert = row.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Kunde inte hämta förhandsgranskning');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('shows the activate error inline next to the activation modal confirm button, not as a toast', async () => {
