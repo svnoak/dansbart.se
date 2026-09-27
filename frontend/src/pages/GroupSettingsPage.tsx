@@ -7,10 +7,13 @@ import {
   inviteMember,
   updateMember,
   removeMember,
+  getGroupPlaylistInvitations,
+  respondToGroupPlaylistInvitation,
 } from '@/api/generated/groups/groups';
 import { ApiError } from '@/api/http-client';
 import type { GroupDto } from '@/api/models/groupDto';
 import type { GroupMemberDto } from '@/api/models/groupMemberDto';
+import type { InvitationDto } from '@/api/models/invitationDto';
 import { useAuth } from '@/auth/useAuth';
 import { ConfirmDeleteByName } from '@/components';
 import { BackArrowIcon } from '@/icons';
@@ -56,6 +59,10 @@ export function GroupSettingsPage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [invitations, setInvitations] = useState<InvitationDto[]>([]);
+  const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null);
+  const [invitationErrors, setInvitationErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -76,6 +83,21 @@ export function GroupSettingsPage() {
       cancelled = true;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !group) return;
+    const membership = group.members?.find((m) => m.userId === user?.id);
+    if (!membership?.isAdmin) return;
+    let cancelled = false;
+    getGroupPlaylistInvitations(id)
+      .then((data) => {
+        if (!cancelled) setInvitations(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [id, group, user?.id]);
 
   if (loading) {
     return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
@@ -211,6 +233,25 @@ export function GroupSettingsPage() {
         setConfirmingLeave(false);
         setLeaving(false);
       }
+    }
+  }
+
+  async function handleRespondToPlaylistInvitation(invitationId: string, accept: boolean) {
+    if (!id) return;
+    setRespondingInvitationId(invitationId);
+    setInvitationErrors((prev) => {
+      const next = { ...prev };
+      delete next[invitationId];
+      return next;
+    });
+    try {
+      await respondToGroupPlaylistInvitation(id, invitationId, { accept });
+      setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+      toast(accept ? 'Inbjudan accepterad' : 'Inbjudan avböjd');
+    } catch {
+      setInvitationErrors((prev) => ({ ...prev, [invitationId]: 'Det gick inte att svara på inbjudan.' }));
+    } finally {
+      setRespondingInvitationId(null);
     }
   }
 
@@ -396,6 +437,51 @@ export function GroupSettingsPage() {
         </ul>
         <InlineError>{memberError}</InlineError>
       </section>
+
+      {isAdmin && invitations.length > 0 && (
+        <section className="space-y-3">
+          <SectionTitle>Väntande inbjudningar till spellistor</SectionTitle>
+          <ul className="space-y-2">
+            {invitations.map((inv) => (
+              <li key={inv.id}>
+                <Card className="space-y-2 p-3">
+                  <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[rgb(var(--color-text))]">
+                        {inv.playlistName}
+                      </p>
+                      <p className="text-sm text-[rgb(var(--color-text-muted))]">
+                        Inbjuden av {inv.invitedByDisplayName ?? inv.invitedByUserId}
+                        {inv.permission && (
+                          <span className="ml-1.5">&middot; {inv.permission === 'edit' ? 'Redigera' : 'Se'}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        size="sm"
+                        disabled={respondingInvitationId === inv.id}
+                        onClick={() => handleRespondToPlaylistInvitation(inv.id!, true)}
+                      >
+                        Acceptera
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={respondingInvitationId === inv.id}
+                        onClick={() => handleRespondToPlaylistInvitation(inv.id!, false)}
+                      >
+                        Avböj
+                      </Button>
+                    </div>
+                  </div>
+                  <InlineError>{inv.id ? invitationErrors[inv.id] : null}</InlineError>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {isAdmin && (
         <section className="space-y-3">

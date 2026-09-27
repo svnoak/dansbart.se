@@ -16,6 +16,8 @@ const deleteGroup = vi.fn();
 const inviteMember = vi.fn();
 const updateMember = vi.fn();
 const removeMember = vi.fn();
+const getGroupPlaylistInvitations = vi.fn();
+const respondToGroupPlaylistInvitation = vi.fn();
 const useAuth = vi.fn();
 const toast = vi.fn();
 
@@ -26,6 +28,8 @@ vi.mock('@/api/generated/groups/groups', () => ({
   inviteMember: (...args: unknown[]) => inviteMember(...args),
   updateMember: (...args: unknown[]) => updateMember(...args),
   removeMember: (...args: unknown[]) => removeMember(...args),
+  getGroupPlaylistInvitations: (...args: unknown[]) => getGroupPlaylistInvitations(...args),
+  respondToGroupPlaylistInvitation: (...args: unknown[]) => respondToGroupPlaylistInvitation(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -51,8 +55,11 @@ describe('GroupSettingsPage', () => {
     inviteMember.mockReset();
     updateMember.mockReset();
     removeMember.mockReset();
+    getGroupPlaylistInvitations.mockReset();
+    respondToGroupPlaylistInvitation.mockReset();
     useAuth.mockReset();
     toast.mockReset();
+    getGroupPlaylistInvitations.mockResolvedValue([]);
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -742,5 +749,181 @@ describe('GroupSettingsPage', () => {
     typeInto(nameInput, 'Ytterligare en grupp');
 
     expect(document.body.textContent).not.toContain('Det finns redan en grupp som heter så.');
+  });
+
+  it("an admin sees the group's pending playlist invitations", async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: true, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    getGroupPlaylistInvitations.mockResolvedValue([
+      { id: 'inv1', playlistName: 'Bröllopsspellistan', invitedByDisplayName: 'Anna', permission: 'edit' },
+    ]);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Väntande inbjudningar till spellistor');
+    expect(document.body.textContent).toContain('Bröllopsspellistan');
+    expect(document.body.textContent).toContain('Redigera');
+    expect(document.body.textContent).toContain('Inbjuden av Anna');
+    expect(getButtonByText('Acceptera')).toBeDefined();
+    expect(getButtonByText('Avböj')).toBeDefined();
+  });
+
+  it('hides the section when there are no invitations', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: true, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    getGroupPlaylistInvitations.mockResolvedValue([]);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).not.toContain('Väntande inbjudningar till spellistor');
+  });
+
+  it('a non-admin does not see the section', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: true, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).not.toContain('Väntande inbjudningar till spellistor');
+    expect(getGroupPlaylistInvitations).not.toHaveBeenCalled();
+  });
+
+  it('accepting removes the invitation', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: true, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    getGroupPlaylistInvitations.mockResolvedValue([
+      { id: 'inv1', playlistName: 'Bröllopsspellistan', invitedByDisplayName: 'Anna', permission: 'edit' },
+    ]);
+    respondToGroupPlaylistInvitation.mockResolvedValue(undefined);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const acceptButton = getButtonByText('Acceptera');
+    await act(async () => {
+      acceptButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(respondToGroupPlaylistInvitation).toHaveBeenCalledWith('g1', 'inv1', { accept: true });
+    expect(document.body.textContent).not.toContain('Bröllopsspellistan');
+    expect(toast).toHaveBeenCalledWith('Inbjudan accepterad');
+  });
+
+  it('declining removes the invitation', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: true, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    getGroupPlaylistInvitations.mockResolvedValue([
+      { id: 'inv1', playlistName: 'Bröllopsspellistan', invitedByDisplayName: 'Anna', permission: 'edit' },
+    ]);
+    respondToGroupPlaylistInvitation.mockResolvedValue(undefined);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const declineButton = getButtonByText('Avböj');
+    await act(async () => {
+      declineButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(respondToGroupPlaylistInvitation).toHaveBeenCalledWith('g1', 'inv1', { accept: false });
+    expect(document.body.textContent).not.toContain('Bröllopsspellistan');
+    expect(toast).toHaveBeenCalledWith('Inbjudan avböjd');
+  });
+
+  it('a failed answer shows the error in that row', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: true, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    getGroupPlaylistInvitations.mockResolvedValue([
+      { id: 'inv1', playlistName: 'Bröllopsspellistan', invitedByDisplayName: 'Anna', permission: 'edit' },
+      { id: 'inv2', playlistName: 'Midsommarlistan', invitedByDisplayName: 'Bertil', permission: 'view' },
+    ]);
+    respondToGroupPlaylistInvitation.mockImplementation((_id: string, invitationId: string) =>
+      invitationId === 'inv1' ? Promise.reject(new Error('Network error')) : Promise.resolve(undefined),
+    );
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const declineButton = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Avböj') && b.closest('li')?.textContent?.includes('Bröllopsspellistan'),
+    );
+    await act(async () => {
+      declineButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const failedRow = declineButton?.closest('li');
+    const otherRow = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Midsommarlistan'),
+    );
+
+    expect(failedRow?.querySelector('[role="alert"]')).toBeDefined();
+    expect(document.body.textContent).toContain('Bröllopsspellistan');
+    expect(otherRow?.querySelector('[role="alert"]')).toBeFalsy();
   });
 });
