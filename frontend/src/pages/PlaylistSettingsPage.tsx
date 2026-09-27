@@ -49,7 +49,7 @@ export function PlaylistSettingsPage() {
   const [transferTarget, setTransferTarget] = useState('');
   const [transferConfirm, setTransferConfirm] = useState(false);
 
-  const { shareToken, shareUrl, createLink, removeLink, copyLink } = usePlaylistShareLink(
+  const { shareToken, shareUrl, createLink, removeLink, copyLink, removeLinkError } = usePlaylistShareLink(
     id,
     playlist?.shareToken,
   );
@@ -338,6 +338,7 @@ export function PlaylistSettingsPage() {
                 >
                   Ogiltigförklara länk
                 </button>
+                <InlineError>{removeLinkError}</InlineError>
               </>
             ) : (
               <>

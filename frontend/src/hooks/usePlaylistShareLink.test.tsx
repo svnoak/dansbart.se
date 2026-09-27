@@ -152,6 +152,8 @@ describe('usePlaylistShareLink', () => {
     };
     toastListeners.add(toastListener);
 
+    const resultBox: { current: UsePlaylistShareLinkResult | null } = { current: null };
+
     function TestComponent({ onResultChange }: { onResultChange: (r: UsePlaylistShareLinkResult) => void }) {
       const hookResult = usePlaylistShareLink('p1', token);
       useEffect(() => {
@@ -164,7 +166,7 @@ describe('usePlaylistShareLink', () => {
 
     await act(async () => {
       root.render(
-        <TestComponent onResultChange={() => {}} />
+        <TestComponent onResultChange={(r: UsePlaylistShareLinkResult) => { resultBox.current = r; }} />
       );
     });
 
@@ -178,8 +180,9 @@ describe('usePlaylistShareLink', () => {
 
     toastListeners.delete(toastListener);
 
-    const errorToast = toastMessages.find((msg) => msg.variant === 'error' && msg.text === 'Det gick inte att kopiera länken.');
-    expect(errorToast).toBeDefined();
+    expect(resultBox.current?.copyLinkError).toBe('Det gick inte att kopiera länken.');
+    const errorToast = toastMessages.find((msg) => msg.variant === 'error');
+    expect(errorToast).toBeUndefined();
   });
 
   it('a failed link creation returns an error for the panel to render', async () => {
@@ -223,5 +226,48 @@ describe('usePlaylistShareLink', () => {
     expect(resultBox.current?.createLinkError).toBe('Kunde inte skapa delningslänk');
     const errorToast2 = toastMessages.find((msg) => msg.variant === 'error');
     expect(errorToast2).toBeUndefined();
+  });
+
+  it('a failed link removal returns an error for the panel to render', async () => {
+    const { invalidateShareToken } = await import('@/api/generated/playlists/playlists');
+    vi.mocked(invalidateShareToken).mockRejectedValue(new Error('Remove failed'));
+
+    const toastMessages: Array<{ text: string; variant: 'success' | 'error' }> = [];
+    const toastListener = (msg: { text: string; variant: 'success' | 'error' }) => {
+      toastMessages.push(msg);
+    };
+    toastListeners.add(toastListener);
+
+    const resultBox: { current: UsePlaylistShareLinkResult | null } = { current: null };
+
+    function TestComponent({ onResultChange }: { onResultChange: (r: UsePlaylistShareLinkResult) => void }) {
+      const hookResult = usePlaylistShareLink('p1', 'initial-token');
+      useEffect(() => {
+        onResultChange(hookResult);
+      }, [hookResult, onResultChange]);
+      return (
+        <button onClick={hookResult.removeLink}>Remove Link</button>
+      );
+    }
+
+    await act(async () => {
+      root.render(
+        <TestComponent onResultChange={(r: UsePlaylistShareLinkResult) => { resultBox.current = r; }} />
+      );
+    });
+
+    const button = container.querySelector('button');
+    expect(button).toBeTruthy();
+
+    await act(async () => {
+      button?.click();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    toastListeners.delete(toastListener);
+
+    expect(resultBox.current?.removeLinkError).toBe('Kunde inte ogiltigförklara länk');
+    const errorToast = toastMessages.find((msg) => msg.variant === 'error');
+    expect(errorToast).toBeUndefined();
   });
 });
