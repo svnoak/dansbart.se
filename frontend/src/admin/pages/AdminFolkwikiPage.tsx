@@ -42,7 +42,7 @@ type StatusFilter = 'pending' | 'confirmed' | 'rejected' | '';
 
 const STATUS_TABS: { value: StatusFilter; label: string }[] = [
   { value: 'pending', label: 'Ej granskade' },
-  { value: 'confirmed', label: 'Bekraftade' },
+  { value: 'confirmed', label: 'Bekräftade' },
   { value: 'rejected', label: 'Avvisade' },
   { value: '', label: 'Alla' },
 ];
@@ -187,6 +187,7 @@ export function AdminFolkwikiPage() {
     match: FolkwikiMatch,
     action: 'confirm' | 'reject',
     force = false,
+    onError?: (message: string) => void,
   ) => {
     setRowErrors((prev) => {
       const next = { ...prev };
@@ -220,15 +221,17 @@ export function AdminFolkwikiPage() {
       removeMatch(match);
 
       if (action === 'confirm' && data.appliedStyle) {
-        toast(`Bekraftad: ${match.trackTitle} -> ${data.appliedStyle}`, 'success');
+        toast(`Bekräftad: ${match.trackTitle} -> ${data.appliedStyle}`, 'success');
       } else if (action === 'reject') {
         toast(`Avvisad: ${match.trackTitle}`, 'success');
       }
     } catch (e) {
-      setRowErrors((prev) => ({
-        ...prev,
-        [matchKey(match)]: e instanceof Error ? e.message : 'Misslyckades',
-      }));
+      const message = e instanceof Error ? e.message : 'Misslyckades';
+      if (onError) {
+        onError(message);
+      } else {
+        setRowErrors((prev) => ({ ...prev, [matchKey(match)]: message }));
+      }
     }
   };
 
@@ -304,8 +307,13 @@ export function AdminFolkwikiPage() {
   };
 
   const handleRejectSimple = async (match: FolkwikiMatch) => {
-    setRejectModal(null);
-    await handleAction(match, 'reject');
+    setRejectModalError(null);
+    let failed = false;
+    await handleAction(match, 'reject', false, (message) => {
+      failed = true;
+      setRejectModalError(message);
+    });
+    if (!failed) setRejectModal(null);
   };
 
   const handleRejectWithOverride = async () => {
@@ -388,7 +396,7 @@ export function AdminFolkwikiPage() {
           <div className="text-xs text-[rgb(var(--color-text-muted))]">
             <kbd className="rounded border border-[rgb(var(--color-border))] px-1">j/k</kbd> navigera{' '}
             <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Mellanslag</kbd> spela{' '}
-            <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Enter</kbd> bekrafta{' '}
+            <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Enter</kbd> bekräfta{' '}
             <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Backspace</kbd> avvisa
           </div>
           <input
@@ -520,7 +528,7 @@ export function AdminFolkwikiPage() {
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   className="shrink-0 text-xs text-[rgb(var(--color-accent))] hover:underline"
-                  title="Visa pa folkwiki.se"
+                  title="Visa på folkwiki.se"
                 >
                   folkwiki
                 </a>
@@ -536,7 +544,7 @@ export function AdminFolkwikiPage() {
                         handleAction(m, 'confirm');
                       }}
                     >
-                      Bekrafta
+                      Bekräfta
                     </Button>
                     <Button
                       variant="ghost"
@@ -556,7 +564,7 @@ export function AdminFolkwikiPage() {
                       ? 'bg-green-500/10 text-green-400'
                       : 'bg-red-500/10 text-red-400'
                   }`}>
-                    {m.matchStatus === 'confirmed' ? 'Bekraftad' : 'Avvisad'}
+                    {m.matchStatus === 'confirmed' ? 'Bekräftad' : 'Avvisad'}
                   </span>
                 )}
                 {rowErrors[matchKey(m)] && (
@@ -581,13 +589,13 @@ export function AdminFolkwikiPage() {
       <Modal
         open={styleModal !== null}
         onClose={() => { setStyleModal(null); setStyleModalError(null); }}
-        title="Okand stil"
+        title="Okänd stil"
       >
         {styleModal && (
           <div className="space-y-4">
             <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Stilen <span className="font-medium text-[rgb(var(--color-text))]">{styleModal.folkwikiStyle}</span> finns
-              inte bland nyckelorden. Valj hur den ska laggas till:
+              inte bland nyckelorden. Välj hur den ska läggas till:
             </p>
 
             {/* Mode tabs */}
@@ -669,7 +677,7 @@ export function AdminFolkwikiPage() {
                 </div>
                 {selectedMainStyle && (
                   <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                    Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> laggs
+                    Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> läggs
                     till som substil under <span className="font-medium">{selectedMainStyle}</span>
                   </p>
                 )}
@@ -684,14 +692,14 @@ export function AdminFolkwikiPage() {
                     disabled={!selectedMainStyle || addingKeyword}
                     onClick={() => handleAddKeywordAndConfirm(selectedMainStyle, styleModal.folkwikiStyle)}
                   >
-                    {addingKeyword ? 'Sparar...' : 'Lagg till och bekrafta'}
+                    {addingKeyword ? 'Sparar...' : 'Lägg till och bekräfta'}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
                 <label className="block text-sm font-medium">
-                  Namn pa ny huvudstil
+                  Namn på ny huvudstil
                 </label>
                 <input
                   type="text"
@@ -701,7 +709,7 @@ export function AdminFolkwikiPage() {
                   className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
                 />
                 <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                  Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> laggs
+                  Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> läggs
                   till som ny huvudstil <span className="font-medium">{newMainStyle || styleModal.folkwikiStyle}</span>
                 </p>
                 <div className="flex items-center justify-end gap-2 pt-2">
@@ -718,7 +726,7 @@ export function AdminFolkwikiPage() {
                       null,
                     )}
                   >
-                    {addingKeyword ? 'Sparar...' : 'Lagg till och bekrafta'}
+                    {addingKeyword ? 'Sparar...' : 'Lägg till och bekräfta'}
                   </Button>
                 </div>
               </div>
@@ -748,20 +756,21 @@ export function AdminFolkwikiPage() {
             >
               <span className="block text-sm font-medium">Stilen var redan korrekt</span>
               <span className="block text-xs text-[rgb(var(--color-text-muted))]">
-                Behall nuvarande stil: {rejectModal.match.dbStyle ?? '(ingen)'}
+                Behåll nuvarande stil: {rejectModal.match.dbStyle ?? '(ingen)'}
                 {rejectModal.match.dbSubStyle && ` / ${rejectModal.match.dbSubStyle}`}
               </span>
             </button>
+            {rejectModalError && !overrideStyle && <InlineError>{rejectModalError}</InlineError>}
 
             {/* Option 2: Override with a different style */}
             <div className="space-y-2">
-              <span className="block text-sm font-medium">Det ar en annan stil:</span>
+              <span className="block text-sm font-medium">Det är en annan stil:</span>
               <select
                 value={overrideStyle}
                 onChange={(e) => { setOverrideStyle(e.target.value); setRejectModalError(null); }}
                 className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
               >
-                <option value="">Valj stil...</option>
+                <option value="">Välj stil...</option>
                 {rejectModal.styleTree.map((node) => (
                   <optgroup key={node.name} label={node.name}>
                     <option value={node.name}>{node.name}</option>
@@ -774,7 +783,7 @@ export function AdminFolkwikiPage() {
                 ))}
               </select>
               <div className="flex items-center justify-end gap-2 pt-1">
-                {rejectModalError && <InlineError>{rejectModalError}</InlineError>}
+                {rejectModalError && overrideStyle && <InlineError>{rejectModalError}</InlineError>}
                 <Button variant="ghost" size="sm" onClick={() => { setRejectModal(null); setRejectModalError(null); }}>
                   Avbryt
                 </Button>
@@ -784,7 +793,7 @@ export function AdminFolkwikiPage() {
                   disabled={!overrideStyle || rejecting}
                   onClick={handleRejectWithOverride}
                 >
-                  {rejecting ? 'Sparar...' : `Avvisa och satt ${overrideStyle || '...'}`}
+                  {rejecting ? 'Sparar...' : `Avvisa och sätt ${overrideStyle || '...'}`}
                 </Button>
               </div>
             </div>

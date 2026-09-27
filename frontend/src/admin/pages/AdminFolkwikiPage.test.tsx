@@ -120,6 +120,14 @@ describe('AdminFolkwikiPage', () => {
     return row as HTMLDivElement;
   }
 
+  function findButtonWithLabelSpan(text: string, scope: ParentNode) {
+    const span = Array.from(scope.querySelectorAll('span')).find((el) => el.textContent === text);
+    expect(span).toBeDefined();
+    const button = span!.closest('button');
+    expect(button).toBeDefined();
+    return button as HTMLButtonElement;
+  }
+
   async function click(button: HTMLButtonElement) {
     await act(async () => {
       button.click();
@@ -168,7 +176,7 @@ describe('AdminFolkwikiPage', () => {
     await renderPage();
 
     const row = findMatchRow('Vals i Bingsjö');
-    await click(clickButton('Bekrafta', row));
+    await click(clickButton('Bekräfta', row));
 
     const alert = row.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Misslyckades');
@@ -198,7 +206,7 @@ describe('AdminFolkwikiPage', () => {
     await renderPage();
 
     const row = findMatchRow('Vals i Bingsjö');
-    await click(clickButton('Bekrafta', row));
+    await click(clickButton('Bekräfta', row));
 
     const dialog = document.body.querySelector('[role="dialog"]')!;
     expect(dialog).toBeTruthy();
@@ -220,16 +228,35 @@ describe('AdminFolkwikiPage', () => {
     await renderPage();
 
     const row = findMatchRow('Vals i Bingsjö');
-    await click(clickButton('Bekrafta', row));
+    await click(clickButton('Bekräfta', row));
 
     const dialog = document.body.querySelector('[role="dialog"]')!;
     expect(dialog).toBeTruthy();
 
     await click(clickButton('Ny huvudstil', dialog));
-    await click(clickButton('Lagg till och bekrafta', dialog));
+    await click(clickButton('Lägg till och bekräfta', dialog));
 
     const alert = dialog.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Kunde inte skapa nyckelord');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('keeps the reject dialog open and shows the error next to "Stilen var redan korrekt" when the reject request fails', async () => {
+    putAction.mockResolvedValueOnce({ ok: false, json: async () => ({}) });
+
+    await renderPage();
+
+    const row = findMatchRow('Vals i Bingsjö');
+    await click(clickButton('Avvisa', row));
+
+    const dialog = document.body.querySelector('[role="dialog"]')!;
+    expect(dialog).toBeTruthy();
+
+    await click(findButtonWithLabelSpan('Stilen var redan korrekt', dialog));
+
+    expect(document.body.querySelector('[role="dialog"]')).toBeTruthy();
+    const alert = dialog.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Misslyckades');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
@@ -255,7 +282,7 @@ describe('AdminFolkwikiPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    await click(clickButton('Avvisa och satt Polska', dialog));
+    await click(clickButton('Avvisa och sätt Polska', dialog));
 
     const alert = dialog.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Misslyckades');
