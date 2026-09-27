@@ -25,7 +25,7 @@ const apiFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 });
 
 vi.mock('@/api/http-client', () => ({
-  apiFetch: (...args: unknown[]) => apiFetch(...args),
+  apiFetch: (input: RequestInfo | URL, init?: RequestInit) => apiFetch(input, init),
 }));
 
 const getStyleTree = vi.fn();
