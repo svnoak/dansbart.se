@@ -14,7 +14,7 @@ import type { Column } from '@/admin/components/DataTable';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button } from '@/ui';
+import { Button, InlineError, LoadError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 type Kind = 'content' | 'dance_style';
@@ -37,12 +37,16 @@ export function AdminSuggestionsPage() {
   const [items, setItems] = useState<SuggestionDto[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [rejectTarget, setRejectTarget] = useState<SuggestionDto | null>(null);
   const [rejectNote, setRejectNote] = useState('');
+  const [rejectError, setRejectError] = useState<string | null>(null);
   const [activatePreview, setActivatePreview] = useState<{
     suggestion: SuggestionDto;
     preview: SuggestionActivationPreviewDto;
   } | null>(null);
+  const [activateError, setActivateError] = useState<string | null>(null);
   const [activating, setActivating] = useState(false);
 
   const fetchItems = useCallback(async () => {
@@ -51,8 +55,9 @@ export function AdminSuggestionsPage() {
       const result = await getAdminSuggestions(kind, status || undefined, limit, offset);
       setItems(result.items ?? []);
       setTotal(result.total ?? 0);
+      setLoadError(null);
     } catch {
-      toast('Kunde inte hämta förslag', 'error');
+      setLoadError('Kunde inte hämta förslag');
     } finally {
       setLoading(false);
     }
@@ -71,17 +76,23 @@ export function AdminSuggestionsPage() {
   };
 
   const handleAccept = async (s: SuggestionDto) => {
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[s.id];
+      return next;
+    });
     try {
       await acceptSuggestion(s.id);
       toast('Förslag godkänt');
       fetchItems();
     } catch {
-      toast('Kunde inte godkänna förslaget', 'error');
+      setRowErrors((prev) => ({ ...prev, [s.id]: 'Kunde inte godkänna förslaget' }));
     }
   };
 
   const handleReject = async () => {
     if (!rejectTarget) return;
+    setRejectError(null);
     try {
       await rejectSuggestion(rejectTarget.id, rejectNote || undefined);
       toast('Förslag avvisat');
@@ -89,29 +100,36 @@ export function AdminSuggestionsPage() {
       setRejectNote('');
       fetchItems();
     } catch {
-      toast('Kunde inte avvisa förslaget', 'error');
+      setRejectError('Kunde inte avvisa förslaget');
     }
   };
 
   const openActivatePreview = async (s: SuggestionDto) => {
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[s.id];
+      return next;
+    });
     try {
       const preview = await getActivationPreview(s.id);
       setActivatePreview({ suggestion: s, preview });
+      setActivateError(null);
     } catch {
-      toast('Kunde inte hämta förhandsgranskning', 'error');
+      setRowErrors((prev) => ({ ...prev, [s.id]: 'Kunde inte hämta förhandsgranskning' }));
     }
   };
 
   const confirmActivate = async () => {
     if (!activatePreview) return;
     setActivating(true);
+    setActivateError(null);
     try {
       await activateSuggestion(activatePreview.suggestion.id);
       toast('Dansstil aktiverad');
       setActivatePreview(null);
       fetchItems();
     } catch {
-      toast('Kunde inte aktivera förslaget', 'error');
+      setActivateError('Kunde inte aktivera förslaget');
     } finally {
       setActivating(false);
     }
@@ -166,18 +184,21 @@ export function AdminSuggestionsPage() {
       header: '',
       render: (s) =>
         s.status === 'pending' ? (
-          <div className="flex items-center gap-2">
-            <Button variant="primary" size="sm" onClick={() => handleAccept(s)}>
-              Godkänn
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-600 dark:text-red-400"
-              onClick={() => setRejectTarget(s)}
-            >
-              Avvisa
-            </Button>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Button variant="primary" size="sm" onClick={() => handleAccept(s)}>
+                Godkänn
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600 dark:text-red-400"
+                onClick={() => { setRejectTarget(s); setRejectError(null); }}
+              >
+                Avvisa
+              </Button>
+            </div>
+            {rowErrors[s.id] && <InlineError>{rowErrors[s.id]}</InlineError>}
           </div>
         ) : null,
       className: 'w-48',
@@ -217,26 +238,32 @@ export function AdminSuggestionsPage() {
       render: (s) => {
         if (s.status === 'pending') {
           return (
-            <div className="flex items-center gap-2">
-              <Button variant="primary" size="sm" onClick={() => handleAccept(s)}>
-                Godkänn
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 dark:text-red-400"
-                onClick={() => setRejectTarget(s)}
-              >
-                Avvisa
-              </Button>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Button variant="primary" size="sm" onClick={() => handleAccept(s)}>
+                  Godkänn
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 dark:text-red-400"
+                  onClick={() => { setRejectTarget(s); setRejectError(null); }}
+                >
+                  Avvisa
+                </Button>
+              </div>
+              {rowErrors[s.id] && <InlineError>{rowErrors[s.id]}</InlineError>}
             </div>
           );
         }
         if (s.status === 'accepted') {
           return (
-            <Button variant="primary" size="sm" onClick={() => openActivatePreview(s)}>
-              Aktivera...
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button variant="primary" size="sm" onClick={() => openActivatePreview(s)}>
+                Aktivera...
+              </Button>
+              {rowErrors[s.id] && <InlineError>{rowErrors[s.id]}</InlineError>}
+            </div>
           );
         }
         return null;
@@ -283,13 +310,17 @@ export function AdminSuggestionsPage() {
         ))}
       </div>
 
-      <DataTable
-        columns={kind === 'content' ? contentColumns : styleColumns}
-        data={items}
-        keyFn={(s) => s.id}
-        loading={loading}
-        emptyMessage="Inga förslag."
-      />
+      {loadError && <LoadError message={loadError} onRetry={fetchItems} />}
+
+      {!loadError && (
+        <DataTable
+          columns={kind === 'content' ? contentColumns : styleColumns}
+          data={items}
+          keyFn={(s) => s.id}
+          loading={loading}
+          emptyMessage="Inga förslag."
+        />
+      )}
 
       {total > 0 && (
         <Pagination
@@ -302,18 +333,19 @@ export function AdminSuggestionsPage() {
 
       <Modal
         open={!!rejectTarget}
-        onClose={() => { setRejectTarget(null); setRejectNote(''); }}
+        onClose={() => { setRejectTarget(null); setRejectNote(''); setRejectError(null); }}
         title="Avvisa förslag"
       >
         <div className="mt-1">
           <TextInput
             placeholder="Motivering (valfritt)"
             value={rejectNote}
-            onChange={(e) => setRejectNote(e.target.value)}
+            onChange={(e) => { setRejectNote(e.target.value); setRejectError(null); }}
           />
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => { setRejectTarget(null); setRejectNote(''); }}>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          {rejectError && <InlineError>{rejectError}</InlineError>}
+          <Button variant="ghost" onClick={() => { setRejectTarget(null); setRejectNote(''); setRejectError(null); }}>
             Avbryt
           </Button>
           <Button variant="primary" className="bg-red-600 hover:bg-red-700" onClick={handleReject}>
@@ -324,7 +356,7 @@ export function AdminSuggestionsPage() {
 
       <Modal
         open={!!activatePreview}
-        onClose={() => setActivatePreview(null)}
+        onClose={() => { setActivatePreview(null); setActivateError(null); }}
         title="Aktivera dansstil"
       >
         {activatePreview && (
@@ -340,8 +372,9 @@ export function AdminSuggestionsPage() {
               klassificerade {activatePreview.preview.affectedTrackCount === 1 ? 'låt' : 'låtar'}{' '}
               i den här stilen.
             </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setActivatePreview(null)}>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              {activateError && <InlineError>{activateError}</InlineError>}
+              <Button variant="ghost" onClick={() => { setActivatePreview(null); setActivateError(null); }}>
                 Avbryt
               </Button>
               <Button variant="primary" disabled={activating} onClick={confirmActivate}>
