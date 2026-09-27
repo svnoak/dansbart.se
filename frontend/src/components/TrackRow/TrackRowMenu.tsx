@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { IconButton, toast } from '@/ui';
+import { IconButton } from '@/ui';
 import { MoreVerticalIcon } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
+import { getTrackRowMenuItems, isActionItem } from './trackRowMenuItems';
 
 interface TrackRowMenuProps {
   track: TrackListDto;
@@ -22,6 +23,13 @@ export function TrackRowMenu({
   onFlag,
   onAddToPlaylist,
 }: TrackRowMenuProps) {
+  const items = getTrackRowMenuItems({
+    track,
+    onAddToQueue,
+    onFlag,
+    onAddToPlaylist,
+  });
+
   return (
     <div className="relative shrink-0">
       <IconButton aria-label="Mer" onClick={onToggle}>
@@ -38,90 +46,32 @@ export function TrackRowMenu({
             className="absolute right-0 top-full z-20 mt-1 w-48 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
             role="menu"
           >
-            <li role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                onClick={() => {
-                  onAddToQueue();
-                  onClose();
-                }}
-              >
-                Lägg i kö
-              </button>
-            </li>
-            {onAddToPlaylist && (
-              <li role="none">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                  onClick={() => {
-                    onAddToPlaylist();
-                    onClose();
-                  }}
-                >
-                  Lägg till i spellista
-                </button>
+            {items.map((item) => (
+              <li key={item.key} role="none">
+                {isActionItem(item) ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
+                    onClick={async () => {
+                      await item.onSelect();
+                      onClose();
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ) : (
+                  <Link
+                    to={item.to}
+                    role="menuitem"
+                    className="block w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
+                    onClick={onClose}
+                  >
+                    {item.label}
+                  </Link>
+                )}
               </li>
-            )}
-            <li role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                onClick={async () => {
-                  const url = `${window.location.origin}?track=${track.id ?? ''}`;
-                  try {
-                    await navigator.clipboard.writeText(url);
-                    toast('Länk kopierad');
-                  } catch {
-                    toast('Kunde inte kopiera länk', 'error');
-                  }
-                  onClose();
-                }}
-              >
-                Dela
-              </button>
-            </li>
-            {track.artistId && (
-              <li role="none">
-                <Link
-                  to={`/artist/${track.artistId}`}
-                  role="menuitem"
-                  className="block w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                  onClick={onClose}
-                >
-                  Gå till artist
-                </Link>
-              </li>
-            )}
-            {track.albumId && (
-              <li role="none">
-                <Link
-                  to={`/album/${track.albumId}`}
-                  role="menuitem"
-                  className="block w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                  onClick={onClose}
-                >
-                  Gå till album
-                </Link>
-              </li>
-            )}
-            <li role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
-                onClick={() => {
-                  onFlag();
-                  onClose();
-                }}
-              >
-                Rapportera problem
-              </button>
-            </li>
+            ))}
           </ul>
         </>
       )}
