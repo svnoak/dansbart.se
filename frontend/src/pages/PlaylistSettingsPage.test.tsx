@@ -890,4 +890,206 @@ describe('PlaylistSettingsPage', () => {
       vi.useRealTimers();
     }
   });
+
+  it('invites a group by its name', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: undefined,
+      isPublic: false,
+      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+      ownerGroup: undefined,
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+    inviteCollaborator.mockResolvedValue({});
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
+    );
+    expect(inviteButton).toBeTruthy();
+
+    await act(async () => {
+      inviteButton?.click();
+    });
+
+    const groupRadio = getInputByLabel('Grupp');
+    expect(groupRadio).toBeTruthy();
+
+    await act(async () => {
+      groupRadio?.click();
+    });
+
+    const groupNameInput = getInputByLabel('Gruppnamn');
+    expect(groupNameInput).toBeTruthy();
+
+    await act(async () => {
+      typeInto(groupNameInput as HTMLInputElement, 'Barngruppen');
+    });
+
+    const submitButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Bjud in',
+    );
+
+    await act(async () => {
+      submitButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(inviteCollaborator).toHaveBeenCalledWith('p1', {
+      groupName: 'Barngruppen',
+      permission: 'view',
+    });
+    expect(inviteCollaborator.mock.calls[0][1]).not.toHaveProperty('username');
+  });
+
+  it('shows the group message for an unknown group', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+      getPlaylist.mockResolvedValue({
+        id: 'p1',
+        name: 'Min spellista',
+        description: undefined,
+        isPublic: false,
+        owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+        ownerGroup: undefined,
+        viewerCanManage: true,
+        trackCount: 0,
+        tracks: [],
+        collaborators: [],
+      });
+      inviteCollaborator.mockRejectedValue(new ApiError('Unprocessable Entity', 422));
+
+      await renderPage();
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
+      );
+      expect(inviteButton).toBeTruthy();
+
+      await act(async () => {
+        inviteButton?.click();
+      });
+
+      const groupRadio = getInputByLabel('Grupp');
+      expect(groupRadio).toBeTruthy();
+
+      await act(async () => {
+        groupRadio?.click();
+      });
+
+      const groupNameInput = getInputByLabel('Gruppnamn');
+      expect(groupNameInput).toBeTruthy();
+
+      await act(async () => {
+        typeInto(groupNameInput as HTMLInputElement, 'Spökgruppen');
+      });
+
+      const submitButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === 'Bjud in',
+      );
+      await act(async () => {
+        submitButton?.click();
+        vi.advanceTimersByTime(100);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(document.body.textContent).toContain(
+        'Ingen grupp heter så. Kontrollera stavningen.',
+      );
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    }
+  });
+
+  it('switching to Grupp clears the field and the error', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+      getPlaylist.mockResolvedValue({
+        id: 'p1',
+        name: 'Min spellista',
+        description: undefined,
+        isPublic: false,
+        owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+        ownerGroup: undefined,
+        viewerCanManage: true,
+        trackCount: 0,
+        tracks: [],
+        collaborators: [],
+      });
+      inviteCollaborator.mockRejectedValue(new ApiError('Unprocessable Entity', 422));
+
+      await renderPage();
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
+      );
+      expect(inviteButton).toBeTruthy();
+
+      await act(async () => {
+        inviteButton?.click();
+      });
+
+      const usernameInput = getInputByLabel('Användarnamn');
+      expect(usernameInput).toBeTruthy();
+
+      await act(async () => {
+        typeInto(usernameInput as HTMLInputElement, 'spokelse');
+      });
+
+      const submitButton = Array.from(document.body.querySelectorAll('button')).find(
+        (btn) => btn.textContent?.trim() === 'Bjud in',
+      );
+      await act(async () => {
+        submitButton?.click();
+        vi.advanceTimersByTime(100);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(document.body.textContent).toContain(
+        'Ingen användare heter så. Kontrollera stavningen.',
+      );
+
+      const groupRadio = getInputByLabel('Grupp');
+      expect(groupRadio).toBeTruthy();
+
+      await act(async () => {
+        groupRadio?.click();
+      });
+
+      const groupNameInput = getInputByLabel('Gruppnamn');
+      expect(groupNameInput).toBeTruthy();
+      expect((groupNameInput as HTMLInputElement).value).toBe('');
+      expect(document.body.textContent).not.toContain(
+        'Ingen användare heter så. Kontrollera stavningen.',
+      );
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+    }
+  });
 });

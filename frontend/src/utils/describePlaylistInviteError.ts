@@ -1,6 +1,9 @@
 import { ApiError } from '@/api/http-client';
 
-export function describePlaylistInviteError(error: unknown): string {
+export function describePlaylistInviteError(
+  error: unknown,
+  inviteType: 'user' | 'group' = 'user',
+): string {
   if (error instanceof ApiError) {
     switch (error.status) {
       case 400:
@@ -10,9 +13,13 @@ export function describePlaylistInviteError(error: unknown): string {
       case 404:
         return 'Spellistan finns inte längre.';
       case 409:
-        return 'Personen är redan inbjuden.';
+        return inviteType === 'group'
+          ? 'Gruppen är redan inbjuden.'
+          : 'Personen är redan inbjuden.';
       case 422:
-        return 'Ingen användare heter så. Kontrollera stavningen.';
+        return inviteType === 'group'
+          ? 'Ingen grupp heter så. Kontrollera stavningen.'
+          : 'Ingen användare heter så. Kontrollera stavningen.';
     }
   }
 
