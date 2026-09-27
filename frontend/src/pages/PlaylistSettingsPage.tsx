@@ -39,7 +39,8 @@ export function PlaylistSettingsPage() {
 
   // Invite form
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [inviteUsername, setInviteUsername] = useState('');
+  const [inviteType, setInviteType] = useState<'user' | 'group'>('user');
+  const [inviteValue, setInviteValue] = useState('');
   const [invitePermission, setInvitePermission] = useState<'edit' | 'view'>('view');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -129,20 +130,30 @@ export function PlaylistSettingsPage() {
 
   // ── Collaborators ───────────────────────────────────────────────────────────
 
+  function handleInviteTypeChange(type: 'user' | 'group') {
+    setInviteType(type);
+    setInviteValue('');
+    setInviteError(null);
+  }
+
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!id || !inviteUsername.trim()) return;
+    if (!id || !inviteValue.trim()) return;
     setInviting(true);
     setInviteError(null);
     try {
-      await inviteCollaborator(id, { username: inviteUsername.trim(), permission: invitePermission });
+      const request =
+        inviteType === 'group'
+          ? { groupName: inviteValue.trim(), permission: invitePermission }
+          : { username: inviteValue.trim(), permission: invitePermission };
+      await inviteCollaborator(id, request);
       const updated = await getPlaylist(id);
       setPlaylist(updated);
-      setInviteUsername('');
+      setInviteValue('');
       setShowInviteForm(false);
       toast('Inbjudan skickad');
     } catch (error) {
-      setInviteError(describePlaylistInviteError(error));
+      setInviteError(describePlaylistInviteError(error, inviteType));
     } finally {
       setInviting(false);
     }
@@ -442,42 +453,77 @@ export function PlaylistSettingsPage() {
           </button>
         )}
         {isOwner && showInviteForm && (
-          <form onSubmit={handleInvite} className="flex items-end gap-2">
-            <div className="flex-1">
-              <TextField
-                id="invite-username"
-                label="Användarnamn"
-                value={inviteUsername}
-                onChange={setInviteUsername}
-                autoComplete="off"
-              />
+          <form onSubmit={handleInvite} className="space-y-3">
+            <fieldset className="space-y-1">
+              <legend className="block text-sm font-medium text-[rgb(var(--color-text))]">
+                Bjud in
+              </legend>
+              <div className="flex gap-4">
+                <label
+                  htmlFor="invite-type-user"
+                  className="flex min-h-11 items-center gap-2 text-sm text-[rgb(var(--color-text))]"
+                >
+                  <input
+                    type="radio"
+                    id="invite-type-user"
+                    name="invite-type"
+                    checked={inviteType === 'user'}
+                    onChange={() => handleInviteTypeChange('user')}
+                  />
+                  Person
+                </label>
+                <label
+                  htmlFor="invite-type-group"
+                  className="flex min-h-11 items-center gap-2 text-sm text-[rgb(var(--color-text))]"
+                >
+                  <input
+                    type="radio"
+                    id="invite-type-group"
+                    name="invite-type"
+                    checked={inviteType === 'group'}
+                    onChange={() => handleInviteTypeChange('group')}
+                  />
+                  Grupp
+                </label>
+              </div>
+            </fieldset>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <TextField
+                  id="invite-value"
+                  label={inviteType === 'group' ? 'Gruppnamn' : 'Användarnamn'}
+                  value={inviteValue}
+                  onChange={setInviteValue}
+                  autoComplete="off"
+                />
+              </div>
+              <select
+                value={invitePermission}
+                onChange={(e) => setInvitePermission(e.target.value as 'edit' | 'view')}
+                className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
+              >
+                <option value="view">Se</option>
+                <option value="edit">Redigera</option>
+              </select>
+              <button
+                type="submit"
+                disabled={inviting || !inviteValue.trim()}
+                className="min-h-[44px] rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Bjud in
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInviteForm(false);
+                  setInviteValue('');
+                  setInviteError(null);
+                }}
+                className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
+              >
+                Avbryt
+              </button>
             </div>
-            <select
-              value={invitePermission}
-              onChange={(e) => setInvitePermission(e.target.value as 'edit' | 'view')}
-              className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
-            >
-              <option value="view">Se</option>
-              <option value="edit">Redigera</option>
-            </select>
-            <button
-              type="submit"
-              disabled={inviting || !inviteUsername.trim()}
-              className="min-h-[44px] rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-            >
-              Bjud in
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowInviteForm(false);
-                setInviteUsername('');
-                setInviteError(null);
-              }}
-              className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
-            >
-              Avbryt
-            </button>
           </form>
         )}
         {isOwner && showInviteForm && <InlineError>{inviteError}</InlineError>}
