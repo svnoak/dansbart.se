@@ -1,6 +1,6 @@
 import { GripIcon } from '@/icons';
 import { TrackRow } from './TrackRow';
-import { InlineError } from '@/ui';
+import { Button, InlineError } from '@/ui';
 import type { TrackListDto } from '@/api/models/trackListDto';
 
 interface PlaylistTrackRowProps {
@@ -52,18 +52,23 @@ export function PlaylistTrackRow({
         <GripIcon className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <TrackRow track={track} contextTracks={contextTracks} />
+        <TrackRow
+          track={track}
+          contextTracks={contextTracks}
+          action={
+            onRemove && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onRemove}
+                aria-label="Ta bort från spellista"
+              >
+                Ta bort
+              </Button>
+            )
+          }
+        />
       </div>
-      {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          className="invisible shrink-0 rounded px-2 py-1 text-xs text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))] group-hover:visible group-focus-within:visible"
-          aria-label="Ta bort från spellista"
-        >
-          Ta bort
-        </button>
-      )}
       {error && <InlineError>{error}</InlineError>}
     </li>
   );
