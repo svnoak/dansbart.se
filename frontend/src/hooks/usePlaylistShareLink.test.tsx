@@ -181,4 +181,47 @@ describe('usePlaylistShareLink', () => {
     const errorToast = toastMessages.find((msg) => msg.variant === 'error' && msg.text === 'Det gick inte att kopiera länken.');
     expect(errorToast).toBeDefined();
   });
+
+  it('a failed link creation returns an error for the panel to render', async () => {
+    const { generateShareToken } = await import('@/api/generated/playlists/playlists');
+    vi.mocked(generateShareToken).mockRejectedValue(new Error('Create failed'));
+
+    const toastMessages: Array<{ text: string; variant: 'success' | 'error' }> = [];
+    const toastListener = (msg: { text: string; variant: 'success' | 'error' }) => {
+      toastMessages.push(msg);
+    };
+    toastListeners.add(toastListener);
+
+    const resultBox: { current: (UsePlaylistShareLinkResult & { createLinkError?: string | null }) | null } = { current: null };
+
+    function TestComponent({ onResultChange }: { onResultChange: (r: UsePlaylistShareLinkResult) => void }) {
+      const hookResult = usePlaylistShareLink('p1', undefined);
+      useEffect(() => {
+        onResultChange(hookResult);
+      }, [hookResult, onResultChange]);
+      return (
+        <button onClick={hookResult.createLink}>Create Link</button>
+      );
+    }
+
+    await act(async () => {
+      root.render(
+        <TestComponent onResultChange={(r: UsePlaylistShareLinkResult) => { resultBox.current = r; }} />
+      );
+    });
+
+    const button = container.querySelector('button');
+    expect(button).toBeTruthy();
+
+    await act(async () => {
+      button?.click();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    toastListeners.delete(toastListener);
+
+    expect(resultBox.current?.createLinkError).toBe('Kunde inte skapa delningslänk');
+    const errorToast2 = toastMessages.find((msg) => msg.variant === 'error');
+    expect(errorToast2).toBeUndefined();
+  });
 });
