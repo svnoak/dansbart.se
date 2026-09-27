@@ -14,6 +14,7 @@ export function useLongPress(onLongPress: () => void) {
   const pressActiveRef = useRef(false);
   const longPressFiredRef = useRef(false);
   const removeScrollListenerRef = useRef<(() => void) | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
 
   const endPress = useCallback(() => {
     if (timerRef.current !== null) {
@@ -22,6 +23,7 @@ export function useLongPress(onLongPress: () => void) {
     }
     pressActiveRef.current = false;
     startPositionRef.current = null;
+    activePointerIdRef.current = null;
     if (removeScrollListenerRef.current) {
       removeScrollListenerRef.current();
       removeScrollListenerRef.current = null;
@@ -31,6 +33,9 @@ export function useLongPress(onLongPress: () => void) {
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.pointerType !== 'touch') return;
+      if (activePointerIdRef.current !== null) return;
+      longPressFiredRef.current = false;
+      activePointerIdRef.current = e.pointerId;
       pressActiveRef.current = true;
       startPositionRef.current = { x: e.clientX, y: e.clientY };
       const handleScroll = () => endPress();
@@ -47,6 +52,7 @@ export function useLongPress(onLongPress: () => void) {
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return;
       if (!pressActiveRef.current || !startPositionRef.current) return;
       const dx = e.clientX - startPositionRef.current.x;
       const dy = e.clientY - startPositionRef.current.y;
@@ -55,8 +61,20 @@ export function useLongPress(onLongPress: () => void) {
     [endPress],
   );
 
-  const onPointerUp = useCallback(() => endPress(), [endPress]);
-  const onPointerCancel = useCallback(() => endPress(), [endPress]);
+  const onPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return;
+      endPress();
+    },
+    [endPress],
+  );
+  const onPointerCancel = useCallback(
+    (e: React.PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return;
+      endPress();
+    },
+    [endPress],
+  );
 
   const onContextMenu = useCallback((e: React.MouseEvent) => {
     if (pressActiveRef.current || longPressFiredRef.current) e.preventDefault();

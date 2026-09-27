@@ -8,15 +8,16 @@ import { useLongPress } from './useLongPress';
 function firePointerEvent(
   target: EventTarget,
   type: string,
-  options: { pointerType: string; clientX?: number; clientY?: number },
+  options: { pointerType: string; clientX?: number; clientY?: number; pointerId?: number },
 ) {
-  const { pointerType, clientX = 0, clientY = 0 } = options;
+  const { pointerType, clientX = 0, clientY = 0, pointerId = 1 } = options;
   let event: Event;
   if (typeof PointerEvent === 'function') {
-    event = new PointerEvent(type, { bubbles: true, cancelable: true, clientX, clientY, pointerType });
+    event = new PointerEvent(type, { bubbles: true, cancelable: true, clientX, clientY, pointerType, pointerId });
   } else {
     event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX, clientY });
     Object.defineProperty(event, 'pointerType', { value: pointerType });
+    Object.defineProperty(event, 'pointerId', { value: pointerId });
   }
   target.dispatchEvent(event);
 }
@@ -208,5 +209,82 @@ describe('useLongPress', () => {
     });
 
     expect(onChildClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('a tap after a long press without a click is not swallowed', async () => {
+    const onLongPress = vi.fn();
+    const onChildClick = vi.fn();
+
+    await act(async () => {
+      root.render(<LongPressTarget onLongPress={onLongPress} onChildClick={onChildClick} />);
+    });
+
+    const target = container.querySelector<HTMLDivElement>('[data-testid="target"]')!;
+    const child = container.querySelector<HTMLButtonElement>('[data-testid="child"]')!;
+
+    act(() => {
+      firePointerEvent(target, 'pointerdown', { pointerType: 'touch', clientX: 0, clientY: 0 });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      firePointerEvent(target, 'pointercancel', { pointerType: 'touch', clientX: 0, clientY: 0 });
+    });
+
+    act(() => {
+      firePointerEvent(target, 'pointerdown', { pointerType: 'touch', clientX: 0, clientY: 0 });
+    });
+
+    act(() => {
+      firePointerEvent(target, 'pointerup', { pointerType: 'touch', clientX: 0, clientY: 0 });
+    });
+
+    act(() => {
+      child.click();
+    });
+
+    expect(onChildClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('a second finger does not disturb the first press', async () => {
+    const onLongPress = vi.fn();
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+    await act(async () => {
+      root.render(<LongPressTarget onLongPress={onLongPress} onChildClick={() => {}} />);
+    });
+
+    const target = container.querySelector<HTMLDivElement>('[data-testid="target"]')!;
+
+    act(() => {
+      firePointerEvent(target, 'pointerdown', { pointerType: 'touch', clientX: 0, clientY: 0, pointerId: 1 });
+    });
+
+    act(() => {
+      firePointerEvent(target, 'pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100, pointerId: 2 });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      firePointerEvent(target, 'pointerup', { pointerType: 'touch', clientX: 100, clientY: 100, pointerId: 2 });
+    });
+
+    act(() => {
+      firePointerEvent(target, 'pointerup', { pointerType: 'touch', clientX: 0, clientY: 0, pointerId: 1 });
+    });
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function));
+
+    removeEventListenerSpy.mockRestore();
   });
 });
