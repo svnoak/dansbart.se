@@ -54,6 +54,8 @@ export function GroupSettingsPage() {
 
   const [confirmingPublic, setConfirmingPublic] = useState(false);
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -214,12 +216,13 @@ export function GroupSettingsPage() {
 
   async function handleDelete() {
     if (!id) return;
+    setDeleteError(null);
     try {
       await deleteGroup(id);
       toast('Gruppen är raderad.');
       navigate('/groups');
     } catch {
-      toast('Det gick inte att radera gruppen.', 'error');
+      setDeleteError('Det gick inte att radera gruppen.');
     }
   }
 
@@ -406,6 +409,7 @@ export function GroupSettingsPage() {
               buttonLabel="Radera grupp"
               onConfirm={handleDelete}
             />
+            <InlineError>{deleteError}</InlineError>
           </Card>
         </section>
       )}

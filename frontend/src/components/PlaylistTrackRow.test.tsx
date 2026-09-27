@@ -68,7 +68,7 @@ describe('PlaylistTrackRow', () => {
     vi.clearAllMocks();
   });
 
-  it('does not lay the remove button over the favourite button', async () => {
+  it('shows Ta bort in place of the heart', async () => {
     const onRemove = vi.fn();
 
     await act(async () => {
@@ -90,26 +90,31 @@ describe('PlaylistTrackRow', () => {
       );
     });
 
-    const removeButton = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.getAttribute('aria-label') === 'Ta bort från spellista',
-    );
-    const favouriteButton = Array.from(container.querySelectorAll('button')).find(
+    const heartButton = Array.from(container.querySelectorAll('button')).find(
       (btn) => {
         const label = btn.getAttribute('aria-label');
         return label === 'Favoritmarkera' || label === 'Sluta favoritmarkera';
       },
     );
+    expect(heartButton).toBeFalsy();
 
+    const menuButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Mer',
+    );
+    expect(menuButton).toBeTruthy();
+    const menuWrapper = menuButton!.parentElement;
+    const rightGroup = menuWrapper!.parentElement;
+
+    const removeButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Ta bort från spellista',
+    );
     expect(removeButton).toBeTruthy();
-    expect(favouriteButton).toBeTruthy();
 
-    // Remove button should not use absolute positioning.
-    expect(removeButton?.classList.contains('absolute')).toBe(false);
+    // The remove button sits in the row's right-hand group, directly before the menu trigger.
+    expect(removeButton!.parentElement).toBe(rightGroup);
+    expect(removeButton!.nextElementSibling).toBe(menuWrapper);
 
-    // Favourite button should come before remove button in document order.
-    expect(
-      favouriteButton!.compareDocumentPosition(removeButton!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    // The remove button is always visible, also on touch screens.
+    expect(removeButton!.classList.contains('invisible')).toBe(false);
   });
 });

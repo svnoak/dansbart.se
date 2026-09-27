@@ -7,10 +7,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import se.dansbart.domain.playlist.PlaylistService;
+import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.dto.GroupDto;
 import se.dansbart.dto.GroupInvitationDto;
 import se.dansbart.dto.GroupMemberDto;
 import se.dansbart.dto.GroupSummaryDto;
+import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.exception.BadRequestException;
 
@@ -25,6 +28,7 @@ import java.util.UUID;
 public class GroupController {
 
     private final GroupService groupService;
+    private final PlaylistService playlistService;
 
     @GetMapping
     @Operation(summary = "Get groups the current user belongs to")
@@ -90,6 +94,26 @@ public class GroupController {
         return ResponseEntity.created(URI.create("/api/playlists/" + playlist.getId())).body(playlist);
     }
 
+    @GetMapping("/{id}/playlist-invitations")
+    @Operation(operationId = "getGroupPlaylistInvitations", summary = "Get pending playlist invitations for the group")
+    public ResponseEntity<List<InvitationDto>> getGroupPlaylistInvitations(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(playlistService.getPendingInvitationsForGroup(id, userId));
+    }
+
+    @PutMapping("/{id}/playlist-invitations/{invitationId}")
+    @Operation(operationId = "respondToGroupPlaylistInvitation", summary = "Accept or reject a playlist invitation sent to the group")
+    public ResponseEntity<PlaylistCollaborator> respondToGroupPlaylistInvitation(
+            @PathVariable UUID id,
+            @PathVariable UUID invitationId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody RespondToPlaylistInvitationRequest request) {
+        return playlistService.respondToGroupInvitation(id, invitationId, userId, request.accept())
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     @GetMapping("/invitations")
     @Operation(operationId = "getGroupInvitations", summary = "Get pending group invitations for current user")
     public ResponseEntity<List<GroupInvitationDto>> getInvitations(@AuthenticationPrincipal UUID userId) {
@@ -143,5 +167,6 @@ public class GroupController {
     public record UpdateGroupRequest(String name, String aboutUs, Boolean isPublic) {}
     public record InviteMemberRequest(String username) {}
     public record RespondToInvitationRequest(Boolean accept) {}
+    public record RespondToPlaylistInvitationRequest(boolean accept) {}
     public record UpdateMemberRequest(Boolean isAdmin, Boolean canEditInfo, Boolean canManagePlaylists, Boolean canInviteMembers, Boolean canRemoveMembers) {}
 }

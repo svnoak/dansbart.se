@@ -16,6 +16,8 @@ public class CollaboratorDto {
     private UUID userId;
     private String username;
     private String displayName;
+    private UUID groupId;
+    private String groupName;
     private String permission;
     private String status;
     private OffsetDateTime invitedAt;

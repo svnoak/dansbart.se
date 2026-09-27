@@ -5,8 +5,6 @@
  * OpenAPI spec version: v0
  */
 
-export interface InviteCollaboratorRequest {
-  username?: string;
-  groupName?: string;
-  permission?: string;
+export interface RespondToPlaylistInvitationRequest {
+  accept?: boolean;
 }

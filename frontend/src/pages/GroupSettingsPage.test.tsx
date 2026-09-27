@@ -17,6 +17,7 @@ const inviteMember = vi.fn();
 const updateMember = vi.fn();
 const removeMember = vi.fn();
 const useAuth = vi.fn();
+const toast = vi.fn();
 
 vi.mock('@/api/generated/groups/groups', () => ({
   getGroup: (...args: unknown[]) => getGroup(...args),
@@ -31,6 +32,14 @@ vi.mock('@/auth/useAuth', () => ({
   useAuth: () => useAuth(),
 }));
 
+vi.mock('@/ui', async () => {
+  const actual = await vi.importActual<typeof import('@/ui')>('@/ui');
+  return {
+    ...actual,
+    toast: (...args: unknown[]) => toast(...args),
+  };
+});
+
 describe('GroupSettingsPage', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -43,6 +52,7 @@ describe('GroupSettingsPage', () => {
     updateMember.mockReset();
     removeMember.mockReset();
     useAuth.mockReset();
+    toast.mockReset();
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -366,6 +376,45 @@ describe('GroupSettingsPage', () => {
     });
 
     expect(deleteGroup).toHaveBeenCalledWith('g1');
+  });
+
+  it('a failed group deletion shows an error inline near the delete control', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Barngruppen',
+      aboutUs: 'Vi dansar polska',
+      isPublic: true,
+      members: [
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: true, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
+      ],
+    });
+    deleteGroup.mockRejectedValue(new Error('Delete failed'));
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const deleteButton = getButtonByText('Radera grupp');
+    await act(async () => {
+      deleteButton?.click();
+    });
+
+    const confirmInput = document.body.querySelector('input[type="text"]') as HTMLInputElement;
+    typeInto(confirmInput, 'Barngruppen');
+
+    const confirmDeleteButton = getButtonByText('Radera permanent');
+    await act(async () => {
+      confirmDeleteButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const errorAlert = Array.from(document.body.querySelectorAll('[role="alert"]')).find((el) =>
+      el.closest('section')?.textContent?.includes('Radera grupp'),
+    );
+    expect(errorAlert?.textContent).toBe('Det gick inte att radera gruppen.');
+    expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
   });
 
   it('a non-admin never sees Radera grupp', async () => {

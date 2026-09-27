@@ -10,6 +10,8 @@ export interface CollaboratorDto {
   userId?: string;
   username?: string;
   displayName?: string;
+  groupId?: string;
+  groupName?: string;
   permission?: string;
   status?: string;
   invitedAt?: string;

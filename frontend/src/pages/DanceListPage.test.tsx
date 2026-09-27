@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import DanceListPage from './DanceListPage';
 import { typeInto } from '@/test/typeInto';
 import { ToastContainer } from '@/ui';
+import * as toastEmitter from '@/ui/toastEmitter';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -151,8 +152,10 @@ const mockEmptySearchResults = {
 describe('DanceListPage', () => {
   let container: HTMLDivElement;
   let root: Root;
+  let toastSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    toastSpy = vi.spyOn(toastEmitter, 'toast');
     getDanceList.mockReset();
     addEntry.mockReset();
     removeEntry.mockReset();
@@ -172,6 +175,7 @@ describe('DanceListPage', () => {
   afterEach(() => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+    toastSpy.mockRestore();
     root.unmount();
     container.remove();
   });
@@ -778,5 +782,210 @@ describe('DanceListPage', () => {
     const hasPlayButton = playButtons.some((b) => b.textContent?.includes('Spela'));
 
     expect(hasPlayButton).toBe(false);
+  });
+
+  it('shows the add-dance error inline next to the search panel, not as a toast', async () => {
+    getDances.mockResolvedValue(mockSearchResults);
+    addEntry.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    const addButton = clickButton('Lägg till dans');
+    await act(async () => {
+      addButton?.click();
+    });
+
+    const searchInput = getInputByLabel('Sök efter dans');
+    await act(async () => {
+      typeInto(searchInput!, 'Fam');
+      vi.advanceTimersByTime(300);
+    });
+
+    const resultButton = clickButton('Familjevals från Ödsmål');
+    await act(async () => {
+      resultButton?.click();
+    });
+
+    const addFromResultButton = clickButton('Lägg till');
+    await act(async () => {
+      addFromResultButton?.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    const searchPanel = getInputByLabel('Sök efter dans')!.closest('div')!.parentElement!;
+    const alert = searchPanel.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Det gick inte att lägga till dansen.');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('shows the add-track error inline next to the track search panel, not as a toast', async () => {
+    const mockTrack = {
+      id: 'track-3',
+      title: 'Ny låt',
+      artistName: 'Testartisten',
+      durationMs: 190000,
+      danceStyle: 'familjevals',
+      source: 'spotify',
+    };
+    searchTracks.mockResolvedValue({
+      items: [mockTrack],
+      total: 1,
+      page: 0,
+      size: 20,
+      hasMore: false,
+    });
+    addTrackToEntry.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    const addTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
+      b.textContent?.includes('Lägg till låt'),
+    );
+    await act(async () => {
+      addTrackButtons[0]?.click();
+    });
+
+    const searchInput = getInputByLabel('Sök efter låt');
+    await act(async () => {
+      typeInto(searchInput!, 'Ny');
+      vi.advanceTimersByTime(300);
+    });
+
+    const trackResultButton = clickButton('Ny låt');
+    await act(async () => {
+      trackResultButton?.click();
+    });
+
+    const addFromResultButton = clickButton('Lägg till');
+    await act(async () => {
+      addFromResultButton?.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    const trackSearchPanel = getInputByLabel('Sök efter låt')!.closest('div')!.parentElement!;
+    const alert = trackSearchPanel.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Det gick inte att lägga till låten.');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('shows the remove-dance error inline next to that dance entry, not as a toast', async () => {
+    removeEntry.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    const removeButton = clickButton('Ta bort');
+    await act(async () => {
+      removeButton?.click();
+    });
+
+    const confirmButton = clickButton('Ja, ta bort');
+    await act(async () => {
+      confirmButton?.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    const entry = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Familjevals från Ödsmål'),
+    );
+    expect(entry).toBeDefined();
+    const alert = entry!.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Det gick inte att ta bort dansen.');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('shows the remove-track error inline next to that track, not as a toast', async () => {
+    removeTrackFromEntry.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    const removeTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
+      b.textContent?.includes('Ta bort låt'),
+    );
+    await act(async () => {
+      removeTrackButtons[0]?.click();
+    });
+
+    const confirmButton = clickButton('Ja, ta bort');
+    await act(async () => {
+      confirmButton?.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    const entry = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Familjevals från Ödsmål'),
+    );
+    expect(entry).toBeDefined();
+    const alert = entry!.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Det gick inte att ta bort låten.');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('shows the play-mode error inline next to the play-mode select, not as a toast', async () => {
+    setPlayMode.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    const playModeSelects = Array.from(document.body.querySelectorAll('select'));
+    const firstSelect = playModeSelects[0];
+    expect(firstSelect).toBeDefined();
+
+    await act(async () => {
+      firstSelect.value = 'random';
+      firstSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      vi.advanceTimersByTime(300);
+    });
+
+    const entry = Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes('Familjevals från Ödsmål'),
+    );
+    expect(entry).toBeDefined();
+    const alert = entry!.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Det gick inte att ändra spelläget.');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('keeps the remove error of one entry when another entry is removed', async () => {
+    removeEntry.mockImplementation((_listId: string, entryId: string) =>
+      entryId === 'entry-1' ? Promise.reject(new Error('Server error')) : Promise.resolve(undefined),
+    );
+
+    await renderPage();
+
+    function findEntry(danceName: string) {
+      const li = Array.from(document.body.querySelectorAll('li')).find((el) =>
+        el.textContent?.includes(danceName),
+      );
+      expect(li).toBeDefined();
+      return li as HTMLLIElement;
+    }
+
+    function clickIn(el: HTMLElement, text: string) {
+      const button = Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === text);
+      expect(button).toBeDefined();
+      button!.click();
+    }
+
+    const entryA = findEntry('Familjevals från Ödsmål');
+    await act(async () => {
+      clickIn(entryA, 'Ta bort');
+    });
+    await act(async () => {
+      clickIn(entryA, 'Ja, ta bort');
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(entryA.querySelector('[role="alert"]')?.textContent).toContain('Det gick inte att ta bort dansen.');
+
+    const entryB = findEntry('Egen dans');
+    await act(async () => {
+      clickIn(entryB, 'Ta bort');
+    });
+    await act(async () => {
+      clickIn(entryB, 'Ja, ta bort');
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(removeEntry).toHaveBeenCalledWith('list-1', 'entry-2');
+    expect(entryA.querySelector('[role="alert"]')?.textContent).toContain('Det gick inte att ta bort dansen.');
   });
 });

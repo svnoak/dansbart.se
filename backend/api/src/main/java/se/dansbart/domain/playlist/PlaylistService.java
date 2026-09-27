@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.CollaborationAccess;
+import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
+import se.dansbart.domain.group.GroupMember;
+import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
@@ -39,6 +42,7 @@ public class PlaylistService {
     private final PlaylistCollaboratorJooqRepository collaboratorRepository;
     private final UserJooqRepository userJooqRepository;
     private final GroupJooqRepository groupJooqRepository;
+    private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final CollaborationAccess collaborationAccess;
 
     @Transactional(readOnly = true)
@@ -114,21 +118,25 @@ public class PlaylistService {
 
     @Transactional
     public Optional<Playlist> update(UUID playlistId, UUID userId, String name, String description, Boolean isPublic, String danceStyle, String subStyle, String tempoCategory) {
-        return playlistJooqRepository.findById(playlistId)
-            .filter(p -> hasEditAccess(p, userId))
-            .map(playlist -> {
-                boolean fullControl = hasFullControl(playlist, userId);
-                if (name != null) playlist.setName(name);
-                if (fullControl) {
-                    if (description != null) playlist.setDescription(description);
-                    if (isPublic != null) playlist.setIsPublic(isPublic);
-                    if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
-                    if (subStyle != null) playlist.setSubStyle(subStyle.isEmpty() ? null : subStyle);
-                    if (tempoCategory != null) playlist.setTempoCategory(tempoCategory.isEmpty() ? null : tempoCategory);
-                }
-                playlist.setUpdatedAt(OffsetDateTime.now());
-                return playlistJooqRepository.update(playlist);
-            });
+        Optional<Playlist> maybePlaylist = playlistJooqRepository.findById(playlistId);
+        if (maybePlaylist.isEmpty()) {
+            return Optional.empty();
+        }
+        Playlist playlist = maybePlaylist.get();
+        if (!hasEditAccess(playlist, userId)) {
+            return Optional.empty();
+        }
+        boolean fullControl = hasFullControl(playlist, userId);
+        if (name != null) playlist.setName(name);
+        if (fullControl) {
+            if (description != null) playlist.setDescription(description);
+            if (isPublic != null) playlist.setIsPublic(isPublic);
+            if (danceStyle != null) playlist.setDanceStyle(danceStyle.isEmpty() ? null : danceStyle);
+            if (subStyle != null) playlist.setSubStyle(subStyle.isEmpty() ? null : subStyle);
+            if (tempoCategory != null) playlist.setTempoCategory(tempoCategory.isEmpty() ? null : tempoCategory);
+        }
+        playlist.setUpdatedAt(OffsetDateTime.now());
+        return Optional.of(playlistJooqRepository.update(playlist));
     }
 
     @Transactional
@@ -170,7 +178,8 @@ public class PlaylistService {
     }
 
     private boolean hasEditPermission(UUID playlistId, UUID userId) {
-        return playlistJooqRepository.existsByPlaylistIdAndUserIdAndPermission(playlistId, userId, "edit");
+        return playlistJooqRepository.existsByPlaylistIdAndUserIdAndPermission(playlistId, userId, "edit")
+            || playlistJooqRepository.hasAcceptedGroupCollaborationWithPermission(playlistId, userId, "edit");
     }
 
     private boolean hasFullControl(Playlist playlist, UUID userId) {
@@ -180,6 +189,13 @@ public class PlaylistService {
     private boolean hasEditAccess(Playlist playlist, UUID userId) {
         return collaborationAccess.hasEditAccess(playlist.getUserId(), playlist.getGroupId(), userId,
             () -> hasEditPermission(playlist.getId(), userId));
+    }
+
+    private boolean hasAcceptedCollaboration(Playlist playlist, UUID userId) {
+        return collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), userId)
+            .filter(c -> "accepted".equals(c.getStatus()))
+            .isPresent()
+            || playlistJooqRepository.hasAcceptedGroupCollaboration(playlist.getId(), userId);
     }
 
     private void reorderTracks(UUID playlistId) {
@@ -208,9 +224,7 @@ public class PlaylistService {
     private boolean canView(Playlist playlist, UUID viewerId) {
         return collaborationAccess.canView(Boolean.TRUE.equals(playlist.getIsPublic()), playlist.getGroupId(), viewerId,
             () -> hasEditAccess(playlist, viewerId),
-            () -> collaboratorRepository.findByPlaylistIdAndUserId(playlist.getId(), viewerId)
-                .filter(c -> "accepted".equals(c.getStatus()))
-                .isPresent());
+            () -> hasAcceptedCollaboration(playlist, viewerId));
     }
 
     /** Playlist by share token with tracks as TrackListDto. */
@@ -253,19 +267,7 @@ public class PlaylistService {
                 .build());
         }
         List<CollaboratorDto> collaborators = collaboratorRepository.findByPlaylistId(playlist.getId()).stream()
-            .map(c -> {
-                var user = c.getUser();
-                return CollaboratorDto.builder()
-                    .id(c.getId())
-                    .userId(c.getUserId())
-                    .username(user != null ? user.getUsername() : null)
-                    .displayName(user != null ? user.getDisplayName() : null)
-                    .permission(c.getPermission())
-                    .status(c.getStatus())
-                    .invitedAt(c.getInvitedAt())
-                    .acceptedAt(c.getAcceptedAt())
-                    .build();
-            })
+            .map(this::toCollaboratorDto)
             .collect(Collectors.toList());
         return PlaylistDto.builder()
             .id(playlist.getId())
@@ -284,6 +286,23 @@ public class PlaylistService {
             .trackCount(playlistTrackDtos.size())
             .tracks(playlistTrackDtos)
             .collaborators(collaborators)
+            .build();
+    }
+
+    private CollaboratorDto toCollaboratorDto(PlaylistCollaborator collab) {
+        var user = collab.getUser();
+        var group = collab.getGroup();
+        return CollaboratorDto.builder()
+            .id(collab.getId())
+            .userId(collab.getUserId())
+            .username(user != null ? user.getUsername() : null)
+            .displayName(user != null ? user.getDisplayName() : null)
+            .groupId(group != null ? group.getId() : null)
+            .groupName(group != null ? group.getName() : null)
+            .permission(collab.getPermission())
+            .status(collab.getStatus())
+            .invitedAt(collab.getInvitedAt())
+            .acceptedAt(collab.getAcceptedAt())
             .build();
     }
 
@@ -307,18 +326,60 @@ public class PlaylistService {
 
     @Transactional
     public Optional<PlaylistCollaborator> respondToInvitation(UUID invitationId, UUID userId, boolean accept) {
-        return collaboratorRepository.findById(invitationId)
-            .filter(collab -> userId.equals(collab.getUserId()) && "pending".equals(collab.getStatus()))
-            .map(collab -> {
-                if (accept) {
-                    collab.setStatus("accepted");
-                    collab.setAcceptedAt(OffsetDateTime.now());
-                    return collaboratorRepository.save(collab);
-                } else {
-                    collaboratorRepository.delete(collab);
-                    return null;
-                }
-            });
+        PlaylistCollaborator collab = collaboratorRepository.findById(invitationId)
+            .filter(c -> userId.equals(c.getUserId()) && "pending".equals(c.getStatus()))
+            .orElseThrow(() -> new ResourceNotFoundException("This invitation does not exist."));
+        if (accept) {
+            collab.setStatus("accepted");
+            collab.setAcceptedAt(OffsetDateTime.now());
+            return Optional.of(collaboratorRepository.save(collab));
+        }
+        collaboratorRepository.delete(collab);
+        return Optional.empty();
+    }
+
+    @Transactional(readOnly = true)
+    public List<InvitationDto> getPendingInvitationsForGroup(UUID groupId, UUID viewerId) {
+        requireGroupAdmin(groupId, viewerId);
+        return collaboratorRepository.findByGroupIdAndStatus(groupId, "pending").stream()
+            .map(invitation -> InvitationDto.builder()
+                .id(invitation.id())
+                .playlistId(invitation.playlistId())
+                .playlistName(invitation.playlistName())
+                .invitedByUserId(invitation.invitedByUserId())
+                .invitedByDisplayName(invitation.invitedByDisplayName())
+                .permission(invitation.permission())
+                .invitedAt(invitation.invitedAt())
+                .build())
+            .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Optional<PlaylistCollaborator> respondToGroupInvitation(UUID groupId, UUID invitationId, UUID viewerId, boolean accept) {
+        requireGroupAdmin(groupId, viewerId);
+        PlaylistCollaborator collab = collaboratorRepository.findById(invitationId)
+            .filter(c -> groupId.equals(c.getGroupId()) && "pending".equals(c.getStatus()))
+            .orElseThrow(() -> new ResourceNotFoundException("This invitation does not exist."));
+        if (accept) {
+            collab.setStatus("accepted");
+            collab.setAcceptedAt(OffsetDateTime.now());
+            return Optional.of(collaboratorRepository.save(collab));
+        }
+        collaboratorRepository.delete(collab);
+        return Optional.empty();
+    }
+
+    private void requireGroupAdmin(UUID groupId, UUID viewerId) {
+        Group group = groupJooqRepository.findById(groupId)
+            .orElseThrow(() -> new ResourceNotFoundException("The group does not exist, or you do not have access to it."));
+        var membership = groupMemberJooqRepository.findByGroupIdAndUserId(groupId, viewerId)
+            .filter(GroupMember::isAccepted);
+        if (membership.isEmpty() && !Boolean.TRUE.equals(group.getIsPublic())) {
+            throw new ResourceNotFoundException("The group does not exist, or you do not have access to it.");
+        }
+        if (membership.isEmpty() || !Boolean.TRUE.equals(membership.get().getIsAdmin())) {
+            throw new ForbiddenException("You do not have permission to do this in the group.");
+        }
     }
 
     @Transactional
@@ -340,6 +401,27 @@ public class PlaylistService {
                 return true;
             })
             .orElse(false);
+    }
+
+    @Transactional
+    public Optional<PlaylistCollaborator> inviteCollaborator(UUID playlistId, UUID ownerId, String username, String groupName, String permission) {
+        Playlist playlist = playlistJooqRepository.findById(playlistId)
+            .orElseThrow(() -> new ResourceNotFoundException("The playlist does not exist."));
+
+        if (!hasFullControl(playlist, ownerId)) {
+            throw new ForbiddenException("You do not have permission to manage collaborators.");
+        }
+
+        boolean hasUsername = username != null && !username.isBlank();
+        boolean hasGroupName = groupName != null && !groupName.isBlank();
+        if (hasUsername == hasGroupName) {
+            throw new BadRequestException("Invite exactly one of a username or a group name.");
+        }
+
+        if (hasGroupName) {
+            return inviteGroupCollaborator(playlistId, ownerId, groupName, permission);
+        }
+        return inviteCollaborator(playlistId, ownerId, username, permission);
     }
 
     @Transactional
@@ -377,24 +459,43 @@ public class PlaylistService {
         return Optional.of(collaboratorRepository.save(collab));
     }
 
+    @Transactional
+    public Optional<PlaylistCollaborator> inviteGroupCollaborator(UUID playlistId, UUID ownerId, String groupName, String permission) {
+        Playlist playlist = playlistJooqRepository.findById(playlistId)
+            .orElseThrow(() -> new ResourceNotFoundException("The playlist does not exist."));
+
+        if (!hasFullControl(playlist, ownerId)) {
+            throw new ForbiddenException("You do not have permission to manage collaborators.");
+        }
+
+        if (groupName == null || groupName.isBlank()) {
+            throw new BadRequestException("The group name is required.");
+        }
+
+        UUID groupId = groupJooqRepository.findByNameIgnoreCase(groupName.trim())
+            .map(group -> group.getId())
+            .orElseThrow(() -> new UnprocessableEntityException("No group has that name."));
+
+        if (collaboratorRepository.findByPlaylistIdAndGroupId(playlistId, groupId).isPresent()) {
+            return Optional.empty();
+        }
+
+        PlaylistCollaborator collab = PlaylistCollaborator.builder()
+            .playlistId(playlistId)
+            .groupId(groupId)
+            .permission(permission != null ? permission : "view")
+            .status("pending")
+            .invitedBy(ownerId)
+            .build();
+        return Optional.of(collaboratorRepository.save(collab));
+    }
+
     @Transactional(readOnly = true)
     public Optional<List<CollaboratorDto>> getCollaborators(UUID playlistId, UUID viewerId) {
         return playlistJooqRepository.findById(playlistId)
             .filter(playlist -> canView(playlist, viewerId))
             .map(playlist -> collaboratorRepository.findByPlaylistId(playlistId).stream()
-                .map(collab -> {
-                    var user = collab.getUser();
-                    return CollaboratorDto.builder()
-                        .id(collab.getId())
-                        .userId(collab.getUserId())
-                        .username(user != null ? user.getUsername() : null)
-                        .displayName(user != null ? user.getDisplayName() : null)
-                        .permission(collab.getPermission())
-                        .status(collab.getStatus())
-                        .invitedAt(collab.getInvitedAt())
-                        .acceptedAt(collab.getAcceptedAt())
-                        .build();
-                })
+                .map(this::toCollaboratorDto)
                 .collect(Collectors.toList()));
     }
 
