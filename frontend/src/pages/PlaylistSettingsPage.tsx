@@ -49,10 +49,16 @@ export function PlaylistSettingsPage() {
   const [transferTarget, setTransferTarget] = useState('');
   const [transferConfirm, setTransferConfirm] = useState(false);
 
-  const { shareToken, shareUrl, createLink, removeLink, copyLink, removeLinkError } = usePlaylistShareLink(
-    id,
-    playlist?.shareToken,
-  );
+  const {
+    shareToken,
+    shareUrl,
+    createLink,
+    removeLink,
+    copyLink,
+    createLinkError,
+    copyLinkError,
+    removeLinkError,
+  } = usePlaylistShareLink(id, playlist?.shareToken);
 
   // Description
   const [description, setDescription] = useState('');
@@ -331,6 +337,7 @@ export function PlaylistSettingsPage() {
                     Kopiera
                   </button>
                 </div>
+                <InlineError>{copyLinkError}</InlineError>
                 <button
                   type="button"
                   onClick={removeLink}
@@ -352,6 +359,7 @@ export function PlaylistSettingsPage() {
                 >
                   Skapa delningslänk
                 </button>
+                <InlineError>{createLinkError}</InlineError>
               </>
             )}
           </div>

@@ -8,6 +8,7 @@ export interface UsePlaylistShareLinkResult {
   createLink: () => Promise<void>;
   removeLink: () => Promise<void>;
   copyLink: () => void;
+  clearErrors: () => void;
   createLinkError: string | null;
   copyLinkError: string | null;
   removeLinkError: string | null;
@@ -60,6 +61,12 @@ export function usePlaylistShareLink(
     navigator.clipboard.writeText(url).then(() => toast('Länk kopierad')).catch(() => setCopyLinkError('Det gick inte att kopiera länken.'));
   }, [shareToken]);
 
+  const clearErrors = useCallback(() => {
+    setCreateLinkError(null);
+    setCopyLinkError(null);
+    setRemoveLinkError(null);
+  }, []);
+
   const shareUrl = shareToken ? `${window.location.origin}/shared/${shareToken}` : null;
 
   return {
@@ -68,6 +75,7 @@ export function usePlaylistShareLink(
     createLink,
     removeLink,
     copyLink,
+    clearErrors,
     createLinkError,
     copyLinkError,
     removeLinkError,

@@ -161,6 +161,43 @@ describe('AddToPlaylistModal', () => {
     expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
   });
 
+  it('clears the add error on a successful retry', async () => {
+    getEditablePlaylists.mockResolvedValue([
+      { id: 'p1', name: 'Mina valser', ownerGroupName: null },
+    ]);
+    addTrack.mockRejectedValueOnce(new Error('Add failed')).mockResolvedValueOnce({});
+    const onClose = vi.fn();
+
+    await act(async () => {
+      root.render(
+        <AddToPlaylistModal open={true} onClose={onClose} track={track} />
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const playlistButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.includes('Mina valser')
+    );
+    expect(playlistButton).toBeDefined();
+
+    await act(async () => {
+      playlistButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toBe(
+      'Kunde inte lägga till låt'
+    );
+
+    await act(async () => {
+      playlistButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.querySelector('[role="alert"]')).toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('shows an inline error when creating a playlist fails', async () => {
     getEditablePlaylists.mockResolvedValue([]);
     createPlaylist.mockRejectedValue(new Error('Create failed'));
@@ -202,5 +239,52 @@ describe('AddToPlaylistModal', () => {
     expect(document.body.textContent).toContain('Lägg till i spellista');
     expect(onClose).not.toHaveBeenCalled();
     expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
+  });
+
+  it('clears the create error when the name input changes', async () => {
+    getEditablePlaylists.mockResolvedValue([]);
+    createPlaylist.mockRejectedValue(new Error('Create failed'));
+    const onClose = vi.fn();
+
+    await act(async () => {
+      root.render(
+        <AddToPlaylistModal open={true} onClose={onClose} track={track} />
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const newPlaylistButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.includes('Ny spellista')
+    );
+    expect(newPlaylistButton).toBeDefined();
+
+    await act(async () => {
+      newPlaylistButton?.click();
+    });
+
+    const nameInput = document.body.querySelector('input[type="text"]') as HTMLInputElement;
+    expect(nameInput).toBeTruthy();
+
+    await act(async () => {
+      typeInto(nameInput, 'Ny spellista namn');
+    });
+
+    const form = nameInput.closest('form');
+    expect(form).toBeTruthy();
+
+    await act(async () => {
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toBe(
+      'Kunde inte skapa spellista'
+    );
+
+    await act(async () => {
+      typeInto(nameInput, 'Ny spellista namn 2');
+    });
+
+    expect(document.body.querySelector('[role="alert"]')).toBeNull();
   });
 });

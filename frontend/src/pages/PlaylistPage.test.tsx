@@ -707,6 +707,82 @@ describe('PlaylistPage', () => {
     expect(dialogAfterEscape).toBeNull();
   });
 
+  it('does not show a stale create-link error when the share modal reopens', async () => {
+    generateShareToken.mockRejectedValue(new Error('Create failed'));
+
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Teststlista',
+      description: undefined,
+      isPublic: false,
+      ownerGroup: undefined,
+      owner: { id: 'u1', username: 'user1' },
+      viewerCanManage: true,
+      trackCount: 1,
+      shareToken: undefined,
+      tracks: [{
+        id: 'pt1',
+        track: {
+          id: 'track1',
+          title: 'Test Track',
+          artistName: 'Test Artist',
+          danceStyle: 'Polska',
+          tempoCategory: undefined,
+          confidence: 0.9,
+          durationMs: 180000,
+        },
+        position: 0,
+      }],
+      collaborators: [],
+    });
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const shareButton = getButtonByText('Dela spellista');
+    expect(shareButton).toBeDefined();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    const createLinkButton = getButtonByText('Skapa länk');
+    expect(createLinkButton).toBeDefined();
+
+    if (createLinkButton) {
+      await act(async () => {
+        createLinkButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+    }
+
+    expect(document.body.querySelector('[role="alert"]')).not.toBeNull();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    if (shareButton) {
+      await act(async () => {
+        shareButton.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+
+    expect(document.body.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it('clicking Namn twice sorts descending', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({

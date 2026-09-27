@@ -67,4 +67,57 @@ describe('SharePlaylistPanel', () => {
     expect(alert?.textContent).toBe('Det gick inte att kopiera länken.');
     expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
   });
+
+  it('shows the create-link error next to Skapa länk', async () => {
+    await act(async () => {
+      root.render(
+        <SharePlaylistPanel
+          playlistId="p1"
+          canEdit={true}
+          shareToken={null}
+          shareUrl={null}
+          createLink={vi.fn()}
+          copyLink={vi.fn()}
+          createLinkError="Kunde inte skapa delningslänk"
+        />
+      );
+    });
+
+    const createButton = Array.from(container.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Skapa länk')
+    );
+    expect(createButton).toBeDefined();
+
+    const alert = createButton?.parentElement?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Kunde inte skapa delningslänk');
+  });
+
+  it('shows the copy-link error next to Kopiera länk and not under Skapa länk', async () => {
+    await act(async () => {
+      root.render(
+        <SharePlaylistPanel
+          playlistId="p1"
+          canEdit={true}
+          shareToken="token-1"
+          shareUrl="https://example.com/shared/token-1"
+          createLink={vi.fn()}
+          copyLink={vi.fn()}
+          copyLinkError="Det gick inte att kopiera länken."
+        />
+      );
+    });
+
+    const createButton = Array.from(container.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Skapa länk')
+    );
+    expect(createButton).toBeUndefined();
+
+    const copyButton = Array.from(container.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Kopiera länk')
+    );
+    expect(copyButton).toBeDefined();
+
+    const alert = copyButton?.parentElement?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Det gick inte att kopiera länken.');
+  });
 });
