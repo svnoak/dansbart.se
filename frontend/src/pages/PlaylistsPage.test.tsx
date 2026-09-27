@@ -355,4 +355,25 @@ describe('PlaylistsPage playlist cards', () => {
 
     toastSpy.mockRestore();
   });
+
+  it('shows who shared a playlist', async () => {
+    const playlists: PlaylistListItemDto[] = [
+      {
+        id: 'pl1',
+        name: 'Delad spellista',
+        ownerDisplayName: 'Anna',
+      },
+    ];
+
+    getMyPlaylists1.mockResolvedValue(playlists);
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Delad av Anna');
+    expect(document.body.textContent).not.toContain('Du');
+  });
 });

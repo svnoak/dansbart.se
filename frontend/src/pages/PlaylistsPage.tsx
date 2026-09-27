@@ -296,7 +296,7 @@ export function PlaylistsPage() {
                   </Card>
                 </Link>
               </div>
-              {pl.ownerGroup && (
+              {pl.ownerGroup ? (
                 <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">
                   Ägs av gruppen{' '}
                   <Link
@@ -306,6 +306,12 @@ export function PlaylistsPage() {
                     {pl.ownerGroup.name}
                   </Link>
                 </p>
+              ) : pl.ownerDisplayName ? (
+                <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">
+                  Delad av {pl.ownerDisplayName}
+                </p>
+              ) : (
+                <p className="px-2 text-sm text-[rgb(var(--color-text-muted))]">Du</p>
               )}
             </li>
           );
