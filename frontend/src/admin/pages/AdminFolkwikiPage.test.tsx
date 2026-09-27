@@ -133,7 +133,7 @@ describe('AdminFolkwikiPage', () => {
     await renderPage();
 
     const alert = document.body.querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain('Kunde inte hamta folkwiki-matchningar');
+    expect(alert?.textContent).toContain('Kunde inte hämta folkwiki-matchningar');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
     expect(document.body.textContent).not.toContain('Inga matchningar att visa');
 
@@ -184,7 +184,7 @@ describe('AdminFolkwikiPage', () => {
     await click(clickButton('Avvisa', row));
 
     const alert = row.querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain('Kunde inte hamta stilar');
+    expect(alert?.textContent).toContain('Kunde inte hämta stilar');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
