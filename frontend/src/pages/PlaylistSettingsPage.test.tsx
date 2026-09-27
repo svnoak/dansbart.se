@@ -725,6 +725,130 @@ describe('PlaylistSettingsPage', () => {
     expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
   });
 
+  it('a failed link removal shows the message next to the remove-link control', async () => {
+    const { invalidateShareToken } = await import('@/api/generated/playlists/playlists');
+    vi.mocked(invalidateShareToken).mockRejectedValue(new Error('Remove failed'));
+
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: undefined,
+      isPublic: false,
+      shareToken: 'share-token-1',
+      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+      ownerGroup: undefined,
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const removeLinkButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Ogiltigförklara länk',
+    );
+    expect(removeLinkButton).toBeTruthy();
+
+    await act(async () => {
+      removeLinkButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const errorAlert = removeLinkButton?.parentElement?.querySelector('[role="alert"]');
+    expect(errorAlert?.textContent).toBe('Kunde inte ogiltigförklara länk');
+    expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
+  });
+
+  it('a failed link creation shows the message next to the create-link control', async () => {
+    const { generateShareToken } = await import('@/api/generated/playlists/playlists');
+    vi.mocked(generateShareToken).mockRejectedValue(new Error('Create failed'));
+
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: undefined,
+      isPublic: false,
+      shareToken: undefined,
+      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+      ownerGroup: undefined,
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const createLinkButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Skapa delningslänk',
+    );
+    expect(createLinkButton).toBeTruthy();
+
+    await act(async () => {
+      createLinkButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const errorAlert = createLinkButton?.parentElement?.querySelector('[role="alert"]');
+    expect(errorAlert?.textContent).toBe('Kunde inte skapa delningslänk');
+    expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
+  });
+
+  it('a failed link copy shows the message next to the Kopiera control', async () => {
+    const { generateShareToken } = await import('@/api/generated/playlists/playlists');
+    vi.mocked(generateShareToken).mockClear();
+
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
+    getPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Min spellista',
+      description: undefined,
+      isPublic: false,
+      shareToken: 'share-token-1',
+      owner: { id: 'u1', username: 'user1', displayName: 'User 1' },
+      ownerGroup: undefined,
+      viewerCanManage: true,
+      trackCount: 0,
+      tracks: [],
+      collaborators: [],
+    });
+
+    const clipboardMock = { writeText: vi.fn().mockRejectedValue(new Error('Copy failed')) };
+    Object.defineProperty(navigator, 'clipboard', { value: clipboardMock, writable: true });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const copyLinkButton = Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Kopiera',
+    );
+    expect(copyLinkButton).toBeTruthy();
+
+    await act(async () => {
+      copyLinkButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const errorAlert = copyLinkButton?.parentElement?.nextElementSibling;
+    expect(errorAlert?.getAttribute('role')).toBe('alert');
+    expect(errorAlert?.textContent).toBe('Det gick inte att kopiera länken.');
+    expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
+  });
+
   it('invite form offers the permissions Se and Redigera', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({

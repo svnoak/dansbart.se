@@ -250,7 +250,8 @@ export function PlaylistPage() {
   // Prevent autoplay from firing again on subsequent playlist state updates
   const autoplayTriggered = useRef(false);
 
-  const { shareToken, shareUrl, createLink, copyLink } = usePlaylistShareLink(id, playlist?.shareToken);
+  const { shareToken, shareUrl, createLink, copyLink, clearErrors, createLinkError, copyLinkError } =
+    usePlaylistShareLink(id, playlist?.shareToken);
 
   const isOwner = playlist?.viewerCanManage === true;
   const canEdit = canEditPlaylist(playlist, user?.id);
@@ -534,7 +535,12 @@ export function PlaylistPage() {
           {(canEdit || playlist.isPublic) && (
             <Button
               variant="secondary"
-              onClick={() => setShowSharePanel((s) => !s)}
+              onClick={() =>
+                setShowSharePanel((s) => {
+                  if (!s) clearErrors();
+                  return !s;
+                })
+              }
               className="flex items-center gap-1.5"
             >
               <ShareIcon className="h-4 w-4" aria-hidden />
@@ -555,7 +561,16 @@ export function PlaylistPage() {
 
         {(canEdit || playlist.isPublic) && id && (
           <Modal open={showSharePanel} onClose={() => setShowSharePanel(false)} label="Dela spellista">
-            <SharePlaylistPanel playlistId={id} canEdit={canEdit} shareToken={shareToken} shareUrl={shareUrl} createLink={createLink} copyLink={copyLink} />
+            <SharePlaylistPanel
+              playlistId={id}
+              canEdit={canEdit}
+              shareToken={shareToken}
+              shareUrl={shareUrl}
+              createLink={createLink}
+              copyLink={copyLink}
+              createLinkError={createLinkError}
+              copyLinkError={copyLinkError}
+            />
           </Modal>
         )}
 
