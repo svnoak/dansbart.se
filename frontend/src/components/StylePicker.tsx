@@ -5,7 +5,7 @@ export interface StylePickerOption {
 }
 
 interface StylePickerProps {
-  /** 'full' is a labelled button grid with large tap targets (FlagTrackModal, /classify).
+  /** 'full' is a labelled button grid with large tap targets (FlagTrackModal, StyleVotePanel).
    *  'compact' is a native <select> for surfaces with little screen space (SmartNudge) —
    *  a native picker gets the platform's own large picker UI, OS text scaling and
    *  screen-reader support for free. */

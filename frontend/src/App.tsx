@@ -12,7 +12,6 @@ import { HelpTopicPage } from '@/pages/HelpTopicPage';
 import { FeedbackPage } from '@/pages/FeedbackPage';
 import { AlbumPage } from '@/pages/AlbumPage';
 import { ArtistPage } from '@/pages/ArtistPage';
-import { ClassifyPage } from '@/pages/ClassifyPage';
 import { HomePage } from '@/pages/HomePage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 import { SearchPage } from '@/pages/SearchPage';
@@ -72,7 +71,6 @@ export function App() {
                       <Routes>
                         <Route path="/" element={<HomePage />} />
                         <Route path="/search" element={<SearchPage />} />
-                        <Route path="/classify" element={<ClassifyPage />} />
                         <Route path="/dances" element={<DancesPage />} />
                         <Route path="/dance/:id" element={<DancePage />} />
                         <Route path="/artists" element={<ArtistsPage />} />
