@@ -142,7 +142,8 @@ describe('AdminMaintenancePage', () => {
     await click(clickButton('Kör', card));
 
     const alert = card.querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain('Server error');
+    expect(alert?.textContent).toContain('Rensa fastsittande misslyckades. Försök igen.');
+    expect(alert?.textContent).not.toContain('Server error');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
   });
 });

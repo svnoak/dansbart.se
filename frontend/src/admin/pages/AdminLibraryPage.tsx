@@ -290,20 +290,21 @@ export function AdminLibraryPage() {
     const ids = Array.from(selectedIds);
     setBulkError(null);
     setBulkOp({ label, done: 0, total: ids.length });
-    let failed = 0;
+    const failedIds = new Set<string>();
     for (let i = 0; i < ids.length; i++) {
       try {
         await action(ids[i]);
       } catch {
-        failed++;
+        failedIds.add(ids[i]);
       }
       setBulkOp({ label, done: i + 1, total: ids.length });
     }
     setBulkOp(null);
     fetchData();
     loadStatusCounts();
-    if (failed > 0) {
-      setBulkError(`${label}: ${failed} av ${ids.length} misslyckades`);
+    if (failedIds.size > 0) {
+      setSelectedIds(failedIds);
+      setBulkError(`${label}: ${failedIds.size} av ${ids.length} misslyckades`);
     } else {
       setSelectedIds(new Set());
       toast(`${label}: ${ids.length} klara`);
@@ -615,7 +616,10 @@ export function AdminLibraryPage() {
           emptyMessage="Inga spår hittades. Prova att ändra filter."
           selectable
           selectedKeys={selectedIds}
-          onSelectionChange={setSelectedIds}
+          onSelectionChange={(keys) => {
+            setSelectedIds(keys);
+            setBulkError(null);
+          }}
           sort={sort}
           onSortChange={handleSortChange}
         />

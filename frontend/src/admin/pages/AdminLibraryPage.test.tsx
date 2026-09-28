@@ -58,6 +58,23 @@ const mockTracks = {
   total: 1,
 };
 
+const mockTwoTracks = {
+  items: [
+    mockTracks.items[0],
+    {
+      id: 'track-2',
+      title: 'Polska i Skogen',
+      durationMs: 200000,
+      processingStatus: 'DONE',
+      isFlagged: false,
+      danceStyle: 'Polska',
+      artists: [{ name: 'Testartisten' }],
+      album: { title: 'Testalbum' },
+    },
+  ],
+  total: 2,
+};
+
 describe('AdminLibraryPage', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -228,5 +245,82 @@ describe('AdminLibraryPage', () => {
     const alert = bar.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Omanalysera: 1 av 1 misslyckades');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('keeps only the tracks whose bulk action failed selected, after a partial failure', async () => {
+    getTracks1.mockResolvedValue(mockTwoTracks);
+    reanalyzeTrack.mockImplementation((id: string) =>
+      id === 'track-2' ? Promise.reject(new Error('Server error')) : Promise.resolve({}),
+    );
+
+    await renderPage();
+
+    const row1 = findRow('Vals på Bakfoten');
+    const row2 = findRow('Polska i Skogen');
+    for (const row of [row1, row2]) {
+      const checkbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      await act(async () => {
+        checkbox.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+
+    await click(clickButton('Omanalysera'));
+
+    const checkbox1 = findRow('Vals på Bakfoten').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const checkbox2 = findRow('Polska i Skogen').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox1.checked).toBe(false);
+    expect(checkbox2.checked).toBe(true);
+  });
+
+  it('clears the selection after a bulk action succeeds for every selected track', async () => {
+    getTracks1.mockResolvedValue(mockTwoTracks);
+    reanalyzeTrack.mockResolvedValue({});
+
+    await renderPage();
+
+    const row1 = findRow('Vals på Bakfoten');
+    const row2 = findRow('Polska i Skogen');
+    for (const row of [row1, row2]) {
+      const checkbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      await act(async () => {
+        checkbox.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+
+    await click(clickButton('Omanalysera'));
+
+    const checkbox1 = findRow('Vals på Bakfoten').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const checkbox2 = findRow('Polska i Skogen').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(checkbox1.checked).toBe(false);
+    expect(checkbox2.checked).toBe(false);
+  });
+
+  it('clears a bulk error banner when the selection changes', async () => {
+    getTracks1.mockResolvedValue(mockTwoTracks);
+    reanalyzeTrack.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    const checkbox1 = findRow('Vals på Bakfoten').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(async () => {
+      checkbox1.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await click(clickButton('Omanalysera'));
+
+    let bar = closestWithText(clickButton('Omanalysera'), 'markerade');
+    expect(bar.querySelector('[role="alert"]')).toBeTruthy();
+
+    const checkbox2 = findRow('Polska i Skogen').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(async () => {
+      checkbox2.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    bar = closestWithText(clickButton('Omanalysera'), 'markerade');
+    expect(bar.querySelector('[role="alert"]')).toBeFalsy();
   });
 });

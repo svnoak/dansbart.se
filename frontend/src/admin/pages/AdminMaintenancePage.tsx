@@ -129,7 +129,7 @@ export function AdminMaintenancePage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Misslyckades';
       addResult(name, `Fel: ${msg}`);
-      setOpErrors((prev) => ({ ...prev, [id]: msg }));
+      setOpErrors((prev) => ({ ...prev, [id]: `${name} misslyckades. Försök igen.` }));
     } finally {
       setRunning(null);
     }
