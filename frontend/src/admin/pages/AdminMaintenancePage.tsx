@@ -7,7 +7,7 @@ import {
 } from '@/api/generated/admin-maintenance/admin-maintenance';
 import { apiFetch } from '@/api/http-client';
 import { Modal } from '@/admin/components/Modal';
-import { Button } from '@/ui';
+import { Button, InlineError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 type PauseStatus = Record<string, boolean>;
@@ -55,6 +55,9 @@ export function AdminMaintenancePage() {
   const [pauseStatus, setPauseStatus] = useState<PauseStatus>({});
   const [pauseLoading, setPauseLoading] = useState<string | null>(null);
   const [retrainReclassify, setRetrainReclassify] = useState(false);
+  const [queueErrors, setQueueErrors] = useState<Record<string, string>>({});
+  const [toggleAllError, setToggleAllError] = useState<string | null>(null);
+  const [opErrors, setOpErrors] = useState<Record<string, string>>({});
 
   const loadPauseStatus = useCallback(async () => {
     try {
@@ -70,12 +73,17 @@ export function AdminMaintenancePage() {
 
   const handleToggleQueue = async (queue: string) => {
     setPauseLoading(queue);
+    setQueueErrors((prev) => {
+      const next = { ...prev };
+      delete next[queue];
+      return next;
+    });
     try {
       await togglePause(queue, pauseStatus[queue]);
       await loadPauseStatus();
       toast(pauseStatus[queue] ? `${QUEUE_LABELS[queue]}: återupptagen` : `${QUEUE_LABELS[queue]}: pausad`);
     } catch {
-      toast(`Kunde inte ändra kö-status`, 'error');
+      setQueueErrors((prev) => ({ ...prev, [queue]: 'Kunde inte ändra kö-status' }));
     } finally {
       setPauseLoading(null);
     }
@@ -84,12 +92,13 @@ export function AdminMaintenancePage() {
   const handleToggleAll = async () => {
     const anyActive = Object.values(pauseStatus).some((v) => !v);
     setPauseLoading('all');
+    setToggleAllError(null);
     try {
       await togglePauseAll(anyActive);
       await loadPauseStatus();
       toast(anyActive ? 'Alla köer pausade' : 'Alla köer återupptagna');
     } catch {
-      toast('Kunde inte ändra kö-status', 'error');
+      setToggleAllError('Kunde inte ändra kö-status');
     } finally {
       setPauseLoading(null);
     }
@@ -102,9 +111,14 @@ export function AdminMaintenancePage() {
     ]);
   };
 
-  const run = async (name: string, fn: () => Promise<unknown>) => {
-    setRunning(name);
+  const run = async (id: string, name: string, fn: () => Promise<unknown>) => {
+    setRunning(id);
     setConfirmOp(null);
+    setOpErrors((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     try {
       const result = await fn();
       const msg = typeof result === 'object' && result
@@ -115,7 +129,7 @@ export function AdminMaintenancePage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Misslyckades';
       addResult(name, `Fel: ${msg}`);
-      toast(`${name}: misslyckades`, 'error');
+      setOpErrors((prev) => ({ ...prev, [id]: `${name} misslyckades. Försök igen.` }));
     } finally {
       setRunning(null);
     }
@@ -133,31 +147,31 @@ export function AdminMaintenancePage() {
       id: 'queue-pending',
       label: 'Köa väntande spår',
       description: 'Skicka PENDING-spår till analysarbetaren (max 500)',
-      action: () => run('Köa väntande', () => queuePendingTracks({ limit: 500 })),
+      action: () => run('queue-pending', 'Köa väntande', () => queuePendingTracks({ limit: 500 })),
     },
     {
       id: 'queue-failed',
       label: 'Köa om misslyckade spår',
       description: 'Återställ FAILED-spår till PENDING och skicka till analysarbetaren (max 500)',
-      action: () => run('Köa om misslyckade', () => queuePendingTracks({ limit: 500, status: 'FAILED' })),
+      action: () => run('queue-failed', 'Köa om misslyckade', () => queuePendingTracks({ limit: 500, status: 'FAILED' })),
     },
     {
       id: 'cleanup-orphaned',
       label: 'Rensa fastsittande spår',
       description: 'Återställ spår som fastnat i PROCESSING-status (30 min gräns)',
-      action: () => run('Rensa fastsittande', () => cleanupOrphaned({ stuckThresholdMinutes: 30 })),
+      action: () => run('cleanup-orphaned', 'Rensa fastsittande', () => cleanupOrphaned({ stuckThresholdMinutes: 30 })),
     },
     {
       id: 'backfill-isrcs',
       label: 'Komplettera ISRC',
       description: 'Hämta saknade ISRC-koder från Spotify (max 100)',
-      action: () => run('Komplettera ISRC', () => backfillIsrcs({ limit: 100 })),
+      action: () => run('backfill-isrcs', 'Komplettera ISRC', () => backfillIsrcs({ limit: 100 })),
     },
     {
       id: 'backfill-duration',
       label: 'Komplettera spellängd',
       description: 'Hämta saknad spellängd från Spotify (max 200)',
-      action: () => run('Komplettera spellängd', async () => {
+      action: () => run('backfill-duration', 'Komplettera spellängd', async () => {
         const res = await apiFetch('/api/admin/maintenance/backfill-duration?batchSize=200', { method: 'POST' });
         if (!res.ok) throw new Error('Failed to backfill duration');
         return res.json();
@@ -167,7 +181,7 @@ export function AdminMaintenancePage() {
       id: 'retrain-model',
       label: 'Omträna modell',
       description: 'Träna om klassificeringsmodellen baserat på bekräftade spår',
-      action: () => run('Omträna modell', async () => {
+      action: () => run('retrain-model', 'Omträna modell', async () => {
         const res = await apiFetch(
           `/api/admin/maintenance/retrain-model?reclassify=${retrainReclassify}`,
           { method: 'POST' },
@@ -192,7 +206,7 @@ export function AdminMaintenancePage() {
       label: 'Omklassificera alla',
       description: 'Kör om dansstilsklassificering för hela biblioteket och räknar om taktpositioner för alla spår med en bekräftad dansstil',
       needsConfirm: true,
-      action: () => run('Omklassificera', async () => {
+      action: () => run('reclassify-all', 'Omklassificera', async () => {
         const [reclassify, bars] = await Promise.all([
           reclassifyAll(),
           apiFetch('/api/admin/folkwiki/backfill-bars', { method: 'POST' }).then((r) => r.json()),
@@ -210,35 +224,40 @@ export function AdminMaintenancePage() {
       <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">Köer</h2>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={pauseLoading !== null}
-            onClick={handleToggleAll}
-          >
-            {Object.values(pauseStatus).some((v) => !v) ? 'Pausa alla' : 'Starta alla'}
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={pauseLoading !== null}
+              onClick={handleToggleAll}
+            >
+              {Object.values(pauseStatus).some((v) => !v) ? 'Pausa alla' : 'Starta alla'}
+            </Button>
+            {toggleAllError && <InlineError>{toggleAllError}</InlineError>}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {Object.entries(pauseStatus).map(([queue, paused]) => (
-            <button
-              key={queue}
-              onClick={() => handleToggleQueue(queue)}
-              disabled={pauseLoading !== null}
-              className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                paused
-                  ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-                  : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-              } ${pauseLoading !== null ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
-            >
-              <span
-                className={`inline-block h-2 w-2 rounded-full ${
-                  paused ? 'bg-red-500' : 'bg-green-500'
-                }`}
-              />
-              {QUEUE_LABELS[queue] ?? queue}
-              <span className="font-normal">{paused ? 'Pausad' : 'Aktiv'}</span>
-            </button>
+            <div key={queue} className="flex flex-col gap-1">
+              <button
+                onClick={() => handleToggleQueue(queue)}
+                disabled={pauseLoading !== null}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  paused
+                    ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                } ${pauseLoading !== null ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
+              >
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${
+                    paused ? 'bg-red-500' : 'bg-green-500'
+                  }`}
+                />
+                {QUEUE_LABELS[queue] ?? queue}
+                <span className="font-normal">{paused ? 'Pausad' : 'Aktiv'}</span>
+              </button>
+              {queueErrors[queue] && <InlineError>{queueErrors[queue]}</InlineError>}
+            </div>
           ))}
         </div>
       </div>
@@ -267,6 +286,7 @@ export function AdminMaintenancePage() {
               >
                 {running === op.id ? 'Kör...' : 'Kör'}
               </Button>
+              {opErrors[op.id] && <InlineError>{opErrors[op.id]}</InlineError>}
             </div>
           </div>
         ))}
