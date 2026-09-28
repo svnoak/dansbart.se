@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.group.Group;
 import se.dansbart.domain.playlist.Playlist;
@@ -14,8 +15,10 @@ import se.dansbart.domain.user.User;
 import se.dansbart.e2e.base.AbstractE2ETest;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -83,8 +86,8 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[*].name", containsInAnyOrder("Playlist 1", "Playlist 2")));
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[*].name", containsInAnyOrder("Playlist 1", "Playlist 2")));
         }
 
         @Test
@@ -97,10 +100,10 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Group Playlist"))
-                .andExpect(jsonPath("$[0].ownerGroup.id").value(group.getId().toString()))
-                .andExpect(jsonPath("$[0].ownerGroup.name").value("Test Group"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Group Playlist"))
+                .andExpect(jsonPath("$.items[0].ownerGroup.id").value(group.getId().toString()))
+                .andExpect(jsonPath("$.items[0].ownerGroup.name").value("Test Group"));
         }
 
         @Test
@@ -112,7 +115,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         @Test
@@ -125,7 +128,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         @Test
@@ -141,9 +144,9 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Shared With Me"))
-                .andExpect(jsonPath("$[0].ownerDisplayName").value("Shared Playlist Owner"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Shared With Me"))
+                .andExpect(jsonPath("$.items[0].ownerDisplayName").value("Shared Playlist Owner"));
         }
 
         @Test
@@ -155,7 +158,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         @Test
@@ -169,8 +172,8 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[*].ownerDisplayName", everyItem(nullValue())));
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[*].ownerDisplayName", everyItem(nullValue())));
         }
 
         @Test
@@ -185,7 +188,281 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.items", hasSize(1)));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/playlists filters and paging")
+    class GetMyPlaylistsFiltered {
+
+        @Test
+        @DisplayName("no parameters returns a page with the items and the total count")
+        void getMyPlaylists_noParameters_returnsPageWithItemsAndTotal() throws Exception {
+            testData.playlist().withName("Playlist 1").withOwner(owner).build();
+            testData.playlist().withName("Playlist 2").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.total").value(2));
+        }
+
+        @Test
+        @DisplayName("q filters by name contains, ignoring case")
+        void getMyPlaylists_filterByQ_matchesIgnoringCase() throws Exception {
+            testData.playlist().withName("Vals i Dalarna").withOwner(owner).build();
+            testData.playlist().withName("Polska i Alfta").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("q", "vals")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Vals i Dalarna"));
+        }
+
+        @Test
+        @DisplayName("owner=me returns only the user's own playlists")
+        void getMyPlaylists_filterByOwnerMe_returnsOwnPlaylistsOnly() throws Exception {
+            testData.playlist().withName("My Own").withOwner(owner).build();
+            Playlist shared = testData.playlist().withName("Shared With Me").withOwner(otherUser).build();
+            testData.addCollaborator(shared, owner, "view");
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("owner", "me")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("My Own"));
+        }
+
+        @Test
+        @DisplayName("owner=shared returns playlists owned by another person and shared with the user")
+        void getMyPlaylists_filterByOwnerShared_returnsSharedPlaylistsOnly() throws Exception {
+            testData.playlist().withName("My Own").withOwner(owner).build();
+            Playlist shared = testData.playlist().withName("Shared With Me").withOwner(otherUser).build();
+            testData.addCollaborator(shared, owner, "view");
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("owner", "shared")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Shared With Me"));
+        }
+
+        @Test
+        @DisplayName("owner=<groupId> returns playlists owned by that group")
+        void getMyPlaylists_filterByOwnerGroupId_returnsGroupPlaylistsOnly() throws Exception {
+            Group group = testData.group().withName("Test Group").build();
+            testData.addGroupMember(group, owner, false, false, false, false, false);
+            testData.playlist().withName("Group Playlist").withGroup(group).build();
+            testData.playlist().withName("My Own").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("owner", group.getId().toString())
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Group Playlist"));
+        }
+
+        @Test
+        @DisplayName("visibility=public returns only public playlists")
+        void getMyPlaylists_filterByVisibilityPublic_returnsPublicPlaylistsOnly() throws Exception {
+            testData.playlist().withName("Public Playlist").withOwner(owner).isPublic().build();
+            testData.playlist().withName("Private Playlist").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("visibility", "public")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Public Playlist"));
+        }
+
+        @Test
+        @DisplayName("visibility=private returns only private playlists")
+        void getMyPlaylists_filterByVisibilityPrivate_returnsPrivatePlaylistsOnly() throws Exception {
+            testData.playlist().withName("Public Playlist").withOwner(owner).isPublic().build();
+            testData.playlist().withName("Private Playlist").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("visibility", "private")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Private Playlist"));
+        }
+
+        @Test
+        @DisplayName("danceStyle filters by the playlist's dance style, ignoring case")
+        void getMyPlaylists_filterByDanceStyle_matchesIgnoringCase() throws Exception {
+            Playlist polska = testData.playlist().withName("Polska Playlist").withOwner(owner).build();
+            mockMvc.perform(put("/api/playlists/{id}", polska.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("danceStyle", "Polska"))))
+                .andExpect(status().isOk());
+            Playlist vals = testData.playlist().withName("Vals Playlist").withOwner(owner).build();
+            mockMvc.perform(put("/api/playlists/{id}", vals.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("danceStyle", "Vals"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("danceStyle", "polska")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Polska Playlist"));
+        }
+
+        @Test
+        @DisplayName("tempo filters by the playlist's tempo category")
+        void getMyPlaylists_filterByTempo_returnsMatchingTempoOnly() throws Exception {
+            Playlist fast = testData.playlist().withName("Fast Playlist").withOwner(owner).build();
+            mockMvc.perform(put("/api/playlists/{id}", fast.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("tempoCategory", "Fast"))))
+                .andExpect(status().isOk());
+            Playlist slow = testData.playlist().withName("Slow Playlist").withOwner(owner).build();
+            mockMvc.perform(put("/api/playlists/{id}", slow.getId())
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("tempoCategory", "Slow"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("tempo", "Fast")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Fast Playlist"));
+        }
+
+        @Test
+        @DisplayName("filters combine, for example q and visibility")
+        void getMyPlaylists_combinesQAndVisibility() throws Exception {
+            testData.playlist().withName("Vals Public").withOwner(owner).isPublic().build();
+            testData.playlist().withName("Vals Private").withOwner(owner).build();
+            testData.playlist().withName("Polska Public").withOwner(owner).isPublic().build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("q", "Vals")
+                    .param("visibility", "public")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Vals Public"));
+        }
+
+        @Test
+        @DisplayName("paging returns the requested page size, and the next page returns the remainder")
+        void getMyPlaylists_paging_returnsRequestedPageSizeAndRemainder() throws Exception {
+            testData.playlist().withName("Alpha").withOwner(owner).build();
+            testData.playlist().withName("Beta").withOwner(owner).build();
+            testData.playlist().withName("Gamma").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("size", "2")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.total").value(3));
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("size", "2")
+                    .param("page", "1")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Gamma"));
+        }
+
+        @Test
+        @DisplayName("an invalid owner value returns 400")
+        void getMyPlaylists_invalidOwnerValue_returns400() throws Exception {
+            mockMvc.perform(get("/api/playlists")
+                    .param("owner", "not-a-real-value")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("an invalid visibility value returns 400")
+        void getMyPlaylists_invalidVisibilityValue_returns400() throws Exception {
+            mockMvc.perform(get("/api/playlists")
+                    .param("visibility", "not-a-real-value")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("an invalid tempo value returns 400")
+        void getMyPlaylists_invalidTempoValue_returns400() throws Exception {
+            mockMvc.perform(get("/api/playlists")
+                    .param("tempo", "not-a-real-value")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("q with a percent sign does not match a name without a literal percent sign")
+        void getMyPlaylists_filterByQPercent_doesNotMatchNameWithoutLiteralPercent() throws Exception {
+            testData.playlist().withName("Vals i Dalarna").withOwner(owner).build();
+            testData.playlist().withName("50% Rabatt").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("q", "%")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("50% Rabatt"));
+        }
+
+        @Test
+        @DisplayName("q with a percent sign matches only the literal substring")
+        void getMyPlaylists_filterByQPercent_matchesOnlyLiteralSubstring() throws Exception {
+            testData.playlist().withName("50% Rabatt").withOwner(owner).build();
+            testData.playlist().withName("500 Saker").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists")
+                    .param("q", "50%")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("50% Rabatt"));
+        }
+
+        @Test
+        @DisplayName("playlists with the same name page consistently, each once, tied by ID")
+        void getMyPlaylists_sameNameAcrossPages_eachAppearsOnceTiedById() throws Exception {
+            Playlist a = testData.playlist().withName("Same Name").withOwner(owner).build();
+            Playlist b = testData.playlist().withName("Same Name").withOwner(owner).build();
+
+            MvcResult page0 = mockMvc.perform(get("/api/playlists")
+                    .param("size", "1")
+                    .param("page", "0")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andReturn();
+            MvcResult page1 = mockMvc.perform(get("/api/playlists")
+                    .param("size", "1")
+                    .param("page", "1")
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andReturn();
+
+            String id0 = objectMapper.readTree(page0.getResponse().getContentAsString()).at("/items/0/id").asText();
+            String id1 = objectMapper.readTree(page1.getResponse().getContentAsString()).at("/items/0/id").asText();
+
+            assertThat(id0).isNotEqualTo(id1);
+            assertThat(Set.of(id0, id1)).containsExactlyInAnyOrder(a.getId().toString(), b.getId().toString());
         }
     }
 
@@ -1369,8 +1646,8 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Shared With My Group"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Shared With My Group"));
         }
 
         @Test
@@ -1383,7 +1660,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         @Test
@@ -1396,7 +1673,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         @Test

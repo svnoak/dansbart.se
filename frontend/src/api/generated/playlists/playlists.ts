@@ -9,13 +9,14 @@ import type {
   CollaboratorDto,
   CreatePlaylistRequest,
   EditablePlaylistDto,
+  GetMyPlaylists1Params,
   InvitationDto,
   InviteCollaborator200,
   InviteCollaboratorRequest,
+  PageResponsePlaylistListItemDto,
   Playlist,
   PlaylistCollaborator,
   PlaylistDto,
-  PlaylistListItemDto,
   PlaylistTrack,
   ReorderTracksRequest,
   RespondToInvitationRequest,
@@ -227,17 +228,24 @@ export const respondToInvitation = async (invitationId: string,
 /**
  * @summary Get current user's playlists
  */
-export const getGetMyPlaylists1Url = () => {
+export const getGetMyPlaylists1Url = (params?: GetMyPlaylists1Params,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
-  
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/playlists`
+  return stringifiedParams.length > 0 ? `/api/playlists?${stringifiedParams}` : `/api/playlists`
 }
 
-export const getMyPlaylists1 = async ( options?: RequestInit): Promise<PlaylistListItemDto[]> => {
+export const getMyPlaylists1 = async (params?: GetMyPlaylists1Params, options?: RequestInit): Promise<PageResponsePlaylistListItemDto> => {
   
-  return httpClient<PlaylistListItemDto[]>(getGetMyPlaylists1Url(),
+  return httpClient<PageResponsePlaylistListItemDto>(getGetMyPlaylists1Url(params),
   {      
     ...options,
     method: 'GET'

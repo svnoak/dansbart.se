@@ -84,7 +84,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -109,7 +109,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -137,7 +137,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -157,7 +157,7 @@ describe('PlaylistsPage playlist cards', () => {
   });
 
   it('renders the new playlist button as a small Button', async () => {
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
 
     await renderPage();
 
@@ -185,7 +185,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     getInvitations.mockResolvedValue(invitations);
 
     await renderPage();
@@ -213,7 +213,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -243,7 +243,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -266,7 +266,7 @@ describe('PlaylistsPage playlist cards', () => {
         invitedByDisplayName: 'Anna',
       },
     ];
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     getInvitations.mockResolvedValue(invitations);
     respondToInvitation.mockRejectedValue(new Error('Network error'));
     const toastSpy = vi.spyOn(ui, 'toast');
@@ -306,7 +306,7 @@ describe('PlaylistsPage playlist cards', () => {
         invitedByDisplayName: 'Britt',
       },
     ];
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     getInvitations.mockResolvedValue(invitations);
     respondToInvitation.mockImplementation((id: string) =>
       id === 'inv1' ? Promise.reject(new Error('Network error')) : Promise.resolve(undefined),
@@ -347,7 +347,7 @@ describe('PlaylistsPage playlist cards', () => {
   });
 
   it('a failed playlist creation shows the error in the form, not as a toast', async () => {
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     createPlaylist.mockRejectedValue(new Error('Network error'));
     const toastSpy = vi.spyOn(ui, 'toast');
 
@@ -381,6 +381,82 @@ describe('PlaylistsPage playlist cards', () => {
     toastSpy.mockRestore();
   });
 
+  it('shows a "Visa fler" button when there are more playlists to load', async () => {
+    const playlists: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: 2, hasMore: true });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(getButtonByText('Visa fler')).toBeDefined();
+  });
+
+  it('does not show a "Visa fler" button when there are no more playlists to load', async () => {
+    const playlists: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: 1, hasMore: false });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(getButtonByText('Visa fler')).toBeUndefined();
+  });
+
+  it('clicking "Visa fler" loads the next page and appends its items', async () => {
+    const page0: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    const page1: PlaylistListItemDto[] = [{ id: 'pl2', name: 'Spellista 2' }];
+    getMyPlaylists1.mockImplementation((params: { page?: number }) =>
+      Promise.resolve(
+        params?.page === 1
+          ? { items: page1, total: 2, hasMore: false }
+          : { items: page0, total: 2, hasMore: true },
+      ),
+    );
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const loadMoreButton = getButtonByText('Visa fler');
+    await act(async () => {
+      loadMoreButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(getMyPlaylists1).toHaveBeenCalledWith({ page: 1 });
+    expect(document.body.textContent).toContain('Spellista 1');
+    expect(document.body.textContent).toContain('Spellista 2');
+    expect(getButtonByText('Visa fler')).toBeUndefined();
+  });
+
+  it('a failed "Visa fler" load shows the error next to the button', async () => {
+    const page0: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    getMyPlaylists1.mockResolvedValueOnce({ items: page0, total: 2, hasMore: true });
+    getMyPlaylists1.mockRejectedValueOnce(new Error('Network error'));
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const loadMoreButton = getButtonByText('Visa fler');
+    await act(async () => {
+      loadMoreButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const alert = loadMoreButton?.parentElement?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Kunde inte ladda fler spellistor');
+  });
+
   it('shows who shared a playlist', async () => {
     const playlists: PlaylistListItemDto[] = [
       {
@@ -390,7 +466,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 

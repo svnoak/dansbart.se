@@ -16,6 +16,7 @@ import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.InvitationDto;
+import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.dto.PlaylistListItemDto;
 import se.dansbart.dto.PlaylistTrackDto;
@@ -29,6 +30,7 @@ import se.dansbart.exception.UnprocessableEntityException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -45,6 +47,9 @@ public class PlaylistService {
     private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final CollaborationAccess collaborationAccess;
 
+    private static final Set<String> VALID_TEMPO_CATEGORIES = Set.of("Slow", "SlowMed", "Medium", "Fast", "Turbo");
+    private static final int MAX_PAGE_SIZE = 100;
+
     @Transactional(readOnly = true)
     public Optional<Playlist> findById(UUID id) {
         return playlistJooqRepository.findById(id);
@@ -56,27 +61,62 @@ public class PlaylistService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlaylistListItemDto> findOwnedAndGroupPlaylists(UUID userId) {
-        return playlistJooqRepository.findOwnedAndGroupPlaylistsByUserId(userId).stream()
-            .map(record -> {
-                Playlist playlist = record.playlist();
-                GroupSummaryDto ownerGroup = playlist.getGroupId() != null
-                    ? GroupSummaryDto.builder().id(playlist.getGroupId()).name(record.groupName()).build()
-                    : null;
-                return PlaylistListItemDto.builder()
-                    .id(playlist.getId())
-                    .name(playlist.getName())
-                    .description(playlist.getDescription())
-                    .isPublic(playlist.getIsPublic())
-                    .danceStyle(playlist.getDanceStyle())
-                    .subStyle(playlist.getSubStyle())
-                    .tempoCategory(playlist.getTempoCategory())
-                    .trackCount(record.trackCount())
-                    .ownerGroup(ownerGroup)
-                    .ownerDisplayName(record.ownerDisplayName())
-                    .build();
-            })
+    public PageResponse<PlaylistListItemDto> findOwnedAndGroupPlaylists(UUID userId, String q, String owner, String visibility, String danceStyle, String tempo, int page, int size) {
+        validateOwner(owner);
+        validateVisibility(visibility);
+        validateTempo(tempo);
+        int clampedSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int clampedPage = Math.max(page, 0);
+
+        List<PlaylistListItemDto> items = playlistJooqRepository
+            .findOwnedAndGroupPlaylists(userId, q, owner, visibility, danceStyle, tempo, clampedPage, clampedSize).stream()
+            .map(this::toPlaylistListItemDto)
             .collect(Collectors.toList());
+        long total = playlistJooqRepository.countOwnedAndGroupPlaylists(userId, q, owner, visibility, danceStyle, tempo);
+        boolean hasMore = (long) (clampedPage + 1) * clampedSize < total;
+        return new PageResponse<>(items, total, clampedPage, clampedSize, hasMore);
+    }
+
+    private PlaylistListItemDto toPlaylistListItemDto(PlaylistJooqRepository.PlaylistWithGroupName record) {
+        Playlist playlist = record.playlist();
+        GroupSummaryDto ownerGroup = playlist.getGroupId() != null
+            ? GroupSummaryDto.builder().id(playlist.getGroupId()).name(record.groupName()).build()
+            : null;
+        return PlaylistListItemDto.builder()
+            .id(playlist.getId())
+            .name(playlist.getName())
+            .description(playlist.getDescription())
+            .isPublic(playlist.getIsPublic())
+            .danceStyle(playlist.getDanceStyle())
+            .subStyle(playlist.getSubStyle())
+            .tempoCategory(playlist.getTempoCategory())
+            .trackCount(record.trackCount())
+            .ownerGroup(ownerGroup)
+            .ownerDisplayName(record.ownerDisplayName())
+            .build();
+    }
+
+    private void validateOwner(String owner) {
+        if (owner == null || owner.equals("me") || owner.equals("shared")) {
+            return;
+        }
+        try {
+            UUID.fromString(owner);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("The owner filter must be 'me', 'shared', or a group ID.");
+        }
+    }
+
+    private void validateVisibility(String visibility) {
+        if (visibility != null && !visibility.equals("public") && !visibility.equals("private")) {
+            throw new BadRequestException("The visibility filter must be 'public' or 'private'.");
+        }
+    }
+
+    private void validateTempo(String tempo) {
+        if (tempo != null && !VALID_TEMPO_CATEGORIES.contains(tempo)) {
+            throw new BadRequestException("The tempo filter must be one of Slow, SlowMed, Medium, Fast, or Turbo.");
+        }
     }
 
     @Transactional(readOnly = true)
