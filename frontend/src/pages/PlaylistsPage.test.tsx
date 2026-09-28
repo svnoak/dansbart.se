@@ -84,7 +84,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -109,7 +109,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -137,7 +137,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -157,7 +157,7 @@ describe('PlaylistsPage playlist cards', () => {
   });
 
   it('renders the new playlist button as a small Button', async () => {
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
 
     await renderPage();
 
@@ -185,7 +185,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     getInvitations.mockResolvedValue(invitations);
 
     await renderPage();
@@ -213,7 +213,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -243,7 +243,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 
@@ -266,7 +266,7 @@ describe('PlaylistsPage playlist cards', () => {
         invitedByDisplayName: 'Anna',
       },
     ];
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     getInvitations.mockResolvedValue(invitations);
     respondToInvitation.mockRejectedValue(new Error('Network error'));
     const toastSpy = vi.spyOn(ui, 'toast');
@@ -306,7 +306,7 @@ describe('PlaylistsPage playlist cards', () => {
         invitedByDisplayName: 'Britt',
       },
     ];
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     getInvitations.mockResolvedValue(invitations);
     respondToInvitation.mockImplementation((id: string) =>
       id === 'inv1' ? Promise.reject(new Error('Network error')) : Promise.resolve(undefined),
@@ -347,7 +347,7 @@ describe('PlaylistsPage playlist cards', () => {
   });
 
   it('a failed playlist creation shows the error in the form, not as a toast', async () => {
-    getMyPlaylists1.mockResolvedValue([]);
+    getMyPlaylists1.mockResolvedValue({ items: [], total: 0 });
     createPlaylist.mockRejectedValue(new Error('Network error'));
     const toastSpy = vi.spyOn(ui, 'toast');
 
@@ -390,7 +390,7 @@ describe('PlaylistsPage playlist cards', () => {
       },
     ];
 
-    getMyPlaylists1.mockResolvedValue(playlists);
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: playlists.length });
 
     await renderPage();
 

@@ -1694,16 +1694,57 @@
         "tags": ["Playlists"],
         "summary": "Get current user's playlists",
         "operationId": "getMyPlaylists_1",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "visibility",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "danceStyle",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "tempo",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PlaylistListItemDto"
-                  }
+                  "$ref": "#/components/schemas/PageResponsePlaylistListItemDto"
                 }
               }
             }
@@ -7650,6 +7691,19 @@
           "queuedTracks": { "type": "integer", "format": "int64" },
           "coveragePercent": { "type": "integer", "format": "int32" },
           "lastAdded": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PageResponsePlaylistListItemDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaylistListItemDto" }
+          },
+          "total": { "type": "integer", "format": "int64" },
+          "page": { "type": "integer", "format": "int32" },
+          "size": { "type": "integer", "format": "int32" },
+          "hasMore": { "type": "boolean" }
         }
       },
       "PlaylistListItemDto": {

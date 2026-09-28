@@ -43,19 +43,61 @@ public class PlaylistJooqRepository {
         return dsl.selectFrom(PLAYLISTS).where(PLAYLISTS.USER_ID.eq(userId)).orderBy(PLAYLISTS.NAME.asc()).fetch(this::toPlaylist);
     }
 
-    public List<PlaylistWithGroupName> findOwnedAndGroupPlaylistsByUserId(UUID userId) {
-        var acceptedGroups = acceptedGroupsSubquery(userId);
+    public List<PlaylistWithGroupName> findOwnedAndGroupPlaylists(UUID userId, String q, String owner, String visibility, String danceStyle, String tempo, int page, int size) {
+        Condition condition = buildListCondition(userId, q, owner, visibility, danceStyle, tempo);
         return dsl.select(PLAYLISTS.fields())
             .select(trackCountField(), GROUPS.NAME.as("group_name"), ownerDisplayNameField(userId))
             .from(PLAYLISTS)
             .leftJoin(GROUPS).on(PLAYLISTS.GROUP_ID.eq(GROUPS.ID))
             .leftJoin(USERS).on(PLAYLISTS.USER_ID.eq(USERS.ID))
-            .where(PLAYLISTS.USER_ID.eq(userId))
-            .or(PLAYLISTS.GROUP_ID.in(acceptedGroups))
-            .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, null)))
-            .or(PLAYLISTS.ID.in(acceptedIndividualPlaylistsSubquery(userId)))
+            .where(condition)
             .orderBy(PLAYLISTS.NAME.asc())
+            .limit(size)
+            .offset(page * size)
             .fetch(r -> new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class), r.get("owner_display_name", String.class)));
+    }
+
+    public long countOwnedAndGroupPlaylists(UUID userId, String q, String owner, String visibility, String danceStyle, String tempo) {
+        Condition condition = buildListCondition(userId, q, owner, visibility, danceStyle, tempo);
+        return dsl.fetchCount(dsl.selectFrom(PLAYLISTS).where(condition));
+    }
+
+    private Condition buildListCondition(UUID userId, String q, String owner, String visibility, String danceStyle, String tempo) {
+        Condition condition = PLAYLISTS.USER_ID.eq(userId)
+            .or(PLAYLISTS.GROUP_ID.in(acceptedGroupsSubquery(userId)))
+            .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, null)))
+            .or(PLAYLISTS.ID.in(acceptedIndividualPlaylistsSubquery(userId)));
+        if (q != null && !q.isBlank()) {
+            condition = condition.and(DSL.lower(PLAYLISTS.NAME).like("%" + q.toLowerCase() + "%"));
+        }
+        if (owner != null) {
+            if (owner.equals("me")) {
+                condition = condition.and(PLAYLISTS.USER_ID.eq(userId));
+            } else if (owner.equals("shared")) {
+                condition = condition.and(PLAYLISTS.USER_ID.isNotNull()).and(PLAYLISTS.USER_ID.ne(userId));
+            } else {
+                UUID groupId = UUID.fromString(owner);
+                condition = condition.and(PLAYLISTS.GROUP_ID.eq(groupId)
+                    .or(PLAYLISTS.ID.in(groupCollaborationPlaylistsForGroupSubquery(groupId))));
+            }
+        }
+        if (visibility != null) {
+            condition = condition.and(PLAYLISTS.IS_PUBLIC.eq(visibility.equals("public")));
+        }
+        if (danceStyle != null && !danceStyle.isBlank()) {
+            condition = condition.and(DSL.lower(PLAYLISTS.DANCE_STYLE).eq(danceStyle.toLowerCase()));
+        }
+        if (tempo != null && !tempo.isBlank()) {
+            condition = condition.and(PLAYLISTS.TEMPO_CATEGORY.eq(tempo));
+        }
+        return condition;
+    }
+
+    private SelectConditionStep<Record1<UUID>> groupCollaborationPlaylistsForGroupSubquery(UUID groupId) {
+        return dsl.select(PLAYLIST_COLLABORATORS.PLAYLIST_ID)
+            .from(PLAYLIST_COLLABORATORS)
+            .where(PLAYLIST_COLLABORATORS.GROUP_ID.eq(groupId))
+            .and(PLAYLIST_COLLABORATORS.STATUS.eq("accepted"));
     }
 
     private Field<String> ownerDisplayNameField(UUID viewerId) {

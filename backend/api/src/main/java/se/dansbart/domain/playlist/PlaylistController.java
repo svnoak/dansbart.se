@@ -10,6 +10,7 @@ import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.EditablePlaylistDto;
 import se.dansbart.dto.InvitationDto;
+import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.dto.PlaylistListItemDto;
 
@@ -28,8 +29,16 @@ public class PlaylistController {
 
     @GetMapping
     @Operation(summary = "Get current user's playlists")
-    public ResponseEntity<List<PlaylistListItemDto>> getMyPlaylists(@AuthenticationPrincipal UUID userId) {
-        return ResponseEntity.ok(playlistService.findOwnedAndGroupPlaylists(userId));
+    public ResponseEntity<PageResponse<PlaylistListItemDto>> getMyPlaylists(
+            @AuthenticationPrincipal UUID userId,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String owner,
+            @RequestParam(required = false) String visibility,
+            @RequestParam(required = false) String danceStyle,
+            @RequestParam(required = false) String tempo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(playlistService.findOwnedAndGroupPlaylists(userId, q, owner, visibility, danceStyle, tempo, page, size));
     }
 
     @GetMapping("/shared")
