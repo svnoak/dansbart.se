@@ -63,7 +63,6 @@ The image uses a multi-stage build (Node build, then nginx serve) and `npm ci` f
 - **Right sidebar** (`src/layout/Sidebar.tsx`):
   - **Search** – link to Search page (keeps current query when applicable).
   - **Discovery** – link to home.
-  - Bottom CTA: **“Take a quiz to make the site better”** → `/classify`.
 - **Global player shell** (`src/player/GlobalPlayerShell.tsx`): fixed bottom bar with placeholder “Select a track to start listening” (embedded player and queue to be added).
 - **Layout CSS** (`src/layout/Layout.css`): sticky header, main + 260px sidebar on desktop, sidebar hidden on small screens, basic styles for search, nav, CTA, and player bar.
 
