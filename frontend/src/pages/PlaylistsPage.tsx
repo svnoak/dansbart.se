@@ -37,6 +37,10 @@ export function PlaylistsPage() {
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,8 +53,10 @@ export function PlaylistsPage() {
       getMyPlaylists1({ page: 0 }, { signal: controller.signal }),
       getInvitations({ signal: controller.signal }),
     ])
-      .then(([page, invs]) => {
-        setPlaylists(page.items ?? []);
+      .then(([page0, invs]) => {
+        setPlaylists(page0.items ?? []);
+        setPage(0);
+        setHasMore(page0.hasMore ?? false);
         setInvitations(invs);
       })
       .catch(() => {
@@ -61,6 +67,22 @@ export function PlaylistsPage() {
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, [authLoading, isAuthenticated]);
+
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    setLoadMoreError(null);
+    try {
+      const nextPage = page + 1;
+      const result = await getMyPlaylists1({ page: nextPage });
+      setPlaylists((prev) => [...prev, ...(result.items ?? [])]);
+      setPage(nextPage);
+      setHasMore(result.hasMore ?? false);
+    } catch {
+      setLoadMoreError('Kunde inte ladda fler spellistor');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
@@ -76,6 +98,8 @@ export function PlaylistsPage() {
         // Refresh playlist list so accepted playlist appears
         const updated = await getMyPlaylists1({ page: 0 });
         setPlaylists(updated.items ?? []);
+        setPage(0);
+        setHasMore(updated.hasMore ?? false);
         toast('Inbjudan accepterad');
       } else {
         toast('Inbjudan avböjd');
@@ -310,6 +334,15 @@ export function PlaylistsPage() {
           );
         })}
       </ul>
+
+      {hasMore && (
+        <div className="flex flex-col items-center gap-1">
+          <Button variant="secondary" onClick={handleLoadMore} disabled={loadingMore}>
+            Visa fler
+          </Button>
+          <InlineError>{loadMoreError}</InlineError>
+        </div>
+      )}
     </div>
   );
 }

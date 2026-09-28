@@ -51,7 +51,7 @@ public class PlaylistJooqRepository {
             .leftJoin(GROUPS).on(PLAYLISTS.GROUP_ID.eq(GROUPS.ID))
             .leftJoin(USERS).on(PLAYLISTS.USER_ID.eq(USERS.ID))
             .where(condition)
-            .orderBy(PLAYLISTS.NAME.asc())
+            .orderBy(PLAYLISTS.NAME.asc(), PLAYLISTS.ID.asc())
             .limit(size)
             .offset(page * size)
             .fetch(r -> new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class), r.get("owner_display_name", String.class)));
@@ -68,7 +68,8 @@ public class PlaylistJooqRepository {
             .or(PLAYLISTS.ID.in(groupCollaboratorPlaylistsSubquery(userId, null)))
             .or(PLAYLISTS.ID.in(acceptedIndividualPlaylistsSubquery(userId)));
         if (q != null && !q.isBlank()) {
-            condition = condition.and(DSL.lower(PLAYLISTS.NAME).like("%" + q.toLowerCase() + "%"));
+            String escapedQ = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            condition = condition.and(PLAYLISTS.NAME.likeIgnoreCase("%" + escapedQ + "%", '\\'));
         }
         if (owner != null) {
             if (owner.equals("me")) {

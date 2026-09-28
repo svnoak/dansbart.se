@@ -381,6 +381,82 @@ describe('PlaylistsPage playlist cards', () => {
     toastSpy.mockRestore();
   });
 
+  it('shows a "Visa fler" button when there are more playlists to load', async () => {
+    const playlists: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: 2, hasMore: true });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(getButtonByText('Visa fler')).toBeDefined();
+  });
+
+  it('does not show a "Visa fler" button when there are no more playlists to load', async () => {
+    const playlists: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    getMyPlaylists1.mockResolvedValue({ items: playlists, total: 1, hasMore: false });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(getButtonByText('Visa fler')).toBeUndefined();
+  });
+
+  it('clicking "Visa fler" loads the next page and appends its items', async () => {
+    const page0: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    const page1: PlaylistListItemDto[] = [{ id: 'pl2', name: 'Spellista 2' }];
+    getMyPlaylists1.mockImplementation((params: { page?: number }) =>
+      Promise.resolve(
+        params?.page === 1
+          ? { items: page1, total: 2, hasMore: false }
+          : { items: page0, total: 2, hasMore: true },
+      ),
+    );
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const loadMoreButton = getButtonByText('Visa fler');
+    await act(async () => {
+      loadMoreButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(getMyPlaylists1).toHaveBeenCalledWith({ page: 1 });
+    expect(document.body.textContent).toContain('Spellista 1');
+    expect(document.body.textContent).toContain('Spellista 2');
+    expect(getButtonByText('Visa fler')).toBeUndefined();
+  });
+
+  it('a failed "Visa fler" load shows the error next to the button', async () => {
+    const page0: PlaylistListItemDto[] = [{ id: 'pl1', name: 'Spellista 1' }];
+    getMyPlaylists1.mockResolvedValueOnce({ items: page0, total: 2, hasMore: true });
+    getMyPlaylists1.mockRejectedValueOnce(new Error('Network error'));
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const loadMoreButton = getButtonByText('Visa fler');
+    await act(async () => {
+      loadMoreButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const alert = loadMoreButton?.parentElement?.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe('Kunde inte ladda fler spellistor');
+  });
+
   it('shows who shared a playlist', async () => {
     const playlists: PlaylistListItemDto[] = [
       {
