@@ -1571,8 +1571,8 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Shared With My Group"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Shared With My Group"));
         }
 
         @Test
@@ -1585,7 +1585,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         @Test
@@ -1598,7 +1598,7 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(get("/api/playlists")
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         @Test
