@@ -28,12 +28,12 @@ function NavLink({
     <Link
       to={to}
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm font-medium transition-colors ${
+      className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm transition-colors ${
         icon != null ? '' : 'pl-2'
       } ${
         active
-          ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] border-r-3 border-[rgb(var(--color-accent))]'
-          : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
+          ? 'bg-[rgb(var(--color-selected))]/10 font-semibold text-[rgb(var(--color-selected))]'
+          : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
       }`}
     >
       {icon != null && (
@@ -198,7 +198,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => setOmOpen((o) => !o)}
           className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-left text-sm font-medium transition-colors ${
             isInfoPage
-              ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
+              ? 'bg-[rgb(var(--color-selected))]/10 text-[rgb(var(--color-selected))]'
               : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
           }`}
           aria-expanded={omOpen}

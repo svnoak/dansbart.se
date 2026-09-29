@@ -3,6 +3,7 @@ export { ArtistCard } from './ArtistCard';
 export { ConfirmDeleteByName } from './ConfirmDeleteByName';
 export { FilterBar } from './FilterBar';
 export { FlagTrackModal } from './FlagTrackModal';
+export { PlaylistShortcutCard } from './PlaylistShortcutCard';
 export { SearchBar } from './SearchBar';
 export { SelectableSearchResults } from './SelectableSearchResults';
 export { SharePlaylistPanel } from './SharePlaylistPanel';

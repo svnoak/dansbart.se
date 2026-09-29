@@ -77,6 +77,22 @@ public class PlaylistService {
         return new PageResponse<>(items, total, clampedPage, clampedSize, hasMore);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<PlaylistListItemDto> findPublicPlaylists(int page, int size) {
+        int clampedSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int clampedPage = Math.max(page, 0);
+
+        List<PlaylistListItemDto> all = playlistJooqRepository.findPublicPlaylists().stream()
+            .map(this::toPlaylistListItemDto)
+            .collect(Collectors.toList());
+        long total = all.size();
+        int fromIndex = Math.min(clampedPage * clampedSize, all.size());
+        int toIndex = Math.min(fromIndex + clampedSize, all.size());
+        List<PlaylistListItemDto> items = all.subList(fromIndex, toIndex);
+        boolean hasMore = (long) (clampedPage + 1) * clampedSize < total;
+        return new PageResponse<>(items, total, clampedPage, clampedSize, hasMore);
+    }
+
     private PlaylistListItemDto toPlaylistListItemDto(PlaylistJooqRepository.PlaylistWithGroupName record) {
         Playlist playlist = record.playlist();
         GroupSummaryDto ownerGroup = playlist.getGroupId() != null

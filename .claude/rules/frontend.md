@@ -23,11 +23,11 @@ npm run test:run
 
 ## Accessibility
 
-Many users are older and non-technical. Apply these rules to each component you touch:
+Users are non-technical and span ages 14 to 85. Apply these rules to each component you touch:
 
-- Use at least 14px text for body text and controls. Remove `text-[9px]`, `text-[10px]`, and `text-[11px]`.
+- Meet WCAG 2.2 AA contrast (4.5:1 body text, 3:1 large text) and stay readable at 200% zoom. No pixel minimum applies beyond that.
 - Do not make text smaller on larger screens.
-- Make tap targets at least 44x44px.
+- Meet WCAG 2.2 AA tap targets: at least 24x24 CSS px, or enough spacing around a smaller target. Primary touch controls aim for 44x44px.
 - Give every control a strong clickability cue: a button shape and a visible icon or word.
 - Use a visible word when the action is new or has no widely known icon.
 - Give every control an accessible name with a verb.

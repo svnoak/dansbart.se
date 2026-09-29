@@ -14,6 +14,7 @@ import se.dansbart.dto.GroupInvitationDto;
 import se.dansbart.dto.GroupMemberDto;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.InvitationDto;
+import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.exception.BadRequestException;
 
@@ -38,8 +39,10 @@ public class GroupController {
 
     @GetMapping("/public")
     @Operation(summary = "Get public groups")
-    public ResponseEntity<List<GroupSummaryDto>> getPublicGroups() {
-        return ResponseEntity.ok(groupService.findPublicGroups());
+    public ResponseEntity<PageResponse<GroupSummaryDto>> getPublicGroups(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(groupService.findPublicGroups(page, size));
     }
 
     @GetMapping("/{id}")

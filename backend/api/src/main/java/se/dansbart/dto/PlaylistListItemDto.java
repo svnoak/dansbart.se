@@ -3,7 +3,7 @@ package se.dansbart.dto;
 import lombok.*;
 import java.util.UUID;
 
-/** Playlist entry in the current user's playlist list, owned by the user or by one of their groups. */
+/** A playlist entry as shown in a list view — either the current user's own accessible playlists, or the site's public playlists. */
 @Getter
 @Setter
 @NoArgsConstructor
