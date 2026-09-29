@@ -10,8 +10,7 @@ import { typeInto } from '@/test/typeInto';
 
 const getStyleOverview = vi.fn();
 const getArtists = vi.fn();
-const getPublicGroups = vi.fn();
-const getGroup = vi.fn();
+const getPublicPlaylists = vi.fn();
 const getStats = vi.fn();
 const navigateMock = vi.fn();
 
@@ -27,9 +26,8 @@ vi.mock('@/api/generated/artists/artists', () => ({
   getArtists: (...args: unknown[]) => getArtists(...args),
 }));
 
-vi.mock('@/api/generated/groups/groups', () => ({
-  getPublicGroups: () => getPublicGroups(),
-  getGroup: (...args: unknown[]) => getGroup(...args),
+vi.mock('@/api/generated/playlists/playlists', () => ({
+  getPublicPlaylists: (...args: unknown[]) => getPublicPlaylists(...args),
 }));
 
 vi.mock('@/api/generated/stats/stats', () => ({
@@ -51,17 +49,17 @@ describe('HomePage', () => {
   beforeEach(() => {
     getStyleOverview.mockReset();
     getArtists.mockReset();
-    getPublicGroups.mockReset();
-    getGroup.mockReset();
+    getPublicPlaylists.mockReset();
     getStats.mockReset();
     navigateMock.mockReset();
     getStyleOverview.mockResolvedValue([{ style: 'Polska', trackCount: 3 }]);
     getArtists.mockResolvedValue({ items: [{ id: 'a1', name: 'Spelmanslaget' }] });
-    getPublicGroups.mockResolvedValue([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]);
-    getGroup.mockResolvedValue({
-      id: 'g1',
-      name: 'Öppen grupp',
-      playlists: [{ id: 'p1', name: 'Bygdedans', isPublic: true, trackCount: 4 }],
+    getPublicPlaylists.mockResolvedValue({
+      items: [{ id: 'p1', name: 'Bygdedans', trackCount: 4 }],
+      total: 1,
+      page: 0,
+      size: 8,
+      hasMore: false,
     });
     getStats.mockResolvedValue({ totalTracks: 100, coveragePercent: 42, lastAdded: '2024-01-01' });
     container = document.createElement('div');
@@ -155,8 +153,8 @@ describe('HomePage', () => {
   });
 
   it('shows a retry error when the playlists fetch fails', async () => {
-    getPublicGroups.mockReset();
-    getPublicGroups.mockRejectedValue(new Error('network error'));
+    getPublicPlaylists.mockReset();
+    getPublicPlaylists.mockRejectedValue(new Error('network error'));
 
     await renderPage();
 
@@ -164,24 +162,32 @@ describe('HomePage', () => {
     expect(alert?.textContent).toContain('Kunde inte hämta spellistorna.');
   });
 
-  it('shows only public playlists from public groups, to any visitor', async () => {
-    getGroup.mockResolvedValue({
-      id: 'g1',
-      name: 'Öppen grupp',
-      playlists: [
-        { id: 'p1', name: 'Bygdedans', isPublic: true, trackCount: 4 },
-        { id: 'p2', name: 'Privat lista', isPublic: false, trackCount: 2 },
+  it('shows the public playlists the endpoint returns', async () => {
+    getPublicPlaylists.mockResolvedValue({
+      items: [
+        { id: 'p1', name: 'Bygdedans', trackCount: 4 },
+        { id: 'p2', name: 'Valslangdans', trackCount: 7 },
       ],
+      total: 2,
+      page: 0,
+      size: 8,
+      hasMore: false,
     });
 
     await renderPage();
 
     expect(document.body.textContent).toContain('Bygdedans');
-    expect(document.body.textContent).not.toContain('Privat lista');
+    expect(document.body.textContent).toContain('Valslangdans');
   });
 
-  it('shows an empty state when no public group has a public playlist', async () => {
-    getPublicGroups.mockResolvedValue([]);
+  it('shows an empty state when no public playlists exist', async () => {
+    getPublicPlaylists.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      size: 8,
+      hasMore: false,
+    });
 
     await renderPage();
 

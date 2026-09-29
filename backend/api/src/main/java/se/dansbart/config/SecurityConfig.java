@@ -75,6 +75,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/groups/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/groups/invitations").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/groups/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/playlists/public").permitAll()
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/tracks/*/flag").hasRole("ADMIN")

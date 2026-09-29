@@ -114,6 +114,7 @@ export * from './getPendingLinksParams';
 export * from './getPlatformStats200';
 export * from './getPlatformStatsParams';
 export * from './getPopularTracksParams';
+export * from './getPublicPlaylistsParams';
 export * from './getRecentTracksParams';
 export * from './getRecommendationsParams';
 export * from './getRejections200';

@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getArtists } from '@/api/generated/artists/artists';
-import { getPublicGroups, getGroup } from '@/api/generated/groups/groups';
+import { getPublicPlaylists } from '@/api/generated/playlists/playlists';
 import { getStats } from '@/api/generated/stats/stats';
 import type { StyleOverviewDto } from '@/api/models/styleOverviewDto';
 import type { Artist } from '@/api/models/artist';
-import type { PlaylistSummaryDto } from '@/api/models/playlistSummaryDto';
+import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { StatsDto } from '@/api/models/statsDto';
 import { StyleShortcutCard } from '@/components/StyleShortcutCard';
 import { ArtistCard, PlaylistShortcutCard } from '@/components';
@@ -34,7 +34,7 @@ export function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [styles, setStyles] = useState<StyleOverviewDto[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [playlists, setPlaylists] = useState<PlaylistSummaryDto[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistListItemDto[]>([]);
   const [loadingStyles, setLoadingStyles] = useState(true);
   const [loadingArtists, setLoadingArtists] = useState(true);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
@@ -82,16 +82,8 @@ export function HomePage() {
     setLoadingPlaylists(true);
     setPlaylistsError(null);
     try {
-      const groups = await getPublicGroups();
-      const details = await Promise.all(
-        (groups ?? [])
-          .slice(0, 6)
-          .map((g) => (g.id ? getGroup(g.id).catch(() => null) : null)),
-      );
-      const publicPlaylists = details
-        .flatMap((group) => group?.playlists ?? [])
-        .filter((playlist) => playlist.isPublic);
-      setPlaylists(publicPlaylists.slice(0, 8));
+      const data = await getPublicPlaylists({ size: 8 });
+      setPlaylists(data?.items ?? []);
     } catch {
       setPlaylistsError('Kunde inte hämta spellistorna.');
     } finally {

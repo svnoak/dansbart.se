@@ -10,6 +10,7 @@ import type {
   CreatePlaylistRequest,
   EditablePlaylistDto,
   GetMyPlaylists1Params,
+  GetPublicPlaylistsParams,
   InvitationDto,
   InviteCollaborator200,
   InviteCollaboratorRequest,
@@ -435,6 +436,36 @@ export const getGetPlaylistByShareTokenUrl = (shareToken: string,) => {
 export const getPlaylistByShareToken = async (shareToken: string, options?: RequestInit): Promise<PlaylistDto> => {
   
   return httpClient<PlaylistDto>(getGetPlaylistByShareTokenUrl(shareToken),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get public playlists
+ */
+export const getGetPublicPlaylistsUrl = (params?: GetPublicPlaylistsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/playlists/public?${stringifiedParams}` : `/api/playlists/public`
+}
+
+export const getPublicPlaylists = async (params?: GetPublicPlaylistsParams, options?: RequestInit): Promise<PageResponsePlaylistListItemDto> => {
+  
+  return httpClient<PageResponsePlaylistListItemDto>(getGetPublicPlaylistsUrl(params),
   {      
     ...options,
     method: 'GET'

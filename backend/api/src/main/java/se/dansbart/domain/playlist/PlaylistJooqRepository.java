@@ -54,7 +54,18 @@ public class PlaylistJooqRepository {
             .orderBy(PLAYLISTS.NAME.asc(), PLAYLISTS.ID.asc())
             .limit(size)
             .offset(page * size)
-            .fetch(r -> new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class), r.get("owner_display_name", String.class)));
+            .fetch(this::toPlaylistWithGroupName);
+    }
+
+    public List<PlaylistWithGroupName> findPublicPlaylists() {
+        return dsl.select(PLAYLISTS.fields())
+            .select(trackCountField(), GROUPS.NAME.as("group_name"), ownerDisplayNameField())
+            .from(PLAYLISTS)
+            .leftJoin(GROUPS).on(PLAYLISTS.GROUP_ID.eq(GROUPS.ID))
+            .leftJoin(USERS).on(PLAYLISTS.USER_ID.eq(USERS.ID))
+            .where(PLAYLISTS.IS_PUBLIC.isTrue())
+            .orderBy(PLAYLISTS.NAME.asc(), PLAYLISTS.ID.asc())
+            .fetch(this::toPlaylistWithGroupName);
     }
 
     public long countOwnedAndGroupPlaylists(UUID userId, String q, String owner, String visibility, String danceStyle, String tempo) {
@@ -105,6 +116,10 @@ public class PlaylistJooqRepository {
         return DSL.when(PLAYLISTS.USER_ID.eq(viewerId), (String) null)
             .otherwise(coalesce(USERS.DISPLAY_NAME, USERS.USERNAME))
             .as("owner_display_name");
+    }
+
+    private Field<String> ownerDisplayNameField() {
+        return coalesce(USERS.DISPLAY_NAME, USERS.USERNAME).as("owner_display_name");
     }
 
     public List<PlaylistWithTrackCount> findByGroupIdWithTrackCount(UUID groupId, boolean includePrivate) {
@@ -285,6 +300,10 @@ public class PlaylistJooqRepository {
 
     private PlaylistWithTrackCount toPlaylistWithTrackCount(Record r) {
         return new PlaylistWithTrackCount(toPlaylist(r), r.get("track_count", Integer.class));
+    }
+
+    private PlaylistWithGroupName toPlaylistWithGroupName(Record r) {
+        return new PlaylistWithGroupName(toPlaylist(r), r.get("track_count", Integer.class), r.get("group_name", String.class), r.get("owner_display_name", String.class));
     }
 
     public record PlaylistWithTrackCount(Playlist playlist, int trackCount) {}
