@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getMyDanceLists, createDanceList } from '@/api/generated/dance-lists/dance-lists';
 import type { DanceList } from '@/api/models/danceList';
 import { QueueListIcon, PlusIcon } from '@/icons';
-import { Button, Card, InlineError, SectionTitle } from '@/ui';
+import { Button, Card, InlineError, LoadError, SectionTitle } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 
 export function DanceListsPage() {
@@ -16,34 +16,27 @@ export function DanceListsPage() {
   const [showForm, setShowForm] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  const load = useCallback(async () => {
+    try {
+      const lists = await getMyDanceLists();
+      setDanceLists(lists ?? []);
+      setError(false);
+    } catch {
+      setDanceLists([]);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) {
       setLoading(false);
       return;
     }
-    let cancelled = false;
-    async function load() {
-      try {
-        const lists = await getMyDanceLists();
-        if (!cancelled) {
-          setDanceLists(lists ?? []);
-          setError(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setDanceLists([]);
-          setError(true);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
     load();
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, load]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -123,7 +116,7 @@ export function DanceListsPage() {
           </p>
           <Link
             to="/login"
-            className="mt-1 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
           >
             Logga in
           </Link>
@@ -134,9 +127,7 @@ export function DanceListsPage() {
         <section className="space-y-3">
           <SectionTitle>Mina danslistor</SectionTitle>
           {error ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Det gick inte att hämta danslistorna.
-            </p>
+            <LoadError message="Det gick inte att hämta danslistorna." onRetry={load} />
           ) : danceLists.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Du har inga danslistor ännu.

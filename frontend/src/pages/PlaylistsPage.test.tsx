@@ -8,6 +8,8 @@ import { loggedInAuthValue } from '@/test/authValue';
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import * as ui from '@/ui';
+import { getInputByLabel } from '@/test/getInputByLabel';
+import { typeInto } from '@/test/typeInto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -358,22 +360,20 @@ describe('PlaylistsPage playlist cards', () => {
       newButton?.click();
     });
 
-    const nameInput = document.body.querySelector('input[placeholder="Namn på spellistan"]') as HTMLInputElement;
+    const nameInput = getInputByLabel('Spellistans namn');
     expect(nameInput).toBeTruthy();
 
     await act(async () => {
-      const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(nameInput), 'value')!.set!;
-      setter.call(nameInput, 'Ny spellista');
-      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      if (nameInput) typeInto(nameInput, 'Ny spellista');
     });
 
-    const createButton = getButtonByText('Skapa');
+    const createButton = getButtonByText('Skapa spellista');
     await act(async () => {
       createButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const form = nameInput.closest('form');
+    const form = nameInput?.closest('form');
     const alert = form?.querySelector('[role="alert"]');
     expect(alert?.textContent).toBe('Kunde inte skapa spellista');
     expect(toastSpy).not.toHaveBeenCalledWith('Kunde inte skapa spellista', 'error');

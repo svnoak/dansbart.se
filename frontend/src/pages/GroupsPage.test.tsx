@@ -70,6 +70,12 @@ describe('GroupsPage', () => {
     );
   }
 
+  function getLinkByText(text: string) {
+    return Array.from(document.body.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes(text),
+    );
+  }
+
   it('shows public groups to a visitor who is not logged in', async () => {
     getPublicGroups.mockResolvedValue([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]);
     await renderPage();
@@ -79,8 +85,8 @@ describe('GroupsPage', () => {
     expect(getGroupInvitations).not.toHaveBeenCalled();
     expect(document.body.textContent).toContain('Öppen grupp');
 
-    const loginButton = getButtonByText('Logga in');
-    expect(loginButton).toBeDefined();
+    const loginLink = getLinkByText('Logga in');
+    expect(loginLink).toBeDefined();
   });
 
   it('shows my groups and hides them from the public list', async () => {

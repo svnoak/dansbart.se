@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getMyGroups,
@@ -11,12 +11,12 @@ import { ApiError } from '@/api/http-client';
 import type { GroupSummaryDto } from '@/api/models/groupSummaryDto';
 import type { GroupInvitationDto } from '@/api/models/groupInvitationDto';
 import { GroupIcon, PlusIcon } from '@/icons';
-import { Badge, Button, Card, InlineError, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, InlineError, LoadError, SectionTitle, toast } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 import { describeGroupError } from '@/utils/describeGroupError';
 
 export function GroupsPage() {
-  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [myGroups, setMyGroups] = useState<GroupSummaryDto[]>([]);
   const [publicGroups, setPublicGroups] = useState<GroupSummaryDto[]>([]);
   const [invitations, setInvitations] = useState<GroupInvitationDto[]>([]);
@@ -32,29 +32,37 @@ export function GroupsPage() {
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const groups = await getPublicGroups();
-        if (!cancelled) {
-          setPublicGroups(groups ?? []);
-          setErrorPublic(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setPublicGroups([]);
-          setErrorPublic(true);
-        }
-      } finally {
-        if (!cancelled) setLoadingPublic(false);
-      }
+  const loadPublicGroups = useCallback(async () => {
+    try {
+      const groups = await getPublicGroups();
+      setPublicGroups(groups ?? []);
+      setErrorPublic(false);
+    } catch {
+      setPublicGroups([]);
+      setErrorPublic(true);
+    } finally {
+      setLoadingPublic(false);
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  const loadMine = useCallback(async () => {
+    try {
+      const [mine, invs] = await Promise.all([getMyGroups(), getGroupInvitations()]);
+      setMyGroups(mine ?? []);
+      setInvitations(invs ?? []);
+      setErrorMine(false);
+    } catch {
+      setMyGroups([]);
+      setInvitations([]);
+      setErrorMine(true);
+    } finally {
+      setLoadingMine(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPublicGroups();
+  }, [loadPublicGroups]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,30 +70,8 @@ export function GroupsPage() {
       setLoadingMine(false);
       return;
     }
-    let cancelled = false;
-    async function load() {
-      try {
-        const [mine, invs] = await Promise.all([getMyGroups(), getGroupInvitations()]);
-        if (!cancelled) {
-          setMyGroups(mine ?? []);
-          setInvitations(invs ?? []);
-          setErrorMine(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setMyGroups([]);
-          setInvitations([]);
-          setErrorMine(true);
-        }
-      } finally {
-        if (!cancelled) setLoadingMine(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, isAuthenticated]);
+    loadMine();
+  }, [authLoading, isAuthenticated, loadMine]);
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
@@ -250,9 +236,7 @@ export function GroupsPage() {
         <section className="space-y-3">
           <SectionTitle>Mina grupper</SectionTitle>
           {errorMine ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Det gick inte att hämta grupperna.
-            </p>
+            <LoadError message="Det gick inte att hämta grupperna." onRetry={loadMine} />
           ) : myGroups.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Du är inte med i någon grupp ännu.
@@ -269,7 +253,12 @@ export function GroupsPage() {
           <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
             Logga in för att skapa och gå med i grupper.
           </p>
-          <Button onClick={login}>Logga in</Button>
+          <Link
+            to="/login"
+            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Logga in
+          </Link>
         </Card>
       )}
 
@@ -279,9 +268,7 @@ export function GroupsPage() {
           {loadingPublic ? (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar...</p>
           ) : errorPublic ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Det gick inte att hämta grupperna.
-            </p>
+            <LoadError message="Det gick inte att hämta grupperna." onRetry={loadPublicGroups} />
           ) : joinablePublicGroups.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Inga offentliga grupper ännu.
