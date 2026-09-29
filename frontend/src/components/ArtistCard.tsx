@@ -14,8 +14,8 @@ export function ArtistCard({ artist, albumCount, layout = 'row' }: ArtistCardPro
       <Link to={`/artist/${artist.id ?? ''}`}>
         <Card className="flex h-full flex-col items-center gap-2 p-3 text-center transition-colors hover:bg-[rgb(var(--color-border))]/20">
           <AvatarPlaceholder size="lg" />
-          <div className="min-w-0">
-            <h3 className="font-medium text-[rgb(var(--color-text))] truncate">
+          <div className="w-full min-w-0">
+            <h3 className="break-words font-medium text-[rgb(var(--color-text))]">
               {artist.name ?? 'Okänd artist'}
             </h3>
             {albumCount != null && (

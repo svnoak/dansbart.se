@@ -5,23 +5,18 @@ import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { typeInto } from '@/test/typeInto';
-import { authValue, loggedInAuthValue } from '@/test/authValue';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const getStyleOverview = vi.fn();
 const getArtists = vi.fn();
-const getMyPlaylists1 = vi.fn();
+const getPublicGroups = vi.fn();
+const getGroup = vi.fn();
 const getStats = vi.fn();
-const useAuth = vi.fn();
 const navigateMock = vi.fn();
 
 vi.mock('@/analytics/useAnalyticsFlag', () => ({
   useAnalyticsFlag: vi.fn(),
-}));
-
-vi.mock('@/auth/useAuth', () => ({
-  useAuth: () => useAuth(),
 }));
 
 vi.mock('@/api/generated/discovery/discovery', () => ({
@@ -32,8 +27,9 @@ vi.mock('@/api/generated/artists/artists', () => ({
   getArtists: (...args: unknown[]) => getArtists(...args),
 }));
 
-vi.mock('@/api/generated/playlists/playlists', () => ({
-  getMyPlaylists1: (...args: unknown[]) => getMyPlaylists1(...args),
+vi.mock('@/api/generated/groups/groups', () => ({
+  getPublicGroups: () => getPublicGroups(),
+  getGroup: (...args: unknown[]) => getGroup(...args),
 }));
 
 vi.mock('@/api/generated/stats/stats', () => ({
@@ -55,14 +51,18 @@ describe('HomePage', () => {
   beforeEach(() => {
     getStyleOverview.mockReset();
     getArtists.mockReset();
-    getMyPlaylists1.mockReset();
+    getPublicGroups.mockReset();
+    getGroup.mockReset();
     getStats.mockReset();
-    useAuth.mockReset();
     navigateMock.mockReset();
-    useAuth.mockReturnValue(loggedInAuthValue({}));
     getStyleOverview.mockResolvedValue([{ style: 'Polska', trackCount: 3 }]);
     getArtists.mockResolvedValue({ items: [{ id: 'a1', name: 'Spelmanslaget' }] });
-    getMyPlaylists1.mockResolvedValue({ items: [{ id: 'p1', name: 'Bygdedans' }], hasMore: false });
+    getPublicGroups.mockResolvedValue([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]);
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Öppen grupp',
+      playlists: [{ id: 'p1', name: 'Bygdedans', isPublic: true, trackCount: 4 }],
+    });
     getStats.mockResolvedValue({ totalTracks: 100, coveragePercent: 42, lastAdded: '2024-01-01' });
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -155,8 +155,8 @@ describe('HomePage', () => {
   });
 
   it('shows a retry error when the playlists fetch fails', async () => {
-    getMyPlaylists1.mockReset();
-    getMyPlaylists1.mockRejectedValue(new Error('network error'));
+    getPublicGroups.mockReset();
+    getPublicGroups.mockRejectedValue(new Error('network error'));
 
     await renderPage();
 
@@ -164,16 +164,27 @@ describe('HomePage', () => {
     expect(alert?.textContent).toContain('Kunde inte hämta spellistorna.');
   });
 
-  it('prompts a visitor who is not logged in to log in to see their playlists', async () => {
-    useAuth.mockReturnValue(authValue());
+  it('shows only public playlists from public groups, to any visitor', async () => {
+    getGroup.mockResolvedValue({
+      id: 'g1',
+      name: 'Öppen grupp',
+      playlists: [
+        { id: 'p1', name: 'Bygdedans', isPublic: true, trackCount: 4 },
+        { id: 'p2', name: 'Privat lista', isPublic: false, trackCount: 2 },
+      ],
+    });
 
     await renderPage();
 
-    expect(getMyPlaylists1).not.toHaveBeenCalled();
-    const loginLink = Array.from(document.body.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('Logga in'),
-    );
-    expect(loginLink).toBeDefined();
-    expect(document.body.textContent).toContain('för att se dina spellistor här.');
+    expect(document.body.textContent).toContain('Bygdedans');
+    expect(document.body.textContent).not.toContain('Privat lista');
+  });
+
+  it('shows an empty state when no public group has a public playlist', async () => {
+    getPublicGroups.mockResolvedValue([]);
+
+    await renderPage();
+
+    expect(document.body.textContent).toContain('Inga offentliga spellistor ännu.');
   });
 });

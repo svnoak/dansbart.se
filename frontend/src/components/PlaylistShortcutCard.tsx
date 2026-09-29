@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Card } from '@/ui';
 import { PlaylistIcon } from '@/icons';
-import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
+import type { PlaylistSummaryDto } from '@/api/models/playlistSummaryDto';
 
 interface PlaylistShortcutCardProps {
-  playlist: PlaylistListItemDto;
+  playlist: PlaylistSummaryDto;
 }
 
 export function PlaylistShortcutCard({ playlist }: PlaylistShortcutCardProps) {

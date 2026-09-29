@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
-import { useAuth } from '@/auth/useAuth';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getArtists } from '@/api/generated/artists/artists';
-import { getMyPlaylists1 } from '@/api/generated/playlists/playlists';
+import { getPublicGroups, getGroup } from '@/api/generated/groups/groups';
 import { getStats } from '@/api/generated/stats/stats';
 import type { StyleOverviewDto } from '@/api/models/styleOverviewDto';
 import type { Artist } from '@/api/models/artist';
-import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
+import type { PlaylistSummaryDto } from '@/api/models/playlistSummaryDto';
 import type { StatsDto } from '@/api/models/statsDto';
 import { StyleShortcutCard } from '@/components/StyleShortcutCard';
 import { ArtistCard, PlaylistShortcutCard } from '@/components';
@@ -32,11 +31,10 @@ function formatLastAdded(iso?: string) {
 export function HomePage() {
   useAnalyticsFlag('library');
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [styles, setStyles] = useState<StyleOverviewDto[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [playlists, setPlaylists] = useState<PlaylistListItemDto[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistSummaryDto[]>([]);
   const [loadingStyles, setLoadingStyles] = useState(true);
   const [loadingArtists, setLoadingArtists] = useState(true);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
@@ -84,8 +82,16 @@ export function HomePage() {
     setLoadingPlaylists(true);
     setPlaylistsError(null);
     try {
-      const data = await getMyPlaylists1({ page: 0 });
-      setPlaylists((data?.items ?? []).slice(0, 8));
+      const groups = await getPublicGroups();
+      const details = await Promise.all(
+        (groups ?? [])
+          .slice(0, 6)
+          .map((g) => (g.id ? getGroup(g.id).catch(() => null) : null)),
+      );
+      const publicPlaylists = details
+        .flatMap((group) => group?.playlists ?? [])
+        .filter((playlist) => playlist.isPublic);
+      setPlaylists(publicPlaylists.slice(0, 8));
     } catch {
       setPlaylistsError('Kunde inte hämta spellistorna.');
     } finally {
@@ -106,13 +112,8 @@ export function HomePage() {
   }, [fetchArtists]);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) {
-      setLoadingPlaylists(false);
-      return;
-    }
     fetchPlaylists();
-  }, [authLoading, isAuthenticated, fetchPlaylists]);
+  }, [fetchPlaylists]);
 
   function handleSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -183,7 +184,7 @@ export function HomePage() {
 
       {/* Style shortcuts */}
       <section aria-labelledby="style-shortcuts-heading">
-        <SectionTitle id="style-shortcuts-heading" linkTo="/dances">
+        <SectionTitle id="style-shortcuts-heading">
           Dansstilar
         </SectionTitle>
         {stylesError ? (
@@ -193,7 +194,7 @@ export function HomePage() {
         ) : loadingStyles ? (
           <p className="mt-3 text-[rgb(var(--color-text-muted))]">Laddar stilar…</p>
         ) : (
-          <div className="mt-3 flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+          <div className="mt-3 flex flex-wrap gap-3">
             {styles.map((s) => (
               <div key={s.style ?? ''} className="w-36 shrink-0">
                 <StyleShortcutCard style={s} />
@@ -229,24 +230,17 @@ export function HomePage() {
 
       {/* Playlists */}
       <section aria-labelledby="playlists-heading">
-        <SectionTitle id="playlists-heading" linkTo="/playlists">
+        <SectionTitle id="playlists-heading" linkTo="/groups">
           Spellistor
         </SectionTitle>
-        {!authLoading && !isAuthenticated ? (
-          <p className="mt-3 text-[rgb(var(--color-text-muted))]">
-            <Link to="/login" className="font-medium text-[rgb(var(--color-accent))] hover:underline">
-              Logga in
-            </Link>{' '}
-            för att se dina spellistor här.
-          </p>
-        ) : playlistsError ? (
+        {playlistsError ? (
           <div className="mt-3">
             <LoadError message={playlistsError} onRetry={fetchPlaylists} />
           </div>
         ) : loadingPlaylists ? (
           <p className="mt-3 text-[rgb(var(--color-text-muted))]">Laddar…</p>
         ) : playlists.length === 0 ? (
-          <p className="mt-3 text-[rgb(var(--color-text-muted))]">Du har inga spellistor ännu.</p>
+          <p className="mt-3 text-[rgb(var(--color-text-muted))]">Inga offentliga spellistor ännu.</p>
         ) : (
           <div className="mt-3 flex gap-3 overflow-x-auto scrollbar-hide pb-1">
             {playlists.map((playlist) => (

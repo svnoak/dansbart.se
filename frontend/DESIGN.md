@@ -127,7 +127,7 @@ The palette draws on Swedish folk-culture color on a warm neutral ground; each a
 
 ## Layout
 
-The home page composes as a single scrollable column of sections (`space-y-8`), each with a title row (`SectionTitle`, with an optional "Se alla" link) and content below. The signature pattern is the horizontally-scrolling rail: a flex row of fixed-width tiles (`w-36`, 144px) with `overflow-x-auto` and a hidden scrollbar (`scrollbar-hide` utility), used identically for dance styles, artists, and playlists. Tiles gap at `gap-3` (12px); sections stack at `space-y-8` (32px).
+The home page composes as a single scrollable column of sections (`space-y-8`), each with a title row (`SectionTitle`, with an optional "Se alla" link) and content below. The signature pattern is a row of fixed-width tiles (`w-36`, 144px) at `gap-3` (12px); sections stack at `space-y-8` (32px). Dansstilar is a fixed, known set (eleven styles today) and wraps onto as many rows as needed (`flex flex-wrap`) rather than scrolling — every style is visible without a "Se alla" link. Utvalda artister and Spellistor are open-ended, unbounded lists and stay horizontally-scrolling rails (`overflow-x-auto` with a hidden scrollbar, the `scrollbar-hide` utility), each with a "Se alla" link to browse the rest.
 
 The layout is responsive by reflow, not by a distinct mobile composition: the same rails and card widths persist from desktop to phone, with the sidebar collapsing to a hamburger-triggered slide-in overlay below the desktop breakpoint (see Navigation).
 
@@ -174,9 +174,9 @@ Corners are generously and consistently rounded: `--radius` (1rem/16px) for butt
 - On mobile the sidebar becomes a hamburger-triggered slide-in overlay (inside `Layout.tsx`), not a persistent bar.
 
 ### Rail Tile (signature component)
-The horizontally-scrolling tile rail is the home page's signature pattern, reused three times with two distinct tile shapes:
-- **Dance-style tile** (`StyleShortcutCard`): a solid-colored card in the dance style's own fixed hue, left-aligned title and count, no icon.
-- **Artist tile** (`ArtistCard`, `layout="tile"`): a neutral `Card` with a centered 56px circular avatar placeholder above a centered name.
+The tile is the home page's signature shape, reused three times with two distinct treatments:
+- **Dance-style tile** (`StyleShortcutCard`): a solid-colored card in the dance style's own fixed hue, left-aligned title and count, no icon. Wraps in a static grid rather than scrolling (see Layout).
+- **Artist tile** (`ArtistCard`, `layout="tile"`): a neutral `Card` with a centered 56px circular avatar placeholder above a centered name that wraps onto multiple lines rather than truncating.
 - **Playlist tile** (`PlaylistShortcutCard`): a neutral `Card` with a bottom-anchored, left-aligned 40px rounded-square icon tile above the name.
 
 ## Do's and Don'ts
