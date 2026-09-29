@@ -1,4 +1,4 @@
-import '@fontsource-variable/open-sans'
+import '@fontsource-variable/atkinson-hyperlegible-next'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
