@@ -10,7 +10,7 @@ import {
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
-import { toast, Card, Badge, Button, InlineError } from '@/ui';
+import { toast, Card, Badge, Button, InlineError, LoadError, SectionTitle } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -41,6 +41,8 @@ export function PlaylistsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -58,15 +60,17 @@ export function PlaylistsPage() {
         setPage(0);
         setHasMore(page0.hasMore ?? false);
         setInvitations(invs);
+        setError(false);
       })
       .catch(() => {
         if (controller.signal.aborted) return;
         setPlaylists([]);
         setInvitations([]);
+        setError(true);
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, reloadToken]);
 
   async function handleLoadMore() {
     setLoadingMore(true);
@@ -129,9 +133,15 @@ export function PlaylistsPage() {
     }
   }
 
+  function handleCancelForm() {
+    setShowForm(false);
+    setNewName('');
+    setCreateError(null);
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Spellistor</h1>
         {isAuthenticated && (
           <Button size="sm" onClick={() => setShowForm((s) => !s)}>
@@ -142,57 +152,49 @@ export function PlaylistsPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="space-y-1">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => {
-                setNewName(e.target.value);
-                setCreateError(null);
-              }}
-              placeholder="Namn på spellistan"
-              autoFocus
-              className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={creating || !newName.trim()}
-              className="rounded-lg bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            >
-              Skapa
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                setNewName('');
-                setCreateError(null);
-              }}
-              className="rounded-lg border border-[rgb(var(--color-border))] px-4 py-2 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
-            >
-              Avbryt
-            </button>
-          </div>
-          <InlineError>{createError}</InlineError>
-        </form>
+        <Card className="p-4">
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="new-playlist-name"
+                className="block text-sm font-medium text-[rgb(var(--color-text))]"
+              >
+                Spellistans namn
+              </label>
+              <input
+                id="new-playlist-name"
+                type="text"
+                value={newName}
+                onChange={(e) => {
+                  setNewName(e.target.value);
+                  setCreateError(null);
+                }}
+                autoFocus
+                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={creating || !newName.trim()}>
+                Skapa spellista
+              </Button>
+              <Button type="button" variant="ghost" onClick={handleCancelForm}>
+                Avbryt
+              </Button>
+            </div>
+            <InlineError>{createError}</InlineError>
+          </form>
+        </Card>
       )}
 
       {loading && <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>}
 
-      {/* Pending invitations */}
       {!loading && invitations.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
-            Inbjudningar
-          </h2>
+        <section className="space-y-3">
+          <SectionTitle>Inbjudningar</SectionTitle>
           <ul className="space-y-2">
             {invitations.map((inv) => (
-              <li
-                key={inv.id}
-                className="space-y-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3"
-              >
-                <div className="flex items-center justify-between gap-3">
+              <li key={inv.id} className="space-y-1">
+                <Card className="flex items-center justify-between gap-3 p-4">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
                       {inv.playlistName ?? 'Okänd spellista'}
@@ -208,140 +210,151 @@ export function PlaylistsPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
+                    <Button
+                      size="sm"
                       disabled={respondingId === inv.id}
                       onClick={() => handleRespond(inv.id!, true)}
-                      className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 hover:opacity-90"
                     >
                       Acceptera
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
                       disabled={respondingId === inv.id}
                       onClick={() => handleRespond(inv.id!, false)}
-                      className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-xs text-[rgb(var(--color-text-muted))] disabled:opacity-50 hover:bg-[rgb(var(--color-border))]/50"
                     >
                       Avböj
-                    </button>
+                    </Button>
                   </div>
-                </div>
+                </Card>
                 {respondErrors[inv.id!] && <InlineError>{respondErrors[inv.id!]}</InlineError>}
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
 
       {!loading && !isAuthenticated && (
-        <div className="flex flex-col items-center gap-3 py-16 text-center">
+        <Card className="flex flex-col items-center gap-3 p-8 text-center">
           <PlaylistIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
           <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
             Logga in för att skapa och hantera dina egna spellistor.
           </p>
           <Link
             to="/login"
-            className="mt-1 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
           >
             Logga in
           </Link>
-        </div>
+        </Card>
       )}
 
-      {!loading && isAuthenticated && playlists.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Du har inga spellistor ännu.</p>
-      )}
+      {!loading && isAuthenticated && (
+        <section className="space-y-3">
+          <SectionTitle>Mina spellistor</SectionTitle>
+          {error ? (
+            <LoadError
+              message="Det gick inte att hämta spellistorna."
+              onRetry={() => setReloadToken((t) => t + 1)}
+            />
+          ) : playlists.length === 0 ? (
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">Du har inga spellistor ännu.</p>
+          ) : (
+            <>
+              <ul className="space-y-2">
+                {playlists.map((pl) => {
+                  const styleColor = pl.danceStyle ? getStyleColor(pl.danceStyle) : null;
+                  const tempoLabel = pl.tempoCategory ? TEMPO_LABELS[pl.tempoCategory] : null;
+                  return (
+                    <li key={pl.id} className="space-y-1">
+                      <div className="flex items-stretch gap-2">
+                        <button
+                          type="button"
+                          aria-label={`Spela ${pl.name}`}
+                          onClick={() => navigate(`/playlists/${pl.id}?autoplay=true`)}
+                          className="flex shrink-0 items-center justify-center rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors"
+                        >
+                          <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
+                        </button>
 
-      <ul className="space-y-2">
-        {playlists.map((pl) => {
-          const styleColor = pl.danceStyle ? getStyleColor(pl.danceStyle) : null;
-          const tempoLabel = pl.tempoCategory ? TEMPO_LABELS[pl.tempoCategory] : null;
-          return (
-            <li key={pl.id} className="space-y-1">
-              <div className="flex items-stretch gap-2">
-                <button
-                  type="button"
-                  aria-label={`Spela ${pl.name}`}
-                  onClick={() => navigate(`/playlists/${pl.id}?autoplay=true`)}
-                  className="flex shrink-0 items-center justify-center rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors"
-                >
-                  <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
-                </button>
+                        <Link
+                          to={`/playlists/${pl.id}`}
+                          className="flex min-w-0 flex-1"
+                        >
+                          <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
+                              <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                                    {pl.name}
+                                    <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">
+                                      &middot;{' '}
+                                      {pl.ownerGroup
+                                        ? pl.ownerGroup.name
+                                        : pl.ownerDisplayName
+                                          ? `Delad av ${pl.ownerDisplayName}`
+                                          : 'Du'}
+                                    </span>
+                                  </p>
+                                  {pl.description && (
+                                    <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
+                                  )}
+                                  {(styleColor || tempoLabel) && (
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                      {styleColor && pl.danceStyle && (
+                                        <Badge
+                                          size="md"
+                                          style={{
+                                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                                          }}
+                                        >
+                                          {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
+                                        </Badge>
+                                      )}
+                                      {styleColor && pl.subStyle && (
+                                        <Badge
+                                          size="md"
+                                          className="opacity-80"
+                                          style={{
+                                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                                          }}
+                                        >
+                                          {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
+                                        </Badge>
+                                      )}
+                                      {tempoLabel && (
+                                        <Badge size="md" variant="muted">
+                                          {tempoLabel}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                {(pl.trackCount ?? 0) > 0 && (
+                                  <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
+                                    {pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}
+                                  </span>
+                                )}
+                          </Card>
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
 
-                <Link
-                  to={`/playlists/${pl.id}`}
-                  className="flex min-w-0 flex-1"
-                >
-                  <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
-                      <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                            {pl.name}
-                            <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">
-                              &middot;{' '}
-                              {pl.ownerGroup
-                                ? pl.ownerGroup.name
-                                : pl.ownerDisplayName
-                                  ? `Delad av ${pl.ownerDisplayName}`
-                                  : 'Du'}
-                            </span>
-                          </p>
-                          {pl.description && (
-                            <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
-                          )}
-                          {(styleColor || tempoLabel) && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {styleColor && pl.danceStyle && (
-                                <Badge
-                                  size="md"
-                                  style={{
-                                    backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                    color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                                  }}
-                                >
-                                  {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
-                                </Badge>
-                              )}
-                              {styleColor && pl.subStyle && (
-                                <Badge
-                                  size="md"
-                                  className="opacity-80"
-                                  style={{
-                                    backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                    color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                                  }}
-                                >
-                                  {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
-                                </Badge>
-                              )}
-                              {tempoLabel && (
-                                <Badge size="md" variant="muted">
-                                  {tempoLabel}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {(pl.trackCount ?? 0) > 0 && (
-                          <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
-                            {pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}
-                          </span>
-                        )}
-                  </Card>
-                </Link>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      {hasMore && (
-        <div className="flex flex-col items-center gap-1">
-          <Button variant="secondary" onClick={handleLoadMore} disabled={loadingMore}>
-            Visa fler
-          </Button>
-          <InlineError>{loadMoreError}</InlineError>
-        </div>
+              {hasMore && (
+                <div className="flex flex-col items-center gap-1">
+                  <Button variant="secondary" onClick={handleLoadMore} disabled={loadingMore}>
+                    Visa fler
+                  </Button>
+                  <InlineError>{loadMoreError}</InlineError>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       )}
     </div>
   );
