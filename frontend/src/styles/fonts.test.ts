@@ -16,23 +16,23 @@ function extractCssBlock(css: string, selector: string): string {
   return match ? match[1] : '';
 }
 
-describe('serves Open Sans from the site\'s own origin', () => {
+describe('serves Atkinson Hyperlegible Next from the site\'s own origin', () => {
   it('has the dependency in package.json', () => {
     expect(
-      packageJson.dependencies?.['@fontsource-variable/open-sans'],
-      'package.json must list @fontsource-variable/open-sans in dependencies'
+      packageJson.dependencies?.['@fontsource-variable/atkinson-hyperlegible-next'],
+      'package.json must list @fontsource-variable/atkinson-hyperlegible-next in dependencies'
     ).toBeDefined();
   });
 
   it('imports the font in main.tsx', () => {
-    const hasImport = /import\s+['"]@fontsource-variable\/open-sans['"]/.test(mainTsx);
+    const hasImport = /import\s+['"]@fontsource-variable\/atkinson-hyperlegible-next['"]/.test(mainTsx);
     expect(
       hasImport,
-      'src/main.tsx must import @fontsource-variable/open-sans'
+      'src/main.tsx must import @fontsource-variable/atkinson-hyperlegible-next'
     ).toBe(true);
   });
 
-  it('sets body font-family to start with Open Sans Variable', () => {
+  it('sets body font-family to start with Atkinson Hyperlegible Next Variable', () => {
     const bodyBlock = extractCssBlock(indexCss, 'body');
     const fontFamilyMatch = bodyBlock.match(/font-family:\s*([^;]+)/);
     expect(
@@ -42,10 +42,10 @@ describe('serves Open Sans from the site\'s own origin', () => {
 
     if (fontFamilyMatch) {
       const fontStack = fontFamilyMatch[1];
-      const startsWithOpenSans = fontStack.trim().startsWith("'Open Sans Variable'");
+      const startsWithAtkinson = fontStack.trim().startsWith("'Atkinson Hyperlegible Next Variable'");
       expect(
-        startsWithOpenSans,
-        `body font-family must start with 'Open Sans Variable', got: ${fontStack}`
+        startsWithAtkinson,
+        `body font-family must start with 'Atkinson Hyperlegible Next Variable', got: ${fontStack}`
       ).toBe(true);
     }
   });
@@ -58,9 +58,10 @@ describe('serves Open Sans from the site\'s own origin', () => {
     ).toBe(false);
   });
 
-  it('does not reference Merriweather or Inter in index.css', () => {
+  it('does not reference Merriweather, Inter, or Open Sans in index.css', () => {
     const hasMerriweather = /Merriweather/.test(indexCss);
     const hasInter = /\bInter\b/.test(indexCss);
+    const hasOpenSans = /Open Sans/.test(indexCss);
     expect(
       hasMerriweather,
       'index.css must not contain Merriweather'
@@ -68,6 +69,10 @@ describe('serves Open Sans from the site\'s own origin', () => {
     expect(
       hasInter,
       'index.css must not contain Inter'
+    ).toBe(false);
+    expect(
+      hasOpenSans,
+      'index.css must not contain Open Sans'
     ).toBe(false);
   });
 });

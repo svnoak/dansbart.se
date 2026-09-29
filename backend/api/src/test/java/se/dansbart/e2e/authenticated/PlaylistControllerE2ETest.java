@@ -1844,4 +1844,41 @@ class PlaylistControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isNotFound());
         }
     }
+
+    @Nested
+    @DisplayName("GET /api/playlists/public")
+    class GetPublicPlaylists {
+
+        @Test
+        @DisplayName("should return 200 for an anonymous request with only public playlists")
+        void getPublicPlaylists_withoutAuth_shouldReturn200() throws Exception {
+            Group group = testData.group().withName("Public Group").build();
+            testData.playlist().withName("Individual Public Playlist").withOwner(owner).isPublic().build();
+            testData.playlist().withName("Group Public Playlist").withGroup(group).isPublic().build();
+            testData.playlist().withName("Private Playlist").withOwner(owner).build();
+
+            mockMvc.perform(get("/api/playlists/public"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[*].name", containsInAnyOrder("Individual Public Playlist", "Group Public Playlist")))
+                .andExpect(jsonPath("$.items[*].trackCount").exists())
+                .andExpect(jsonPath("$.items[*].name").exists())
+                .andExpect(jsonPath("$.*", not(containsString("Private Playlist"))));
+        }
+
+        @Test
+        @DisplayName("should include PageResponse fields in the response")
+        void getPublicPlaylists_shouldIncludePageResponseFields() throws Exception {
+            Group group = testData.group().withName("Public Group").build();
+            testData.playlist().withName("Public Playlist 1").withOwner(owner).isPublic().build();
+            testData.playlist().withName("Public Playlist 2").withGroup(group).isPublic().build();
+
+            mockMvc.perform(get("/api/playlists/public"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").exists())
+                .andExpect(jsonPath("$.page").exists())
+                .andExpect(jsonPath("$.size").exists())
+                .andExpect(jsonPath("$.hasMore").exists());
+        }
+    }
 }

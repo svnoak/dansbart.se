@@ -100,4 +100,53 @@ class PlaylistJooqRepositoryTest extends AbstractRepositoryTest {
                 groupPlaylist.getId()
             );
     }
+
+    @Test
+    @DisplayName("findPublicPlaylists returns only public playlists regardless of ownership")
+    void findPublicPlaylists_returnsOnlyPublicPlaylists() {
+        User owner = testData.user().withUsername("owner1").withDisplayName("Owner Display").build();
+        Group group = testData.group().withName("Test Group").build();
+
+        Playlist userOwnedPublic = testData.playlist()
+            .withName("User Public")
+            .withOwner(owner)
+            .isPublic()
+            .build();
+
+        Playlist groupOwnedPublic = testData.playlist()
+            .withName("Group Public")
+            .withGroup(group)
+            .isPublic()
+            .build();
+
+        Playlist userOwnedPrivate = testData.playlist()
+            .withName("User Private")
+            .withOwner(owner)
+            .build();
+
+        var found = playlistJooqRepository.findPublicPlaylists();
+
+        assertThat(found)
+            .hasSize(2)
+            .extracting(PlaylistJooqRepository.PlaylistWithGroupName::playlist)
+            .extracting(Playlist::getId)
+            .containsExactlyInAnyOrder(
+                userOwnedPublic.getId(),
+                groupOwnedPublic.getId()
+            );
+
+        var userOwnedResult = found.stream()
+            .filter(r -> r.playlist().getId().equals(userOwnedPublic.getId()))
+            .findFirst()
+            .orElseThrow();
+        assertThat(userOwnedResult.trackCount()).isEqualTo(0);
+        assertThat(userOwnedResult.ownerDisplayName()).isEqualTo("Owner Display");
+
+        var groupOwnedResult = found.stream()
+            .filter(r -> r.playlist().getId().equals(groupOwnedPublic.getId()))
+            .findFirst()
+            .orElseThrow();
+        assertThat(groupOwnedResult.trackCount()).isEqualTo(0);
+        assertThat(groupOwnedResult.groupName()).isEqualTo("Test Group");
+    }
 }
