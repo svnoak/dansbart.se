@@ -230,7 +230,7 @@ export function HomePage() {
 
       {/* Playlists */}
       <section aria-labelledby="playlists-heading">
-        <SectionTitle id="playlists-heading" linkTo="/groups">
+        <SectionTitle id="playlists-heading" linkTo="/playlists">
           Spellistor
         </SectionTitle>
         {playlistsError ? (
