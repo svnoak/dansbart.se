@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .ignoringRequestMatchers(
                     new AntPathRequestMatcher("/api/tracks/**", "POST"),
                     new AntPathRequestMatcher("/api/tracks/**", "PATCH"),
+                    new AntPathRequestMatcher("/api/artists/*/flag", "POST"),
                     new AntPathRequestMatcher("/api/suggestions/**", "POST"),
                     new AntPathRequestMatcher("/api/dances/*/tracks/*/vote", "POST"),
                     new AntPathRequestMatcher("/api/dances/*/tracks/*/vote", "DELETE")))
@@ -64,6 +65,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/artists/*/flag").permitAll()
                 // Dance-track vote: anonymous X-Voter-ID, same as /api/tracks/** style votes.
                 .requestMatchers(HttpMethod.POST, "/api/dances/*/tracks/*/vote").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/dances/*/tracks/*/vote").permitAll()

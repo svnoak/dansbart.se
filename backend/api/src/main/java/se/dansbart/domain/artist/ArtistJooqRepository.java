@@ -7,6 +7,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -166,6 +168,17 @@ public class ArtistJooqRepository {
     public List<Artist> findByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         return dsl.selectFrom(ARTISTS).where(ARTISTS.ID.in(ids)).fetch(this::toArtist);
+    }
+
+    public boolean flag(UUID id, String reason) {
+        dsl.update(ARTISTS)
+            .set(ARTISTS.IS_FLAGGED, true)
+            .set(ARTISTS.FLAGGED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+            .set(ARTISTS.FLAG_REASON, reason)
+            .where(ARTISTS.ID.eq(id))
+            .and(ARTISTS.IS_FLAGGED.eq(false))
+            .execute();
+        return dsl.fetchExists(ARTISTS, ARTISTS.ID.eq(id));
     }
 
     public Artist insert(Artist artist) {

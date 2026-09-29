@@ -76,6 +76,11 @@ public class ArtistService {
         return artistJooqRepository.searchByName(query, pageable);
     }
 
+    @Transactional
+    public boolean flagArtist(UUID id, String reason) {
+        return artistJooqRepository.flag(id, reason.substring(0, Math.min(reason.length(), 100)));
+    }
+
     public Page<Artist> findVerifiedArtists(Pageable pageable) {
         return artistJooqRepository.findVerifiedArtists(pageable);
     }

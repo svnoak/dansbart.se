@@ -57,6 +57,7 @@ export * from './exportDataset200';
 export * from './exportDatasetParams';
 export * from './exportFeedback200';
 export * from './feedbackRequest';
+export * from './flagArtistParams';
 export * from './flagTrack200';
 export * from './flagTrackParams';
 export * from './generateShareToken1200';
