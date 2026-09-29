@@ -19,6 +19,7 @@ import static org.jooq.impl.DSL.rand;
 import static se.dansbart.jooq.Tables.ALBUMS;
 import static se.dansbart.jooq.Tables.ARTISTS;
 import static se.dansbart.jooq.Tables.TRACK_ALBUMS;
+import static se.dansbart.jooq.Tables.TRACK_ARTISTS;
 import static se.dansbart.jooq.Tables.TRACKS;
 
 @Repository
@@ -74,6 +75,19 @@ public class AlbumJooqRepository {
             .from(ALBUMS)
             .leftJoin(ARTISTS).on(ARTISTS.ID.eq(ALBUMS.ARTIST_ID))
             .where(ALBUMS.ARTIST_ID.eq(artistId))
+            .orderBy(ALBUMS.RELEASE_DATE.desc().nullsLast())
+            .fetch(this::toAlbum);
+    }
+
+    public List<Album> findByArtistIdIncludingTrackArtists(UUID artistId) {
+        return dsl.select(ALBUMS.asterisk(), ARTISTS.NAME)
+            .from(ALBUMS)
+            .leftJoin(ARTISTS).on(ARTISTS.ID.eq(ALBUMS.ARTIST_ID))
+            .where(ALBUMS.ARTIST_ID.eq(artistId)
+                .or(ALBUMS.ID.in(dsl.selectDistinct(TRACK_ALBUMS.ALBUM_ID)
+                    .from(TRACK_ALBUMS)
+                    .join(TRACK_ARTISTS).on(TRACK_ARTISTS.TRACK_ID.eq(TRACK_ALBUMS.TRACK_ID))
+                    .where(TRACK_ARTISTS.ARTIST_ID.eq(artistId)))))
             .orderBy(ALBUMS.RELEASE_DATE.desc().nullsLast())
             .fetch(this::toAlbum);
     }
