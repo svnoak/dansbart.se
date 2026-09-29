@@ -12,6 +12,7 @@ import se.dansbart.dto.GroupDto;
 import se.dansbart.dto.GroupInvitationDto;
 import se.dansbart.dto.GroupMemberDto;
 import se.dansbart.dto.GroupSummaryDto;
+import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.dto.PlaylistSummaryDto;
 import se.dansbart.exception.BadRequestException;
@@ -103,10 +104,15 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public List<GroupSummaryDto> findPublicGroups() {
-        return groupJooqRepository.findPublicGroups().stream()
+    public PageResponse<GroupSummaryDto> findPublicGroups(int page, int size) {
+        int clampedSize = Math.min(Math.max(size, 1), 100);
+        int clampedPage = Math.max(page, 0);
+        List<GroupSummaryDto> items = groupJooqRepository.findPublicGroups(clampedPage, clampedSize).stream()
             .map(this::toSummaryDto)
             .collect(Collectors.toList());
+        long total = groupJooqRepository.countPublicGroups();
+        boolean hasMore = (long) (clampedPage + 1) * clampedSize < total;
+        return new PageResponse<>(items, total, clampedPage, clampedSize, hasMore);
     }
 
     @Transactional

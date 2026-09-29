@@ -35,11 +35,17 @@ public class GroupJooqRepository {
         return dsl.selectFrom(GROUPS).where(GROUPS.ID.eq(groupId)).forUpdate().fetchOptional(this::toGroup);
     }
 
-    public List<Group> findPublicGroups() {
+    public List<Group> findPublicGroups(int page, int size) {
         return dsl.selectFrom(GROUPS)
             .where(GROUPS.IS_PUBLIC.isTrue())
             .orderBy(GROUPS.NAME.asc())
+            .limit(size)
+            .offset(page * size)
             .fetch(this::toGroup);
+    }
+
+    public long countPublicGroups() {
+        return dsl.fetchCount(dsl.selectFrom(GROUPS).where(GROUPS.IS_PUBLIC.isTrue()));
     }
 
     public List<Group> findByMemberUserId(UUID userId) {

@@ -233,8 +233,8 @@ class GroupControllerE2ETest extends AbstractE2ETest {
 
             mockMvc.perform(get("/api/groups/public"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Öppen grupp"));
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Öppen grupp"));
         }
 
         @Test
@@ -244,8 +244,29 @@ class GroupControllerE2ETest extends AbstractE2ETest {
 
             mockMvc.perform(get("/api/groups/public"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].memberCount").doesNotExist());
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].memberCount").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("should support pagination with page and size parameters")
+        void getPublicGroups_withPagination_shouldReturnPagedResponse() throws Exception {
+            testData.group().withName("First public group").isPublic().build();
+            testData.group().withName("Second public group").isPublic().build();
+
+            mockMvc.perform(get("/api/groups/public")
+                    .param("page", "0")
+                    .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.hasMore").value(true));
+
+            mockMvc.perform(get("/api/groups/public")
+                    .param("page", "1")
+                    .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.hasMore").value(false));
         }
     }
 

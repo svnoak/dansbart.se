@@ -7,12 +7,14 @@
 import type {
   CreateGroupPlaylistRequest,
   CreateGroupRequest,
+  GetPublicGroupsParams,
   GroupDto,
   GroupInvitationDto,
   GroupMemberDto,
   GroupSummaryDto,
   InvitationDto,
   InviteMemberRequest,
+  PageResponseGroupSummaryDto,
   PlaylistCollaborator,
   PlaylistDto,
   RespondToInvitationRequest,
@@ -321,17 +323,24 @@ export const getGroupPlaylistInvitations = async (id: string, options?: RequestI
 /**
  * @summary Get public groups
  */
-export const getGetPublicGroupsUrl = () => {
+export const getGetPublicGroupsUrl = (params?: GetPublicGroupsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
-  
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/groups/public`
+  return stringifiedParams.length > 0 ? `/api/groups/public?${stringifiedParams}` : `/api/groups/public`
 }
 
-export const getPublicGroups = async ( options?: RequestInit): Promise<GroupSummaryDto[]> => {
+export const getPublicGroups = async (params?: GetPublicGroupsParams, options?: RequestInit): Promise<PageResponseGroupSummaryDto> => {
   
-  return httpClient<GroupSummaryDto[]>(getGetPublicGroupsUrl(),
+  return httpClient<PageResponseGroupSummaryDto>(getGetPublicGroupsUrl(params),
   {      
     ...options,
     method: 'GET'
