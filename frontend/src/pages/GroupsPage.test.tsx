@@ -21,7 +21,7 @@ const useAuth = vi.fn();
 
 vi.mock('@/api/generated/groups/groups', () => ({
   getMyGroups: () => getMyGroups(),
-  getPublicGroups: () => getPublicGroups(),
+  getPublicGroups: (...args: unknown[]) => getPublicGroups(...args),
   getGroupInvitations: () => getGroupInvitations(),
   createGroup: (...args: unknown[]) => createGroup(...args),
   respondToGroupInvitation: (...args: unknown[]) => respondToGroupInvitation(...args),
@@ -51,6 +51,7 @@ describe('GroupsPage', () => {
   afterEach(() => {
     root.unmount();
     container.remove();
+    vi.unstubAllGlobals();
   });
 
   async function renderPage() {
@@ -77,7 +78,13 @@ describe('GroupsPage', () => {
   }
 
   it('shows public groups to a visitor who is not logged in', async () => {
-    getPublicGroups.mockResolvedValue([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]);
+    getPublicGroups.mockResolvedValue({
+      items: [{ id: 'g1', name: 'Öppen grupp', isPublic: true }],
+      total: 1,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     await renderPage();
 
     expect(getPublicGroups).toHaveBeenCalled();
@@ -92,10 +99,16 @@ describe('GroupsPage', () => {
   it('shows my groups and hides them from the public list', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({}));
     getMyGroups.mockResolvedValue([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]);
-    getPublicGroups.mockResolvedValue([
-      { id: 'g1', name: 'Öppen grupp', isPublic: true },
-      { id: 'g2', name: 'Annan grupp', isPublic: true },
-    ]);
+    getPublicGroups.mockResolvedValue({
+      items: [
+        { id: 'g1', name: 'Öppen grupp', isPublic: true },
+        { id: 'g2', name: 'Annan grupp', isPublic: true },
+      ],
+      total: 2,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     await renderPage();
 
     await act(async () => {
@@ -108,7 +121,13 @@ describe('GroupsPage', () => {
   });
 
   it('shows no member count on the cards', async () => {
-    getPublicGroups.mockResolvedValue([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]);
+    getPublicGroups.mockResolvedValue({
+      items: [{ id: 'g1', name: 'Öppen grupp', isPublic: true }],
+      total: 1,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     await renderPage();
 
     await act(async () => {
@@ -181,7 +200,13 @@ describe('GroupsPage', () => {
   it('creates a group', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({}));
     getMyGroups.mockResolvedValue([]);
-    getPublicGroups.mockResolvedValue([]);
+    getPublicGroups.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     createGroup.mockResolvedValue({ id: 'g4', name: 'Barngruppen', isPublic: false });
     await renderPage();
 
@@ -214,7 +239,13 @@ describe('GroupsPage', () => {
   });
 
   it('each group card links to its group page', async () => {
-    getPublicGroups.mockResolvedValue([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]);
+    getPublicGroups.mockResolvedValue({
+      items: [{ id: 'g1', name: 'Öppen grupp', isPublic: true }],
+      total: 1,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     await renderPage();
 
     await act(async () => {
@@ -255,9 +286,9 @@ describe('GroupsPage', () => {
 
   it('renders public groups only after my groups have loaded for logged-in user', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({}));
-    const getPublicGroupsPromise = new Promise<Array<{ id: string; name: string; isPublic: boolean }>>(
+    const getPublicGroupsPromise = new Promise<{ items: Array<{ id: string; name: string; isPublic: boolean }>; total: number; page: number; size: number; hasMore: boolean }>(
       (resolve) => {
-        setTimeout(() => resolve([{ id: 'g1', name: 'Öppen grupp', isPublic: true }]), 50);
+        setTimeout(() => resolve({ items: [{ id: 'g1', name: 'Öppen grupp', isPublic: true }], total: 1, page: 0, size: 50, hasMore: false }), 50);
       },
     );
     const getMyGroupsPromise = new Promise<Array<{ id: string; name: string; isPublic: boolean }>>(
@@ -300,7 +331,13 @@ describe('GroupsPage', () => {
 
   it('does not fetch my groups when authLoading is true', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({}, { isLoading: true }));
-    getPublicGroups.mockResolvedValue([]);
+    getPublicGroups.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     await renderPage();
 
     await act(async () => {
@@ -314,7 +351,13 @@ describe('GroupsPage', () => {
   it('renders the new group button small', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({}));
     getMyGroups.mockResolvedValue([]);
-    getPublicGroups.mockResolvedValue([]);
+    getPublicGroups.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     await renderPage();
 
     await act(async () => {
@@ -331,7 +374,13 @@ describe('GroupsPage', () => {
   it('shows that a group name is taken', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({}));
     getMyGroups.mockResolvedValue([]);
-    getPublicGroups.mockResolvedValue([]);
+    getPublicGroups.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      size: 50,
+      hasMore: false,
+    });
     createGroup.mockRejectedValue(new ApiError('Conflict', 409));
     await renderPage();
 
@@ -444,5 +493,50 @@ describe('GroupsPage', () => {
     });
 
     expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Det gick inte att svara på inbjudan.');
+  });
+
+  it('loads the next page of public groups when the sentinel intersects', async () => {
+    let observerCallback: IntersectionObserverCallback | undefined;
+    class FakeIntersectionObserver {
+      constructor(cb: IntersectionObserverCallback) {
+        observerCallback = cb;
+      }
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
+
+    getPublicGroups.mockResolvedValueOnce({
+      items: [{ id: 'g1', name: 'Grupp Ett', isPublic: true }],
+      total: 2,
+      page: 0,
+      size: 1,
+      hasMore: true,
+    });
+    getPublicGroups.mockResolvedValueOnce({
+      items: [{ id: 'g2', name: 'Grupp Två', isPublic: true }],
+      total: 2,
+      page: 1,
+      size: 1,
+      hasMore: false,
+    });
+
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(document.body.textContent).toContain('Grupp Ett');
+
+    await act(async () => {
+      observerCallback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(getPublicGroups).toHaveBeenCalledTimes(2);
+    expect(getPublicGroups).toHaveBeenLastCalledWith({ page: 1, size: 50 });
+    expect(document.body.textContent).toContain('Grupp Ett');
+    expect(document.body.textContent).toContain('Grupp Två');
   });
 });

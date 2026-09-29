@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getMyGroups,
@@ -31,19 +31,45 @@ export function GroupsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
 
   const loadPublicGroups = useCallback(async () => {
     try {
-      const groups = await getPublicGroups();
-      setPublicGroups(groups ?? []);
+      const result = await getPublicGroups({ page: 0, size: 50 });
+      setPublicGroups(result.items ?? []);
+      setHasMore(result.hasMore ?? false);
       setErrorPublic(false);
     } catch {
       setPublicGroups([]);
+      setHasMore(false);
       setErrorPublic(true);
     } finally {
       setLoadingPublic(false);
     }
   }, []);
+
+  const loadMore = useCallback(async () => {
+    isLoadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const result = await getPublicGroups({ page: page + 1, size: 50 });
+      setPublicGroups((prev) => {
+        const seen = new Set(prev.map((g) => g.id));
+        return [...prev, ...(result.items ?? []).filter((g) => !seen.has(g.id))];
+      });
+      setPage(result.page ?? page + 1);
+      setHasMore(result.hasMore ?? false);
+    } catch {
+      setHasMore(false);
+    } finally {
+      isLoadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [page]);
 
   const loadMine = useCallback(async () => {
     try {
@@ -72,6 +98,20 @@ export function GroupsPage() {
     }
     loadMine();
   }, [authLoading, isAuthenticated, loadMine]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !isLoadingMoreRef.current) {
+        loadMore();
+      }
+    });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
@@ -275,6 +315,13 @@ export function GroupsPage() {
             </p>
           ) : (
             <GroupList groups={joinablePublicGroups} />
+          )}
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {loadingMore && (
+                <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
+              )}
+            </div>
           )}
         </section>
       )}
