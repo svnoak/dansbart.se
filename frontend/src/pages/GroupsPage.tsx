@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getMyGroups,
@@ -11,12 +11,12 @@ import { ApiError } from '@/api/http-client';
 import type { GroupSummaryDto } from '@/api/models/groupSummaryDto';
 import type { GroupInvitationDto } from '@/api/models/groupInvitationDto';
 import { GroupIcon, PlusIcon } from '@/icons';
-import { Badge, Button, Card, InlineError, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, InlineError, LoadError, SectionTitle, toast } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 import { describeGroupError } from '@/utils/describeGroupError';
 
 export function GroupsPage() {
-  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [myGroups, setMyGroups] = useState<GroupSummaryDto[]>([]);
   const [publicGroups, setPublicGroups] = useState<GroupSummaryDto[]>([]);
   const [invitations, setInvitations] = useState<GroupInvitationDto[]>([]);
@@ -31,30 +31,64 @@ export function GroupsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
+
+  const loadPublicGroups = useCallback(async () => {
+    try {
+      const result = await getPublicGroups({ page: 0, size: 50 });
+      setPublicGroups(result.items ?? []);
+      setHasMore(result.hasMore ?? false);
+      setErrorPublic(false);
+    } catch {
+      setPublicGroups([]);
+      setHasMore(false);
+      setErrorPublic(true);
+    } finally {
+      setLoadingPublic(false);
+    }
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    isLoadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const result = await getPublicGroups({ page: page + 1, size: 50 });
+      setPublicGroups((prev) => {
+        const seen = new Set(prev.map((g) => g.id));
+        return [...prev, ...(result.items ?? []).filter((g) => !seen.has(g.id))];
+      });
+      setPage(result.page ?? page + 1);
+      setHasMore(result.hasMore ?? false);
+    } catch {
+      setHasMore(false);
+    } finally {
+      isLoadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [page]);
+
+  const loadMine = useCallback(async () => {
+    try {
+      const [mine, invs] = await Promise.all([getMyGroups(), getGroupInvitations()]);
+      setMyGroups(mine ?? []);
+      setInvitations(invs ?? []);
+      setErrorMine(false);
+    } catch {
+      setMyGroups([]);
+      setInvitations([]);
+      setErrorMine(true);
+    } finally {
+      setLoadingMine(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const groups = await getPublicGroups();
-        if (!cancelled) {
-          setPublicGroups(groups ?? []);
-          setErrorPublic(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setPublicGroups([]);
-          setErrorPublic(true);
-        }
-      } finally {
-        if (!cancelled) setLoadingPublic(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    loadPublicGroups();
+  }, [loadPublicGroups]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,30 +96,22 @@ export function GroupsPage() {
       setLoadingMine(false);
       return;
     }
-    let cancelled = false;
-    async function load() {
-      try {
-        const [mine, invs] = await Promise.all([getMyGroups(), getGroupInvitations()]);
-        if (!cancelled) {
-          setMyGroups(mine ?? []);
-          setInvitations(invs ?? []);
-          setErrorMine(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setMyGroups([]);
-          setInvitations([]);
-          setErrorMine(true);
-        }
-      } finally {
-        if (!cancelled) setLoadingMine(false);
+    loadMine();
+  }, [authLoading, isAuthenticated, loadMine]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && !isLoadingMoreRef.current) {
+        loadMore();
       }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, isAuthenticated]);
+    });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
 
   async function handleRespond(invitationId: string, accept: boolean) {
     setRespondingId(invitationId);
@@ -250,9 +276,7 @@ export function GroupsPage() {
         <section className="space-y-3">
           <SectionTitle>Mina grupper</SectionTitle>
           {errorMine ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Det gick inte att hämta grupperna.
-            </p>
+            <LoadError message="Det gick inte att hämta grupperna." onRetry={loadMine} />
           ) : myGroups.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Du är inte med i någon grupp ännu.
@@ -269,7 +293,12 @@ export function GroupsPage() {
           <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
             Logga in för att skapa och gå med i grupper.
           </p>
-          <Button onClick={login}>Logga in</Button>
+          <Link
+            to="/login"
+            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Logga in
+          </Link>
         </Card>
       )}
 
@@ -279,15 +308,20 @@ export function GroupsPage() {
           {loadingPublic ? (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar...</p>
           ) : errorPublic ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Det gick inte att hämta grupperna.
-            </p>
+            <LoadError message="Det gick inte att hämta grupperna." onRetry={loadPublicGroups} />
           ) : joinablePublicGroups.length === 0 ? (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Inga offentliga grupper ännu.
             </p>
           ) : (
             <GroupList groups={joinablePublicGroups} />
+          )}
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {loadingMore && (
+                <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
+              )}
+            </div>
           )}
         </section>
       )}

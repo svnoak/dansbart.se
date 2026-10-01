@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
 import { recordPlayback, recordInteraction1 } from '@/api/generated/analytics/analytics';
 import { getVoterId } from '@/utils/voter';
 import { useConsent } from '@/consent/useConsent';
@@ -27,7 +26,6 @@ const JUMP_SECONDS = 10;
 const JUMP_BARS = 4;
 
 export function GlobalPlayerShell() {
-  const location = useLocation();
   const { consentStatus } = useConsent();
   const {
     currentTrack,
@@ -353,7 +351,7 @@ export function GlobalPlayerShell() {
         />
       )}
 
-      {!(expanded && isMobile) && location.pathname !== '/classify' && (
+      {!(expanded && isMobile) && (
         <SmartNudge track={currentTrack} isPlaying={isPlaying} bottomOffset={isMobile ? mobileBottomOffset : desktopBottomOffset} mobilePlayerOpen={false} />
       )}
 

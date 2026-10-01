@@ -49,7 +49,7 @@ public class ArtistService {
     }
 
     public List<AlbumSummaryDto> findAlbumsByArtistIdAsSummaryDtos(UUID artistId) {
-        List<Album> albums = albumJooqRepository.findByArtistId(artistId);
+        List<Album> albums = albumJooqRepository.findByArtistIdIncludingTrackArtists(artistId);
         List<UUID> albumIds = albums.stream().map(Album::getId).toList();
         Map<UUID, Long> trackCounts = albumJooqRepository.findTrackCountByAlbumIds(albumIds);
 

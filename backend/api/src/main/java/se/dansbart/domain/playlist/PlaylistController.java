@@ -41,6 +41,14 @@ public class PlaylistController {
         return ResponseEntity.ok(playlistService.findOwnedAndGroupPlaylists(userId, q, owner, visibility, danceStyle, tempo, page, size));
     }
 
+    @GetMapping("/public")
+    @Operation(operationId = "getPublicPlaylists", summary = "Get public playlists")
+    public ResponseEntity<PageResponse<PlaylistListItemDto>> getPublicPlaylists(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(playlistService.findPublicPlaylists(page, size));
+    }
+
     @GetMapping("/shared")
     @Operation(summary = "Get playlists shared with current user")
     public ResponseEntity<List<Playlist>> getSharedPlaylists(@AuthenticationPrincipal UUID userId) {

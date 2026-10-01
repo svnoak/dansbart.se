@@ -5,48 +5,54 @@
 
 /* Global theme – semantic tokens for light/dark and customization */
 :root {
-  --color-bg: 250 250 250;
-  --color-bg-elevated: 255 255 255;
+  --color-bg: 250 247 242;
+  --color-bg-elevated: 255 253 250;
   --color-border: 229 231 235;
   --color-text: 17 24 39;
   --color-text-muted: 107 114 128;
-  --color-accent: 28 66 136;
+  --color-accent: 123 30 30;
   --color-accent-foreground: 255 255 255;
-  --color-accent-hover: 22 53 109;
-  --color-accent-muted: 226 233 246;
+  --color-accent-hover: 95 20 20;
+  --color-accent-muted: 250 224 224;
+  --color-selected: 10 92 54;
+  --color-now-playing: 204 119 34;
+  --color-success: 21 128 61;
   --color-error: 185 28 28;
   --color-error-foreground: 255 255 255;
   --color-error-hover: 153 27 27;
   --color-pill-bg: 238 242 255;
-  --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08);
-  --radius: 0.5rem;
-  --radius-lg: 0.75rem;
+  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+  --radius: 1rem;
+  --radius-lg: 1.5rem;
   --radius-full: 9999px;
 }
 
 /* Dark theme – applied when user selects dark mode (data-theme="dark") */
 html.dark,
 [data-theme="dark"] {
-  --color-bg: 17 24 39;
-  --color-bg-elevated: 31 41 55;
+  --color-bg: 26 20 18;
+  --color-bg-elevated: 40 31 28;
   --color-border: 75 85 99;
   --color-text: 243 244 246;
   --color-text-muted: 156 163 175;
-  --color-accent: 122 160 230;
+  --color-accent: 224 122 122;
   --color-accent-foreground: 15 23 42;
-  --color-accent-hover: 160 188 240;
-  --color-accent-muted: 23 37 84;
+  --color-accent-hover: 240 160 160;
+  --color-accent-muted: 74 26 26;
+  --color-selected: 110 211 163;
+  --color-now-playing: 230 170 90;
+  --color-success: 134 239 172;
   --color-error: 248 113 113;
   --color-error-foreground: 15 23 42;
   --color-error-hover: 252 165 165;
   --color-pill-bg: 100 90 180;
-  --color-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.3);
 }
 
 body {
   background-color: rgb(var(--color-bg));
   color: rgb(var(--color-text));
-  font-family: 'Open Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Buttons and clickable elements show pointer cursor */

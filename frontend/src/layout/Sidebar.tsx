@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
-import { Button, Pill } from '@/ui';
+import { Pill } from '@/ui';
 import { LibraryIcon, PlaylistIcon, HeartIcon, GroupIcon, QueueListIcon } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 import { getGroupInvitations } from '@/api/generated/groups/groups';
@@ -28,12 +28,12 @@ function NavLink({
     <Link
       to={to}
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm font-medium transition-colors ${
+      className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm transition-colors ${
         icon != null ? '' : 'pl-2'
       } ${
         active
-          ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] border-r-3 border-[rgb(var(--color-accent))]'
-          : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
+          ? 'bg-[rgb(var(--color-selected))]/10 font-semibold text-[rgb(var(--color-selected))]'
+          : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
       }`}
     >
       {icon != null && (
@@ -198,7 +198,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => setOmOpen((o) => !o)}
           className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-left text-sm font-medium transition-colors ${
             isInfoPage
-              ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
+              ? 'bg-[rgb(var(--color-selected))]/10 text-[rgb(var(--color-selected))]'
               : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
           }`}
           aria-expanded={omOpen}
@@ -253,20 +253,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </button>
         </div>
       )}
-
-      <div className="m-4">
-        <div className="rounded-xl border border-[rgb(var(--color-accent))]/30 bg-[rgb(var(--color-accent-muted))]/30 p-4">
-          <p className="text-sm font-medium text-[rgb(var(--color-text))]">Hjälp klassificera</p>
-          <p className="mt-1 text-xs text-[rgb(var(--color-text-muted))]">
-            Din klassificering används direkt — inget granskas i efterhand.
-          </p>
-          <Link to="/classify" className="mt-3 block" onClick={onNavigate}>
-            <Button variant="primary" size="sm" className="w-full">
-              Snabbklassificera
-            </Button>
-          </Link>
-        </div>
-      </div>
     </nav>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { httpClient } from '@/api/http-client';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getPrimaryTrack, getDanceTracks } from '@/api/generated/dances/dances';
@@ -26,14 +26,13 @@ function getDances(
   });
   return httpClient(`/api/dances?${q}`, opts);
 }
-import { IconButton, InlineError } from '@/ui';
-import { BackArrowIcon, PlayIcon } from '@/icons';
+import { InlineError, LoadError } from '@/ui';
+import { PlayIcon } from '@/icons';
 import { usePlayer } from '@/player/usePlayer';
 
 const PAGE_SIZE = 20;
 
 export function DancesPage() {
-  const navigate = useNavigate();
   const { play } = usePlayer();
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
@@ -46,6 +45,8 @@ export function DancesPage() {
   const [total, setTotal] = useState(0);
   const [styles, setStyles] = useState<string[]>([]);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -121,19 +122,21 @@ export function DancesPage() {
         );
         setTotal(totalCount);
         setLastFetched(fetchKey);
+        setError(false);
       })
       .catch(() => {
         if (controller.signal.aborted) return;
         setDances([]);
         setTotal(0);
         setLastFetched(fetchKey);
+        if (offset === 0) setError(true);
       })
       .finally(() => {
         isLoadingMoreRef.current = false;
       });
 
     return () => controller.abort();
-  }, [q, style, offset, fetchKey]);
+  }, [q, style, offset, fetchKey, reloadToken]);
 
   const hasMore = dances.length < total;
 
@@ -193,9 +196,6 @@ export function DancesPage() {
 
   return (
     <div className="space-y-6">
-      <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
-        <BackArrowIcon className="h-5 w-5" aria-hidden />
-      </IconButton>
       <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Danser</h1>
 
       <input
@@ -203,7 +203,7 @@ export function DancesPage() {
         defaultValue={q}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Sök dans..."
-        className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+        className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
       />
 
       <div className="min-w-40">
@@ -214,7 +214,7 @@ export function DancesPage() {
           id="dance-style-filter"
           value={style}
           onChange={(e) => setStyle(e.target.value)}
-          className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+          className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
           aria-label="Filtrera på dansstil"
         >
           <option value="">Alla dansstilar</option>
@@ -228,60 +228,69 @@ export function DancesPage() {
         {total.toLocaleString('sv-SE')} danser
       </p>
 
-      {loading && dances.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
-      )}
+      {error ? (
+        <LoadError
+          message="Det gick inte att hämta danserna."
+          onRetry={() => setReloadToken((t) => t + 1)}
+        />
+      ) : (
+        <>
+          {loading && dances.length === 0 && (
+            <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
+          )}
 
-      {!loading && dances.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Inga danser hittades.</p>
-      )}
+          {!loading && dances.length === 0 && (
+            <p className="text-[rgb(var(--color-text-muted))]">Inga danser hittades.</p>
+          )}
 
-      <ul className="space-y-1">
-        {dances.map((dance) => (
-          <li key={dance.id} className="flex items-stretch gap-2">
-            <button
-              type="button"
-              aria-label={`Spela ${dance.name}`}
-              disabled={playingId === dance.id}
-              onClick={() => dance.id && handlePlayDance(dance.id)}
-              className="flex shrink-0 items-center justify-center rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors disabled:opacity-50"
-            >
-              <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
-            </button>
-            <div className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-[rgb(var(--color-border))]/30 transition-colors">
-              <Link
-                to={`/dance/${dance.id}`}
-                className="flex-1 text-sm font-medium text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]"
-              >
-                {dance.name}
-              </Link>
-              <span className="shrink-0 text-xs text-[rgb(var(--color-text-muted))]">
-                {dance.confirmedTrackCount === 1
-                  ? '1 låt'
-                  : `${dance.confirmedTrackCount ?? 0} låtar`}
-              </span>
-              {dance.danceDescriptionUrl && (
-                <a
-                  href={dance.danceDescriptionUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] underline underline-offset-2"
+          <ul className="space-y-1">
+            {dances.map((dance) => (
+              <li key={dance.id} className="flex items-stretch gap-2">
+                <button
+                  type="button"
+                  aria-label={`Spela ${dance.name}`}
+                  disabled={playingId === dance.id}
+                  onClick={() => dance.id && handlePlayDance(dance.id)}
+                  className="flex shrink-0 items-center justify-center rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors disabled:opacity-50"
                 >
-                  ACLA
-                </a>
+                  <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
+                </button>
+                <div className="flex flex-1 items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 hover:bg-[rgb(var(--color-border))]/30 transition-colors">
+                  <Link
+                    to={`/dance/${dance.id}`}
+                    className="flex-1 text-sm font-medium text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]"
+                  >
+                    {dance.name}
+                  </Link>
+                  <span className="shrink-0 text-xs text-[rgb(var(--color-text-muted))]">
+                    {dance.confirmedTrackCount === 1
+                      ? '1 låt'
+                      : `${dance.confirmedTrackCount ?? 0} låtar`}
+                  </span>
+                  {dance.danceDescriptionUrl && (
+                    <a
+                      href={dance.danceDescriptionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] underline underline-offset-2"
+                    >
+                      ACLA
+                    </a>
+                  )}
+                </div>
+                <InlineError>{playErrors[dance.id ?? '']}</InlineError>
+              </li>
+            ))}
+          </ul>
+
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {loadingMore && (
+                <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
               )}
             </div>
-            <InlineError>{playErrors[dance.id ?? '']}</InlineError>
-          </li>
-        ))}
-      </ul>
-
-      {hasMore && (
-        <div ref={sentinelRef} className="flex justify-center py-4">
-          {loadingMore && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
           )}
-        </div>
+        </>
       )}
     </div>
   );
