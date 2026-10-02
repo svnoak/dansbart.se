@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.jooq.impl.DSL.lower;
 import static se.dansbart.jooq.Tables.PENDING_ARTIST_APPROVALS;
 
 @Repository
@@ -43,7 +44,7 @@ public class PendingArtistApprovalJooqRepository {
 
     public Page<PendingArtistApproval> searchByNameAndStatus(String search, String status, Pageable pageable) {
         var condition = PENDING_ARTIST_APPROVALS.STATUS.eq(status)
-            .and(PENDING_ARTIST_APPROVALS.NAME.lower().like("%" + search.toLowerCase() + "%"));
+            .and(lower(PENDING_ARTIST_APPROVALS.NAME).like("%" + search.toLowerCase() + "%"));
         long total = dsl.fetchCount(dsl.selectFrom(PENDING_ARTIST_APPROVALS).where(condition));
         List<PendingArtistApproval> content = dsl.selectFrom(PENDING_ARTIST_APPROVALS)
             .where(condition)

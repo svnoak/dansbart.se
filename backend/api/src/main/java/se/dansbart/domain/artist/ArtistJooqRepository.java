@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.jooq.impl.DSL.count;
+import static org.jooq.impl.DSL.lower;
 import static org.jooq.impl.DSL.rand;
 import static se.dansbart.jooq.Tables.ARTISTS;
 import static se.dansbart.jooq.Tables.TRACKS;
@@ -58,14 +59,14 @@ public class ArtistJooqRepository {
             .orElse(ARTISTS.NAME.asc());
 
         List<Artist> items = dsl.selectFrom(ARTISTS)
-            .where(ARTISTS.NAME.lower().like(pattern))
+            .where(lower(ARTISTS.NAME).like(pattern))
             .orderBy(orderBy)
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
             .fetch(this::toArtist);
 
         long total = dsl.fetchCount(
-            dsl.selectFrom(ARTISTS).where(ARTISTS.NAME.lower().like(pattern))
+            dsl.selectFrom(ARTISTS).where(lower(ARTISTS.NAME).like(pattern))
         );
 
         return new PageImpl<>(items, pageable, total);
