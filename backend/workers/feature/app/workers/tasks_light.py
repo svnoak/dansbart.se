@@ -435,7 +435,9 @@ def cleanup_orphans_task(self):
         db.commit()
 
         # Find and remove tracks without any playback links
-        orphan_tracks = db.query(Track).filter(~Track.playback_links.any()).all()
+        orphan_tracks = (
+            db.query(Track).filter(~Track.playback_links.any(), Track.is_private.is_(False)).all()
+        )
 
         for track in orphan_tracks:
             # Remove related links first
