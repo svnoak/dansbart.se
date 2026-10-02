@@ -294,7 +294,7 @@ public class FolkwikiMatchJooqRepository {
         // Load all DONE tracks
         var tracks = dsl.select(TRACKS.ID, TRACKS.TITLE)
             .from(TRACKS)
-            .where(TRACKS.PROCESSING_STATUS.eq("DONE").and(TrackVisibility.publicOnly()))
+            .where(TRACKS.PROCESSING_STATUS.eq("DONE"))
             .fetch();
 
         // Load existing matches to avoid duplicates

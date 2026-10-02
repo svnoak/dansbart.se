@@ -236,7 +236,7 @@ class PrivateTrackReadersTest extends AbstractRepositoryTest {
                 () -> assertThat(trackRepository.findDuplicateIsrcs(50, 0))
                         .as("findDuplicateIsrcs reports an ISRC that one public track holds")
                         .isEmpty(),
-                () -> assertEquals(1, folkwikiRepository.runMatching(),
-                        "runMatching matches the private track"));
+                () -> assertEquals(2, folkwikiRepository.runMatching(),
+                        "runMatching matches both public and private tracks"));
     }
 }
