@@ -43,6 +43,7 @@ import se.dansbart.jooq.tables.Tracks;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
 import se.dansbart.jooq.tables.UserTrackFavorites;
+import se.dansbart.jooq.tables.UserTrackSources;
 import se.dansbart.jooq.tables.Users;
 import se.dansbart.jooq.tables.VisitorSessions;
 import se.dansbart.jooq.tables.VoterReputation;
@@ -248,6 +249,11 @@ public class Tables {
      * The table <code>public.user_track_favorites</code>.
      */
     public static final UserTrackFavorites USER_TRACK_FAVORITES = UserTrackFavorites.USER_TRACK_FAVORITES;
+
+    /**
+     * The table <code>public.user_track_sources</code>.
+     */
+    public static final UserTrackSources USER_TRACK_SOURCES = UserTrackSources.USER_TRACK_SOURCES;
 
     /**
      * The table <code>public.users</code>.

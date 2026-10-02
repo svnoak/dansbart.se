@@ -50,6 +50,7 @@ import se.dansbart.jooq.tables.Tracks;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
 import se.dansbart.jooq.tables.UserTrackFavorites;
+import se.dansbart.jooq.tables.UserTrackSources;
 import se.dansbart.jooq.tables.Users;
 import se.dansbart.jooq.tables.VisitorSessions;
 import se.dansbart.jooq.tables.VoterReputation;
@@ -264,6 +265,11 @@ public class Public extends SchemaImpl {
     public final UserTrackFavorites USER_TRACK_FAVORITES = UserTrackFavorites.USER_TRACK_FAVORITES;
 
     /**
+     * The table <code>public.user_track_sources</code>.
+     */
+    public final UserTrackSources USER_TRACK_SOURCES = UserTrackSources.USER_TRACK_SOURCES;
+
+    /**
      * The table <code>public.users</code>.
      */
     public final Users USERS = Users.USERS;
@@ -333,6 +339,7 @@ public class Public extends SchemaImpl {
             UserDancePrimaryTracks.USER_DANCE_PRIMARY_TRACKS,
             UserInteractions.USER_INTERACTIONS,
             UserTrackFavorites.USER_TRACK_FAVORITES,
+            UserTrackSources.USER_TRACK_SOURCES,
             Users.USERS,
             VisitorSessions.VISITOR_SESSIONS,
             VoterReputation.VOTER_REPUTATION

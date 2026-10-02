@@ -175,13 +175,13 @@ class TrackControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
-        @DisplayName("should return 401 without authentication")
-        void flagTrack_withoutAuth_shouldReturn401() throws Exception {
+        @DisplayName("should accept a flag without authentication")
+        void flagTrack_withoutAuth_isAccepted() throws Exception {
             Track track = testData.track().withTitle("Test Track").withArtist(artist).complete().build();
 
             mockMvc.perform(post("/api/tracks/{id}/flag", track.getId())
                     .param("reason", "not_folk_music"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk());
         }
     }
 

@@ -12,6 +12,7 @@ import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.TrackStyleVoteDto;
 import se.dansbart.voter.VoterContext;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +29,7 @@ public class TrackController {
     private final TrackService trackService;
     private final TrackFeedbackService feedbackService;
     private final VoterContext voterContext;
+    private final PrivateTrackGuard privateTrackGuard;
 
     @GetMapping
     @Operation(summary = "Get playable tracks with optional filters")
@@ -62,7 +64,8 @@ public class TrackController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get track by ID")
-    public ResponseEntity<TrackListDto> getTrack(@PathVariable UUID id) {
+    public ResponseEntity<TrackListDto> getTrack(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return trackService.findByIdAsListDto(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -70,9 +73,11 @@ public class TrackController {
 
     @GetMapping("/{id}/similar")
     @Operation(summary = "Get similar tracks using embedding similarity")
-    public ResponseEntity<List<Track>> getSimilarTracks(
+    public ResponseEntity<List<TrackListDto>> getSimilarTracks(
             @PathVariable UUID id,
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "10") int limit,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return ResponseEntity.ok(trackService.findSimilarTracks(id, limit));
     }
 
@@ -100,7 +105,9 @@ public class TrackController {
     @Operation(summary = "Submit style correction feedback for a track")
     public ResponseEntity<TrackStyleVoteDto> submitFeedback(
             @PathVariable UUID id,
-            @RequestBody FeedbackRequest request) {
+            @RequestBody FeedbackRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         // Voter identity comes from VoterContext (auth principal or X-Voter-ID, resolved
         // once per request by VoterContextInterceptor) rather than being parsed here.
         return feedbackService.submitStyleFeedback(id, request.suggestedStyle(), request.tempoCorrection())
@@ -111,7 +118,8 @@ public class TrackController {
 
     @GetMapping("/{id}/secondary-styles")
     @Operation(summary = "Get unconfirmed secondary dance styles for a track")
-    public ResponseEntity<List<DanceStyleDto>> getSecondaryStyles(@PathVariable UUID id) {
+    public ResponseEntity<List<DanceStyleDto>> getSecondaryStyles(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return ResponseEntity.ok(feedbackService.getUnconfirmedSecondaryStyles(id));
     }
 
@@ -119,7 +127,9 @@ public class TrackController {
     @Operation(summary = "Confirm a secondary dance style without affecting primary election")
     public ResponseEntity<Map<String, Object>> confirmSecondaryStyle(
             @PathVariable UUID id,
-            @RequestBody SecondaryStyleRequest request) {
+            @RequestBody SecondaryStyleRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return feedbackService.confirmSecondaryStyle(id, request.style())
             .map(result -> {
                 result.put("status", "success");
@@ -133,7 +143,9 @@ public class TrackController {
     @Operation(summary = "Submit movement tags for a track")
     public ResponseEntity<Map<String, Object>> submitMovementVote(
             @PathVariable UUID id,
-            @RequestBody MovementVoteRequest request) {
+            @RequestBody MovementVoteRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         if (feedbackService.processMovementFeedback(id, request.danceStyle(), request.tags())) {
             return ResponseEntity.ok(Map.of(
                 "status", "success",
@@ -147,7 +159,9 @@ public class TrackController {
     @Operation(summary = "Flag a track as not being folk music")
     public ResponseEntity<Map<String, Object>> flagTrack(
             @PathVariable UUID id,
-            @RequestParam(defaultValue = "not_folk_music") String reason) {
+            @RequestParam(defaultValue = "not_folk_music") String reason,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return feedbackService.flagTrack(id, reason)
             .map(result -> {
                 result.put("status", "success");
@@ -174,7 +188,9 @@ public class TrackController {
     public ResponseEntity<Map<String, Object>> submitStructureProposal(
             @PathVariable UUID id,
             @RequestParam(required = false) String description,
-            @RequestBody StructureRequest request) {
+            @RequestBody StructureRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return feedbackService.createStructureVersion(
                 id,
                 request.bars(),
@@ -196,7 +212,8 @@ public class TrackController {
 
     @GetMapping("/{id}/structure-versions")
     @Operation(summary = "Get list of structure versions for a track")
-    public ResponseEntity<List<TrackStructureVersion>> getStructureVersions(@PathVariable UUID id) {
+    public ResponseEntity<List<TrackStructureVersion>> getStructureVersions(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return ResponseEntity.ok(feedbackService.getStructureVersions(id));
     }
 
@@ -204,7 +221,9 @@ public class TrackController {
     @Operation(summary = "Submit a new playback link for a track")
     public ResponseEntity<PlaybackLink> submitLink(
             @PathVariable UUID id,
-            @RequestBody SubmitLinkRequest request) {
+            @RequestBody SubmitLinkRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(id, userId);
         return trackService.submitLink(id, request.platform(), request.deepLink())
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.badRequest().build());

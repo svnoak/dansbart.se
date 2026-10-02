@@ -3,6 +3,8 @@ package se.dansbart.domain.analytics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import se.dansbart.domain.track.PrivateTrackGuard;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,12 +20,15 @@ import org.springframework.http.HttpStatus;
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final PrivateTrackGuard privateTrackGuard;
 
     @PostMapping("/playback/{trackId}")
     @Operation(summary = "Record a track playback event")
     public ResponseEntity<TrackPlayback> recordPlayback(
             @PathVariable UUID trackId,
-            @RequestBody RecordPlaybackRequest request) {
+            @RequestBody RecordPlaybackRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(trackId, userId);
         TrackPlayback playback = analyticsService.recordPlayback(
             trackId,
             request.platform(),

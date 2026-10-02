@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import se.dansbart.domain.track.PrivateTrackGuard;
 import se.dansbart.dto.DanceDto;
 import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.TrackListDto;
@@ -27,6 +28,7 @@ public class DanceController {
 
     private final DanceService danceService;
     private final DancePrimaryTrackService dancePrimaryTrackService;
+    private final PrivateTrackGuard privateTrackGuard;
 
     @GetMapping
     @Operation(summary = "List dances with optional search, style filter, and pagination")
@@ -73,7 +75,9 @@ public class DanceController {
     public ResponseEntity<Void> voteOnTrack(
             @PathVariable UUID id,
             @PathVariable UUID trackId,
-            @RequestBody DanceTrackVoteRequest request) {
+            @RequestBody DanceTrackVoteRequest request,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(trackId, userId);
         int voteValue = "up".equals(request.vote()) ? 1 : "down".equals(request.vote()) ? -1 : 0;
         if (voteValue == 0) return ResponseEntity.badRequest().build();
         try {
@@ -88,7 +92,9 @@ public class DanceController {
     @Operation(summary = "Remove a vote on a recommended track")
     public ResponseEntity<Void> removeVote(
             @PathVariable UUID id,
-            @PathVariable UUID trackId) {
+            @PathVariable UUID trackId,
+            @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(trackId, userId);
         try {
             danceService.removeVote(id, trackId);
         } catch (IllegalStateException e) {
@@ -135,6 +141,7 @@ public class DanceController {
             @PathVariable UUID id,
             @PathVariable UUID trackId,
             @AuthenticationPrincipal UUID userId) {
+        privateTrackGuard.requireVisible(trackId, userId);
         DanceTrack link = danceService.suggestTrack(id, trackId, userId);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", link.getId());
