@@ -135,4 +135,5 @@ public class Indexes {
     public static final Index IX_VISITOR_SESSIONS_LAST_SEEN = Internal.createIndex(DSL.name("ix_visitor_sessions_last_seen"), VisitorSessions.VISITOR_SESSIONS, new OrderField[] { VisitorSessions.VISITOR_SESSIONS.LAST_SEEN }, false);
     public static final Index IX_VISITOR_SESSIONS_SESSION_ID = Internal.createIndex(DSL.name("ix_visitor_sessions_session_id"), VisitorSessions.VISITOR_SESSIONS, new OrderField[] { VisitorSessions.VISITOR_SESSIONS.SESSION_ID }, true);
     public static final Index PATH_COUNTS_DATE_IDX = Internal.createIndex(DSL.name("path_counts_date_idx"), PathCounts.PATH_COUNTS, new OrderField[] { PathCounts.PATH_COUNTS.DATE }, false);
+    public static final Index UX_TRACKS_CONTENT_HASH = Internal.createIndex(DSL.name("ux_tracks_content_hash"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.CONTENT_HASH }, true);
 }
