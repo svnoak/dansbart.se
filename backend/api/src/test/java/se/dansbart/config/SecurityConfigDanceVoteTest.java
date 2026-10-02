@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import se.dansbart.domain.dance.DanceController;
 import se.dansbart.domain.dance.DancePrimaryTrackService;
 import se.dansbart.domain.dance.DanceService;
+import se.dansbart.domain.track.PrivateTrackGuard;
 import se.dansbart.voter.VoterContext;
 
 import java.util.UUID;
@@ -41,6 +42,9 @@ class SecurityConfigDanceVoteTest {
 
     @MockBean
     private VoterContext voterContext;
+
+    @MockBean
+    private PrivateTrackGuard privateTrackGuard;
 
     private final UUID danceId = UUID.randomUUID();
     private final UUID trackId = UUID.randomUUID();

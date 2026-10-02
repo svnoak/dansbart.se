@@ -2,6 +2,7 @@ package se.dansbart.domain.favorites;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import se.dansbart.domain.track.PrivateTrackGuard;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.dto.TrackListDto;
 
@@ -14,8 +15,10 @@ public class FavoriteService {
 
     private final FavoriteJooqRepository favoriteRepository;
     private final TrackJooqRepository trackRepository;
+    private final PrivateTrackGuard privateTrackGuard;
 
     public boolean toggle(UUID userId, UUID trackId) {
+        privateTrackGuard.requireVisible(trackId, userId);
         if (favoriteRepository.isFavorited(userId, trackId)) {
             favoriteRepository.remove(userId, trackId);
             return false;

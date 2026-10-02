@@ -8,6 +8,7 @@ import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.group.GroupMemberJooqRepository;
+import se.dansbart.domain.track.PrivateTrackGuard;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
@@ -46,6 +47,7 @@ public class PlaylistService {
     private final GroupJooqRepository groupJooqRepository;
     private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final CollaborationAccess collaborationAccess;
+    private final PrivateTrackGuard privateTrackGuard;
 
     private static final Set<String> VALID_TEMPO_CATEGORIES = Set.of("Slow", "SlowMed", "Medium", "Fast", "Turbo");
     private static final int MAX_PAGE_SIZE = 100;
@@ -311,10 +313,19 @@ public class PlaylistService {
         List<PlaylistTrack> ptList = playlistTrackJooqRepository.findByPlaylistIdOrderByPositionAsc(playlist.getId());
         List<UUID> trackIds = ptList.stream().map(PlaylistTrack::getTrackId).toList();
         List<TrackListDto> trackDtos = trackJooqRepository.findTrackListDtosByIds(trackIds);
+        Set<UUID> hiddenTrackIds = privateTrackGuard.hiddenTrackIds(trackIds, viewerId);
         List<PlaylistTrackDto> playlistTrackDtos = new java.util.ArrayList<>();
         for (int i = 0; i < ptList.size(); i++) {
             PlaylistTrack pt = ptList.get(i);
             TrackListDto trackDto = i < trackDtos.size() ? trackDtos.get(i) : null;
+            if (trackDto != null && hiddenTrackIds.contains(trackDto.getId())) {
+                trackDto = TrackListDto.builder()
+                    .id(trackDto.getId())
+                    .title(trackDto.getTitle())
+                    .artistId(trackDto.getArtistId())
+                    .artistName(trackDto.getArtistName())
+                    .build();
+            }
             playlistTrackDtos.add(PlaylistTrackDto.builder()
                 .id(pt.getId())
                 .position(pt.getPosition())

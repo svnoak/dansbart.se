@@ -42,6 +42,7 @@ import se.dansbart.jooq.tables.Tracks;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
 import se.dansbart.jooq.tables.UserTrackFavorites;
+import se.dansbart.jooq.tables.UserTrackSources;
 import se.dansbart.jooq.tables.Users;
 import se.dansbart.jooq.tables.VisitorSessions;
 
@@ -131,6 +132,7 @@ public class Indexes {
     public static final Index IX_USER_INTERACTIONS_EVENT_TYPE = Internal.createIndex(DSL.name("ix_user_interactions_event_type"), UserInteractions.USER_INTERACTIONS, new OrderField[] { UserInteractions.USER_INTERACTIONS.EVENT_TYPE }, false);
     public static final Index IX_USER_INTERACTIONS_SESSION_ID = Internal.createIndex(DSL.name("ix_user_interactions_session_id"), UserInteractions.USER_INTERACTIONS, new OrderField[] { UserInteractions.USER_INTERACTIONS.SESSION_ID }, false);
     public static final Index IX_USER_INTERACTIONS_TRACK_ID = Internal.createIndex(DSL.name("ix_user_interactions_track_id"), UserInteractions.USER_INTERACTIONS, new OrderField[] { UserInteractions.USER_INTERACTIONS.TRACK_ID }, false);
+    public static final Index IX_USER_TRACK_SOURCES_TRACK_USER = Internal.createIndex(DSL.name("ix_user_track_sources_track_user"), UserTrackSources.USER_TRACK_SOURCES, new OrderField[] { UserTrackSources.USER_TRACK_SOURCES.TRACK_ID, UserTrackSources.USER_TRACK_SOURCES.USER_ID }, false);
     public static final Index IX_VISITOR_SESSIONS_FIRST_SEEN = Internal.createIndex(DSL.name("ix_visitor_sessions_first_seen"), VisitorSessions.VISITOR_SESSIONS, new OrderField[] { VisitorSessions.VISITOR_SESSIONS.FIRST_SEEN }, false);
     public static final Index IX_VISITOR_SESSIONS_LAST_SEEN = Internal.createIndex(DSL.name("ix_visitor_sessions_last_seen"), VisitorSessions.VISITOR_SESSIONS, new OrderField[] { VisitorSessions.VISITOR_SESSIONS.LAST_SEEN }, false);
     public static final Index IX_VISITOR_SESSIONS_SESSION_ID = Internal.createIndex(DSL.name("ix_visitor_sessions_session_id"), VisitorSessions.VISITOR_SESSIONS, new OrderField[] { VisitorSessions.VISITOR_SESSIONS.SESSION_ID }, true);

@@ -50,6 +50,7 @@ import se.dansbart.jooq.tables.Tracks;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
 import se.dansbart.jooq.tables.UserTrackFavorites;
+import se.dansbart.jooq.tables.UserTrackSources;
 import se.dansbart.jooq.tables.Users;
 import se.dansbart.jooq.tables.VisitorSessions;
 import se.dansbart.jooq.tables.VoterReputation;
@@ -124,6 +125,8 @@ public class Keys {
     public static final UniqueKey<Record> USER_DANCE_PRIMARY_TRACKS_PKEY = Internal.createUniqueKey(UserDancePrimaryTracks.USER_DANCE_PRIMARY_TRACKS, DSL.name("user_dance_primary_tracks_pkey"), new TableField[] { UserDancePrimaryTracks.USER_DANCE_PRIMARY_TRACKS.USER_ID, UserDancePrimaryTracks.USER_DANCE_PRIMARY_TRACKS.DANCE_ID }, true);
     public static final UniqueKey<Record> USER_INTERACTIONS_PKEY = Internal.createUniqueKey(UserInteractions.USER_INTERACTIONS, DSL.name("user_interactions_pkey"), new TableField[] { UserInteractions.USER_INTERACTIONS.ID }, true);
     public static final UniqueKey<Record> USER_TRACK_FAVORITES_PKEY = Internal.createUniqueKey(UserTrackFavorites.USER_TRACK_FAVORITES, DSL.name("user_track_favorites_pkey"), new TableField[] { UserTrackFavorites.USER_TRACK_FAVORITES.USER_ID, UserTrackFavorites.USER_TRACK_FAVORITES.TRACK_ID }, true);
+    public static final UniqueKey<Record> USER_TRACK_SOURCES_PKEY = Internal.createUniqueKey(UserTrackSources.USER_TRACK_SOURCES, DSL.name("user_track_sources_pkey"), new TableField[] { UserTrackSources.USER_TRACK_SOURCES.ID }, true);
+    public static final UniqueKey<Record> USER_TRACK_SOURCES_USER_ID_TRACK_ID_PROVIDER_PROVIDER_FILE__KEY = Internal.createUniqueKey(UserTrackSources.USER_TRACK_SOURCES, DSL.name("user_track_sources_user_id_track_id_provider_provider_file__key"), new TableField[] { UserTrackSources.USER_TRACK_SOURCES.USER_ID, UserTrackSources.USER_TRACK_SOURCES.TRACK_ID, UserTrackSources.USER_TRACK_SOURCES.PROVIDER, UserTrackSources.USER_TRACK_SOURCES.PROVIDER_FILE_ID }, true);
     public static final UniqueKey<Record> USERS_DISCOURSE_ID_KEY = Internal.createUniqueKey(Users.USERS, DSL.name("users_discourse_id_key"), new TableField[] { Users.USERS.DISCOURSE_ID }, true);
     public static final UniqueKey<Record> USERS_PKEY = Internal.createUniqueKey(Users.USERS, DSL.name("users_pkey"), new TableField[] { Users.USERS.ID }, true);
     public static final UniqueKey<Record> VISITOR_SESSIONS_PKEY = Internal.createUniqueKey(VisitorSessions.VISITOR_SESSIONS, DSL.name("visitor_sessions_pkey"), new TableField[] { VisitorSessions.VISITOR_SESSIONS.ID }, true);
@@ -184,5 +187,7 @@ public class Keys {
     public static final ForeignKey<Record, Record> USER_INTERACTIONS__USER_INTERACTIONS_TRACK_ID_FKEY = Internal.createForeignKey(UserInteractions.USER_INTERACTIONS, DSL.name("user_interactions_track_id_fkey"), new TableField[] { UserInteractions.USER_INTERACTIONS.TRACK_ID }, Keys.TRACKS_PKEY, new TableField[] { Tracks.TRACKS.ID }, true);
     public static final ForeignKey<Record, Record> USER_TRACK_FAVORITES__FK_FAVORITES_TRACK = Internal.createForeignKey(UserTrackFavorites.USER_TRACK_FAVORITES, DSL.name("fk_favorites_track"), new TableField[] { UserTrackFavorites.USER_TRACK_FAVORITES.TRACK_ID }, Keys.TRACKS_PKEY, new TableField[] { Tracks.TRACKS.ID }, true);
     public static final ForeignKey<Record, Record> USER_TRACK_FAVORITES__FK_FAVORITES_USER = Internal.createForeignKey(UserTrackFavorites.USER_TRACK_FAVORITES, DSL.name("fk_favorites_user"), new TableField[] { UserTrackFavorites.USER_TRACK_FAVORITES.USER_ID }, Keys.USERS_PKEY, new TableField[] { Users.USERS.ID }, true);
+    public static final ForeignKey<Record, Record> USER_TRACK_SOURCES__USER_TRACK_SOURCES_TRACK_ID_FKEY = Internal.createForeignKey(UserTrackSources.USER_TRACK_SOURCES, DSL.name("user_track_sources_track_id_fkey"), new TableField[] { UserTrackSources.USER_TRACK_SOURCES.TRACK_ID }, Keys.TRACKS_PKEY, new TableField[] { Tracks.TRACKS.ID }, true);
+    public static final ForeignKey<Record, Record> USER_TRACK_SOURCES__USER_TRACK_SOURCES_USER_ID_FKEY = Internal.createForeignKey(UserTrackSources.USER_TRACK_SOURCES, DSL.name("user_track_sources_user_id_fkey"), new TableField[] { UserTrackSources.USER_TRACK_SOURCES.USER_ID }, Keys.USERS_PKEY, new TableField[] { Users.USERS.ID }, true);
     public static final ForeignKey<Record, Record> VOTER_REPUTATION__VOTER_REPUTATION_VOTER_ID_FKEY = Internal.createForeignKey(VoterReputation.VOTER_REPUTATION, DSL.name("voter_reputation_voter_id_fkey"), new TableField[] { VoterReputation.VOTER_REPUTATION.VOTER_ID }, Keys.USERS_PKEY, new TableField[] { Users.USERS.ID }, true);
 }

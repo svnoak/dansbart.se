@@ -148,8 +148,9 @@ public class TrackService {
         return new PageImpl<>(content, pageable, total);
     }
 
-    public List<Track> findSimilarTracks(UUID trackId, int limit) {
-        return trackJooqRepository.findSimilarTracks(trackId, limit);
+    public List<TrackListDto> findSimilarTracks(UUID trackId, int limit) {
+        List<UUID> ids = trackJooqRepository.findSimilarTracks(trackId, limit).stream().map(Track::getId).toList();
+        return trackJooqRepository.findTrackListDtosByIds(ids);
     }
 
     public Page<Track> searchByTitle(String query, Pageable pageable) {
