@@ -75,6 +75,61 @@ describe('StyleVotePanel', () => {
     expect(button).toBeDefined();
     return button;
   }
+
+
+  async function skipTempo() {
+    await act(async () => {
+      clickButton('Hoppa över tempot')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+  }
+
+  it('offers the tempo step after a style is picked', async () => {
+    await renderPanel({ currentStyle: null });
+
+    await act(async () => {
+      clickButton('Halling')?.click();
+    });
+
+    expect(submitFeedback).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Hur snabb är dansen?');
+    for (const label of ['Långsamt', 'Lugnt', 'Lagom', 'Snabbt', 'V. snabbt', 'Hoppa över tempot']) {
+      clickButton(label);
+    }
+  });
+
+  it('submits the style and the chosen tempo', async () => {
+    await renderPanel({ currentStyle: null });
+
+    await act(async () => {
+      clickButton('Halling')?.click();
+    });
+    await act(async () => {
+      clickButton('Snabbt')?.click();
+    });
+
+    expect(submitFeedback).toHaveBeenCalledTimes(1);
+    expect(submitFeedback).toHaveBeenCalledWith(
+      'track-1',
+      expect.objectContaining({ suggestedStyle: 'Halling', tempoCorrection: 'Fast' }),
+      expect.any(Object),
+    );
+  });
+
+  it('submits the style alone when the tempo step is skipped', async () => {
+    await renderPanel({ currentStyle: null });
+
+    await act(async () => {
+      clickButton('Halling')?.click();
+    });
+    await act(async () => {
+      clickButton('Hoppa över tempot')?.click();
+    });
+
+    expect(submitFeedback).toHaveBeenCalledTimes(1);
+    expect(submitFeedback.mock.calls[0][1]).toEqual({ suggestedStyle: 'Halling', tempoCorrection: undefined });
+  });
+
   it('fetches the style tree only after the panel opens', async () => {
     await renderPanel({ open: false });
     expect(getStyleTree).not.toHaveBeenCalled();
@@ -105,6 +160,7 @@ describe('StyleVotePanel', () => {
     await act(async () => {
       hallingButton?.click();
     });
+    await skipTempo();
 
     expect(submitFeedback).toHaveBeenCalledWith(
       'track-1',
@@ -136,6 +192,7 @@ describe('StyleVotePanel', () => {
     await act(async () => {
       varmlandskButton?.click();
     });
+    await skipTempo();
 
     expect(submitFeedback).toHaveBeenCalledWith(
       'track-1',
@@ -153,6 +210,7 @@ describe('StyleVotePanel', () => {
     await act(async () => {
       hallingButton?.click();
     });
+    await skipTempo();
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -162,7 +220,7 @@ describe('StyleVotePanel', () => {
     expect(confirmationText).toContain('Tack! Din röst är sparad.');
   });
 
-  it('shows an error and keeps the styles when the vote fails', async () => {
+  it('shows an error and keeps the tempo step when the vote fails', async () => {
     submitFeedback.mockRejectedValue(new Error('network'));
 
     await renderPanel({ currentStyle: null });
@@ -174,11 +232,12 @@ describe('StyleVotePanel', () => {
     await act(async () => {
       hallingButton?.click();
     });
+    await skipTempo();
 
     expect(document.body.textContent).toContain('Det gick inte att spara din röst. Försök igen.');
     expect(document.body.textContent).not.toContain('Tack! Din röst är sparad.');
     expect(
-      Array.from(document.body.querySelectorAll('button')).some((b) => b.textContent?.includes('Halling')),
+      Array.from(document.body.querySelectorAll('button')).some((b) => b.textContent?.includes('Hoppa över tempot')),
     ).toBe(true);
   });
 
@@ -206,6 +265,7 @@ describe('StyleVotePanel', () => {
       hallingButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
+    await skipTempo();
     expect(onVoted).toHaveBeenCalledWith('Halling', confirmed);
   });
 
@@ -218,6 +278,7 @@ describe('StyleVotePanel', () => {
       hallingButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
+    await skipTempo();
 
     expect(document.body.textContent).toContain('Tack! Nu är stilen bekräftad.');
   });
@@ -231,6 +292,7 @@ describe('StyleVotePanel', () => {
       hallingButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
+    await skipTempo();
 
     const text = document.body.textContent;
     expect(text).toContain('Tack! Din röst är sparad.');
@@ -255,6 +317,7 @@ describe('StyleVotePanel', () => {
       hallingButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
+    await skipTempo();
 
     const text = document.body.textContent;
     expect(text).toContain('Tack! Din röst är sparad.');

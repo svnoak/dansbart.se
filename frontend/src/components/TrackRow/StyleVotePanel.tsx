@@ -4,10 +4,11 @@ import { CloseIcon } from '@/icons';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
 import { StylePicker } from '@/components/StylePicker';
+import { TempoPicker } from '@/components/TempoPicker';
 import { useStyleVote } from '@/hooks/useStyleVote';
 import { useAuth } from '@/auth/useAuth';
 
-type Step = 'main' | 'sub' | 'success';
+type Step = 'main' | 'sub' | 'tempo' | 'success';
 
 interface StyleVotePanelProps {
   trackId: string;
@@ -32,6 +33,7 @@ function StyleVoteDialog({
 }: Omit<StyleVotePanelProps, 'open'>) {
   const [step, setStep] = useState<Step>('main');
   const [selectedMain, setSelectedMain] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('');
   const [failed, setFailed] = useState(false);
   const [styleJustConfirmed, setStyleJustConfirmed] = useState(false);
   const titleId = useId();
@@ -47,19 +49,27 @@ function StyleVoteDialog({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  async function handleSelect(style: string) {
-    const { success, styleJustConfirmed: confirmed } = await styleVote.submit(style);
+  function handleSelect(style: string) {
+    setSelectedStyle(style);
+    setStep('tempo');
+  }
+
+  async function handleSubmit(tempoCorrection?: string) {
+    const { success, styleJustConfirmed: confirmed } = await styleVote.submit(
+      selectedStyle,
+      tempoCorrection,
+    );
     setFailed(!success);
     if (success) {
       setStyleJustConfirmed(confirmed);
       setStep('success');
-      onVoted?.(style, confirmed);
+      onVoted?.(selectedStyle, confirmed);
     }
   }
 
   function handleSelectMain(main: string) {
     if (styleVote.subStylesFor(main).length === 0) {
-      void handleSelect(main);
+      handleSelect(main);
     } else {
       setSelectedMain(main);
       setStep('sub');
@@ -140,6 +150,21 @@ function StyleVoteDialog({
             onSelect={handleSelect}
             disabled={styleVote.isSubmitting}
           />
+        )}
+
+        {step === 'tempo' && (
+          <>
+            <p className="mb-3 text-sm font-bold text-[rgb(var(--color-text))]">Hur snabb är dansen?</p>
+            <TempoPicker presentation="full" onSelect={handleSubmit} disabled={styleVote.isSubmitting} />
+            <Button
+              variant="ghost"
+              className="mt-3"
+              onClick={() => void handleSubmit()}
+              disabled={styleVote.isSubmitting}
+            >
+              Hoppa över tempot
+            </Button>
+          </>
         )}
 
         {step === 'sub' && (
