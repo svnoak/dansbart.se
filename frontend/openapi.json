@@ -1965,6 +1965,39 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/api/library/sources/{sourceId}/match": {
+      "post": {
+        "tags": ["Library"],
+        "summary": "Check whether a file hash matches the track of a source",
+        "operationId": "matchHash",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MatchRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/groups": {
       "get": {
         "tags": ["Groups"],
@@ -7399,6 +7432,18 @@
           "sourceId": { "type": "string", "format": "uuid" },
           "trackId": { "type": "string", "format": "uuid" },
           "linkedToCatalog": { "type": "boolean" }
+        }
+      },
+      "MatchRequest": {
+        "type": "object",
+        "properties": {
+          "contentHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      },
+      "MatchResponse": {
+        "type": "object",
+        "properties": {
+          "matches": { "type": "boolean" }
         }
       },
       "LibrarySourceDto": {

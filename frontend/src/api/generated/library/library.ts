@@ -7,7 +7,9 @@
 import type {
   ImportTrackRequest,
   LibraryImportResponse,
-  LibrarySourceDto
+  LibrarySourceDto,
+  MatchRequest,
+  MatchResponse
 } from '../../models';
 
 import { httpClient } from '../../http-client';
@@ -78,6 +80,31 @@ export const deleteSource = async (sourceId: string, options?: RequestInit): Pro
     method: 'DELETE'
     
     
+  }
+);}
+  
+
+/**
+ * @summary Check whether a file hash matches the track of a source
+ */
+export const getMatchHashUrl = (sourceId: string,) => {
+
+
+  
+
+  return `/api/library/sources/${sourceId}/match`
+}
+
+export const matchHash = async (sourceId: string,
+    matchRequest: MatchRequest, options?: RequestInit): Promise<MatchResponse> => {
+  
+  return httpClient<MatchResponse>(getMatchHashUrl(sourceId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      matchRequest,)
   }
 );}
   

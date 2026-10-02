@@ -66,6 +66,10 @@ public class LibraryService {
         return sourceRepository.deleteSourceIfOwner(sourceId, userId);
     }
 
+    public Optional<Boolean> matchesHash(UUID sourceId, UUID userId, String contentHash) {
+        return sourceRepository.trackHasHash(sourceId, userId, contentHash);
+    }
+
     private UUID createPrivateTrack(ImportTrackRequest request) {
         Track track = new Track();
         track.setId(UUID.randomUUID());

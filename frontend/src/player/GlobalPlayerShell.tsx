@@ -12,6 +12,7 @@ import {
 } from '@/player/embedUrl';
 import { SmartNudge } from '@/player/SmartNudge';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
+import { useLocalAudioPlayer } from './hooks/useLocalAudioPlayer';
 import { usePlaybackPosition } from './hooks/usePlaybackPosition';
 import { useWindowWidth } from './hooks/useWindowWidth';
 import { useStructureBars } from './hooks/useStructureBars';
@@ -45,7 +46,7 @@ export function GlobalPlayerShell() {
   const [expanded, setExpanded] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all' | 'stop'>('none');
-  const [activeSource, setActiveSource] = useState<PlaybackSource>('youtube');
+  const [selectedSource, setActiveSource] = useState<PlaybackSource>('youtube');
   const [structureMode, setStructureMode] = useState<'none' | 'bars'>('none');
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -57,15 +58,28 @@ export function GlobalPlayerShell() {
   const accumulatedSecondsRef = useRef(0);
   const trackCompletedRef = useRef(false);
   const prevTrackRef = useRef(currentTrack);
-  const prevActiveSourceRef = useRef(activeSource);
 
   const windowWidth = useWindowWidth();
   const bars = useStructureBars(currentTrack?.id);
 
+  const handleTrackEnded = useCallback(() => {
+    trackCompletedRef.current = true;
+    next();
+  }, [next]);
+
+  const local = useLocalAudioPlayer({
+    trackId: currentTrack?.id,
+    isPlaying,
+    onEnded: handleTrackEnded,
+  });
+  const isLocal = local.hasLocalFile;
+  const activeSource: PlaybackSource = isLocal ? 'local' : selectedSource;
+  const prevActiveSourceRef = useRef(activeSource);
+
   const hasYt = hasYouTube(currentTrack);
   const hasSpot = hasSpotify(currentTrack);
   const embedUrl = getEmbedUrlForSource(currentTrack, activeSource);
-  const youtubeVideoId = getYouTubeVideoId(currentTrack);
+  const youtubeVideoId = isLocal ? null : getYouTubeVideoId(currentTrack);
   const isYouTubeEmbed = activeSource === 'youtube' && !!youtubeVideoId;
 
   // Reset position and source when track changes
@@ -73,7 +87,7 @@ export function GlobalPlayerShell() {
   if (prevTrackId !== currentTrack?.id) {
     setPrevTrackId(currentTrack?.id);
     if (currentTrack) {
-      setActiveSource(hasYt ? 'youtube' : hasSpot ? 'spotify' : activeSource);
+      setActiveSource(hasYt ? 'youtube' : hasSpot ? 'spotify' : selectedSource);
     }
   }
 
@@ -86,11 +100,6 @@ export function GlobalPlayerShell() {
     }
   }
 
-  const handleTrackEnded = useCallback(() => {
-    trackCompletedRef.current = true;
-    next();
-  }, [next]);
-
   const { ytPlayerRef } = useYouTubePlayer({
     youtubeVideoId,
     consentStatus,
@@ -99,13 +108,19 @@ export function GlobalPlayerShell() {
     onEnded: handleTrackEnded,
   });
 
-  const { playbackPositionMs, setPlaybackPositionMs, playbackDurationMs, setPlaybackDurationMs } =
-    usePlaybackPosition({
-      isYouTubeEmbed,
-      isPlaying,
-      ytPlayerRef,
-      isDraggingRef,
-    });
+  const {
+    playbackPositionMs: youtubePositionMs,
+    setPlaybackPositionMs,
+    playbackDurationMs: youtubeDurationMs,
+    setPlaybackDurationMs,
+  } = usePlaybackPosition({
+    isYouTubeEmbed,
+    isPlaying,
+    ytPlayerRef,
+    isDraggingRef,
+  });
+  const playbackPositionMs = isLocal ? local.positionMs : youtubePositionMs;
+  const playbackDurationMs = isLocal ? local.durationMs : youtubeDurationMs;
 
   // Reset playback position when track changes
   const [prevTrackIdForPos, setPrevTrackIdForPos] = useState(currentTrack?.id);
@@ -183,25 +198,33 @@ export function GlobalPlayerShell() {
       : [];
   const structureButtonLabel = structureMode === 'bars' ? 'Dölj takter' : 'Visa takter';
 
-  const seekToTime = useCallback(
+  const seekPlayer = useCallback(
     (seconds: number) => {
+      if (isLocal) {
+        local.seekTo(seconds);
+        return;
+      }
       if (!isYouTubeEmbed || !ytPlayerRef.current?.seekTo) return;
-      const sec = Math.max(0, seconds);
-      ytPlayerRef.current.seekTo(sec, true);
-      setPlaybackPositionMs(sec * 1000);
+      ytPlayerRef.current.seekTo(seconds, true);
+      setPlaybackPositionMs(seconds * 1000);
     },
-    [isYouTubeEmbed, ytPlayerRef, setPlaybackPositionMs]
+    [isLocal, local, isYouTubeEmbed, ytPlayerRef, setPlaybackPositionMs]
   );
 
+  const getCurrentSeconds = useCallback(() => {
+    if (isLocal) return local.getCurrentTime();
+    return isYouTubeEmbed ? ytPlayerRef.current?.getCurrentTime?.() : undefined;
+  }, [isLocal, local, isYouTubeEmbed, ytPlayerRef]);
+
+  const seekToTime = useCallback((seconds: number) => seekPlayer(Math.max(0, seconds)), [seekPlayer]);
+
   const handleSeek = (clientX: number) => {
-    if (!isYouTubeEmbed || !progressBarRef.current || !ytPlayerRef.current?.seekTo) return;
-    const effectiveDurationSec = durationSec || (ytPlayerRef.current.getDuration?.() ?? 0);
+    if (!progressBarRef.current) return;
+    const effectiveDurationSec = durationSec || (ytPlayerRef.current?.getDuration?.() ?? 0);
     if (effectiveDurationSec <= 0) return;
     const rect = progressBarRef.current.getBoundingClientRect();
     const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const sec = fraction * effectiveDurationSec;
-    setPlaybackPositionMs(sec * 1000);
-    ytPlayerRef.current.seekTo(sec, true);
+    seekPlayer(fraction * effectiveDurationSec);
   };
 
   const hasBars = structureMode === 'bars' && bars.length > 0;
@@ -210,37 +233,31 @@ export function GlobalPlayerShell() {
 
   const jumpByBars = useCallback(
     (direction: 1 | -1) => {
-      if (!isYouTubeEmbed || !ytPlayerRef.current?.getCurrentTime || !ytPlayerRef.current?.seekTo) return;
-      const current = ytPlayerRef.current.getCurrentTime();
+      const current = getCurrentSeconds();
+      if (current === undefined) return;
       const nextBarIdx = bars.findIndex((b) => b > current);
       const currentIdx = nextBarIdx === -1 ? bars.length - 1 : Math.max(0, nextBarIdx - 1);
       let targetIdx = currentIdx + direction * JUMP_BARS;
       if (targetIdx < 0) targetIdx = 0;
       if (targetIdx >= bars.length) targetIdx = bars.length - 1;
-      const sec = bars[targetIdx];
-      ytPlayerRef.current.seekTo(sec, true);
-      setPlaybackPositionMs(sec * 1000);
+      seekPlayer(bars[targetIdx]);
     },
-    [bars, isYouTubeEmbed, ytPlayerRef, setPlaybackPositionMs]
+    [bars, getCurrentSeconds, seekPlayer]
   );
 
   const handleJumpBack = () => {
-    if (!isYouTubeEmbed || !ytPlayerRef.current?.getCurrentTime || !ytPlayerRef.current?.seekTo) return;
     if (hasBars) { jumpByBars(-1); return; }
-    const current = ytPlayerRef.current.getCurrentTime();
-    const nextSec = Math.max(0, current - JUMP_SECONDS);
-    ytPlayerRef.current.seekTo(nextSec, true);
-    setPlaybackPositionMs(nextSec * 1000);
+    const current = getCurrentSeconds();
+    if (current === undefined) return;
+    seekPlayer(Math.max(0, current - JUMP_SECONDS));
   };
 
   const handleJumpForward = () => {
-    if (!isYouTubeEmbed || !ytPlayerRef.current?.getCurrentTime || !ytPlayerRef.current?.seekTo) return;
     if (hasBars) { jumpByBars(1); return; }
-    const current = ytPlayerRef.current.getCurrentTime();
-    const duration = durationSec || (ytPlayerRef.current.getDuration?.() ?? 0);
-    const nextSec = Math.min(duration, current + JUMP_SECONDS);
-    ytPlayerRef.current.seekTo(nextSec, true);
-    setPlaybackPositionMs(nextSec * 1000);
+    const current = getCurrentSeconds();
+    if (current === undefined) return;
+    const duration = durationSec || (ytPlayerRef.current?.getDuration?.() ?? 0);
+    seekPlayer(Math.min(duration, current + JUMP_SECONDS));
   };
 
   const controlsDisabled = activeSource === 'spotify';
@@ -373,7 +390,7 @@ export function GlobalPlayerShell() {
             progressPercent={progressPercent}
             durationMs={durationMs}
             playbackPositionMs={playbackPositionMs}
-            isYouTubeEmbed={isYouTubeEmbed}
+            isYouTubeEmbed={isYouTubeEmbed || isLocal}
             controlsDisabled={controlsDisabled}
             structureMode={structureMode}
             barTicks={barTicks}

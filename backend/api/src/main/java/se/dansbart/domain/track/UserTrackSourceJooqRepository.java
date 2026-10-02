@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -103,5 +104,15 @@ public class UserTrackSourceJooqRepository {
             .and(USER_TRACK_SOURCES.USER_ID.eq(userId))
             .execute();
         return rowsDeleted > 0;
+    }
+
+    /** Whether the track of the user's source has the given hash. Empty when the user holds no such source. */
+    public Optional<Boolean> trackHasHash(UUID sourceId, UUID userId, String contentHash) {
+        return dsl.select(DSL.coalesce(TRACKS.CONTENT_HASH.eq(contentHash), false))
+            .from(USER_TRACK_SOURCES)
+            .join(TRACKS).on(USER_TRACK_SOURCES.TRACK_ID.eq(TRACKS.ID))
+            .where(USER_TRACK_SOURCES.ID.eq(sourceId))
+            .and(USER_TRACK_SOURCES.USER_ID.eq(userId))
+            .fetchOptional(0, Boolean.class);
     }
 }

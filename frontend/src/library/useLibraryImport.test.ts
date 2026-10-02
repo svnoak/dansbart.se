@@ -76,6 +76,6 @@ describe('useLibraryImport', () => {
       isrc: 'SEABC2300001',
     });
     expect(init.body as string).not.toContain('audio bytes');
-    expect(saveLocalFile).toHaveBeenCalledWith('s1', { file });
+    expect(saveLocalFile).toHaveBeenCalledWith('s1', { file }, 't1');
   });
 });

@@ -1,10 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listTracks, deleteSource } from '@/api/generated/library/library';
 import type { LibrarySourceDto } from '@/api/models/librarySourceDto';
+import type { TrackListDto } from '@/api/models/trackListDto';
+import { PlayButton } from '@/components/TrackRow/PlayButton';
 import { StyleVotePanel } from '@/components/TrackRow/StyleVotePanel';
-import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
+import {
+  canKeepHandles,
+  getLocalFileForTrack,
+  LocalFilePermissionDenied,
+  pickAudioFiles,
+} from '@/library/localHandles';
+import { usePlayer } from '@/player/usePlayer';
+import { UNKNOWN_STYLE_COLOR } from '@/styles/danceStyleColors';
 import { useLibraryImport } from '@/library/useLibraryImport';
 import { Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
+
+function toTrack(source: LibrarySourceDto): TrackListDto {
+  return {
+    id: source.trackId,
+    title: source.title,
+    artistName: source.artist,
+    playable: true,
+    playbackLinks: [],
+  };
+}
 
 export function MyLibraryPage() {
   const [sources, setSources] = useState<LibrarySourceDto[] | null>(null);
@@ -13,6 +32,7 @@ export function MyLibraryPage() {
   const [removeError, setRemoveError] = useState<{ sourceId: string; text: string } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const { importFiles, progress, error } = useLibraryImport();
+  const { play, togglePlayPause, currentTrack, isPlaying } = usePlayer();
 
   const load = useCallback(async () => {
     try {
@@ -42,6 +62,25 @@ export function MyLibraryPage() {
     } catch {
       // The person closed the file picker.
     }
+  }
+
+  async function handlePlay(source: LibrarySourceDto) {
+    if (currentTrack?.id === source.trackId) {
+      togglePlayPause();
+      return;
+    }
+    try {
+      const file = await getLocalFileForTrack(source.trackId!, { askPermission: true });
+      if (!file) {
+        toast('Filen finns inte i den här webbläsaren. Importera låten igen.', 'error');
+        return;
+      }
+    } catch (error) {
+      if (!(error instanceof LocalFilePermissionDenied)) throw error;
+      toast('Dansbart.se kan inte läsa filen. Tillåt åtkomst och försök igen.', 'error');
+      return;
+    }
+    play(toTrack(source), sources?.map(toTrack));
   }
 
   async function handleRemove(sourceId: string) {
@@ -91,6 +130,13 @@ export function MyLibraryPage() {
         <ul className="divide-y divide-[rgb(var(--color-border))]">
           {sources?.map((source) => (
             <li key={source.sourceId} className="flex flex-wrap items-center gap-3 py-3">
+              <PlayButton
+                track={toTrack(source)}
+                isCurrent={currentTrack?.id === source.trackId}
+                isPlaying={isPlaying}
+                styleColor={UNKNOWN_STYLE_COLOR}
+                onPlay={() => void handlePlay(source)}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{source.title}</p>
                 <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">

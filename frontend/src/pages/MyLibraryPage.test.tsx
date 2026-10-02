@@ -4,6 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { MyLibraryPage } from './MyLibraryPage';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
+import { LocalFilePermissionDenied } from '@/library/localHandles';
+import { toastListeners } from '@/ui/toastEmitter';
 import { authValue, loggedInAuthValue } from '@/test/authValue';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -11,6 +13,8 @@ import { authValue, loggedInAuthValue } from '@/test/authValue';
 const listTracks = vi.fn();
 const deleteSource = vi.fn();
 const useAuth = vi.fn();
+const play = vi.fn();
+const getLocalFileForTrack = vi.fn();
 
 vi.mock('@/api/generated/library/library', () => ({
   listTracks: () => listTracks(),
@@ -18,6 +22,17 @@ vi.mock('@/api/generated/library/library', () => ({
 }));
 
 vi.mock('@/auth/useAuth', () => ({ useAuth: () => useAuth() }));
+
+vi.mock('@/player/usePlayer', () => ({
+  usePlayer: () => ({ play, currentTrack: null, isPlaying: false }),
+}));
+
+vi.mock('@/library/localHandles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/library/localHandles')>()),
+  canKeepHandles: () => false,
+  pickAudioFiles: vi.fn(),
+  getLocalFileForTrack: (...args: unknown[]) => getLocalFileForTrack(...args),
+}));
 
 vi.mock('@/library/useLibraryImport', () => ({
   useLibraryImport: () => ({ importFiles: vi.fn(), progress: null, error: null }),
@@ -41,6 +56,9 @@ describe('MyLibraryPage', () => {
     listTracks.mockReset();
     deleteSource.mockReset();
     useAuth.mockReset();
+    play.mockReset();
+    getLocalFileForTrack.mockReset();
+    getLocalFileForTrack.mockResolvedValue(new File(['audio bytes'], 'vals.mp3'));
     useAuth.mockReturnValue(loggedInAuthValue({}));
     listTracks.mockResolvedValue(sources);
     deleteSource.mockResolvedValue({});
@@ -95,6 +113,61 @@ describe('MyLibraryPage', () => {
     await act(async () => getButtons('Kategorisera')[1].click());
 
     expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain('t2');
+  });
+
+  it('plays a track from its row', async () => {
+    await renderPage();
+
+    await act(async () => document.body.querySelectorAll<HTMLButtonElement>('button[aria-label="Spela"]')[1].click());
+
+    const polka = {
+      id: 't2',
+      title: 'Polka',
+      artistName: 'Bo',
+      playable: true,
+      playbackLinks: [],
+    };
+    expect(play).toHaveBeenCalledWith(polka, [expect.objectContaining({ id: 't1' }), polka]);
+  });
+
+  async function clickFirstPlayAndCollectToasts() {
+    const messages: unknown[] = [];
+    const listener = (message: unknown) => messages.push(message);
+    toastListeners.add(listener);
+    await renderPage();
+    await act(async () =>
+      document.body.querySelector<HTMLButtonElement>('button[aria-label="Spela"]')!.click(),
+    );
+    toastListeners.delete(listener);
+    return messages;
+  }
+
+  it('shows an error when the file cannot be read', async () => {
+    getLocalFileForTrack.mockRejectedValue(new LocalFilePermissionDenied());
+
+    const messages = await clickFirstPlayAndCollectToasts();
+
+    expect(messages).toEqual([
+      expect.objectContaining({
+        text: 'Dansbart.se kan inte läsa filen. Tillåt åtkomst och försök igen.',
+        variant: 'error',
+      }),
+    ]);
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it('shows that the file is missing when no file is stored', async () => {
+    getLocalFileForTrack.mockResolvedValue(undefined);
+
+    const messages = await clickFirstPlayAndCollectToasts();
+
+    expect(messages).toEqual([
+      expect.objectContaining({
+        text: 'Filen finns inte i den här webbläsaren. Importera låten igen.',
+        variant: 'error',
+      }),
+    ]);
+    expect(play).not.toHaveBeenCalled();
   });
 
   it('removes a track with Ta bort', async () => {

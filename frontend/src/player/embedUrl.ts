@@ -14,7 +14,7 @@ export function getEmbedUrl(track: TrackListDto | null): string | null {
   return deepLinkToEmbedUrl(link);
 }
 
-export type PlaybackSource = 'youtube' | 'spotify';
+export type PlaybackSource = 'youtube' | 'spotify' | 'local';
 
 export function hasYouTube(track: TrackListDto | null): boolean {
   return !!track?.playbackLinks?.some((l) => l.platform?.toUpperCase() === 'YOUTUBE');
@@ -29,7 +29,7 @@ export function getEmbedUrlForSource(
   track: TrackListDto | null,
   source: PlaybackSource
 ): string | null {
-  if (!track?.playbackLinks?.length) return null;
+  if (source === 'local' || !track?.playbackLinks?.length) return null;
   const link =
     source === 'youtube'
       ? track.playbackLinks.find((l) => l.platform?.toUpperCase() === 'YOUTUBE')
