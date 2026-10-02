@@ -92,7 +92,7 @@ describe('StyleVotePanel', () => {
     });
 
     expect(submitFeedback).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain('Hur snabb är dansen?');
+    expect(document.body.textContent).toContain('Hur snabbt är danstempot?');
     for (const label of ['Långsamt', 'Lugnt', 'Lagom', 'Snabbt', 'V. snabbt', 'Hoppa över tempot']) {
       clickButton(label);
     }

@@ -154,7 +154,7 @@ function StyleVoteDialog({
 
         {step === 'tempo' && (
           <>
-            <p className="mb-3 text-sm font-bold text-[rgb(var(--color-text))]">Hur snabb är dansen?</p>
+            <p className="mb-3 text-sm font-bold text-[rgb(var(--color-text))]">Hur snabbt är danstempot?</p>
             <TempoPicker presentation="full" onSelect={handleSubmit} disabled={styleVote.isSubmitting} />
             <Button
               variant="ghost"
