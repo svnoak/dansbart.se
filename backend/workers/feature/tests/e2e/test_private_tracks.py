@@ -1,5 +1,5 @@
 """
-Unit tests for the handling of private tracks in worker sweeps.
+E2E tests for the handling of private tracks in worker sweeps.
 
 A private track is a person's own imported file. Sweeps over the whole table
 leave it alone. Classifier training keeps it. The worker model does not map
@@ -10,39 +10,13 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.core.models import (
     AnalysisSource,
-    PlaybackLink,
     Track,
-    TrackAlbum,
-    TrackArtist,
     TrackDanceStyle,
-    TrackStructureVersion,
 )
 from app.services.training import ModelTrainingService
-
-TABLES = [
-    Track.__table__,
-    PlaybackLink.__table__,
-    TrackArtist.__table__,
-    TrackAlbum.__table__,
-    AnalysisSource.__table__,
-    TrackDanceStyle.__table__,
-    TrackStructureVersion.__table__,
-]
-
-
-@pytest.fixture
-def sqlite_session():
-    engine = create_engine("sqlite:///:memory:")
-    for table in TABLES:
-        table.create(engine)
-    db = sessionmaker(bind=engine)()
-    yield db
-    db.close()
 
 
 def add_track(db, title, is_private):
@@ -57,29 +31,31 @@ def add_analysis_source(db, track):
     db.commit()
 
 
-def test_orphan_cleanup_keeps_private_track(sqlite_session):
-    add_track(sqlite_session, "Public orphan", is_private=False)
-    add_track(sqlite_session, "Private file", is_private=True)
+@pytest.mark.e2e
+def test_orphan_cleanup_keeps_private_track(test_db):
+    add_track(test_db, "Public orphan", is_private=False)
+    add_track(test_db, "Private file", is_private=True)
 
     from app.workers.tasks_light import cleanup_orphans_task
 
-    with patch("app.workers.tasks_light.SessionLocal", return_value=sqlite_session):
+    with patch("app.workers.tasks_light.SessionLocal", return_value=test_db):
         cleanup_orphans_task()
 
-    remaining_titles = {row.title for row in sqlite_session.query(Track).all()}
+    remaining_titles = {row.title for row in test_db.query(Track).all()}
     assert remaining_titles == {"Private file"}
 
 
-def test_reclassify_library_skips_private_track(sqlite_session):
-    public_track = add_track(sqlite_session, "Public", is_private=False)
-    private_track = add_track(sqlite_session, "Private file", is_private=True)
-    add_analysis_source(sqlite_session, public_track)
-    add_analysis_source(sqlite_session, private_track)
+@pytest.mark.e2e
+def test_reclassify_library_skips_private_track(test_db):
+    public_track = add_track(test_db, "Public", is_private=False)
+    private_track = add_track(test_db, "Private file", is_private=True)
+    add_analysis_source(test_db, public_track)
+    add_analysis_source(test_db, private_track)
 
     with patch("app.services.classification.StyleClassifier"):
         from app.services.classification import ClassificationService
 
-        service = ClassificationService(sqlite_session)
+        service = ClassificationService(test_db)
     service.classifier = MagicMock()
     service.classifier.classify.return_value = []
 
@@ -89,9 +65,10 @@ def test_reclassify_library_skips_private_track(sqlite_session):
     assert classified_titles == {"Public"}
 
 
-def test_training_rows_keep_private_track(sqlite_session):
-    private_track = add_track(sqlite_session, "Private file", is_private=True)
-    sqlite_session.add(
+@pytest.mark.e2e
+def test_training_rows_keep_private_track(test_db):
+    private_track = add_track(test_db, "Private file", is_private=True)
+    test_db.add(
         TrackDanceStyle(
             track_id=private_track.id,
             dance_style="Schottis",
@@ -105,8 +82,8 @@ def test_training_rows_keep_private_track(sqlite_session):
             source="user",
         )
     )
-    sqlite_session.commit()
+    test_db.commit()
 
-    rows = ModelTrainingService(sqlite_session)._select_training_rows()
+    rows = ModelTrainingService(test_db)._select_training_rows()
 
     assert [row.track_id for row in rows] == [private_track.id]
