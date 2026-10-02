@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.jooq.impl.DSL.lower;
 import static se.dansbart.jooq.Tables.GROUP_MEMBERS;
 import static se.dansbart.jooq.Tables.GROUPS;
 
@@ -26,7 +27,7 @@ public class GroupJooqRepository {
 
     public Optional<Group> findByNameIgnoreCase(String name) {
         return dsl.selectFrom(GROUPS)
-            .where(GROUPS.NAME.lower().eq(name.trim().toLowerCase()))
+            .where(lower(GROUPS.NAME).eq(name.trim().toLowerCase()))
             .fetchOptional(this::toGroup);
     }
 

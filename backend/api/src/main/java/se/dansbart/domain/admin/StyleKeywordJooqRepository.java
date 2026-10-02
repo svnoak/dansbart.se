@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.jooq.impl.DSL.count;
+import static org.jooq.impl.DSL.lower;
 import static se.dansbart.jooq.Tables.STYLE_KEYWORDS;
 
 @Repository
@@ -108,7 +109,7 @@ public class StyleKeywordJooqRepository {
     }
 
     public Page<StyleKeyword> searchByKeyword(String search, Pageable pageable) {
-        var condition = STYLE_KEYWORDS.KEYWORD.lower().like("%" + search.toLowerCase() + "%");
+        var condition = lower(STYLE_KEYWORDS.KEYWORD).like("%" + search.toLowerCase() + "%");
         long total = dsl.fetchCount(dsl.selectFrom(STYLE_KEYWORDS).where(condition));
         List<StyleKeyword> content = dsl.selectFrom(STYLE_KEYWORDS)
             .where(condition)

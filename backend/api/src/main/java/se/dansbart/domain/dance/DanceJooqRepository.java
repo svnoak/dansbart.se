@@ -34,7 +34,7 @@ public class DanceJooqRepository {
     public Page<Dance> findAll(String search, String danceType, Pageable pageable) {
         Condition condition = DSL.trueCondition();
         if (search != null && !search.isBlank()) {
-            condition = condition.and(DANCES.NAME.lower().like("%" + search.toLowerCase() + "%"));
+            condition = condition.and(DSL.lower(DANCES.NAME).like("%" + search.toLowerCase() + "%"));
         }
         if (danceType != null && !danceType.isBlank()) {
             condition = condition.and(DANCES.DANCE_TYPE.equalIgnoreCase(danceType));
