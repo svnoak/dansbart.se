@@ -16,7 +16,19 @@ declare global {
 
 const DATABASE_NAME = 'dansbart-library';
 const STORE_NAME = 'handles';
-const sessionFiles = new Map<string, File>();
+const sessionFiles = new Map<string, { trackId: string; file: File }>();
+
+interface StoredFile {
+  trackId: string;
+  handle: FileSystemFileHandle;
+}
+
+interface PermissionHandle {
+  queryPermission(descriptor: { mode: 'read' }): Promise<PermissionState>;
+  requestPermission(descriptor: { mode: 'read' }): Promise<PermissionState>;
+}
+
+export class LocalFilePermissionDenied extends Error {}
 
 export const canKeepHandles = () => typeof window.showOpenFilePicker === 'function';
 
@@ -54,27 +66,58 @@ async function runRequest<T>(
   });
 }
 
-export async function saveLocalFile(sourceId: string, { file, handle }: PickedFile) {
+export async function saveLocalFile(sourceId: string, { file, handle }: PickedFile, trackId: string) {
   if (handle) {
     try {
-      await runRequest('readwrite', (store) => store.put(handle, sourceId));
+      await runRequest('readwrite', (store) => store.put({ trackId, handle }, sourceId));
       return;
     } catch {
       // The session map holds the file when IndexedDB is unavailable.
     }
   }
-  sessionFiles.set(sourceId, file);
+  sessionFiles.set(sourceId, { trackId, file });
+}
+
+/** Reads the file of a stored handle. The browser asks the person for access only when `askPermission` is true. */
+async function readHandle(handle: FileSystemFileHandle, askPermission: boolean) {
+  const descriptor = { mode: 'read' } as const;
+  const permissionHandle = handle as unknown as PermissionHandle;
+  let state = await permissionHandle.queryPermission(descriptor);
+  if (state !== 'granted' && askPermission) {
+    state = await permissionHandle.requestPermission(descriptor);
+  }
+  return state === 'granted' ? handle.getFile() : undefined;
 }
 
 export async function getLocalFile(sourceId: string): Promise<File | undefined> {
   const sessionFile = sessionFiles.get(sourceId);
-  if (sessionFile) return sessionFile;
+  if (sessionFile) return sessionFile.file;
   try {
-    const handle = await runRequest<FileSystemFileHandle | undefined>('readonly', (store) =>
+    const stored = await runRequest<StoredFile | undefined>('readonly', (store) =>
       store.get(sourceId),
     );
-    return await handle?.getFile();
+    return stored && (await readHandle(stored.handle, false));
   } catch {
     return undefined;
   }
+}
+
+export async function getLocalFileForTrack(
+  trackId: string,
+  { askPermission = false } = {},
+): Promise<File | undefined> {
+  for (const entry of sessionFiles.values()) {
+    if (entry.trackId === trackId) return entry.file;
+  }
+  let match: StoredFile | undefined;
+  try {
+    const stored = await runRequest<StoredFile[]>('readonly', (store) => store.getAll());
+    match = stored.find((entry) => entry.trackId === trackId);
+  } catch {
+    return undefined;
+  }
+  if (!match) return undefined;
+  const file = await readHandle(match.handle, askPermission).catch(() => undefined);
+  if (!file && askPermission) throw new LocalFilePermissionDenied();
+  return file;
 }

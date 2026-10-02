@@ -232,6 +232,45 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
         assertEquals(0, listOf(firstSignedIn).size());
     }
 
+    private String matchBody(String hash) {
+        return "{\"contentHash\":\"" + hash + "\"}";
+    }
+
+    @Test
+    @DisplayName("the hash of the own source matches")
+    void matchConfirmsTheHashOfOwnSource() throws Exception {
+        JsonNode own = importTrack(firstSignedIn, HASH_A, "Mine", 180000, null);
+
+        String json = mockMvc.perform(post("/api/library/sources/{id}/match", own.get("sourceId").asText())
+                .with(firstSignedIn).contentType(MediaType.APPLICATION_JSON).content(matchBody(HASH_A)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+        assertTrue(objectMapper.readTree(json).get("matches").asBoolean());
+        assertFalse(HEX_64.matcher(json).find(), "the answer holds a content hash");
+    }
+
+    @Test
+    @DisplayName("another hash does not match")
+    void matchRejectsAnotherHash() throws Exception {
+        JsonNode own = importTrack(firstSignedIn, HASH_A, "Mine", 180000, null);
+
+        String json = mockMvc.perform(post("/api/library/sources/{id}/match", own.get("sourceId").asText())
+                .with(firstSignedIn).contentType(MediaType.APPLICATION_JSON).content(matchBody(HASH_B)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+        assertFalse(objectMapper.readTree(json).get("matches").asBoolean());
+    }
+
+    @Test
+    @DisplayName("a match request for another person's source gets 404")
+    void matchGives404ForAnotherPersonsSource() throws Exception {
+        JsonNode other = importTrack(secondSignedIn, HASH_A, "Theirs", 170000, null);
+
+        mockMvc.perform(post("/api/library/sources/{id}/match", other.get("sourceId").asText())
+                .with(firstSignedIn).contentType(MediaType.APPLICATION_JSON).content(matchBody(HASH_A)))
+            .andExpect(status().isNotFound());
+    }
+
     private JsonNode listOf(RequestPostProcessor user) throws Exception {
         String json = mockMvc.perform(get("/api/library/tracks").with(user))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

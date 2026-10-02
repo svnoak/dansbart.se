@@ -24,13 +24,13 @@ export function useLibraryImport() {
           computeAudioHash(item.file),
           readTags(item.file),
         ]);
-        const { sourceId } = await importTrack({
+        const { sourceId, trackId } = await importTrack({
           contentHash,
           provider: 'LOCAL',
           providerFileId: item.file.name,
           ...tags,
         });
-        await saveLocalFile(sourceId!, item);
+        await saveLocalFile(sourceId!, item, trackId!);
       } catch {
         failedNames.push(item.file.name);
       }

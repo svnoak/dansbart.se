@@ -36,6 +36,17 @@ public class LibraryController {
         return ResponseEntity.ok(sources);
     }
 
+    @PostMapping("/sources/{sourceId}/match")
+    @Operation(summary = "Check whether a file hash matches the track of a source")
+    public ResponseEntity<MatchResponse> matchHash(
+            @PathVariable UUID sourceId,
+            @AuthenticationPrincipal UUID userId,
+            @Valid @RequestBody MatchRequest request) {
+        return libraryService.matchesHash(sourceId, userId, request.contentHash())
+            .map(matches -> ResponseEntity.ok(new MatchResponse(matches)))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/sources/{sourceId}")
     @Operation(summary = "Delete a track source")
     public ResponseEntity<Void> deleteSource(

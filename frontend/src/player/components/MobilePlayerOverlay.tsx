@@ -173,7 +173,7 @@ export function MobilePlayerOverlay({
               progressPercent={progressPercent}
               durationMs={durationMs}
               playbackPositionMs={playbackPositionMs}
-              isYouTubeEmbed={isYouTubeEmbed}
+              isYouTubeEmbed={isYouTubeEmbed || activeSource === 'local'}
               controlsDisabled={controlsDisabled}
               structureMode={structureMode}
               barTicks={barTicks}
