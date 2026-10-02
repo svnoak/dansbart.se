@@ -11,6 +11,17 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
   addTrack: vi.fn(),
 }));
 
+const { hasLocalFileForTrack, getLocalFileForTrack } = vi.hoisted(() => ({
+  hasLocalFileForTrack: vi.fn(),
+  getLocalFileForTrack: vi.fn(),
+}));
+
+vi.mock('@/library/localHandles', () => ({
+  LocalFilePermissionDenied: class extends Error {},
+  hasLocalFileForTrack: (...args: unknown[]) => hasLocalFileForTrack(...args),
+  getLocalFileForTrack: (...args: unknown[]) => getLocalFileForTrack(...args),
+}));
+
 vi.mock('@/ui', async () => {
   const actual = await vi.importActual('@/ui');
   return {
@@ -336,5 +347,75 @@ describe('TrackRow long press', () => {
     });
 
     expect(playMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('TrackRow availability', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    hasLocalFileForTrack.mockReset();
+    getLocalFileForTrack.mockReset();
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    root.unmount();
+    container.remove();
+  });
+
+  async function renderRow(row: TrackListDto) {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={row} />
+        </ThemeProvider>,
+      );
+    });
+  }
+
+  it('shows Inte tillgänglig för dig and no play action for a track the viewer cannot play', async () => {
+    await renderRow({ ...track, playable: false, playbackLinks: [] });
+
+    expect(container.textContent).toContain('Inte tillgänglig för dig');
+    expect(container.querySelector('button[aria-label="Spela"]')).toBeNull();
+    expect(container.textContent).toContain('Test Track');
+  });
+
+  it('offers Välj filen igen for an own track without a local file', async () => {
+    hasLocalFileForTrack.mockResolvedValue(false);
+
+    await renderRow({ ...track, playable: true, playbackLinks: [] });
+
+    expect(hasLocalFileForTrack).toHaveBeenCalledWith('track-1');
+    expect(container.textContent).toContain('Välj filen igen');
+    expect(container.querySelector('button[aria-label="Spela"]')).toBeNull();
+  });
+
+  it('offers play for an own track with a stored handle that needs permission', async () => {
+    hasLocalFileForTrack.mockResolvedValue(true);
+    getLocalFileForTrack.mockResolvedValue(undefined);
+
+    await renderRow({ ...track, playable: true, playbackLinks: [] });
+
+    expect(container.textContent).not.toContain('Välj filen igen');
+    expect(container.querySelector('button[aria-label="Spela"]')).not.toBeNull();
+  });
+
+  it('asks for file permission when playing an own track from a row', async () => {
+    hasLocalFileForTrack.mockResolvedValue(true);
+    getLocalFileForTrack.mockResolvedValue(new File(['audio bytes'], 'vals.mp3'));
+    const ownTrack = { ...track, playable: true, playbackLinks: [] };
+
+    await renderRow(ownTrack);
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('button[aria-label="Spela"]')!.click();
+    });
+
+    expect(getLocalFileForTrack).toHaveBeenCalledWith('track-1', { askPermission: true });
+    expect(playMock).toHaveBeenCalledWith(ownTrack, undefined);
   });
 });

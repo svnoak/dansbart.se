@@ -121,3 +121,16 @@ export async function getLocalFileForTrack(
   if (!file && askPermission) throw new LocalFilePermissionDenied();
   return file;
 }
+
+/** True when the browser stores a file or a handle for the track. Never asks for permission. */
+export async function hasLocalFileForTrack(trackId: string): Promise<boolean> {
+  for (const entry of sessionFiles.values()) {
+    if (entry.trackId === trackId) return true;
+  }
+  try {
+    const stored = await runRequest<StoredFile[]>('readonly', (store) => store.getAll());
+    return stored.some((entry) => entry.trackId === trackId);
+  } catch {
+    return false;
+  }
+}

@@ -4,15 +4,12 @@ import type { LibrarySourceDto } from '@/api/models/librarySourceDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { PlayButton } from '@/components/TrackRow/PlayButton';
 import { StyleVotePanel } from '@/components/TrackRow/StyleVotePanel';
-import {
-  canKeepHandles,
-  getLocalFileForTrack,
-  LocalFilePermissionDenied,
-  pickAudioFiles,
-} from '@/library/localHandles';
+import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
+import { requestLocalFile } from '@/library/requestLocalFile';
 import { usePlayer } from '@/player/usePlayer';
 import { UNKNOWN_STYLE_COLOR } from '@/styles/danceStyleColors';
 import { useLibraryImport } from '@/library/useLibraryImport';
+import { RelinkButton } from '@/components/TrackRow/RelinkButton';
 import { Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
 
 function toTrack(source: LibrarySourceDto): TrackListDto {
@@ -30,6 +27,7 @@ export function MyLibraryPage() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [votingOn, setVotingOn] = useState<LibrarySourceDto | null>(null);
   const [removeError, setRemoveError] = useState<{ sourceId: string; text: string } | null>(null);
+  const [missingTrackIds, setMissingTrackIds] = useState<string[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const { importFiles, progress, error } = useLibraryImport();
   const { play, togglePlayPause, currentTrack, isPlaying } = usePlayer();
@@ -69,17 +67,9 @@ export function MyLibraryPage() {
       togglePlayPause();
       return;
     }
-    try {
-      const file = await getLocalFileForTrack(source.trackId!, { askPermission: true });
-      if (!file) {
-        toast('Filen finns inte i den här webbläsaren. Importera låten igen.', 'error');
-        return;
-      }
-    } catch (error) {
-      if (!(error instanceof LocalFilePermissionDenied)) throw error;
-      toast('Dansbart.se kan inte läsa filen. Tillåt åtkomst och försök igen.', 'error');
-      return;
-    }
+    const access = await requestLocalFile(source.trackId!);
+    if (access === 'missing') setMissingTrackIds((ids) => [...ids, source.trackId!]);
+    if (access !== 'ready') return;
     play(toTrack(source), sources?.map(toTrack));
   }
 
@@ -130,13 +120,22 @@ export function MyLibraryPage() {
         <ul className="divide-y divide-[rgb(var(--color-border))]">
           {sources?.map((source) => (
             <li key={source.sourceId} className="flex flex-wrap items-center gap-3 py-3">
-              <PlayButton
-                track={toTrack(source)}
-                isCurrent={currentTrack?.id === source.trackId}
-                isPlaying={isPlaying}
-                styleColor={UNKNOWN_STYLE_COLOR}
-                onPlay={() => void handlePlay(source)}
-              />
+              {missingTrackIds.includes(source.trackId!) ? (
+                <RelinkButton
+                  trackId={source.trackId!}
+                  onRelinked={() =>
+                    setMissingTrackIds((ids) => ids.filter((id) => id !== source.trackId))
+                  }
+                />
+              ) : (
+                <PlayButton
+                  track={toTrack(source)}
+                  isCurrent={currentTrack?.id === source.trackId}
+                  isPlaying={isPlaying}
+                  styleColor={UNKNOWN_STYLE_COLOR}
+                  onPlay={() => void handlePlay(source)}
+                />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{source.title}</p>
                 <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
