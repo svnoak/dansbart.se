@@ -10,7 +10,7 @@ import { getVoterId } from '@/utils/voter';
 import { getTempoLabel } from '@/utils/tempoLabel';
 import { useStyleVote } from '@/hooks/useStyleVote';
 import { StylePicker } from '@/components/StylePicker';
-import { TEMPO_OPTIONS } from '@/utils/tempoOptions';
+import { TempoPicker } from '@/components/TempoPicker';
 
 type Step =
   | 'hidden'
@@ -625,11 +625,8 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   &larr; Tillbaka
                 </button>
               </div>
-              <StylePicker
+              <TempoPicker
                 presentation="compact"
-                placeholder="Välj tempo..."
-                ariaLabel="Välj tempo"
-                options={TEMPO_OPTIONS.map((t) => ({ value: t.key, label: t.label }))}
                 onSelect={(key) => submitTempoSelection(key)}
                 compactClassName="w-full bg-purple-800 border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs"
               />

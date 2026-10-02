@@ -49,6 +49,9 @@ describe('StyleBadge', () => {
     expect(hallingButton).toBeDefined();
     await act(async () => {
       hallingButton?.click();
+    });
+    await act(async () => {
+      Array.from(document.body.querySelectorAll('button')).find((b) => b.textContent?.includes('Hoppa över tempot'))?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
     return badgeButton;
