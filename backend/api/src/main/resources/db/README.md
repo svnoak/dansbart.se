@@ -10,7 +10,7 @@
 
 jOOQ classes are generated from your **live PostgreSQL schema** during the normal Maven build.
 
-- **When:** Every `mvn compile`, `mvn package`, `mvn spring-boot:run`, etc. runs the `generate-sources` phase: Flyway migrate first, then jOOQ codegen. Output goes to `src/main/jooq/`.
+- **When:** Every `mvn compile`, `mvn package`, `mvn spring-boot:run`, etc. runs the `generate-sources` phase: Flyway migrate first, then jOOQ codegen. Output goes to `src/main/java/se/dansbart/jooq/`.
 - **Requirement:** PostgreSQL must be running and reachable (default: `localhost:5432/dansbart`, user `postgres`, password `password`).
 - **Override connection** (e.g. different host in CI): pass Maven properties:
   ```bash
