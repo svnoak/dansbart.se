@@ -57,7 +57,8 @@ public class TrackJooqRepository {
         }
         dsl.insertInto(TRACKS)
             .columns(TRACKS.ID, TRACKS.TITLE, TRACKS.ISRC, TRACKS.DURATION_MS, TRACKS.PROCESSING_STATUS,
-                TRACKS.HAS_VOCALS, TRACKS.SWING_RATIO, TRACKS.ARTICULATION, TRACKS.BOUNCINESS, TRACKS.LOUDNESS)
+                TRACKS.HAS_VOCALS, TRACKS.SWING_RATIO, TRACKS.ARTICULATION, TRACKS.BOUNCINESS, TRACKS.LOUDNESS,
+                TRACKS.IS_PRIVATE, TRACKS.CONTENT_HASH)
             .values(
                 track.getId(),
                 track.getTitle(),
@@ -68,7 +69,9 @@ public class TrackJooqRepository {
                 track.getSwingRatio() != null ? track.getSwingRatio().doubleValue() : null,
                 track.getArticulation() != null ? track.getArticulation().doubleValue() : null,
                 track.getBounciness() != null ? track.getBounciness().doubleValue() : null,
-                track.getLoudness() != null ? track.getLoudness().doubleValue() : null
+                track.getLoudness() != null ? track.getLoudness().doubleValue() : null,
+                track.getIsPrivate() != null ? track.getIsPrivate() : false,
+                track.getContentHash()
             )
             .execute();
         return track;
@@ -795,6 +798,41 @@ public class TrackJooqRepository {
             .limit(limit)
             .offset(offset)
             .fetch(r -> new Object[]{ r.get(TRACKS.ISRC), r.get(1, Long.class) });
+    }
+
+    public Optional<UUID> findTrackByContentHash(String hash) {
+        return dsl.select(TRACKS.ID)
+            .from(TRACKS)
+            .where(TRACKS.CONTENT_HASH.eq(hash))
+            .fetchOptional()
+            .map(r -> r.get(TRACKS.ID));
+    }
+
+    public Optional<UUID> findPublicTrackByIsrc(String isrc) {
+        List<UUID> tracks = dsl.select(TRACKS.ID)
+            .from(TRACKS)
+            .where(TRACKS.ISRC.eq(isrc))
+            .and(TRACKS.IS_PRIVATE.eq(false))
+            .fetch(TRACKS.ID);
+        if (tracks.size() == 1) {
+            return Optional.of(tracks.get(0));
+        }
+        return Optional.empty();
+    }
+
+    public Optional<Integer> getTrackDuration(UUID trackId) {
+        return dsl.select(TRACKS.DURATION_MS)
+            .from(TRACKS)
+            .where(TRACKS.ID.eq(trackId))
+            .fetchOptional()
+            .map(r -> r.get(TRACKS.DURATION_MS));
+    }
+
+    public void updateTrackContentHash(UUID trackId, String hash) {
+        dsl.update(TRACKS)
+            .set(TRACKS.CONTENT_HASH, hash)
+            .where(TRACKS.ID.eq(trackId))
+            .execute();
     }
 
     private Track toTrack(Record r) {
