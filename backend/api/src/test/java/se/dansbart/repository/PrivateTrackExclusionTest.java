@@ -54,7 +54,8 @@ class PrivateTrackExclusionTest extends AbstractRepositoryTest {
             "findByIsrc",
             "countByIsrcNotNull",
             "countByIsrcStartingWith",
-            "findDuplicateIsrcs");
+            "findDuplicateIsrcs",
+            "findPublicTrackByIsrc");
 
     private static final Set<String> UNFILTERED = Set.of(
             "findById",
@@ -73,7 +74,10 @@ class PrivateTrackExclusionTest extends AbstractRepositoryTest {
             "findIdsByProcessingStatusOrderByCreatedAtDesc",
             "findIdsOrderByCreatedAtDesc",
             "findIdsWhereProcessingStatusNotDone",
-            "countPrivateTracks");
+            "countPrivateTracks",
+            "findTrackByContentHash",
+            "getTrackDuration",
+            "updateTrackContentHash");
 
     private static final String STYLE = "polska";
     private static final String PUBLIC_SUB_STYLE = "slangpolska";
