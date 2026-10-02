@@ -28,6 +28,11 @@ class AdminStatsControllerE2ETest extends AbstractE2ETest {
     @Autowired
     private TrackPlaybackJooqRepository playbackRepository;
 
+    private void insertSource(UUID person, Track track) {
+        dsl.execute("insert into user_track_sources (id, user_id, track_id, provider, title)"
+            + " values (?, ?, ?, 'LOCAL', 'Tune')", UUID.randomUUID(), person, track.getId());
+    }
+
     @Nested
     @DisplayName("Authorization")
     class Authorization {
@@ -91,6 +96,25 @@ class AdminStatsControllerE2ETest extends AbstractE2ETest {
                 .andExpect(jsonPath("$.publicPlayCount", equalTo(3)))
                 .andExpect(jsonPath("$.privatePlayCount", equalTo(2)))
                 .andExpect(jsonPath("$.library.totalTracks", equalTo(2)));
+        }
+
+        @Test
+        @DisplayName("admin sees how many people imported tracks")
+        void adminStatsCountsPeopleWithImportedTracks() throws Exception {
+            Track libraryTrack = testData.track().withTitle("Library Track").complete().build();
+            dsl.execute("update tracks set is_private = true where id = ?", libraryTrack.getId());
+            UUID firstPerson = testData.user().withId(UUID.randomUUID()).withUsername("importer1").build().getId();
+            UUID secondPerson = testData.user().withId(UUID.randomUUID()).withUsername("importer2").build().getId();
+            Track otherTrack = testData.track().withTitle("Other Library Track").complete().build();
+            dsl.execute("update tracks set is_private = true where id = ?", otherTrack.getId());
+            insertSource(firstPerson, libraryTrack);
+            insertSource(firstPerson, otherTrack);
+            insertSource(secondPerson, libraryTrack);
+
+            mockMvc.perform(get("/api/admin/stats")
+                    .with(jwt.adminToken(ADMIN_USER_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.libraryUserCount", equalTo(2)));
         }
 
         @Test

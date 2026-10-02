@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.analytics.TrackPlaybackJooqRepository;
 import se.dansbart.domain.stats.StatsService;
 import se.dansbart.domain.track.TrackJooqRepository;
+import se.dansbart.domain.track.UserTrackSourceJooqRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +16,7 @@ public class AdminStatsService {
     private final StatsService statsService;
     private final TrackJooqRepository trackRepository;
     private final TrackPlaybackJooqRepository playbackRepository;
+    private final UserTrackSourceJooqRepository sourceRepository;
 
     public AdminStatsDto getAdminStats() {
         long privateTrackCount = trackRepository.countPrivateTracks();
@@ -26,6 +28,7 @@ public class AdminStatsService {
         return new AdminStatsDto(
             statsService.getLibraryStats(),
             privateTrackCount,
+            sourceRepository.countDistinctUsers(),
             publicPlayCount,
             privatePlayCount
         );

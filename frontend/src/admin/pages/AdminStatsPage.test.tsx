@@ -60,6 +60,7 @@ describe('AdminStatsPage', () => {
         coveragePercent: 95,
       },
       privateTrackCount: 100,
+      libraryUserCount: 37,
       publicPlayCount: 5000,
       privatePlayCount: 500,
     });
@@ -100,6 +101,23 @@ describe('AdminStatsPage', () => {
 
     expect(container.textContent).toContain('Privata låtar');
     expect(container.textContent).toContain('100');
+  });
+
+  it('shows the number of people who use Mina låtar', async () => {
+    await act(async () => {
+      root.render(
+        <BrowserRouter>
+          <AdminStatsPage />
+        </BrowserRouter>
+      );
+    });
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    expect(container.textContent).toContain('Personer som använder Mina låtar');
+    expect(container.textContent).toContain('37');
   });
 
   it('shows the plays of public and private tracks', async () => {

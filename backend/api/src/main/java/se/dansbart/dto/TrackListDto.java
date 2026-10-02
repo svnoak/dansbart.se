@@ -18,6 +18,7 @@ public class TrackListDto {
 
     private UUID id;
     private String title;
+    private Boolean playable;
     private Integer durationMs;
 
     // Primary classification

@@ -98,11 +98,21 @@ public class DanceJooqRepository {
     }
 
     public List<DanceTrack> findConfirmedTracksByDanceId(UUID danceId) {
+        return findConfirmedTracksByDanceId(danceId, null);
+    }
+
+    /** The confirmed public tracks of a dance, and the confirmed private tracks that the viewer holds. */
+    public List<DanceTrack> findConfirmedTracksByDanceId(UUID danceId, UUID viewerId) {
+        Condition heldByViewer = viewerId == null ? DSL.falseCondition()
+                : DSL.exists(dsl.selectOne().from(USER_TRACK_SOURCES)
+                        .where(USER_TRACK_SOURCES.TRACK_ID.eq(TRACKS.ID))
+                        .and(USER_TRACK_SOURCES.USER_ID.eq(viewerId)));
         return dsl.selectFrom(DANCE_TRACKS)
                 .where(DANCE_TRACKS.DANCE_ID.eq(danceId)
                         .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
                         .and(DANCE_TRACKS.TRACK_ID.in(
-                            dsl.select(TRACKS.ID).from(TRACKS).where(TrackVisibility.publicOnly())
+                            dsl.select(TRACKS.ID).from(TRACKS)
+                                .where(TrackVisibility.publicOnly().or(heldByViewer))
                         )))
                 .fetch(this::toDanceTrack);
     }

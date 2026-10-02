@@ -52,8 +52,8 @@ public class DanceService {
                 .map(d -> toDto(d, danceJooqRepository.countConfirmedTracksByDanceId(d.getId())));
     }
 
-    public List<TrackListDto> getConfirmedTracksForDance(UUID danceId) {
-        List<DanceTrack> links = danceJooqRepository.findConfirmedTracksByDanceId(danceId);
+    public List<TrackListDto> getConfirmedTracksForDance(UUID danceId, UUID viewerId) {
+        List<DanceTrack> links = danceJooqRepository.findConfirmedTracksByDanceId(danceId, viewerId);
         if (links.isEmpty()) return List.of();
         List<UUID> trackIds = links.stream().map(DanceTrack::getTrackId).toList();
         return trackJooqRepository.findTrackListDtosByIds(trackIds);

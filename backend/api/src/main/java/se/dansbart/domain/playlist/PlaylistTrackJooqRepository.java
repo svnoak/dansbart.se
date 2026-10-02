@@ -24,8 +24,9 @@ public class PlaylistTrackJooqRepository {
     public PlaylistTrack insert(PlaylistTrack track) {
         UUID id = track.getId() != null ? track.getId() : UUID.randomUUID();
         dsl.insertInto(PLAYLIST_TRACKS)
-            .columns(PLAYLIST_TRACKS.ID, PLAYLIST_TRACKS.PLAYLIST_ID, PLAYLIST_TRACKS.TRACK_ID, PLAYLIST_TRACKS.POSITION)
-            .values(id, track.getPlaylistId(), track.getTrackId(), track.getPosition())
+            .columns(PLAYLIST_TRACKS.ID, PLAYLIST_TRACKS.PLAYLIST_ID, PLAYLIST_TRACKS.TRACK_ID, PLAYLIST_TRACKS.POSITION,
+                PLAYLIST_TRACKS.ADDED_BY)
+            .values(id, track.getPlaylistId(), track.getTrackId(), track.getPosition(), track.getAddedBy())
             .execute();
         track.setId(id);
         return track;
@@ -61,6 +62,7 @@ public class PlaylistTrackJooqRepository {
         pt.setPlaylistId(r.get(PLAYLIST_TRACKS.PLAYLIST_ID));
         pt.setTrackId(r.get(PLAYLIST_TRACKS.TRACK_ID));
         pt.setPosition(r.get(PLAYLIST_TRACKS.POSITION));
+        pt.setAddedBy(r.get(PLAYLIST_TRACKS.ADDED_BY));
 
         LocalDateTime addedAtRaw = r.get(PLAYLIST_TRACKS.ADDED_AT);
         OffsetDateTime addedAt = addedAtRaw != null ? addedAtRaw.atOffset(ZoneOffset.UTC) : null;

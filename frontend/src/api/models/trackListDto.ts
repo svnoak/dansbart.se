@@ -9,6 +9,7 @@ import type { PlaybackLinkDto } from './playbackLinkDto';
 export interface TrackListDto {
   id?: string;
   title?: string;
+  playable?: boolean;
   durationMs?: number;
   danceStyle?: string;
   subStyle?: string;

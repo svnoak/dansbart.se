@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class PrivateTrackGuardE2ETest extends AbstractE2ETest {
 
-    private static final Set<String> VISIBLE_TO_NON_HOLDER = Set.of("id", "title", "artistId", "artistName");
+    private static final Set<String> VISIBLE_TO_NON_HOLDER = Set.of("id", "title", "artistId", "artistName", "playable");
     private static final String SHARE_TOKEN = "private-guard-share-token";
 
     @Autowired
