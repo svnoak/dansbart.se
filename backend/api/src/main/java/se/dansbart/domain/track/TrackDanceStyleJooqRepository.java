@@ -49,8 +49,7 @@ public class TrackDanceStyleJooqRepository {
         return dsl.fetchCount(
             dsl.selectDistinct(TRACK_DANCE_STYLES.TRACK_ID)
                 .from(TRACK_DANCE_STYLES)
-                .join(TRACKS).on(TRACKS.ID.eq(TRACK_DANCE_STYLES.TRACK_ID))
-                .where(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danceStyle).and(TrackVisibility.publicOnly()))
+                .where(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danceStyle))
         );
     }
 

@@ -76,8 +76,7 @@ public class TrackPlaybackJooqRepository {
     public Long sumDurationSeconds(OffsetDateTime since) {
         return dsl.select(sum(TRACK_PLAYBACKS.DURATION_SECONDS))
             .from(TRACK_PLAYBACKS)
-            .join(TRACKS).on(TRACKS.ID.eq(TRACK_PLAYBACKS.TRACK_ID))
-            .where((since == null ? DSL.noCondition() : TRACK_PLAYBACKS.PLAYED_AT.ge(since)).and(TrackVisibility.publicOnly()))
+            .where(since == null ? DSL.noCondition() : TRACK_PLAYBACKS.PLAYED_AT.ge(since))
             .fetchOne(0, Long.class);
     }
 
@@ -91,8 +90,7 @@ public class TrackPlaybackJooqRepository {
                 sum(TRACK_PLAYBACKS.DURATION_SECONDS).as("total_duration")
             )
             .from(TRACK_PLAYBACKS)
-            .join(TRACKS).on(TRACKS.ID.eq(TRACK_PLAYBACKS.TRACK_ID))
-            .where((since == null ? DSL.noCondition() : TRACK_PLAYBACKS.PLAYED_AT.ge(since)).and(TrackVisibility.publicOnly()))
+            .where(since == null ? DSL.noCondition() : TRACK_PLAYBACKS.PLAYED_AT.ge(since))
             .groupBy(TRACK_PLAYBACKS.PLATFORM)
             .orderBy(DSL.field("play_count").desc())
             .fetch(r -> new Object[]{

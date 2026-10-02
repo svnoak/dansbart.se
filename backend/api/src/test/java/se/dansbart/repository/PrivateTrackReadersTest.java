@@ -92,7 +92,7 @@ class PrivateTrackReadersTest extends AbstractRepositoryTest {
     }
 
     @Test
-    void statsAndCountsIgnorePrivateTracks() {
+    void adminAnalyticsCountPrivateTracksAndPublicReadsDoNot() {
         Artist artist = testData.artist().build();
         Album album = testData.album().withArtist(artist).build();
         Track publicTrack = seedTrack("Stats Public", "DONE", false, null, artist, album);
@@ -108,14 +108,14 @@ class PrivateTrackReadersTest extends AbstractRepositoryTest {
                 .map(row -> (UUID) row[0]).toList();
 
         assertAll(
-                () -> assertEquals(1L, stats.getTotalTracks(), "getLibraryStats totalTracks counts the private track"),
-                () -> assertEquals(1L, stats.getClassified(), "getLibraryStats classified counts the private track"),
-                () -> assertEquals(1L, danceStyleRepository.countDistinctTracksByDanceStyle(STYLE),
+                () -> assertEquals(1L, stats.getTotalTracks(), "getLibraryStats totalTracks does not count the private track"),
+                () -> assertEquals(1L, stats.getClassified(), "getLibraryStats classified does not count the private track"),
+                () -> assertEquals(2L, danceStyleRepository.countDistinctTracksByDanceStyle(STYLE),
                         "countDistinctTracksByDanceStyle counts the private track"),
                 () -> assertVisible("findMostPlayedTracks", played, publicTrack, privateTrack),
-                () -> assertEquals(100L, playbackRepository.sumDurationSeconds(null),
+                () -> assertEquals(200L, playbackRepository.sumDurationSeconds(null),
                         "sumDurationSeconds sums the private track"),
-                () -> assertEquals(1L, number(playbackRepository.countByPlatform(null).get(0)[1]),
+                () -> assertEquals(2L, number(playbackRepository.countByPlatform(null).get(0)[1]),
                         "countByPlatform counts the private track"));
     }
 
