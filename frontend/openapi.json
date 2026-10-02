@@ -7409,6 +7409,7 @@
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "title": { "type": "string" },
+          "playable": { "type": "boolean" },
           "durationMs": { "type": "integer", "format": "int32" },
           "danceStyle": { "type": "string" },
           "subStyle": { "type": "string" },
@@ -7974,6 +7975,7 @@
         "properties": {
           "library": { "$ref": "#/components/schemas/StatsDto" },
           "privateTrackCount": { "type": "integer", "format": "int64" },
+          "libraryUserCount": { "type": "integer", "format": "int64" },
           "publicPlayCount": { "type": "integer", "format": "int64" },
           "privatePlayCount": { "type": "integer", "format": "int64" }
         }

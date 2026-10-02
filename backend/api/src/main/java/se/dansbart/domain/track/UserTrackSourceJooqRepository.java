@@ -37,6 +37,27 @@ public class UserTrackSourceJooqRepository {
             .fetchSet(TRACKS.ID);
     }
 
+    /** The sources of the private tracks among the given ids, earliest first. */
+    public List<PrivateTrackSource> findSourcesOfPrivateTracks(List<UUID> trackIds) {
+        return dsl.select(USER_TRACK_SOURCES.TRACK_ID, USER_TRACK_SOURCES.USER_ID,
+                USER_TRACK_SOURCES.TITLE, USER_TRACK_SOURCES.ARTIST)
+            .from(USER_TRACK_SOURCES)
+            .join(TRACKS).on(USER_TRACK_SOURCES.TRACK_ID.eq(TRACKS.ID))
+            .where(TRACKS.ID.in(trackIds))
+            .and(TRACKS.IS_PRIVATE.isTrue())
+            .orderBy(USER_TRACK_SOURCES.ADDED_AT.asc())
+            .fetch(r -> new PrivateTrackSource(r.get(USER_TRACK_SOURCES.TRACK_ID),
+                r.get(USER_TRACK_SOURCES.USER_ID), r.get(USER_TRACK_SOURCES.TITLE),
+                r.get(USER_TRACK_SOURCES.ARTIST)));
+    }
+
+    public long countDistinctUsers() {
+        return dsl.select(DSL.countDistinct(USER_TRACK_SOURCES.USER_ID)).from(USER_TRACK_SOURCES)
+            .fetchOne(0, long.class);
+    }
+
+    public record PrivateTrackSource(UUID trackId, UUID userId, String title, String artist) {}
+
     public UUID upsertSource(UUID userId, UUID trackId, String provider, String providerFileId,
                              String title, String artist, String album) {
         Record result = dsl.insertInto(USER_TRACK_SOURCES)

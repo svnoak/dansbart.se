@@ -18,6 +18,7 @@ public class PlaylistTrack {
     private UUID trackId;
     private Integer position;
     private OffsetDateTime addedAt;
+    private UUID addedBy;
 
     private Playlist playlist;
     private Track track;

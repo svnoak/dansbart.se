@@ -10,6 +10,8 @@ import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.track.PrivateTrackGuard;
 import se.dansbart.domain.track.TrackJooqRepository;
+import se.dansbart.domain.track.UserTrackSourceJooqRepository;
+import se.dansbart.domain.track.UserTrackSourceJooqRepository.PrivateTrackSource;
 import se.dansbart.domain.user.PlaylistCollaborator;
 import se.dansbart.domain.user.PlaylistCollaboratorJooqRepository;
 import se.dansbart.domain.user.UserJooqRepository;
@@ -30,6 +32,7 @@ import se.dansbart.exception.UnprocessableEntityException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -48,6 +51,7 @@ public class PlaylistService {
     private final GroupMemberJooqRepository groupMemberJooqRepository;
     private final CollaborationAccess collaborationAccess;
     private final PrivateTrackGuard privateTrackGuard;
+    private final UserTrackSourceJooqRepository sourceRepository;
 
     private static final Set<String> VALID_TEMPO_CATEGORIES = Set.of("Slow", "SlowMed", "Medium", "Fast", "Turbo");
     private static final int MAX_PAGE_SIZE = 100;
@@ -219,6 +223,7 @@ public class PlaylistService {
                     .playlistId(playlistId)
                     .trackId(trackId)
                     .position(nextPosition)
+                    .addedBy(userId)
                     .build();
                 return playlistTrackJooqRepository.insert(pt);
             }));
@@ -314,17 +319,32 @@ public class PlaylistService {
         List<UUID> trackIds = ptList.stream().map(PlaylistTrack::getTrackId).toList();
         List<TrackListDto> trackDtos = trackJooqRepository.findTrackListDtosByIds(trackIds);
         Set<UUID> hiddenTrackIds = privateTrackGuard.hiddenTrackIds(trackIds, viewerId);
+        Map<UUID, List<PrivateTrackSource>> sourcesByTrack = trackIds.isEmpty() ? Map.of()
+            : sourceRepository.findSourcesOfPrivateTracks(trackIds).stream()
+                .collect(Collectors.groupingBy(PrivateTrackSource::trackId));
         List<PlaylistTrackDto> playlistTrackDtos = new java.util.ArrayList<>();
         for (int i = 0; i < ptList.size(); i++) {
             PlaylistTrack pt = ptList.get(i);
             TrackListDto trackDto = i < trackDtos.size() ? trackDtos.get(i) : null;
-            if (trackDto != null && hiddenTrackIds.contains(trackDto.getId())) {
-                trackDto = TrackListDto.builder()
-                    .id(trackDto.getId())
-                    .title(trackDto.getTitle())
-                    .artistId(trackDto.getArtistId())
-                    .artistName(trackDto.getArtistName())
-                    .build();
+            if (trackDto != null) {
+                boolean hidden = hiddenTrackIds.contains(trackDto.getId());
+                if (hidden) {
+                    trackDto = TrackListDto.builder()
+                        .id(trackDto.getId())
+                        .title(trackDto.getTitle())
+                        .artistId(trackDto.getArtistId())
+                        .artistName(trackDto.getArtistName())
+                        .build();
+                }
+                trackDto.setPlayable(!hidden);
+                PrivateTrackSource tagSource = pickTagSource(
+                    sourcesByTrack.get(trackDto.getId()), hidden, viewerId, pt.getAddedBy());
+                if (tagSource != null) {
+                    trackDto.setTitle(tagSource.title());
+                    if (tagSource.artist() != null) {
+                        trackDto.setArtistName(tagSource.artist());
+                    }
+                }
             }
             playlistTrackDtos.add(PlaylistTrackDto.builder()
                 .id(pt.getId())
@@ -355,6 +375,15 @@ public class PlaylistService {
             .tracks(playlistTrackDtos)
             .collaborators(collaborators)
             .build();
+    }
+
+    private PrivateTrackSource pickTagSource(List<PrivateTrackSource> sources, boolean hidden,
+                                             UUID viewerId, UUID addedBy) {
+        if (sources == null) return null;
+        if (!hidden) {
+            return sources.stream().filter(s -> s.userId().equals(viewerId)).findFirst().orElse(null);
+        }
+        return sources.stream().filter(s -> s.userId().equals(addedBy)).findFirst().orElse(sources.get(0));
     }
 
     private CollaboratorDto toCollaboratorDto(PlaylistCollaborator collab) {

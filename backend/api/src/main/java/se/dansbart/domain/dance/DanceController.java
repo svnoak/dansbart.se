@@ -51,8 +51,10 @@ public class DanceController {
 
     @GetMapping("/{id}/tracks")
     @Operation(summary = "Get confirmed tracks for a dance")
-    public ResponseEntity<List<TrackListDto>> getDanceTracks(@PathVariable UUID id) {
-        return ResponseEntity.ok(danceService.getConfirmedTracksForDance(id));
+    public ResponseEntity<List<TrackListDto>> getDanceTracks(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID viewerId) {
+        return ResponseEntity.ok(danceService.getConfirmedTracksForDance(id, viewerId));
     }
 
     @GetMapping("/{id}/recommendations")

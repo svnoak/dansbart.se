@@ -1,0 +1,1 @@
+ALTER TABLE playlist_tracks ADD COLUMN added_by UUID REFERENCES users(id) ON DELETE SET NULL;

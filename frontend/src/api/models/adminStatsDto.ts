@@ -9,6 +9,7 @@ import type { StatsDto } from './statsDto';
 export interface AdminStatsDto {
   library?: StatsDto;
   privateTrackCount?: number;
+  libraryUserCount?: number;
   publicPlayCount?: number;
   privatePlayCount?: number;
 }

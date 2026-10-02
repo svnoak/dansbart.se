@@ -37,6 +37,7 @@ import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
+import se.dansbart.jooq.tables.Users.UsersPath;
 
 
 /**
@@ -84,6 +85,11 @@ public class PlaylistTracks extends TableImpl<Record> {
      * The column <code>public.playlist_tracks.added_at</code>.
      */
     public final TableField<Record, LocalDateTime> ADDED_AT = createField(DSL.name("added_at"), SQLDataType.LOCALDATETIME(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.LOCALDATETIME)), this, "");
+
+    /**
+     * The column <code>public.playlist_tracks.added_by</code>.
+     */
+    public final TableField<Record, UUID> ADDED_BY = createField(DSL.name("added_by"), SQLDataType.UUID, this, "");
 
     private PlaylistTracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -169,7 +175,7 @@ public class PlaylistTracks extends TableImpl<Record> {
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_PLAYLIST_ID_FKEY, Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_TRACK_ID_FKEY);
+        return Arrays.asList(Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_PLAYLIST_ID_FKEY, Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_TRACK_ID_FKEY, Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_ADDED_BY_FKEY);
     }
 
     private transient PlaylistsPath _playlists;
@@ -194,6 +200,18 @@ public class PlaylistTracks extends TableImpl<Record> {
             _tracks = new TracksPath(this, Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_TRACK_ID_FKEY, null);
 
         return _tracks;
+    }
+
+    private transient UsersPath _users;
+
+    /**
+     * Get the implicit join path to the <code>public.users</code> table.
+     */
+    public UsersPath users() {
+        if (_users == null)
+            _users = new UsersPath(this, Keys.PLAYLIST_TRACKS__PLAYLIST_TRACKS_ADDED_BY_FKEY, null);
+
+        return _users;
     }
 
     @Override

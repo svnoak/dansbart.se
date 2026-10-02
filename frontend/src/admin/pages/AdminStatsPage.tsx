@@ -100,6 +100,7 @@ export function AdminStatsPage() {
   const [days, setDays] = useState(30);
   const [libraryStats, setLibraryStats] = useState<Record<string, unknown> | null>(null);
   const [privateTrackCount, setPrivateTrackCount] = useState(0);
+  const [libraryUserCount, setLibraryUserCount] = useState(0);
   const [publicPlayCount, setPublicPlayCount] = useState(0);
   const [privatePlayCount, setPrivatePlayCount] = useState(0);
   const [dashboard, setDashboard] = useState<Record<string, unknown> | null>(null);
@@ -140,6 +141,7 @@ export function AdminStatsPage() {
       const adminStats = adminStatsRes as Record<string, unknown> | null;
       setLibraryStats(adminStats?.library as Record<string, unknown> | null);
       setPrivateTrackCount(Number(adminStats?.privateTrackCount ?? 0));
+      setLibraryUserCount(Number(adminStats?.libraryUserCount ?? 0));
       setPublicPlayCount(Number(adminStats?.publicPlayCount ?? 0));
       setPrivatePlayCount(Number(adminStats?.privatePlayCount ?? 0));
       setDashboard(dashRes as Record<string, unknown> | null);
@@ -329,6 +331,7 @@ export function AdminStatsPage() {
           <StatCard label="Väntar klassificering" value={pendingClassification} />
           <StatCard label="Spellistor" value={totalPlaylists} />
           <StatCard label="Privata låtar" value={privateTrackCount} />
+          <StatCard label="Personer som använder Mina låtar" value={libraryUserCount} />
           <StatCard label="Spelningar av offentliga låtar" value={publicPlayCount} />
           <StatCard label="Spelningar av privata låtar" value={privatePlayCount} />
         </div>
