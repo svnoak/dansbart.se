@@ -8,6 +8,7 @@ import se.dansbart.domain.track.TrackVisibility;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.jooq.impl.DSL.count;
@@ -98,5 +99,14 @@ public class TrackPlaybackJooqRepository {
                 r.get("play_count", Long.class),
                 r.get("total_duration", Long.class)
             });
+    }
+
+    public Map<Boolean, Integer> countPlaysByPrivacy() {
+        var playCount = count(TRACK_PLAYBACKS.ID).as("play_count");
+        return dsl.select(TRACKS.IS_PRIVATE, playCount)
+            .from(TRACK_PLAYBACKS)
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_PLAYBACKS.TRACK_ID))
+            .groupBy(TRACKS.IS_PRIVATE)
+            .fetchMap(TRACKS.IS_PRIVATE, playCount);
     }
 }

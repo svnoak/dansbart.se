@@ -7,8 +7,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { getStats } from '@/api/generated/stats/stats';
 import {
+  getAdminStats,
   getDashboard,
   getDailyVisits,
   getHourlyVisits,
@@ -99,6 +99,9 @@ function formatMinutes(seconds: number): string {
 export function AdminStatsPage() {
   const [days, setDays] = useState(30);
   const [libraryStats, setLibraryStats] = useState<Record<string, unknown> | null>(null);
+  const [privateTrackCount, setPrivateTrackCount] = useState(0);
+  const [publicPlayCount, setPublicPlayCount] = useState(0);
+  const [privatePlayCount, setPrivatePlayCount] = useState(0);
   const [dashboard, setDashboard] = useState<Record<string, unknown> | null>(null);
   const [daily, setDaily] = useState<DayData[]>([]);
   const [hourly, setHourly] = useState<HourData[]>([]);
@@ -117,9 +120,9 @@ export function AdminStatsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsRes, dashRes, dailyRes, hourlyRes, mostPlayedRes, platformRes, listenRes, nudgeRes, classifyRes, durationRes, flagsRes, pathsRes, searchRes] =
+      const [adminStatsRes, dashRes, dailyRes, hourlyRes, mostPlayedRes, platformRes, listenRes, nudgeRes, classifyRes, durationRes, flagsRes, pathsRes, searchRes] =
         await Promise.all([
-          getStats().catch(() => null),
+          getAdminStats().catch(() => null),
           getDashboard({ days }).catch(() => null),
           getDailyVisits({ days }).catch(() => null),
           getHourlyVisits({ days }).catch(() => null),
@@ -134,7 +137,11 @@ export function AdminStatsPage() {
           getSearchStats({ days }).catch(() => null),
         ]);
 
-      setLibraryStats(statsRes as Record<string, unknown> | null);
+      const adminStats = adminStatsRes as Record<string, unknown> | null;
+      setLibraryStats(adminStats?.library as Record<string, unknown> | null);
+      setPrivateTrackCount(Number(adminStats?.privateTrackCount ?? 0));
+      setPublicPlayCount(Number(adminStats?.publicPlayCount ?? 0));
+      setPrivatePlayCount(Number(adminStats?.privatePlayCount ?? 0));
       setDashboard(dashRes as Record<string, unknown> | null);
 
       // Daily visits: backend now returns { byDate: [{date, total, loggedIn, anonymous}], days }
@@ -321,6 +328,9 @@ export function AdminStatsPage() {
           <StatCard label="I kö" value={queuedTracks} />
           <StatCard label="Väntar klassificering" value={pendingClassification} />
           <StatCard label="Spellistor" value={totalPlaylists} />
+          <StatCard label="Privata låtar" value={privateTrackCount} />
+          <StatCard label="Spelningar av offentliga låtar" value={publicPlayCount} />
+          <StatCard label="Spelningar av privata låtar" value={privatePlayCount} />
         </div>
       </div>
 

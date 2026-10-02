@@ -72,7 +72,8 @@ class PrivateTrackExclusionTest extends AbstractRepositoryTest {
             "updateTrack",
             "findIdsByProcessingStatusOrderByCreatedAtDesc",
             "findIdsOrderByCreatedAtDesc",
-            "findIdsWhereProcessingStatusNotDone");
+            "findIdsWhereProcessingStatusNotDone",
+            "countPrivateTracks");
 
     private static final String STYLE = "polska";
     private static final String PUBLIC_SUB_STYLE = "slangpolska";

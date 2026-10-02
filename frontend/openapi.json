@@ -6657,6 +6657,23 @@
         }
       }
     },
+    "/api/admin/stats": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get admin statistics including private track and play counts",
+        "operationId": "getAdminStats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdminStatsDto" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/albums": {
       "get": {
         "tags": ["Admin Albums"],
@@ -7950,6 +7967,15 @@
           "name": { "type": "string" },
           "imageUrl": { "type": "string" },
           "role": { "type": "string" }
+        }
+      },
+      "AdminStatsDto": {
+        "type": "object",
+        "properties": {
+          "library": { "$ref": "#/components/schemas/StatsDto" },
+          "privateTrackCount": { "type": "integer", "format": "int64" },
+          "publicPlayCount": { "type": "integer", "format": "int64" },
+          "privatePlayCount": { "type": "integer", "format": "int64" }
         }
       },
       "AdminTrackDto": {
