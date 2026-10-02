@@ -73,10 +73,17 @@ public class Track {
     private String flagReason;
 
     // User Upload
+    @JsonIgnore
     private UUID uploaderId;
 
     @JsonIgnore
     private User uploader;
+
+    @JsonIgnore
+    private String contentHash;
+
+    @Builder.Default
+    private Boolean isPrivate = false;
 
     // Processing Status
     @Builder.Default

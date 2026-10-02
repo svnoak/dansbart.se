@@ -230,17 +230,19 @@ public class TrackJooqRepository {
         String pattern = "%" + (query == null ? "" : query).toLowerCase() + "%";
         List<Track> items = dsl.selectFrom(TRACKS)
             .where(DSL.lower(TRACKS.TITLE).like(pattern))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
             .fetch(this::toTrack);
-        long total = dsl.fetchCount(dsl.selectFrom(TRACKS).where(DSL.lower(TRACKS.TITLE).like(pattern)));
+        long total = dsl.fetchCount(dsl.selectFrom(TRACKS).where(DSL.lower(TRACKS.TITLE).like(pattern)).and(TrackVisibility.publicOnly()));
         return new PageImpl<>(items, pageable, total);
     }
 
     public List<Track> findByArtistId(UUID artistId) {
         return dsl.selectFrom(TRACKS)
             .where(TRACKS.ID.in(dsl.select(TRACK_ARTISTS.TRACK_ID).from(TRACK_ARTISTS).where(TRACK_ARTISTS.ARTIST_ID.eq(artistId))))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.TITLE)
             .fetch(this::toTrack);
     }
@@ -248,6 +250,7 @@ public class TrackJooqRepository {
     public List<Track> findByAlbumId(UUID albumId) {
         return dsl.selectFrom(TRACKS)
             .where(TRACKS.ID.in(dsl.select(TRACK_ALBUMS.TRACK_ID).from(TRACK_ALBUMS).where(TRACK_ALBUMS.ALBUM_ID.eq(albumId))))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.TITLE)
             .fetch(this::toTrack);
     }
@@ -263,6 +266,7 @@ public class TrackJooqRepository {
             .where(TRACKS.ID.ne(trackId))
             .and(TRACKS.EMBEDDING.isNotNull())
             .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
+            .and(TrackVisibility.publicOnly())
             .orderBy(DSL.field(orderBySql))
             .limit(limit)
             .fetch(this::toTrack);
@@ -374,6 +378,7 @@ public class TrackJooqRepository {
         Condition where = TRACKS.IS_FLAGGED.eq(false)
             .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
             .and(PLAYBACK_LINKS.IS_WORKING.eq(true))
+            .and(TrackVisibility.publicOnly())
             .andNot(alreadyConfirmed)
             .andNot(alreadyVotedByThisVoter);
 
@@ -436,7 +441,8 @@ public class TrackJooqRepository {
     ) {
         Condition c = PLAYBACK_LINKS.IS_WORKING.eq(true)
             .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
-            .and(TRACKS.IS_FLAGGED.eq(false));
+            .and(TRACKS.IS_FLAGGED.eq(false))
+            .and(TrackVisibility.publicOnly());
         if (mainStyle != null && !mainStyle.isBlank()) c = c.and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(mainStyle));
         if (subStyle != null && !subStyle.isBlank()) c = c.and(TRACK_DANCE_STYLES.SUB_STYLE.eq(subStyle));
         if (search != null && !search.isBlank()) c = c.and(DSL.lower(TRACKS.TITLE).like("%" + search.toLowerCase() + "%"));
@@ -456,12 +462,13 @@ public class TrackJooqRepository {
     }
 
     public List<Track> findRecentVerifiedTracks(int limit) {
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge(1.0))
             .and(TRACKS.IS_FLAGGED.eq(false))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -472,8 +479,8 @@ public class TrackJooqRepository {
         var playsSub = dsl.select(TRACK_PLAYBACKS.TRACK_ID, DSL.count(TRACK_PLAYBACKS.ID).as("plays"))
             .from(TRACK_PLAYBACKS)
             .groupBy(TRACK_PLAYBACKS.TRACK_ID).asTable("tp");
-        var ids = dsl.selectDistinct(TRACKS.ID)
-            .from(TRACKS)
+        var playsField = coalesce(playsSub.field("plays", Long.class), 0L).as("plays_count");
+        var ids = dsl.selectDistinct(TRACKS.ID, playsField).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .leftJoin(playsSub).on(TRACKS.ID.eq(playsSub.field("track_id", UUID.class)))
@@ -482,20 +489,22 @@ public class TrackJooqRepository {
             .and(TRACKS.IS_FLAGGED.eq(false))
             .and(TRACKS.BOUNCINESS.isNotNull())
             .and(TRACKS.ARTICULATION.isNotNull())
-            .orderBy(coalesce(playsSub.field("plays", Long.class), 0L).desc())
+            .and(TrackVisibility.publicOnly())
+            .orderBy(playsField.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
         return findByIds(ids);
     }
 
     public List<Track> findFallbackTracks(int limit) {
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
             .and(TRACKS.IS_FLAGGED.eq(false))
             .and(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge(0.8))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -510,6 +519,7 @@ public class TrackJooqRepository {
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
             .and(TRACK_DANCE_STYLES.DANCE_STYLE.isNotNull())
             .and(TRACKS.IS_FLAGGED.eq(false))
+            .and(TrackVisibility.publicOnly())
             .groupBy(TRACK_DANCE_STYLES.DANCE_STYLE)
             .orderBy(countDistinct(TRACKS.ID).desc())
             .fetch()
@@ -533,20 +543,23 @@ public class TrackJooqRepository {
     public List<String> findSubStylesForStyle(String mainStyle) {
         return dsl.selectDistinct(TRACK_DANCE_STYLES.SUB_STYLE)
             .from(TRACK_DANCE_STYLES)
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_DANCE_STYLES.TRACK_ID))
             .where(TRACK_DANCE_STYLES.DANCE_STYLE.eq(mainStyle))
             .and(TRACK_DANCE_STYLES.SUB_STYLE.isNotNull())
             .and(TRACK_DANCE_STYLES.CONFIDENCE.gt(0.3))
+            .and(TrackVisibility.publicOnly())
             .fetch(TRACK_DANCE_STYLES.SUB_STYLE);
     }
 
     public List<Track> findByStyleWithConfidence(String style, float minConfidence, int limit) {
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
             .and(TRACKS.IS_FLAGGED.eq(false))
             .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(style))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge((double) minConfidence))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -556,13 +569,14 @@ public class TrackJooqRepository {
 
     public List<Track> findByStylesWithConfidence(List<String> styles, float minConfidence, int limit) {
         if (styles == null || styles.isEmpty()) return List.of();
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
             .and(TRACKS.IS_FLAGGED.eq(false))
             .and(TRACK_DANCE_STYLES.DANCE_STYLE.in(styles))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge((double) minConfidence))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -571,13 +585,14 @@ public class TrackJooqRepository {
     }
 
     public List<Track> findInstrumentalTracks(float minConfidence, int limit) {
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
             .and(TRACKS.IS_FLAGGED.eq(false))
             .and(TRACKS.HAS_VOCALS.eq(false))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge((double) minConfidence))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -586,7 +601,7 @@ public class TrackJooqRepository {
     }
 
     public List<Track> findSlowTracks(int maxBpm, float minConfidence, int limit) {
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
@@ -594,6 +609,7 @@ public class TrackJooqRepository {
             .and(TRACK_DANCE_STYLES.EFFECTIVE_BPM.isNotNull())
             .and(TRACK_DANCE_STYLES.EFFECTIVE_BPM.le(maxBpm))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge((double) minConfidence))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -602,7 +618,7 @@ public class TrackJooqRepository {
     }
 
     public List<Track> findFastTracks(int minBpm, float minConfidence, int limit) {
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
@@ -610,6 +626,7 @@ public class TrackJooqRepository {
             .and(TRACK_DANCE_STYLES.EFFECTIVE_BPM.isNotNull())
             .and(TRACK_DANCE_STYLES.EFFECTIVE_BPM.ge(minBpm))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge((double) minConfidence))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -618,7 +635,7 @@ public class TrackJooqRepository {
     }
 
     public List<Track> findBeginnerFriendlyByStyle(String style, int limit) {
-        var ids = dsl.selectDistinct(TRACKS.ID).from(TRACKS)
+        var ids = dsl.selectDistinct(TRACKS.ID, TRACKS.CREATED_AT).from(TRACKS)
             .join(TRACK_DANCE_STYLES).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
             .join(PLAYBACK_LINKS).on(PLAYBACK_LINKS.TRACK_ID.eq(TRACKS.ID))
             .where(PLAYBACK_LINKS.IS_WORKING.eq(true))
@@ -627,6 +644,7 @@ public class TrackJooqRepository {
             .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(style))
             .and(TRACK_DANCE_STYLES.CONFIDENCE.ge(0.8))
             .and(TRACK_DANCE_STYLES.EFFECTIVE_BPM.isNull().or(TRACK_DANCE_STYLES.EFFECTIVE_BPM.between(80, 140)))
+            .and(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.desc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -720,6 +738,7 @@ public class TrackJooqRepository {
     /** All tracks ordered by created_at, with limit/offset (for export). */
     public List<Track> findAllOrderByCreatedAt(int limit, int offset) {
         return dsl.selectFrom(TRACKS)
+            .where(TrackVisibility.publicOnly())
             .orderBy(TRACKS.CREATED_AT.asc())
             .offset(offset)
             .limit(limit)
@@ -727,12 +746,12 @@ public class TrackJooqRepository {
     }
 
     public long countTracks() {
-        return dsl.fetchCount(TRACKS);
+        return dsl.fetchCount(dsl.selectFrom(TRACKS).where(TrackVisibility.publicOnly()));
     }
 
     public long countTracksWithAnalysis() {
         return dsl.fetchCount(
-            dsl.selectFrom(TRACKS).where(TRACKS.ANALYSIS_VERSION.isNotNull())
+            dsl.selectFrom(TRACKS).where(TRACKS.ANALYSIS_VERSION.isNotNull()).and(TrackVisibility.publicOnly())
         );
     }
 
