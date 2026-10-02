@@ -4,6 +4,7 @@
 package se.dansbart.jooq.tables;
 
 
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -84,6 +85,21 @@ public class Artists extends TableImpl<Record> {
      * The column <code>public.artists.is_verified</code>.
      */
     public final TableField<Record, Boolean> IS_VERIFIED = createField(DSL.name("is_verified"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.artists.is_flagged</code>.
+     */
+    public final TableField<Record, Boolean> IS_FLAGGED = createField(DSL.name("is_flagged"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column <code>public.artists.flagged_at</code>.
+     */
+    public final TableField<Record, OffsetDateTime> FLAGGED_AT = createField(DSL.name("flagged_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+
+    /**
+     * The column <code>public.artists.flag_reason</code>.
+     */
+    public final TableField<Record, String> FLAG_REASON = createField(DSL.name("flag_reason"), SQLDataType.VARCHAR, this, "");
 
     private Artists(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

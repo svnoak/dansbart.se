@@ -70,6 +70,16 @@ public class ArtistController {
         return ResponseEntity.ok(trackService.findByArtistId(id));
     }
 
+    @PostMapping("/{id}/flag")
+    @Operation(summary = "Flag an artist as not being folk music")
+    public ResponseEntity<Void> flagArtist(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "not_folk_music") String reason) {
+        return artistService.flagArtist(id, reason)
+            ? ResponseEntity.noContent().build()
+            : ResponseEntity.notFound().build();
+    }
+
     @GetMapping("/search")
     @Operation(summary = "Search artists by name")
     public ResponseEntity<PageResponse<Artist>> searchArtists(

@@ -4,8 +4,9 @@ import { getArtist, getArtistAlbums } from '@/api/generated/artists/artists';
 import type { Artist } from '@/api/models/artist';
 import type { Album } from '@/api/models/album';
 import { AvatarPlaceholder, IconButton, SectionTitle } from '@/ui';
-import { BackArrowIcon } from '@/icons';
+import { BackArrowIcon, FlagIcon } from '@/icons';
 import { AlbumCard } from '@/components/AlbumCard';
+import { FlagArtistModal } from '@/components/FlagArtistModal';
 
 export function ArtistPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,7 @@ export function ArtistPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [prevId, setPrevId] = useState(id);
+  const [flagOpen, setFlagOpen] = useState(false);
 
   if (prevId !== id) {
     setPrevId(id);
@@ -48,7 +50,7 @@ export function ArtistPage() {
   if (loading) {
     return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
   }
-  if (error || !artist) {
+  if (error || !artist || !id) {
     return (
       <p className="text-red-600" role="alert">
         {error ?? 'Artist hittades inte.'}
@@ -64,14 +66,25 @@ export function ArtistPage() {
       <div className="flex items-center gap-4">
         <AvatarPlaceholder size="lg" />
         <div>
-          <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-            {artist.name ?? 'Okand artist'}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
+              {artist.name ?? 'Okand artist'}
+            </h1>
+            <IconButton aria-label="Rapportera artist" onClick={() => setFlagOpen(true)}>
+              <FlagIcon className="h-5 w-5" aria-hidden />
+            </IconButton>
+          </div>
           {artist.isVerified && (
             <p className="text-sm text-[rgb(var(--color-text-muted))]">Verifierad artist</p>
           )}
         </div>
       </div>
+      <FlagArtistModal
+        open={flagOpen}
+        onClose={() => setFlagOpen(false)}
+        artistId={id}
+        artistName={artist.name ?? 'Okänd artist'}
+      />
 
       <section aria-labelledby="albums-heading">
         <SectionTitle id="albums-heading">Album</SectionTitle>

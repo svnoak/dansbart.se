@@ -41,6 +41,7 @@ public class TestSecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/groups/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/public").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/artists/*/flag").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/dance-lists/**").authenticated()
