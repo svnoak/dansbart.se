@@ -106,7 +106,10 @@ class ClassificationService:
         tracks = (
             self.db.query(Track)
             .join(AnalysisSource)
-            .filter(AnalysisSource.source_type.in_(["neckenml_analyzer", "hybrid_ml_v2"]))
+            .filter(
+                AnalysisSource.source_type.in_(["neckenml_analyzer", "hybrid_ml_v2"]),
+                Track.is_private.is_(False),
+            )
             .all()
         )
 
