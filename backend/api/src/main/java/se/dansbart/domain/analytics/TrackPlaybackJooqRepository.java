@@ -4,6 +4,7 @@ import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
+import se.dansbart.domain.track.TrackVisibility;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -13,6 +14,7 @@ import static org.jooq.impl.DSL.count;
 import static org.jooq.impl.DSL.sum;
 import static org.jooq.impl.DSL.when;
 import static se.dansbart.jooq.Tables.TRACK_PLAYBACKS;
+import static se.dansbart.jooq.Tables.TRACKS;
 
 @Repository
 public class TrackPlaybackJooqRepository {
@@ -57,7 +59,8 @@ public class TrackPlaybackJooqRepository {
         var totalDuration = sum(TRACK_PLAYBACKS.DURATION_SECONDS).as("total_duration");
         var query = dsl.select(TRACK_PLAYBACKS.TRACK_ID, playCount, completionRate, totalDuration)
             .from(TRACK_PLAYBACKS)
-            .where(since == null ? DSL.noCondition() : TRACK_PLAYBACKS.PLAYED_AT.ge(since))
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_PLAYBACKS.TRACK_ID))
+            .where((since == null ? DSL.noCondition() : TRACK_PLAYBACKS.PLAYED_AT.ge(since)).and(TrackVisibility.publicOnly()))
             .groupBy(TRACK_PLAYBACKS.TRACK_ID)
             .orderBy(playCount.desc())
             .limit(limit);

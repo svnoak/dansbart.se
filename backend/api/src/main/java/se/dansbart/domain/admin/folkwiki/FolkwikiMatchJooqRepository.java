@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
+import se.dansbart.domain.track.TrackVisibility;
 import se.dansbart.dto.PlaybackLinkDto;
 
 import java.time.OffsetDateTime;
@@ -51,7 +52,7 @@ public class FolkwikiMatchJooqRepository {
             .join(t).on(t.ID.eq(tfm.TRACK_ID))
             .join(ft).on(ft.ID.eq(tfm.FOLKWIKI_TUNE_ID))
             .leftJoin(tds).on(tds.TRACK_ID.eq(t.ID).and(tds.IS_PRIMARY.eq(true)))
-            .where(condition)
+            .where(condition.and(TrackVisibility.publicOnly()))
             .orderBy(t.TITLE.asc())
             .limit(limit)
             .offset(offset)
@@ -90,7 +91,8 @@ public class FolkwikiMatchJooqRepository {
 
         return dsl.selectCount()
             .from(TRACK_FOLKWIKI_MATCHES)
-            .where(condition)
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_FOLKWIKI_MATCHES.TRACK_ID))
+            .where(condition.and(TrackVisibility.publicOnly()))
             .fetchOne(0, int.class);
     }
 
@@ -119,7 +121,8 @@ public class FolkwikiMatchJooqRepository {
                 TRACK_DANCE_STYLES.SUB_STYLE
             )
             .from(TRACK_DANCE_STYLES)
-            .where(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true))
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_DANCE_STYLES.TRACK_ID))
+            .where(TRACK_DANCE_STYLES.IS_PRIMARY.eq(true).and(TrackVisibility.publicOnly()))
             .fetch()
             .stream()
             .map(r -> {

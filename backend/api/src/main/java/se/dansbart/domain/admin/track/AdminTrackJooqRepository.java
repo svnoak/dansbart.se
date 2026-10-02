@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
+import se.dansbart.domain.track.TrackVisibility;
 import se.dansbart.dto.AlbumSummaryDto;
 import se.dansbart.dto.ArtistSummaryDto;
 import se.dansbart.dto.PlaybackLinkDto;
@@ -58,9 +59,10 @@ public class AdminTrackJooqRepository {
             conditions.add(TRACKS.IS_FLAGGED.eq(flagged));
         }
 
-        var whereClause = conditions.isEmpty()
+        var whereClause = (conditions.isEmpty()
             ? org.jooq.impl.DSL.trueCondition()
-            : org.jooq.impl.DSL.and(conditions);
+            : org.jooq.impl.DSL.and(conditions))
+            .and(TrackVisibility.publicOnly());
 
         // Resolve sort
         boolean sortByConfidence = "confidence".equalsIgnoreCase(sortBy);
@@ -218,6 +220,7 @@ public class AdminTrackJooqRepository {
     public Map<String, Long> countByProcessingStatus() {
         return dsl.select(TRACKS.PROCESSING_STATUS, count())
             .from(TRACKS)
+            .where(TrackVisibility.publicOnly())
             .groupBy(TRACKS.PROCESSING_STATUS)
             .fetchStream()
             .collect(Collectors.toMap(

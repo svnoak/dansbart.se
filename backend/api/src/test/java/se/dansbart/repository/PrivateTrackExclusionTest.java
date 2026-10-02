@@ -47,7 +47,14 @@ class PrivateTrackExclusionTest extends AbstractRepositoryTest {
             "findBeginnerFriendlyByStyle",
             "findAllOrderByCreatedAt",
             "countTracks",
-            "countTracksWithAnalysis");
+            "countTracksWithAnalysis",
+            "findByProcessingStatus",
+            "findIdsByProcessingStatusOrderByCreatedAtAsc",
+            "findIdsByProcessingStatusAndCreatedAtBefore",
+            "findByIsrc",
+            "countByIsrcNotNull",
+            "countByIsrcStartingWith",
+            "findDuplicateIsrcs");
 
     private static final Set<String> UNFILTERED = Set.of(
             "findById",
@@ -65,14 +72,7 @@ class PrivateTrackExclusionTest extends AbstractRepositoryTest {
             "updateTrack",
             "findIdsByProcessingStatusOrderByCreatedAtDesc",
             "findIdsOrderByCreatedAtDesc",
-            "findIdsWhereProcessingStatusNotDone",
-            "findIdsByProcessingStatusOrderByCreatedAtAsc",
-            "findByProcessingStatus",
-            "findIdsByProcessingStatusAndCreatedAtBefore",
-            "findByIsrc",
-            "countByIsrcNotNull",
-            "countByIsrcStartingWith",
-            "findDuplicateIsrcs");
+            "findIdsWhereProcessingStatusNotDone");
 
     private static final String STYLE = "polska";
     private static final String PUBLIC_SUB_STYLE = "slangpolska";
