@@ -10,6 +10,10 @@ import { AddToPlaylistModal } from './AddToPlaylistModal';
 import { FlagTrackModal } from './FlagTrackModal';
 import { LoginRequiredModal } from './LoginRequiredModal';
 import { PlayButton } from './TrackRow/PlayButton';
+import { RelinkButton } from './TrackRow/RelinkButton';
+import { UnavailableLabel } from './TrackRow/UnavailableLabel';
+import { requestLocalFile } from '@/library/requestLocalFile';
+import { useMissingLocalFile } from '@/library/useMissingLocalFile';
 import { StyleBadge } from './TrackRow/StyleBadge';
 import { TrackActionsModal } from './TrackRow/TrackActionsModal';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
@@ -58,6 +62,18 @@ export function TrackRow({
   const [adding, setAdding] = useState(false);
   const longPress = useLongPress(() => setOptionsOpen(true));
   const favorited = track.id != null && isFavorited(track.id);
+  const { missing: fileMissing, setMissing } = useMissingLocalFile(track);
+  const unavailable = track.playable === false;
+  const isOwnTrack = track.playable === true && !track.playbackLinks?.length;
+
+  async function handlePlay() {
+    if (isOwnTrack && track.id != null && !isCurrent) {
+      const access = await requestLocalFile(track.id);
+      if (access === 'missing') setMissing(true);
+      if (access !== 'ready') return;
+    }
+    play(track, contextTracks);
+  }
 
   const handleAddToPlaylist = async () => {
     if (!addToPlaylistId || track.id == null) return;
@@ -92,17 +108,25 @@ export function TrackRow({
   return (
     <>
       <div
-        className="flex items-center gap-3 px-2 py-2.5 border-b border-[rgb(var(--color-border))]/30 select-none [-webkit-touch-callout:none]"
+        className={`flex items-center gap-3 px-2 py-2.5 border-b border-[rgb(var(--color-border))]/30 select-none [-webkit-touch-callout:none] ${
+          unavailable ? 'bg-[rgb(var(--color-border))]/20' : ''
+        }`}
         {...longPress}
       >
         {/* Left: Play button (fixed, spans all lines) */}
-        <PlayButton
-          track={track}
-          isCurrent={isCurrent}
-          isPlaying={isPlaying}
-          styleColor={styleColor}
-          onPlay={() => play(track, contextTracks)}
-        />
+        {unavailable ? (
+          <UnavailableLabel />
+        ) : fileMissing ? (
+          <RelinkButton trackId={track.id!} onRelinked={() => setMissing(false)} />
+        ) : (
+          <PlayButton
+            track={track}
+            isCurrent={isCurrent}
+            isPlaying={isPlaying}
+            styleColor={styleColor}
+            onPlay={() => void handlePlay()}
+          />
+        )}
 
         {/* Center: Vertical text stack */}
         <div className="min-w-0 flex-1 flex flex-col">

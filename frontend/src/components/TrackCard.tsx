@@ -20,6 +20,7 @@ import { formatDurationMs } from '@/utils/formatDuration';
 import { FlagTrackModal } from './FlagTrackModal';
 import { LoginRequiredModal } from './LoginRequiredModal';
 import { TrackActionsModal } from './TrackRow/TrackActionsModal';
+import { UnavailableLabel } from './TrackRow/UnavailableLabel';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -62,8 +63,15 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
   const isMlLow = hasValidStyle && !isHumanVerified && !isMlHigh;
 
   return (
-    <Card className="flex items-center gap-3 p-4 shadow-sm select-none [-webkit-touch-callout:none]" {...longPress}>
+    <Card className={`flex items-center gap-3 p-4 shadow-sm select-none [-webkit-touch-callout:none] ${
+        track.playable === false ? 'bg-[rgb(var(--color-border))]/20' : ''
+      }`}
+      {...longPress}
+    >
       {/* Left: Play button */}
+      {track.playable === false ? (
+        <UnavailableLabel />
+      ) : (
       <button
         type="button"
         onClick={() => play(track, contextTracks)}
@@ -76,6 +84,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
           <PlayIcon className="h-5 w-5 ml-0.5" aria-hidden />
         )}
       </button>
+      )}
 
       {/* Center: Content rows */}
       <div className="min-w-0 flex-1">

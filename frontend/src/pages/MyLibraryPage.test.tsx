@@ -156,17 +156,13 @@ describe('MyLibraryPage', () => {
     expect(play).not.toHaveBeenCalled();
   });
 
-  it('shows that the file is missing when no file is stored', async () => {
+  it('offers Välj filen igen when the file is missing', async () => {
     getLocalFileForTrack.mockResolvedValue(undefined);
 
-    const messages = await clickFirstPlayAndCollectToasts();
+    await clickFirstPlayAndCollectToasts();
 
-    expect(messages).toEqual([
-      expect.objectContaining({
-        text: 'Filen finns inte i den här webbläsaren. Importera låten igen.',
-        variant: 'error',
-      }),
-    ]);
+    expect(getButtons('Välj filen igen')).toHaveLength(1);
+    expect(document.body.querySelectorAll('button[aria-label="Spela"]')).toHaveLength(1);
     expect(play).not.toHaveBeenCalled();
   });
 
