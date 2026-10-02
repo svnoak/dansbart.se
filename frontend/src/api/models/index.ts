@@ -8,6 +8,7 @@
 export * from './addEntryRequest';
 export * from './addToBlocklist200';
 export * from './addTrackRequest';
+export * from './adminStatsDto';
 export * from './adminTrackDto';
 export * from './adminTrackPageResponse';
 export * from './album';

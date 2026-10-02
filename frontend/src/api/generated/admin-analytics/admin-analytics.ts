@@ -5,6 +5,7 @@
  * OpenAPI spec version: v0
  */
 import type {
+  AdminStatsDto,
   GetBehavioralFlags200,
   GetBehavioralFlagsParams,
   GetClassifyStats200,
@@ -480,6 +481,29 @@ export const getGetBehavioralFlagsUrl = (params?: GetBehavioralFlagsParams,) => 
 export const getBehavioralFlags = async (params?: GetBehavioralFlagsParams, options?: RequestInit): Promise<GetBehavioralFlags200> => {
   
   return httpClient<GetBehavioralFlags200>(getGetBehavioralFlagsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get admin statistics including private track and play counts
+ */
+export const getGetAdminStatsUrl = () => {
+
+
+  
+
+  return `/api/admin/stats`
+}
+
+export const getAdminStats = async ( options?: RequestInit): Promise<AdminStatsDto> => {
+  
+  return httpClient<AdminStatsDto>(getGetAdminStatsUrl(),
   {      
     ...options,
     method: 'GET'

@@ -755,6 +755,10 @@ public class TrackJooqRepository {
         );
     }
 
+    public long countPrivateTracks() {
+        return dsl.fetchCount(dsl.selectFrom(TRACKS).where(TRACKS.IS_PRIVATE.isTrue()));
+    }
+
     /** Tracks by status (e.g. PENDING for bulk delete). */
     public List<Track> findByProcessingStatus(String status) {
         return dsl.selectFrom(TRACKS).where(TRACKS.PROCESSING_STATUS.eq(status).and(TrackVisibility.publicOnly())).fetch(this::toTrack);
