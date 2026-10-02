@@ -110,7 +110,15 @@ export function Header({
           <span className="text-lg font-semibold">dansbart.se</span>
         </Link>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {isAuthenticated && (
+            <Link
+              to="/mina-latar"
+              className="text-sm font-medium text-[rgb(var(--color-text))] hover:underline"
+            >
+              Mina låtar
+            </Link>
+          )}
           {!isLoading && (
             isAuthenticated
               ? <UserMenu />

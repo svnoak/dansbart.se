@@ -36,6 +36,7 @@ export default defineConfig({
           'Dance Lists',
           'Favorites',
           'Groups',
+          'Library',
         ],
       },
     },

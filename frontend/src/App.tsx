@@ -52,6 +52,7 @@ import { DanceListsPage } from '@/pages/DanceListsPage';
 import DanceListPage from '@/pages/DanceListPage';
 import { GroupPage } from '@/pages/GroupPage';
 import { GroupSettingsPage } from '@/pages/GroupSettingsPage';
+import { MyLibraryPage } from '@/pages/MyLibraryPage';
 
 export function App() {
   return (
@@ -109,6 +110,14 @@ export function App() {
                           }
                         />
                         <Route path="/favorites" element={<FavoritesPage />} />
+                        <Route
+                          path="/mina-latar"
+                          element={
+                            <ProtectedRoute>
+                              <MyLibraryPage />
+                            </ProtectedRoute>
+                          }
+                        />
                         <Route path="/help" element={<HelpPage />} />
                         <Route path="/help/topic/:slug/:id" element={<HelpTopicPage />} />
                         <Route path="/about" element={<AboutPage />} />
