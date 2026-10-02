@@ -729,7 +729,7 @@ public class TrackJooqRepository {
     /** Track IDs by status, order created_at asc (e.g. for queueing PENDING). */
     public List<UUID> findIdsByProcessingStatusOrderByCreatedAtAsc(String status, int limit) {
         return dsl.select(TRACKS.ID).from(TRACKS)
-            .where(TRACKS.PROCESSING_STATUS.eq(status))
+            .where(TRACKS.PROCESSING_STATUS.eq(status).and(TrackVisibility.publicOnly()))
             .orderBy(TRACKS.CREATED_AT.asc())
             .limit(limit)
             .fetch(TRACKS.ID);
@@ -757,34 +757,34 @@ public class TrackJooqRepository {
 
     /** Tracks by status (e.g. PENDING for bulk delete). */
     public List<Track> findByProcessingStatus(String status) {
-        return dsl.selectFrom(TRACKS).where(TRACKS.PROCESSING_STATUS.eq(status)).fetch(this::toTrack);
+        return dsl.selectFrom(TRACKS).where(TRACKS.PROCESSING_STATUS.eq(status).and(TrackVisibility.publicOnly())).fetch(this::toTrack);
     }
 
     /** Track IDs stuck in status since before threshold. */
     public List<UUID> findIdsByProcessingStatusAndCreatedAtBefore(String status, OffsetDateTime threshold) {
         return dsl.select(TRACKS.ID).from(TRACKS)
-            .where(TRACKS.PROCESSING_STATUS.eq(status).and(TRACKS.CREATED_AT.lt(threshold)))
+            .where(TRACKS.PROCESSING_STATUS.eq(status).and(TRACKS.CREATED_AT.lt(threshold)).and(TrackVisibility.publicOnly()))
             .fetch(TRACKS.ID);
     }
 
     /** Find tracks by ISRC. */
     public List<Track> findByIsrc(String isrc) {
-        return dsl.selectFrom(TRACKS).where(TRACKS.ISRC.eq(isrc)).fetch(this::toTrack);
+        return dsl.selectFrom(TRACKS).where(TRACKS.ISRC.eq(isrc).and(TrackVisibility.publicOnly())).fetch(this::toTrack);
     }
 
     public long countByIsrcNotNull() {
-        return dsl.fetchCount(dsl.selectFrom(TRACKS).where(TRACKS.ISRC.isNotNull()));
+        return dsl.fetchCount(dsl.selectFrom(TRACKS).where(TRACKS.ISRC.isNotNull().and(TrackVisibility.publicOnly())));
     }
 
     public long countByIsrcStartingWith(String prefix) {
-        return dsl.fetchCount(dsl.selectFrom(TRACKS).where(TRACKS.ISRC.like(prefix + "%")));
+        return dsl.fetchCount(dsl.selectFrom(TRACKS).where(TRACKS.ISRC.like(prefix + "%").and(TrackVisibility.publicOnly())));
     }
 
     /** Find ISRCs that have multiple tracks. Returns list of [isrc, count]. */
     public List<Object[]> findDuplicateIsrcs(int limit, int offset) {
         return dsl.select(TRACKS.ISRC, DSL.count(TRACKS.ID).as("cnt"))
             .from(TRACKS)
-            .where(TRACKS.ISRC.isNotNull())
+            .where(TRACKS.ISRC.isNotNull().and(TrackVisibility.publicOnly()))
             .groupBy(TRACKS.ISRC)
             .having(DSL.count(TRACKS.ID).gt(1))
             .orderBy(DSL.count(TRACKS.ID).desc())

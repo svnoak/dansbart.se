@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import se.dansbart.domain.track.TrackVisibility;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -114,8 +115,9 @@ public class AlbumJooqRepository {
         return dsl.select(TRACK_ALBUMS.ALBUM_ID, count().as("pending_count"))
             .from(TRACK_ALBUMS)
             .join(TRACKS).on(TRACKS.ID.eq(TRACK_ALBUMS.TRACK_ID))
-            .where(TRACK_ALBUMS.ALBUM_ID.in(albumIds))
-            .and(TRACKS.PROCESSING_STATUS.eq("PENDING"))
+            .where(TRACK_ALBUMS.ALBUM_ID.in(albumIds)
+                .and(TRACKS.PROCESSING_STATUS.eq("PENDING"))
+                .and(TrackVisibility.publicOnly()))
             .groupBy(TRACK_ALBUMS.ALBUM_ID)
             .fetch()
             .map(r -> new Object[]{r.get(TRACK_ALBUMS.ALBUM_ID), r.get("pending_count", Long.class)});
@@ -126,7 +128,8 @@ public class AlbumJooqRepository {
         Map<UUID, Long> out = new LinkedHashMap<>();
         var rows = dsl.select(TRACK_ALBUMS.ALBUM_ID, count().as("cnt"))
             .from(TRACK_ALBUMS)
-            .where(TRACK_ALBUMS.ALBUM_ID.in(albumIds))
+            .join(TRACKS).on(TRACKS.ID.eq(TRACK_ALBUMS.TRACK_ID))
+            .where(TRACK_ALBUMS.ALBUM_ID.in(albumIds).and(TrackVisibility.publicOnly()))
             .groupBy(TRACK_ALBUMS.ALBUM_ID)
             .fetch();
         for (var r : rows) {

@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.track.TrackVisibility;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -75,8 +76,11 @@ public class DanceJooqRepository {
     public long countConfirmedTracksByDanceId(UUID danceId) {
         return dsl.fetchCount(
                 dsl.selectFrom(DANCE_TRACKS)
-                        .where(DANCE_TRACKS.DANCE_ID.eq(danceId))
-                        .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
+                        .where(DANCE_TRACKS.DANCE_ID.eq(danceId)
+                                .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
+                                .and(DANCE_TRACKS.TRACK_ID.in(
+                                    dsl.select(TRACKS.ID).from(TRACKS).where(TrackVisibility.publicOnly())
+                                )))
         );
     }
 
@@ -84,16 +88,22 @@ public class DanceJooqRepository {
         if (danceIds.isEmpty()) return Map.of();
         return dsl.select(DANCE_TRACKS.DANCE_ID, count())
                 .from(DANCE_TRACKS)
-                .where(DANCE_TRACKS.DANCE_ID.in(danceIds))
-                .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
+                .where(DANCE_TRACKS.DANCE_ID.in(danceIds)
+                        .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
+                        .and(DANCE_TRACKS.TRACK_ID.in(
+                            dsl.select(TRACKS.ID).from(TRACKS).where(TrackVisibility.publicOnly())
+                        )))
                 .groupBy(DANCE_TRACKS.DANCE_ID)
                 .fetchMap(DANCE_TRACKS.DANCE_ID, count());
     }
 
     public List<DanceTrack> findConfirmedTracksByDanceId(UUID danceId) {
         return dsl.selectFrom(DANCE_TRACKS)
-                .where(DANCE_TRACKS.DANCE_ID.eq(danceId))
-                .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
+                .where(DANCE_TRACKS.DANCE_ID.eq(danceId)
+                        .and(DANCE_TRACKS.IS_CONFIRMED.isTrue())
+                        .and(DANCE_TRACKS.TRACK_ID.in(
+                            dsl.select(TRACKS.ID).from(TRACKS).where(TrackVisibility.publicOnly())
+                        )))
                 .fetch(this::toDanceTrack);
     }
 
@@ -128,7 +138,7 @@ public class DanceJooqRepository {
                 .from(DANCE_TRACKS)
                 .join(DANCES).on(DANCES.ID.eq(DANCE_TRACKS.DANCE_ID))
                 .join(TRACKS).on(TRACKS.ID.eq(DANCE_TRACKS.TRACK_ID))
-                .where(DANCE_TRACKS.IS_CONFIRMED.isFalse())
+                .where(DANCE_TRACKS.IS_CONFIRMED.isFalse().and(TrackVisibility.publicOnly()))
                 .orderBy(DANCE_TRACKS.ADDED_AT.asc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -253,7 +263,8 @@ public class DanceJooqRepository {
     public List<UUID> findTrackIdsByTitleFragment(String fragment) {
         return dsl.select(TRACKS.ID)
                 .from(TRACKS)
-                .where(org.jooq.impl.DSL.lower(TRACKS.TITLE).like("%" + fragment.toLowerCase() + "%"))
+                .where(org.jooq.impl.DSL.lower(TRACKS.TITLE).like("%" + fragment.toLowerCase() + "%")
+                        .and(TrackVisibility.publicOnly()))
                 .limit(5)
                 .fetch(TRACKS.ID);
     }
@@ -288,6 +299,7 @@ public class DanceJooqRepository {
                 .where(nameMatch.or(musicMatch).or(styleMatch))
                 .and(TRACKS.ID.notIn(confirmed))
                 .and(excludeCondition)
+                .and(TrackVisibility.publicOnly())
                 .orderBy(priority.asc(), TRACKS.TITLE.asc())
                 .limit(limit)
                 .offset(offset)
@@ -318,6 +330,7 @@ public class DanceJooqRepository {
                         .where(nameMatch.or(musicMatch).or(styleMatch))
                         .and(TRACKS.ID.notIn(confirmed))
                         .and(excludeCondition)
+                        .and(TrackVisibility.publicOnly())
         );
     }
 

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.track.TrackVisibility;
 import se.dansbart.dto.StatsDto;
 
 import java.time.OffsetDateTime;
@@ -25,35 +26,37 @@ public class StatsService {
         // Total tracks with processing status DONE or FAILED
         Long totalTracks = dsl.selectCount()
             .from(TRACKS)
-            .where(statusCondition)
+            .where(statusCondition.and(TrackVisibility.publicOnly()))
             .fetchOne(0, Long.class);
 
         // Analyzed tracks (distinct tracks in analysis_sources)
         Long analyzed = dsl.select(countDistinct(ANALYSIS_SOURCES.TRACK_ID))
             .from(ANALYSIS_SOURCES)
+            .join(TRACKS).on(ANALYSIS_SOURCES.TRACK_ID.eq(TRACKS.ID))
+            .where(TrackVisibility.publicOnly())
             .fetchOne(0, Long.class);
 
         // Classified tracks (distinct tracks in track_dance_styles with DONE/FAILED status)
         Long classified = dsl.select(countDistinct(TRACK_DANCE_STYLES.TRACK_ID))
             .from(TRACK_DANCE_STYLES)
             .join(TRACKS).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
-            .where(statusCondition)
+            .where(statusCondition.and(TrackVisibility.publicOnly()))
             .fetchOne(0, Long.class);
 
         // Tracks with FAILED status
         Long failedTracks = dsl.selectCount()
             .from(TRACKS)
-            .where(TRACKS.PROCESSING_STATUS.eq("FAILED"))
+            .where(TRACKS.PROCESSING_STATUS.eq("FAILED").and(TrackVisibility.publicOnly()))
             .fetchOne(0, Long.class);
 
         // Tracks actively queued or being processed
         Long queuedTracks = dsl.selectCount()
             .from(TRACKS)
-            .where(TRACKS.PROCESSING_STATUS.in("PENDING", "PROCESSING"))
+            .where(TRACKS.PROCESSING_STATUS.in("PENDING", "PROCESSING").and(TrackVisibility.publicOnly()))
             .fetchOne(0, Long.class);
 
         // Last added track date
-        var maxCreated = dsl.select(max(TRACKS.CREATED_AT)).from(TRACKS).where(statusCondition).fetchOne();
+        var maxCreated = dsl.select(max(TRACKS.CREATED_AT)).from(TRACKS).where(statusCondition.and(TrackVisibility.publicOnly())).fetchOne();
         OffsetDateTime lastAdded = maxCreated != null ? maxCreated.get(0, OffsetDateTime.class) : null;
 
         // Calculate derived values
