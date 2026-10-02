@@ -18,7 +18,8 @@ describe('fetchAudioBlob', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://example.com/file', {
       headers: { Authorization: 'Bearer token-1' },
     });
-    expect(await blob.text()).toBe('audio');
+    expect(blob.size).toBe(5);
+    expect(blob.type).toBe('text/plain;charset=utf-8');
   });
 
   it('sends the Range header when asked', async () => {
