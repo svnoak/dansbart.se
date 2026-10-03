@@ -32,17 +32,43 @@ export class LocalFilePermissionDenied extends Error {}
 
 export const canKeepHandles = () => typeof window.showOpenFilePicker === 'function';
 
-export async function pickAudioFiles(): Promise<PickedFile[]> {
-  const handles = await window.showOpenFilePicker!({
-    multiple: true,
-    types: [
-      {
-        description: 'Ljudfiler',
-        accept: { 'audio/*': ['.mp3', '.flac', '.m4a', '.ogg', '.wav'] },
-      },
-    ],
+function pickWithFileInput(): Promise<PickedFile[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/*';
+    input.multiple = true;
+    const finish = (files: PickedFile[]) => {
+      input.remove();
+      resolve(files);
+    };
+    input.addEventListener('change', () =>
+      finish(Array.from(input.files ?? [], (file) => ({ file }))),
+    );
+    input.addEventListener('cancel', () => finish([]));
+    input.click();
   });
-  return Promise.all(handles.map(async (handle) => ({ file: await handle.getFile(), handle })));
+}
+
+export async function pickAudioFiles(): Promise<PickedFile[]> {
+  if (!window.showOpenFilePicker) return pickWithFileInput();
+  try {
+    const handles = await window.showOpenFilePicker({
+      multiple: true,
+      types: [
+        {
+          description: 'Ljudfiler',
+          accept: { 'audio/*': ['.mp3', '.flac', '.m4a', '.ogg', '.wav'] },
+        },
+      ],
+    });
+    return await Promise.all(
+      handles.map(async (handle) => ({ file: await handle.getFile(), handle })),
+    );
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return [];
+    throw error;
+  }
 }
 
 function openDatabase(): Promise<IDBDatabase> {

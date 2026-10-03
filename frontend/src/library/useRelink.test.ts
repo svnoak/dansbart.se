@@ -87,4 +87,62 @@ describe('useRelink', () => {
       }),
     ]);
   });
+
+  it('opens the picker before loading the sources', async () => {
+    const callOrder: string[] = [];
+    pickAudioFiles.mockImplementation(() => {
+      callOrder.push('pickAudioFiles');
+      return Promise.resolve([picked]);
+    });
+    listTracks.mockImplementation(() => {
+      callOrder.push('listTracks');
+      return Promise.resolve([
+        { sourceId: 'cloud', trackId: 't1', provider: 'GOOGLE_DRIVE' },
+        { sourceId: 's1', trackId: 't1', provider: 'LOCAL' },
+      ]);
+    });
+    matchHash.mockResolvedValue({ matches: true });
+
+    let result: boolean | undefined;
+    await act(async () => {
+      result = await hook.current!.relink('t1');
+    });
+
+    expect(callOrder).toEqual(['pickAudioFiles', 'listTracks']);
+    expect(result).toBe(true);
+  });
+
+  it('shows a message when the relink fails', async () => {
+    listTracks.mockRejectedValue(new Error('Network error'));
+    const messages: unknown[] = [];
+    toastListeners.add((message) => messages.push(message));
+
+    let result: boolean | undefined;
+    await act(async () => {
+      result = await hook.current!.relink('t1');
+    });
+
+    expect(result).toBe(false);
+    expect(messages).toEqual([
+      expect.objectContaining({
+        text: 'Det gick inte att välja filen igen. Försök igen.',
+        variant: 'error',
+      }),
+    ]);
+  });
+
+  it('returns false without a message when the person picks nothing', async () => {
+    pickAudioFiles.mockResolvedValue([]);
+    const messages: unknown[] = [];
+    toastListeners.add((message) => messages.push(message));
+
+    let result: boolean | undefined;
+    await act(async () => {
+      result = await hook.current!.relink('t1');
+    });
+
+    expect(result).toBe(false);
+    expect(messages).toEqual([]);
+    expect(listTracks).not.toHaveBeenCalled();
+  });
 });
