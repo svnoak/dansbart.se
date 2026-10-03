@@ -32,7 +32,7 @@ function NavLink({
         icon != null ? '' : 'pl-2'
       } ${
         active
-          ? 'bg-[rgb(var(--color-selected-muted))] font-semibold text-[rgb(var(--color-selected))] shadow-[inset_3px_0_0_rgb(var(--color-selected))]'
+          ? 'bg-[rgb(var(--color-selected-muted))] font-semibold text-[rgb(var(--color-selected))]'
           : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-bg-elevated))]'
       }`}
     >

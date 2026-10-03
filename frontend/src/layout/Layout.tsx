@@ -44,13 +44,13 @@ export function Layout({ children }: LayoutProps) {
           onClick={() => setSidebarOpen(false)}
         />
         <aside
-          className={`fixed left-0 top-0 z-40 h-full w-72 overflow-y-auto border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-sunken))] py-4 shadow-[var(--color-card-shadow)] transition-transform duration-200 ease-out lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`fixed left-0 top-0 z-40 h-full w-72 overflow-y-auto bg-[rgb(var(--color-bg-sunken))] py-4 shadow-[var(--color-card-shadow)] transition-transform duration-200 ease-out lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
           aria-label="Mobilmeny"
         >
           <Sidebar onNavigate={() => setSidebarOpen(false)} />
         </aside>
         {/* Desktop left sidebar */}
-        <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-sunken))] py-4 lg:block">
+        <aside className="hidden w-64 shrink-0 overflow-y-auto bg-[rgb(var(--color-bg-sunken))] py-4 lg:block">
           <Sidebar />
         </aside>
         {/* Content */}
