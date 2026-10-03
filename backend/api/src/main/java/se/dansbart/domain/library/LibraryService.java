@@ -65,13 +65,6 @@ public class LibraryService {
         return new LibraryImportResponse(sourceId, trackId, linkedToCatalog, false);
     }
 
-    public List<LibrarySourceDto> listUserSources(UUID userId) {
-        return sourceRepository.findUserSourcesNewestFirst(userId).stream()
-            .map(source -> new LibrarySourceDto(source.id(), source.trackId(), source.title(), source.artist(),
-                source.album(), source.provider(), source.addedAt(), !source.trackIsPrivate()))
-            .toList();
-    }
-
     public List<LibraryTrackDto> listUserTracks(UUID userId) {
         Map<UUID, List<UserTrackSource>> sourcesByTrack = sourceRepository.findUserSourcesNewestFirst(userId).stream()
             .collect(Collectors.groupingBy(UserTrackSource::trackId, LinkedHashMap::new, Collectors.toList()));
@@ -99,10 +92,6 @@ public class LibraryService {
 
     public boolean deleteTrack(UUID trackId, UUID userId) {
         return sourceRepository.deleteSourcesOfTrack(trackId, userId) > 0;
-    }
-
-    public boolean deleteSource(UUID sourceId, UUID userId) {
-        return sourceRepository.deleteSourceIfOwner(sourceId, userId);
     }
 
     public Optional<Boolean> matchesHash(UUID sourceId, UUID userId, String contentHash) {

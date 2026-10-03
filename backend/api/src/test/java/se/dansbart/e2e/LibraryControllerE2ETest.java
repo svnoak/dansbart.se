@@ -121,8 +121,6 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
         mockMvc.perform(post("/api/library/tracks").contentType(MediaType.APPLICATION_JSON)
                 .content(body(HASH_A, "LOCAL", null, "Polska", 1000, null)))
             .andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/library/tracks")).andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/api/library/sources/{id}", UUID.randomUUID())).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/library/my-tracks")).andExpect(status().isUnauthorized());
         mockMvc.perform(delete("/api/library/tracks/{id}", UUID.randomUUID())).andExpect(status().isUnauthorized());
     }
@@ -164,8 +162,8 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
 
         assertEquals(one.get("trackId").asText(), two.get("trackId").asText());
         assertNotEquals(one.get("sourceId").asText(), two.get("sourceId").asText());
-        assertEquals("First Title", listOf(firstSignedIn).get(0).get("title").asText());
-        assertEquals("Second Title", listOf(secondSignedIn).get(0).get("title").asText());
+        assertEquals("First Title", listOf(firstSignedIn).get(0).get("track").get("title").asText());
+        assertEquals("Second Title", listOf(secondSignedIn).get(0).get("track").get("title").asText());
     }
 
     @Test
@@ -231,39 +229,50 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
     }
 
     @Test
-    @DisplayName("the list returns own sources newest first and no hash")
-    void listReturnsOwnSourcesNewestFirstWithoutHash() throws Exception {
+    @DisplayName("my-tracks returns own tracks newest first and no hash")
+    void listReturnsOwnTracksNewestFirstWithoutHash() throws Exception {
         importTrack(firstSignedIn, HASH_A, "Older", 180000, null);
         importTrack(firstSignedIn, HASH_B, "Newer", 170000, null);
         importTrack(secondSignedIn, "c".repeat(64), "Someone Else", 160000, null);
 
-        String json = mockMvc.perform(get("/api/library/tracks").with(firstSignedIn))
+        String json = mockMvc.perform(get("/api/library/my-tracks").with(firstSignedIn))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         JsonNode list = objectMapper.readTree(json);
 
         assertEquals(2, list.size());
-        assertEquals("Newer", list.get(0).get("title").asText());
-        assertEquals("Older", list.get(1).get("title").asText());
-        assertEquals("Tag Artist", list.get(0).get("artist").asText());
-        assertEquals("LOCAL", list.get(0).get("provider").asText());
-        assertTrue(list.get(0).has("sourceId") && list.get(0).has("trackId") && list.get(0).has("addedAt"));
+        assertEquals("Newer", list.get(0).get("track").get("title").asText());
+        assertEquals("Older", list.get(1).get("track").get("title").asText());
+        assertEquals("Tag Artist", list.get(0).get("track").get("artistName").asText());
+        assertEquals("LOCAL", list.get(0).get("sources").get(0).get("provider").asText());
+        assertTrue(list.get(0).get("sources").get(0).has("sourceId"));
         assertFalse(HEX_64.matcher(json).find(), "the list holds a content hash");
     }
 
     @Test
-    @DisplayName("a person deletes their own source and gets 404 for another person's source")
-    void deleteRemovesOwnSourceAndRejectsAnotherPersonsSource() throws Exception {
+    @DisplayName("a person deletes their own track and gets 404 for another person's track")
+    void deleteRemovesOwnTrackAndRejectsAnotherPersonsTrack() throws Exception {
         JsonNode own = importTrack(firstSignedIn, HASH_A, "Mine", 180000, null);
         JsonNode other = importTrack(secondSignedIn, HASH_B, "Theirs", 170000, null);
 
-        mockMvc.perform(delete("/api/library/sources/{id}", other.get("sourceId").asText()).with(firstSignedIn))
+        mockMvc.perform(delete("/api/library/tracks/{id}", other.get("trackId").asText()).with(firstSignedIn))
             .andExpect(status().isNotFound());
         assertEquals(1, scalar(Integer.class, "select count(*) from user_track_sources where id = ?::uuid",
             other.get("sourceId").asText()));
 
-        mockMvc.perform(delete("/api/library/sources/{id}", own.get("sourceId").asText()).with(firstSignedIn))
+        mockMvc.perform(delete("/api/library/tracks/{id}", own.get("trackId").asText()).with(firstSignedIn))
             .andExpect(status().is2xxSuccessful());
         assertEquals(0, listOf(firstSignedIn).size());
+    }
+
+    @Test
+    @DisplayName("the removed list and source-delete routes are gone")
+    void removedLibraryRoutesAreGone() throws Exception {
+        int listStatus = mockMvc.perform(get("/api/library/tracks").with(firstSignedIn))
+            .andReturn().getResponse().getStatus();
+        int deleteStatus = mockMvc.perform(delete("/api/library/sources/{id}", UUID.randomUUID()).with(firstSignedIn))
+            .andReturn().getResponse().getStatus();
+        assertFalse(listStatus >= 200 && listStatus < 300, "the list route succeeds");
+        assertFalse(deleteStatus >= 200 && deleteStatus < 300, "the source delete route succeeds");
     }
 
     private String matchBody(String hash) {
@@ -306,7 +315,7 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
     }
 
     private JsonNode listOf(RequestPostProcessor user) throws Exception {
-        String json = mockMvc.perform(get("/api/library/tracks").with(user))
+        String json = mockMvc.perform(get("/api/library/my-tracks").with(user))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(json);
     }
@@ -326,7 +335,7 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
 
         JsonNode list = listOf(firstSignedIn);
         assertEquals(1, list.size());
-        assertEquals("First", list.get(0).get("title").asText());
+        assertEquals("First", list.get(0).get("track").get("title").asText());
     }
 
     @Test
@@ -344,7 +353,7 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
 
         JsonNode list = listOf(firstSignedIn);
         assertEquals(1, list.size());
-        assertEquals("Title", list.get(0).get("title").asText());
+        assertEquals("Title", list.get(0).get("track").get("title").asText());
     }
 
     @Test
@@ -360,7 +369,8 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
         assertNotEquals(first.get("sourceId").asText(), second.get("sourceId").asText());
 
         JsonNode list = listOf(firstSignedIn);
-        assertEquals(2, list.size());
+        assertEquals(1, list.size());
+        assertEquals(2, list.get(0).get("sources").size());
     }
 
     @Test
