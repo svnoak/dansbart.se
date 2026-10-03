@@ -38,3 +38,38 @@ describe('StylePicker full presentation disabled state', () => {
     container.remove();
   });
 });
+
+describe('StylePicker compact presentation', () => {
+  it('keeps the padding of the compact select when a colour class is passed', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root: Root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <StylePicker
+          presentation="compact"
+          placeholder="Välj kategori..."
+          ariaLabel="Välj dansstil"
+          options={[{ value: 'Polska', label: 'Polska' }]}
+          onSelect={() => {}}
+          compactClassName="bg-purple-700 border-purple-500 text-white"
+        />,
+      );
+    });
+
+    const select = container.querySelector('select[aria-label="Välj dansstil"]') as HTMLSelectElement;
+    expect(select).toBeTruthy();
+
+    const className = select.className;
+    expect(className).toContain('w-full');
+    expect(className).toContain('px-4');
+    expect(className).toContain('py-3');
+    expect(className).toContain('rounded');
+    expect(className).toContain('border');
+    expect(className).toContain('bg-purple-700');
+
+    root.unmount();
+    container.remove();
+  });
+});

@@ -13,6 +13,7 @@ interface StylePickerProps {
   options: StylePickerOption[];
   placeholder?: string;
   onSelect: (value: string) => void;
+  /** Colour classes for the 'compact' select; its layout classes always apply. */
   compactClassName?: string;
   disabled?: boolean;
   /** Accessible name for the 'compact' native select — required there since the
@@ -38,8 +39,8 @@ export function StylePicker({
           if (e.target.value) onSelect(e.target.value);
         }}
         className={
-          compactClassName ??
-          'w-full bg-white border border-gray-300 text-gray-900 px-4 py-3 rounded text-sm font-medium'
+          'w-full border px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium ' +
+          (compactClassName ?? 'bg-white border-gray-300 text-gray-900')
         }
       >
         <option value="" disabled>

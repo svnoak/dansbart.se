@@ -628,7 +628,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <TempoPicker
                 presentation="compact"
                 onSelect={(key) => submitTempoSelection(key)}
-                compactClassName="w-full bg-purple-800 border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs"
+                compactClassName="bg-purple-800 border-white/20 text-white"
               />
             </div>
           )}
