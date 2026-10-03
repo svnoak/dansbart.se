@@ -173,4 +173,57 @@ class ProviderConnectionJooqRepositoryTest extends AbstractRepositoryTest {
         assertThat(dsl.fetchOne("select connection_id from user_track_sources where id = ?", sourceId).get(0))
             .isNull();
     }
+
+    @Test
+    void findsAConnectionByUserAndProvider() {
+        User user1 = testData.user().withUsername("user1").build();
+        User user2 = testData.user().withUsername("user2").build();
+        ProviderConnection conn1 = connection(user1, "GDRIVE", null, NOW);
+        ProviderConnection conn2 = connection(user1, "HIDRIVE", null, NOW);
+        ProviderConnection conn3 = connection(user2, "GDRIVE", null, NOW);
+        repository.insert(conn1);
+        repository.insert(conn2);
+        repository.insert(conn3);
+
+        ProviderConnection found1 = repository.findByUserAndProvider(user1.getId(), "GDRIVE").orElseThrow();
+        assertThat(found1.id()).isEqualTo(conn1.id());
+        assertThat(found1.userId()).isEqualTo(user1.getId());
+        assertThat(found1.provider()).isEqualTo("GDRIVE");
+        assertThat(found1.status()).isEqualTo("ACTIVE");
+        assertThat(found1.encryptedRefreshToken()).containsExactly(1, 2, 3);
+
+        ProviderConnection found2 = repository.findByUserAndProvider(user1.getId(), "HIDRIVE").orElseThrow();
+        assertThat(found2.id()).isEqualTo(conn2.id());
+        assertThat(found2.provider()).isEqualTo("HIDRIVE");
+
+        ProviderConnection found3 = repository.findByUserAndProvider(user2.getId(), "GDRIVE").orElseThrow();
+        assertThat(found3.id()).isEqualTo(conn3.id());
+        assertThat(found3.userId()).isEqualTo(user2.getId());
+
+        assertThat(repository.findByUserAndProvider(user2.getId(), "HIDRIVE"))
+            .isEmpty();
+        assertThat(repository.findByUserAndProvider(user1.getId(), "UNKNOWN"))
+            .isEmpty();
+    }
+
+    @Test
+    void replacesTheTokenOnTheSameRowAndReactivatesIt() {
+        User user = testData.user().withUsername("owner").build();
+        Instant expiresAt = NOW.plus(30, ChronoUnit.DAYS);
+        ProviderConnection connection = new ProviderConnection(
+            UUID.randomUUID(), user.getId(), "GDRIVE", "NEEDS_RECONNECT",
+            new byte[] {1, 2, 3}, expiresAt, NOW);
+        repository.insert(connection);
+        byte[] newToken = new byte[] {4, 5, 6};
+        Instant newLastRefreshedAt = NOW.plus(1, ChronoUnit.DAYS);
+
+        repository.replaceToken(connection.id(), newToken, null, newLastRefreshedAt);
+
+        ProviderConnection found = repository.findById(connection.id()).orElseThrow();
+        assertThat(found.id()).isEqualTo(connection.id());
+        assertThat(found.status()).isEqualTo("ACTIVE");
+        assertThat(found.encryptedRefreshToken()).containsExactly(4, 5, 6);
+        assertThat(found.refreshTokenExpiresAt()).isNull();
+        assertThat(found.lastRefreshedAt().truncatedTo(ChronoUnit.MICROS)).isEqualTo(newLastRefreshedAt);
+    }
 }
