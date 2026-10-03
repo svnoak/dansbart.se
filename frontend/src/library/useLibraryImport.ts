@@ -4,6 +4,11 @@ import { computeAudioHash } from './audioHash';
 import { saveLocalFile, type PickedFile } from './localHandles';
 import { readTags } from './readTags';
 
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+}
+
 export interface ImportProgress {
   done: number;
   total: number;
@@ -14,7 +19,8 @@ export function useLibraryImport() {
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const importFiles = useCallback(async (picked: PickedFile[]) => {
+  const importFiles = useCallback(async (picked: PickedFile[]): Promise<ImportResult> => {
+    const result = { imported: 0, skipped: 0 };
     const failedNames: string[] = [];
     setError(null);
     for (const [index, item] of picked.entries()) {
@@ -24,13 +30,15 @@ export function useLibraryImport() {
           computeAudioHash(item.file),
           readTags(item.file),
         ]);
-        const { sourceId, trackId } = await importTrack({
+        const { sourceId, trackId, skipped } = await importTrack({
           contentHash,
           provider: 'LOCAL',
           providerFileId: item.file.name,
           ...tags,
         });
         await saveLocalFile(sourceId!, item, trackId!);
+        if (skipped) result.skipped++;
+        else result.imported++;
       } catch {
         failedNames.push(item.file.name);
       }
@@ -39,6 +47,7 @@ export function useLibraryImport() {
     if (failedNames.length > 0) {
       setError(`Det gick inte att importera: ${failedNames.join(', ')}. Försök igen.`);
     }
+    return result;
   }, []);
 
   return { importFiles, progress, error };

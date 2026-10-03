@@ -15,6 +15,8 @@ const deleteSource = vi.fn();
 const useAuth = vi.fn();
 const play = vi.fn();
 const getLocalFileForTrack = vi.fn();
+const canKeepHandles = vi.fn();
+const pickAudioFiles = vi.fn();
 
 vi.mock('@/api/generated/library/library', () => ({
   listTracks: () => listTracks(),
@@ -29,13 +31,14 @@ vi.mock('@/player/usePlayer', () => ({
 
 vi.mock('@/library/localHandles', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/library/localHandles')>()),
-  canKeepHandles: () => false,
-  pickAudioFiles: vi.fn(),
+  canKeepHandles: () => canKeepHandles(),
+  pickAudioFiles: (...args: unknown[]) => pickAudioFiles(...args),
   getLocalFileForTrack: (...args: unknown[]) => getLocalFileForTrack(...args),
 }));
 
+const importFiles = vi.fn();
 vi.mock('@/library/useLibraryImport', () => ({
-  useLibraryImport: () => ({ importFiles: vi.fn(), progress: null, error: null }),
+  useLibraryImport: () => ({ importFiles: importFiles, progress: null, error: null }),
 }));
 
 vi.mock('@/components/TrackRow/StyleVotePanel', () => ({
@@ -58,6 +61,10 @@ describe('MyLibraryPage', () => {
     useAuth.mockReset();
     play.mockReset();
     getLocalFileForTrack.mockReset();
+    importFiles.mockReset();
+    canKeepHandles.mockReset();
+    pickAudioFiles.mockReset();
+    canKeepHandles.mockReturnValue(false);
     getLocalFileForTrack.mockResolvedValue(new File(['audio bytes'], 'vals.mp3'));
     useAuth.mockReturnValue(loggedInAuthValue({}));
     listTracks.mockResolvedValue(sources);
@@ -191,5 +198,46 @@ describe('MyLibraryPage', () => {
 
     expect(document.body.textContent).toContain('Inloggningssidan');
     expect(listTracks).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { imported: 12, skipped: 288, text: '12 låtar importerade, 288 fanns redan' },
+    { imported: 1, skipped: 1, text: '1 låt importerad, 1 fanns redan' },
+    { imported: 12, skipped: 0, text: '12 låtar importerade' },
+    { imported: 0, skipped: 288, text: '288 låtar fanns redan' },
+    { imported: 0, skipped: 1, text: '1 låt fanns redan' },
+  ])('shows a toast with imported=$imported, skipped=$skipped', async ({ imported, skipped, text }) => {
+    canKeepHandles.mockReturnValue(true);
+    pickAudioFiles.mockResolvedValue([{ file: new File(['audio'], 'track.mp3') }]);
+    importFiles.mockResolvedValue({ imported, skipped });
+    const messages: unknown[] = [];
+    const listener = (message: unknown) => messages.push(message);
+    toastListeners.add(listener);
+    await renderPage();
+    await act(async () => getButtons('Importera låtar')[0].click());
+
+    await vi.waitFor(() => {
+      expect(messages).toContainEqual(
+        expect.objectContaining({ text }),
+      );
+    });
+    toastListeners.delete(listener);
+  });
+
+  it('shows no toast when no tracks are imported or skipped', async () => {
+    canKeepHandles.mockReturnValue(true);
+    pickAudioFiles.mockResolvedValue([{ file: new File(['audio'], 'track.mp3') }]);
+    importFiles.mockResolvedValue({ imported: 0, skipped: 0 });
+    const messages: unknown[] = [];
+    const listener = (message: unknown) => messages.push(message);
+    toastListeners.add(listener);
+    await renderPage();
+    await act(async () => getButtons('Importera låtar')[0].click());
+
+    await vi.waitFor(() => expect(importFiles).toHaveBeenCalled());
+    await act(async () => {});
+    toastListeners.delete(listener);
+
+    expect(messages).toHaveLength(0);
   });
 });

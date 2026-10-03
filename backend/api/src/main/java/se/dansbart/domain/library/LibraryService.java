@@ -26,6 +26,10 @@ public class LibraryService {
         Optional<UUID> existingByHash = trackRepository.findTrackByContentHash(request.contentHash());
         if (existingByHash.isPresent()) {
             trackId = existingByHash.get();
+            Optional<UUID> existingSourceId = sourceRepository.findSourceId(userId, trackId, request.provider());
+            if (existingSourceId.isPresent()) {
+                return new LibraryImportResponse(existingSourceId.get(), trackId, linkedToCatalog, true);
+            }
         } else if (request.isrc() != null) {
             Optional<UUID> catalogTrackId = trackRepository.findPublicTrackByIsrc(request.isrc());
             if (catalogTrackId.isPresent()) {
@@ -52,7 +56,7 @@ public class LibraryService {
 
         UUID sourceId = sourceRepository.upsertSource(userId, trackId, request.provider(),
             request.providerFileId(), request.title(), request.artist(), request.album());
-        return new LibraryImportResponse(sourceId, trackId, linkedToCatalog);
+        return new LibraryImportResponse(sourceId, trackId, linkedToCatalog, false);
     }
 
     public List<LibrarySourceDto> listUserSources(UUID userId) {

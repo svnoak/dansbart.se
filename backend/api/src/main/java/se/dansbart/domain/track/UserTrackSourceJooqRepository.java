@@ -78,6 +78,17 @@ public class UserTrackSourceJooqRepository {
         return result != null ? result.get(USER_TRACK_SOURCES.ID) : null;
     }
 
+    /** The id of the earliest source that the user holds on the track from the provider. */
+    public Optional<UUID> findSourceId(UUID userId, UUID trackId, String provider) {
+        return dsl.select(USER_TRACK_SOURCES.ID).from(USER_TRACK_SOURCES)
+            .where(USER_TRACK_SOURCES.USER_ID.eq(userId))
+            .and(USER_TRACK_SOURCES.TRACK_ID.eq(trackId))
+            .and(USER_TRACK_SOURCES.PROVIDER.eq(provider))
+            .orderBy(USER_TRACK_SOURCES.ADDED_AT.asc())
+            .limit(1)
+            .fetchOptional(USER_TRACK_SOURCES.ID);
+    }
+
     public List<UserTrackSource> findUserSourcesNewestFirst(UUID userId) {
         return dsl.select(USER_TRACK_SOURCES.ID, USER_TRACK_SOURCES.TRACK_ID,
                 USER_TRACK_SOURCES.TITLE, USER_TRACK_SOURCES.ARTIST, USER_TRACK_SOURCES.ALBUM,

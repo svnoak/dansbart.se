@@ -9,4 +9,5 @@ export interface LibraryImportResponse {
   sourceId?: string;
   trackId?: string;
   linkedToCatalog?: boolean;
+  skipped?: boolean;
 }
