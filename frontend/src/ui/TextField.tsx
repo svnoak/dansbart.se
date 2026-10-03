@@ -1,15 +1,19 @@
+import { fieldClassName, fieldLabelClassName } from './fieldStyles';
+
 interface TextFieldProps {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   autoComplete?: string;
+  autoFocus?: boolean;
+  placeholder?: string;
 }
 
-export function TextField({ id, label, value, onChange, autoComplete }: TextFieldProps) {
+export function TextField({ id, label, value, onChange, autoComplete, autoFocus, placeholder }: TextFieldProps) {
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium text-[rgb(var(--color-text))]">
+      <label htmlFor={id} className={fieldLabelClassName}>
         {label}
       </label>
       <input
@@ -17,7 +21,9 @@ export function TextField({ id, label, value, onChange, autoComplete }: TextFiel
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
-        className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))] focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-accent))]"
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        className={fieldClassName}
       />
     </div>
   );

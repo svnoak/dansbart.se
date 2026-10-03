@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   getMyGroups,
   getPublicGroups,
@@ -11,7 +10,7 @@ import { ApiError } from '@/api/http-client';
 import type { GroupSummaryDto } from '@/api/models/groupSummaryDto';
 import type { GroupInvitationDto } from '@/api/models/groupInvitationDto';
 import { GroupIcon, PlusIcon } from '@/icons';
-import { Badge, Button, Card, InlineError, LoadError, SectionTitle, toast } from '@/ui';
+import { Badge, Button, Card, InlineError, LoadError, SectionTitle, toast, PageHeader, EmptyState, LinkButton, ListRow, fieldClassName } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 import { describeGroupError } from '@/utils/describeGroupError';
 
@@ -176,15 +175,17 @@ export function GroupsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Grupper</h1>
-        {isAuthenticated && (
-          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
-            <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
-            Ny grupp
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Grupper"
+        action={
+          isAuthenticated && (
+            <Button size="sm" onClick={() => setShowForm((s) => !s)}>
+              <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+              Ny grupp
+            </Button>
+          )
+        }
+      />
 
       {showForm && (
         <Card className="p-4">
@@ -205,7 +206,7 @@ export function GroupsPage() {
                   setCreateError(null);
                 }}
                 autoFocus
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className={fieldClassName}
               />
             </div>
             <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text))]">
@@ -288,18 +289,12 @@ export function GroupsPage() {
       )}
 
       {!authLoading && !isAuthenticated && (
-        <Card className="flex flex-col items-center gap-3 p-8 text-center">
-          <GroupIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
-          <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-            Logga in för att skapa och gå med i grupper.
-          </p>
-          <Link
-            to="/login"
-            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            Logga in
-          </Link>
-        </Card>
+        <EmptyState
+          icon={<GroupIcon className="h-10 w-10" aria-hidden />}
+          action={<LinkButton to="/login">Logga in</LinkButton>}
+        >
+          Logga in för att skapa och gå med i grupper.
+        </EmptyState>
       )}
 
       {(!isAuthenticated || !loadingMine) && (
@@ -334,20 +329,16 @@ function GroupList({ groups }: { groups: GroupSummaryDto[] }) {
     <ul className="space-y-2">
       {groups.map((g) => (
         <li key={g.id}>
-          <Link to={`/groups/${g.id}`} className="block">
-            <Card className="flex items-center gap-3 p-4 transition-colors hover:border-[rgb(var(--color-accent))]/50">
-              <GroupIcon
-                className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]"
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                {g.name}
-              </span>
+          <ListRow
+            to={`/groups/${g.id}`}
+            title={g.name}
+            icon={<GroupIcon className="h-5 w-5" aria-hidden />}
+            trailing={
               <Badge variant={g.isPublic ? 'default' : 'muted'} className="text-base">
                 {g.isPublic ? 'Offentlig' : 'Privat'}
               </Badge>
-            </Card>
-          </Link>
+            }
+          />
         </li>
       ))}
     </ul>

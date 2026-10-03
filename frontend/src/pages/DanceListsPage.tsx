@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { getMyDanceLists, createDanceList } from '@/api/generated/dance-lists/dance-lists';
 import type { DanceList } from '@/api/models/danceList';
 import { QueueListIcon, PlusIcon } from '@/icons';
-import { Button, Card, InlineError, LoadError, SectionTitle } from '@/ui';
+import { Button, Card, InlineError, LoadError, SectionTitle, PageHeader, EmptyState, LinkButton, ListRow, fieldClassName } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 
 export function DanceListsPage() {
@@ -63,15 +62,17 @@ export function DanceListsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Danslistor</h1>
-        {isAuthenticated && (
-          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
-            <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
-            Ny danslista
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Danslistor"
+        action={
+          isAuthenticated && (
+            <Button size="sm" onClick={() => setShowForm((s) => !s)}>
+              <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+              Ny danslista
+            </Button>
+          )
+        }
+      />
 
       {showForm && (
         <Card className="p-4">
@@ -92,7 +93,7 @@ export function DanceListsPage() {
                   setCreateError(null);
                 }}
                 autoFocus
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className={fieldClassName}
               />
             </div>
             <div className="flex gap-2">
@@ -109,18 +110,12 @@ export function DanceListsPage() {
       )}
 
       {!authLoading && !isAuthenticated && (
-        <Card className="flex flex-col items-center gap-3 p-8 text-center">
-          <QueueListIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
-          <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-            Logga in för att skapa och se dina danslistor.
-          </p>
-          <Link
-            to="/login"
-            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            Logga in
-          </Link>
-        </Card>
+        <EmptyState
+          icon={<QueueListIcon className="h-10 w-10" aria-hidden />}
+          action={<LinkButton to="/login">Logga in</LinkButton>}
+        >
+          Logga in för att skapa och se dina danslistor.
+        </EmptyState>
       )}
 
       {isAuthenticated && !loading && (
@@ -146,17 +141,12 @@ function DanceListCards({ danceLists }: { danceLists: DanceList[] }) {
     <ul className="space-y-2">
       {danceLists.map((list) => (
         <li key={list.id}>
-          <Link to={`/dance-lists/${list.id}`} className="block">
-            <Card className="flex items-center gap-3 p-4 transition-colors hover:border-[rgb(var(--color-accent))]/50">
-              <QueueListIcon
-                className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]"
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                {list.name}
-              </span>
-            </Card>
-          </Link>
+          <ListRow
+            to={`/dance-lists/${list.id}`}
+            title={list.name}
+            subtitle={list.description}
+            icon={<QueueListIcon className="h-5 w-5" aria-hidden />}
+          />
         </li>
       ))}
     </ul>

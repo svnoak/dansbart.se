@@ -42,6 +42,7 @@ Users are non-technical and span ages 14 to 85. Apply these rules to each compon
 ## Components
 
 - Before you create a component, search `src/components/`, `src/ui/`, and `src/layout/`. Reuse or extend what exists.
+- Build pages from the shared pieces in `src/ui/`: `PageHeader` for the title row, `SearchField` and `SelectField` for filters, `ListRow` for every entry in a list, `EmptyState` for an empty list or a login prompt, and `fieldClassName` for any other input. `frontend/DESIGN.md` describes them.
 - Import from `src/` with the `@` alias.
 
 ## API client

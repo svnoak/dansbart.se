@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { httpClient } from '@/api/http-client';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getPrimaryTrack, getDanceTracks } from '@/api/generated/dances/dances';
@@ -26,8 +26,7 @@ function getDances(
   });
   return httpClient(`/api/dances?${q}`, opts);
 }
-import { InlineError, LoadError } from '@/ui';
-import { PlayIcon } from '@/icons';
+import { EmptyState, InlineError, ListRow, LoadError, PageHeader, SearchField, SelectField } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 
 const PAGE_SIZE = 20;
@@ -196,37 +195,22 @@ export function DancesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Danser</h1>
+      <PageHeader title="Danser" meta={`${total.toLocaleString('sv-SE')} danser`} />
 
-      <input
-        type="text"
-        defaultValue={q}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Sök dans..."
-        className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-      />
-
-      <div className="min-w-40">
-        <label htmlFor="dance-style-filter" className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1 block">
-          Dansstil
-        </label>
-        <select
-          id="dance-style-filter"
-          value={style}
-          onChange={(e) => setStyle(e.target.value)}
-          className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
-          aria-label="Filtrera på dansstil"
-        >
+      <div className="grid gap-3 sm:grid-cols-[1fr_minmax(12rem,16rem)] sm:items-end">
+        <SearchField
+          label="Sök danser"
+          defaultValue={q}
+          onChange={setQuery}
+          placeholder="Sök dans…"
+        />
+        <SelectField id="dance-style-filter" label="Dansstil" value={style} onChange={setStyle}>
           <option value="">Alla dansstilar</option>
           {styles.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
-        </select>
+        </SelectField>
       </div>
-
-      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-        {total.toLocaleString('sv-SE')} danser
-      </p>
 
       {error ? (
         <LoadError
@@ -236,48 +220,44 @@ export function DancesPage() {
       ) : (
         <>
           {loading && dances.length === 0 && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
+            <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>
           )}
 
           {!loading && dances.length === 0 && (
-            <p className="text-[rgb(var(--color-text-muted))]">Inga danser hittades.</p>
+            <EmptyState>Inga danser hittades.</EmptyState>
           )}
 
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {dances.map((dance) => (
-              <li key={dance.id} className="flex items-stretch gap-2">
-                <button
-                  type="button"
-                  aria-label={`Spela ${dance.name}`}
-                  disabled={playingId === dance.id}
-                  onClick={() => dance.id && handlePlayDance(dance.id)}
-                  className="flex shrink-0 items-center justify-center rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors disabled:opacity-50"
-                >
-                  <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
-                </button>
-                <div className="flex flex-1 items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 hover:bg-[rgb(var(--color-border))]/30 transition-colors">
-                  <Link
-                    to={`/dance/${dance.id}`}
-                    className="flex-1 text-sm font-medium text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]"
-                  >
-                    {dance.name}
-                  </Link>
-                  <span className="shrink-0 text-xs text-[rgb(var(--color-text-muted))]">
-                    {dance.confirmedTrackCount === 1
-                      ? '1 låt'
-                      : `${dance.confirmedTrackCount ?? 0} låtar`}
-                  </span>
-                  {dance.danceDescriptionUrl && (
-                    <a
-                      href={dance.danceDescriptionUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] underline underline-offset-2"
-                    >
-                      ACLA
-                    </a>
-                  )}
-                </div>
+              <li key={dance.id} className="space-y-1">
+                <ListRow
+                  to={`/dance/${dance.id}`}
+                  title={dance.name}
+                  play={{
+                    label: `Spela ${dance.name}`,
+                    disabled: playingId === dance.id,
+                    onPlay: () => dance.id && handlePlayDance(dance.id),
+                  }}
+                  trailing={
+                    <>
+                      <span>
+                        {dance.confirmedTrackCount === 1
+                          ? '1 låt'
+                          : `${dance.confirmedTrackCount ?? 0} låtar`}
+                      </span>
+                      {dance.danceDescriptionUrl && (
+                        <a
+                          href={dance.danceDescriptionUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
+                        >
+                          Dansbeskrivning
+                        </a>
+                      )}
+                    </>
+                  }
+                />
                 <InlineError>{playErrors[dance.id ?? '']}</InlineError>
               </li>
             ))}
@@ -286,7 +266,7 @@ export function DancesPage() {
           {hasMore && (
             <div ref={sentinelRef} className="flex justify-center py-4">
               {loadingMore && (
-                <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
+                <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
               )}
             </div>
           )}

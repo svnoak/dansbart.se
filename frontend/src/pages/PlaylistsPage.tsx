@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   getMyPlaylists1,
   createPlaylist,
@@ -9,8 +9,8 @@ import {
 } from '@/api/generated/playlists/playlists';
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
-import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
-import { toast, Card, Badge, Button, InlineError, LoadError, SectionTitle } from '@/ui';
+import { PlaylistIcon, PlusIcon } from '@/icons';
+import { toast, Card, Badge, Button, InlineError, LoadError, SectionTitle, PageHeader, EmptyState, LinkButton, ListRow, fieldClassName } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -141,15 +141,17 @@ export function PlaylistsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Spellistor</h1>
-        {isAuthenticated && (
-          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
-            <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
-            Ny spellista
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Spellistor"
+        action={
+          isAuthenticated && (
+            <Button size="sm" onClick={() => setShowForm((s) => !s)}>
+              <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+              Ny spellista
+            </Button>
+          )
+        }
+      />
 
       {showForm && (
         <Card className="p-4">
@@ -170,7 +172,7 @@ export function PlaylistsPage() {
                   setCreateError(null);
                 }}
                 autoFocus
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className={fieldClassName}
               />
             </div>
             <div className="flex gap-2">
@@ -235,18 +237,12 @@ export function PlaylistsPage() {
       )}
 
       {!loading && !isAuthenticated && (
-        <Card className="flex flex-col items-center gap-3 p-8 text-center">
-          <PlaylistIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
-          <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-            Logga in för att skapa och hantera dina egna spellistor.
-          </p>
-          <Link
-            to="/login"
-            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            Logga in
-          </Link>
-        </Card>
+        <EmptyState
+          icon={<PlaylistIcon className="h-10 w-10" aria-hidden />}
+          action={<LinkButton to="/login">Logga in</LinkButton>}
+        >
+          Logga in för att skapa och hantera dina egna spellistor.
+        </EmptyState>
       )}
 
       {!loading && isAuthenticated && (
@@ -265,80 +261,61 @@ export function PlaylistsPage() {
                 {playlists.map((pl) => {
                   const styleColor = pl.danceStyle ? getStyleColor(pl.danceStyle) : null;
                   const tempoLabel = pl.tempoCategory ? TEMPO_LABELS[pl.tempoCategory] : null;
+                  const owner = pl.ownerGroup
+                    ? pl.ownerGroup.name
+                    : pl.ownerDisplayName
+                      ? `Delad av ${pl.ownerDisplayName}`
+                      : 'Du';
                   return (
                     <li key={pl.id} className="space-y-1">
-                      <div className="flex items-stretch gap-2">
-                        <button
-                          type="button"
-                          aria-label={`Spela ${pl.name}`}
-                          onClick={() => navigate(`/playlists/${pl.id}?autoplay=true`)}
-                          className="flex shrink-0 items-center justify-center rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors"
-                        >
-                          <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
-                        </button>
-
-                        <Link
-                          to={`/playlists/${pl.id}`}
-                          className="flex min-w-0 flex-1"
-                        >
-                          <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
-                              <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                                    {pl.name}
-                                    <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">
-                                      &middot;{' '}
-                                      {pl.ownerGroup
-                                        ? pl.ownerGroup.name
-                                        : pl.ownerDisplayName
-                                          ? `Delad av ${pl.ownerDisplayName}`
-                                          : 'Du'}
-                                    </span>
-                                  </p>
-                                  {pl.description && (
-                                    <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
-                                  )}
-                                  {(styleColor || tempoLabel) && (
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                      {styleColor && pl.danceStyle && (
-                                        <Badge
-                                          size="md"
-                                          style={{
-                                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                                          }}
-                                        >
-                                          {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
-                                        </Badge>
-                                      )}
-                                      {styleColor && pl.subStyle && (
-                                        <Badge
-                                          size="md"
-                                          className="opacity-80"
-                                          style={{
-                                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                                          }}
-                                        >
-                                          {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
-                                        </Badge>
-                                      )}
-                                      {tempoLabel && (
-                                        <Badge size="md" variant="muted">
-                                          {tempoLabel}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                {(pl.trackCount ?? 0) > 0 && (
-                                  <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
-                                    {pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}
-                                  </span>
-                                )}
-                          </Card>
-                        </Link>
-                      </div>
+                      <ListRow
+                        to={`/playlists/${pl.id}`}
+                        title={
+                          <>
+                            {pl.name}
+                            <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">&middot; {owner}</span>
+                          </>
+                        }
+                        subtitle={pl.description}
+                        play={{
+                          label: `Spela ${pl.name}`,
+                          onPlay: () => navigate(`/playlists/${pl.id}?autoplay=true`),
+                        }}
+                        trailing={
+                          (pl.trackCount ?? 0) > 0 ? (
+                            <span>{pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}</span>
+                          ) : undefined
+                        }
+                      >
+                        {styleColor && pl.danceStyle && (
+                          <Badge
+                            size="md"
+                            style={{
+                              backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                              color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                            }}
+                          >
+                            {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
+                          </Badge>
+                        )}
+                        {styleColor && pl.subStyle && (
+                          <Badge
+                            size="md"
+                            className="opacity-80"
+                            style={{
+                              backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                              color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+                            }}
+                          >
+                            {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
+                          </Badge>
+                        )}
+                        {tempoLabel && (
+                          <Badge size="md" variant="muted">
+                            {tempoLabel}
+                          </Badge>
+                        )}
+                      </ListRow>
                     </li>
                   );
                 })}

@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getAlbums } from '@/api/generated/albums/albums';
 import type { Album } from '@/api/models/album';
 import { AlbumCard } from '@/components';
-import { IconButton } from '@/ui';
+import { IconButton, EmptyState, PageHeader, SearchField } from '@/ui';
 import { BackArrowIcon } from '@/icons';
 
 const PAGE_SIZE = 20;
@@ -114,33 +114,24 @@ export function AlbumsPage() {
       <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Album
-      </h1>
+      <PageHeader title="Album" meta={`${total.toLocaleString('sv-SE')} album`} />
 
-      <input
-        type="text"
+      <SearchField
+        label="Sök album"
         defaultValue={q}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Sök album..."
-        className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+        onChange={setQuery}
+        placeholder="Sök album…"
       />
 
-      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-        {total.toLocaleString('sv-SE')} album
-      </p>
-
       {loading && albums.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
+        <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>
       )}
 
       {!loading && albums.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">
-          Inga album hittades.
-        </p>
+        <EmptyState>Inga album hittades.</EmptyState>
       )}
 
-      <ul className="space-y-3">
+      <ul className="space-y-2">
         {albums.map((album, i) => (
           <li key={album.id ?? album.title ?? `album-${i}`}>
             <AlbumCard album={album} />
@@ -151,7 +142,7 @@ export function AlbumsPage() {
       {hasMore && (
         <div ref={sentinelRef} className="flex justify-center py-4">
           {loadingMore && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
+            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
           )}
         </div>
       )}

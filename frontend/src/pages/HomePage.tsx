@@ -11,7 +11,7 @@ import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { StatsDto } from '@/api/models/statsDto';
 import { StyleShortcutCard } from '@/components/StyleShortcutCard';
 import { ArtistCard, PlaylistShortcutCard } from '@/components';
-import { SectionTitle, Button, LoadError } from '@/ui';
+import { SectionTitle, Button, LoadError, PageHeader, SearchField } from '@/ui';
 import { MusicNoteIcon, BadgeCheckIcon, CalendarIcon } from '@/icons';
 
 function formatLastAdded(iso?: string) {
@@ -116,31 +116,26 @@ export function HomePage() {
   return (
     <div className="min-w-0 space-y-10">
       <div className="space-y-4">
-        <h1 className="text-3xl font-semibold text-[rgb(var(--color-text))] sm:text-4xl">
-          Bibliotek
-        </h1>
-        <p className="max-w-2xl text-lg text-[rgb(var(--color-text-muted))]">
-          Hej! Här hittar du låtar att dansa till, sorterade efter dansstil, artist och spellista.
-          {stats && (
-            <> Volontärer har redan bekräftat {stats.coveragePercent ?? 0}% av låtarna.</>
-          )}
-        </p>
+        <PageHeader
+          title="Bibliotek"
+          description={
+            <>
+              Hej! Här hittar du låtar att dansa till, sorterade efter dansstil, artist och spellista.
+              {stats && (
+                <> Volontärer har redan bekräftat {stats.coveragePercent ?? 0}% av låtarna.</>
+              )}
+            </>
+          }
+        />
         <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-muted))]">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-              </svg>
-            </span>
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Sök låtnamn, artist…"
-              className="min-h-12 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-2.5 pl-11 pr-5 text-base text-[rgb(var(--color-text))] shadow-[var(--color-card-shadow)] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))] focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-accent))]"
-              aria-label="Sök låtar, artister eller album"
-            />
-          </div>
+          <SearchField
+            label="Sök låtar, artister eller album"
+            size="lg"
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Sök låtnamn, artist…"
+            className="flex-1"
+          />
           <Button type="submit" variant="primary" size="lg" className="min-h-12">
             Sök
           </Button>

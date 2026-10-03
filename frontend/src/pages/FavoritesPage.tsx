@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { PageHeader, EmptyState, LinkButton } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 import { getFavoriteTracks } from '@/api/generated/favorites/favorites';
 import type { TrackListDto } from '@/api/models/trackListDto';
@@ -67,18 +67,14 @@ export function FavoritesPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-        <HeartFilledIcon className="h-12 w-12 text-[rgb(var(--color-text-muted))]" aria-hidden />
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Favoriter</h1>
-        <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-          Skapa ett konto eller logga in för att spara dina favoritlåtar och lyssna på dem igen.
-        </p>
-        <Link
-          to="/login"
-          className="mt-2 rounded-lg bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+      <div className="space-y-6">
+        <PageHeader title="Favoriter" icon={<HeartFilledIcon className="h-7 w-7" aria-hidden />} />
+        <EmptyState
+          icon={<HeartFilledIcon className="h-10 w-10" aria-hidden />}
+          action={<LinkButton to="/login">Logga in</LinkButton>}
         >
-          Logga in
-        </Link>
+          Skapa ett konto eller logga in för att spara dina favoritlåtar och lyssna på dem igen.
+        </EmptyState>
       </div>
     );
   }
@@ -96,11 +92,11 @@ export function FavoritesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <HeartFilledIcon className="h-6 w-6 text-[rgb(var(--color-accent))]" aria-hidden />
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Favoriter</h1>
-        <span className="text-sm text-[rgb(var(--color-text-muted))]">({tracks.length})</span>
-      </div>
+      <PageHeader
+        title="Favoriter"
+        icon={<HeartFilledIcon className="h-7 w-7" aria-hidden />}
+        meta={tracks.length === 1 ? '1 låt' : `${tracks.length} låtar`}
+      />
 
       {tracks.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">

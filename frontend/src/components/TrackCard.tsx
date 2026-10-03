@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, IconButton, toast } from '@/ui';
+import { Card, IconButton, PlayCircleButton, toast } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
 import { useFavorites } from '@/favorites/useFavorites';
 import { useLongPress } from '@/hooks/useLongPress';
 import {
-  PauseIcon,
-  PlayIcon,
   MoreVerticalIcon,
   SparklesIcon,
   SpotifyIcon,
@@ -63,7 +61,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
   const isMlLow = hasValidStyle && !isHumanVerified && !isMlHigh;
 
   return (
-    <Card className={`flex items-center gap-3 p-4 shadow-sm select-none [-webkit-touch-callout:none] ${
+    <Card className={`flex items-center gap-3 px-3 py-2.5 select-none [-webkit-touch-callout:none] ${
         track.playable === false ? 'bg-[rgb(var(--color-border))]/20' : ''
       }`}
       {...longPress}
@@ -72,18 +70,11 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
       {track.playable === false ? (
         <UnavailableLabel />
       ) : (
-      <button
-        type="button"
+      <PlayCircleButton
         onClick={() => play(track, contextTracks)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
+        playing={isCurrent && isPlaying}
         aria-label={isCurrent && isPlaying ? 'Pausa' : 'Spela'}
-      >
-        {isCurrent && isPlaying ? (
-          <PauseIcon className="h-5 w-5" aria-hidden />
-        ) : (
-          <PlayIcon className="h-5 w-5 ml-0.5" aria-hidden />
-        )}
-      </button>
+      />
       )}
 
       {/* Center: Content rows */}
@@ -224,7 +215,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
           }}
         >
           {favorited ? (
-            <HeartFilledIcon className="h-5 w-5 text-red-500" aria-hidden />
+            <HeartFilledIcon className="h-5 w-5 text-[rgb(var(--color-accent))]" aria-hidden />
           ) : (
             <HeartIcon className="h-5 w-5" aria-hidden />
           )}

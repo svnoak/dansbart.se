@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getArtists } from '@/api/generated/artists/artists';
 import type { Artist } from '@/api/models/artist';
 import { ArtistCard } from '@/components';
-import { IconButton } from '@/ui';
+import { IconButton, EmptyState, PageHeader, SearchField } from '@/ui';
 import { BackArrowIcon } from '@/icons';
 
 const PAGE_SIZE = 20;
@@ -114,33 +114,24 @@ export function ArtistsPage() {
       <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Artister
-      </h1>
+      <PageHeader title="Artister" meta={`${total.toLocaleString('sv-SE')} artister`} />
 
-      <input
-        type="text"
+      <SearchField
+        label="Sök artister"
         defaultValue={q}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Sök artister..."
-        className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+        onChange={setQuery}
+        placeholder="Sök artister…"
       />
 
-      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-        {total.toLocaleString('sv-SE')} artister
-      </p>
-
       {loading && artists.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
+        <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>
       )}
 
       {!loading && artists.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">
-          Inga artister hittades.
-        </p>
+        <EmptyState>Inga artister hittades.</EmptyState>
       )}
 
-      <ul className="space-y-3">
+      <ul className="space-y-2">
         {artists.map((artist, i) => (
           <li key={artist.id ?? artist.name ?? `artist-${i}`}>
             <ArtistCard artist={artist} />
@@ -151,7 +142,7 @@ export function ArtistsPage() {
       {hasMore && (
         <div ref={sentinelRef} className="flex justify-center py-4">
           {loadingMore && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
+            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
           )}
         </div>
       )}

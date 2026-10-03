@@ -163,6 +163,15 @@ Depth comes from edges, not shadows. Every card has a solid hairline border and 
 
 ## Components
 
+Every page is built from the same handful of pieces in `src/ui/`. Reach for these before writing markup:
+
+- **`PageHeader`**: the title in the display face, with `meta` for a count ("8 danser"), `description` for a sentence, `icon` for a mark and `action` for one control on the right.
+- **`SearchField`** and **`SelectField`**: the only search box and the only labelled select. Both use `fieldClassName`, the one input chrome, which `TextField` and every create-form input share.
+- **`ListRow`**: one entry in a list. A paper card row with an optional round play button, an icon tile or avatar, a title that links, a subtitle, badges as children and `trailing` text or controls. Dances, playlists, groups, dance lists, artists and albums all render through it.
+- **`PlayCircleButton`**: the round play button, outlined on paper and Falu red when playing. `ListRow`, `TrackCard` and the track row's play button share its look.
+- **`EmptyState`**: a centred paper card for a list with nothing in it or a page that needs a login first, with `LinkButton` for the action.
+- **`Button`** and **`LinkButton`**: the same four variants, as a button or a router link.
+
 ### Buttons
 - **Primary:** Falu red fill, warm-white text, a 1px border in the hover red so the edge reads as cut, `--radius`, `min-h-11`.
 - **Secondary:** paper fill, Falu red text, hairline-strong border; hover fills with Falu red muted.
@@ -173,7 +182,10 @@ Depth comes from edges, not shadows. Every card has a solid hairline border and 
 - Inactive: paper fill, hairline border, ink text. Active: Falu red muted fill, Falu red text and border. The Spotify (green) and YouTube (red) variants keep their source identity.
 
 ### Cards
-- Paper fill, hairline border, `--radius-lg`, the one shadow. `p-3` for rail tiles, `p-4` for rows.
+- Paper fill, hairline border, `--radius-lg`, the one shadow. `p-3` for rail tiles, `px-3 py-2.5` for list rows.
+
+### List rows
+- `ListRow` for every entry list. The whole row is a link; the play button and any trailing control sit above the link so both stay clickable. Rows stack at `space-y-2`. Track lists on the search and playlist pages use `TrackRow`, a denser bordered row with the same play button, because they can hold hundreds of entries.
 
 ### Dance-style tile
 - The style's own fixed colour pair, a border in the text colour at 35%, the style name in the display face at 1.125rem, and the count in the sans.

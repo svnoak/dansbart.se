@@ -113,7 +113,7 @@ export function Header({
           {isAuthenticated && (
             <Link
               to="/mina-latar"
-              className="text-sm font-semibold text-[rgb(var(--color-text))] underline decoration-[rgb(var(--color-border-strong))] underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
+              className="hidden whitespace-nowrap text-sm font-semibold text-[rgb(var(--color-text))] underline decoration-[rgb(var(--color-border-strong))] underline-offset-4 hover:decoration-[rgb(var(--color-accent))] sm:inline"
             >
               Mina låtar
             </Link>

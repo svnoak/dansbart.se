@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PageHeader } from '@/ui';
 import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
 import { getVoterId } from '@/utils/voter';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -267,9 +268,7 @@ export function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Sök
-      </h1>
+      <PageHeader title="Sök" />
 
       {addToId && (
         <div className={`flex items-center justify-between gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm ${addToError || !canAddToPlaylist ? 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text-muted))]' : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'}`}>
