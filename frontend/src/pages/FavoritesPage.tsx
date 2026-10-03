@@ -115,7 +115,7 @@ export function FavoritesPage() {
                 onClick={() => setSort(key)}
                 className={`px-3 py-1.5 transition-colors ${
                   sort === key
-                    ? 'bg-[rgb(var(--color-accent))] text-white'
+                    ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
                     : 'text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]'
                 }`}
               >

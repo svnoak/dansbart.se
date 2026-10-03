@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { searchTracks } from '@/api/generated/tracks/tracks';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import { Button } from '@/ui';
-import { toast } from '@/ui';
+import { Button, fieldClassName, fieldLabelClassName, toast } from '@/ui';
 
 interface SuggestTrackModalProps {
   danceName: string;
@@ -72,23 +71,32 @@ export function SuggestTrackModal({
       className="fixed inset-0 z-[70] flex items-center justify-center p-4"
       onClick={(e) => { if (e.currentTarget === e.target) onClose(); }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[rgb(var(--color-text))]/55" />
       <div
-        className="relative w-full max-w-md rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="suggest-track-heading"
+        className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-semibold text-[rgb(var(--color-text))]">
+        <h2 id="suggest-track-heading" className="mb-4 text-xl font-semibold text-[rgb(var(--color-text))]">
           Föreslå låt för {danceName}
         </h2>
 
-        <input
-          type="text"
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Sök låt..."
-          className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-        />
+        <div className="space-y-1">
+          <label htmlFor="suggest-track-query" className={fieldLabelClassName}>
+            Sök låt
+          </label>
+          <input
+            id="suggest-track-query"
+            type="text"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Sök låt..."
+            className={fieldClassName}
+          />
+        </div>
 
         <div className="mt-3 max-h-72 overflow-y-auto">
           {loading && (
@@ -106,14 +114,14 @@ export function SuggestTrackModal({
             return (
               <div
                 key={track.id}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-[rgb(var(--color-border))]/30"
+                className="flex items-center gap-3 rounded-[var(--radius)] px-3 py-2 hover:bg-[rgb(var(--color-pill-bg))]/40"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+                  <p className="truncate text-sm font-semibold text-[rgb(var(--color-text))]">
                     {track.title}
                   </p>
                   {track.artistName && (
-                    <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">
+                    <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
                       {track.artistName}
                     </p>
                   )}

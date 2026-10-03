@@ -6,7 +6,7 @@ import {
   ingestSpotifyTrack,
 } from '@/api/generated/spotify-ingest/spotify-ingest';
 import { ingest } from '@/api/generated/admin-maintenance/admin-maintenance';
-import { Button, InlineError } from '@/ui';
+import { Button, InlineError, PageHeader } from '@/ui';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { toast } from '@/admin/components/toastEmitter';
 
@@ -167,7 +167,7 @@ export function AdminIngestPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Importera</h1>
+      <PageHeader title="Importera" />
 
       <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-5">
         <p className="text-sm text-[rgb(var(--color-text-muted))] mb-3">
@@ -277,8 +277,8 @@ export function AdminIngestPage() {
           </h2>
           <div className="space-y-1">
             {history.map((h, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                <span className={h.status === 'success' ? 'text-green-600' : 'text-red-600'}>
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className={h.status === 'success' ? 'font-medium text-[rgb(var(--color-success))]' : 'font-medium text-[rgb(var(--color-error))]'}>
                   {h.status === 'success' ? 'OK' : 'Fel'}
                 </span>
                 <span className="text-[rgb(var(--color-text-muted))]">{h.time}</span>

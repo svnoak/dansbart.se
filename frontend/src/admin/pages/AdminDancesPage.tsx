@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/api/http-client';
-import { Button } from '@/ui';
+import { Button, PageHeader, fieldClassName, Card } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface DanceItem {
@@ -69,12 +69,14 @@ export function AdminDancesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Danser</h1>
-        <Button variant="primary" size="sm" onClick={() => setImportOpen(true)}>
-          Importera
-        </Button>
-      </div>
+      <PageHeader
+        title="Danser"
+        action={
+          <Button variant="primary" size="sm" onClick={() => setImportOpen(true)}>
+            Importera
+          </Button>
+        }
+      />
 
       {importOpen && <ImportDialog onClose={() => setImportOpen(false)} />}
 
@@ -243,7 +245,7 @@ function PendingTab() {
   return (
     <div className="space-y-2">
       <p className="text-sm text-[rgb(var(--color-text-muted))]">{total} förslag</p>
-      <div className="divide-y divide-[rgb(var(--color-border))] rounded-lg border border-[rgb(var(--color-border))]">
+      <Card className="divide-y divide-[rgb(var(--color-border))]">
         {links.map((link) => (
           <div key={link.id} className="flex items-center gap-4 px-4 py-3">
             <div className="flex-1 min-w-0">
@@ -264,7 +266,7 @@ function PendingTab() {
             </div>
           </div>
         ))}
-      </div>
+      </Card>
       <div className="flex gap-2">
         {offset > 0 && (
           <Button variant="ghost" size="sm" onClick={() => setOffset(offset - limit)}>
@@ -389,33 +391,36 @@ function DancesTab() {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  const inputClass = 'w-full rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1 text-sm focus:outline-none';
+  const inputClass = fieldClassName;
 
   return (
     <div className="space-y-4">
       <input
         type="text"
+        aria-label="Sök dans"
         placeholder="Sök dans..."
         onChange={(e) => handleSearch(e.target.value)}
-        className="w-full max-w-sm rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm focus:outline-none"
+        className={`${fieldClassName} max-w-sm`}
       />
       <p className="text-sm text-[rgb(var(--color-text-muted))]">{total} danser</p>
 
       {loading ? (
         <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar...</p>
       ) : (
-        <div className="divide-y divide-[rgb(var(--color-border))] rounded-lg border border-[rgb(var(--color-border))]">
+        <Card className="divide-y divide-[rgb(var(--color-border))]">
           {dances.map((dance) =>
             editingId === dance.id ? (
               <div key={dance.id} className="flex flex-col gap-2 px-4 py-3">
                 <input
                   className={inputClass}
+                  aria-label="Namn"
                   placeholder="Namn"
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                 />
                 <input
                   className={inputClass}
+                  aria-label="Beskrivnings-URL"
                   placeholder="Beskrivnings-URL"
                   value={editForm.danceDescriptionUrl}
                   onChange={(e) => setEditForm((f) => ({ ...f, danceDescriptionUrl: e.target.value }))}
@@ -423,12 +428,14 @@ function DancesTab() {
                 <div className="flex gap-2">
                   <input
                     className={inputClass}
+                    aria-label="Danstyp"
                     placeholder="Danstyp"
                     value={editForm.danceType}
                     onChange={(e) => setEditForm((f) => ({ ...f, danceType: e.target.value }))}
                   />
                   <input
                     className={inputClass}
+                    aria-label="Musik"
                     placeholder="Musik"
                     value={editForm.music}
                     onChange={(e) => setEditForm((f) => ({ ...f, music: e.target.value }))}
@@ -494,7 +501,7 @@ function DancesTab() {
               </div>
             )
           )}
-        </div>
+        </Card>
       )}
 
       <div className="flex gap-2">
@@ -594,9 +601,7 @@ function DanceDetailPanel({
   return (
     <div className="border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-4 space-y-4">
       <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
-          Bekräftade låtar
-        </p>
+        <h3 className="text-sm font-semibold text-[rgb(var(--color-text))]">Bekräftade låtar</h3>
         {loadingTracks ? (
           <p className="text-xs text-[rgb(var(--color-text-muted))]">Laddar...</p>
         ) : confirmedTracks.length === 0 ? (
@@ -628,15 +633,14 @@ function DanceDetailPanel({
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
-          Lägg till låt
-        </p>
+        <h3 className="text-sm font-semibold text-[rgb(var(--color-text))]">Lägg till låt</h3>
         <input
           type="text"
+          aria-label="Sök låtar"
           placeholder="Sök låtar..."
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
-          className="w-full max-w-sm rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1.5 text-sm focus:outline-none"
+          className={`${fieldClassName} max-w-sm`}
         />
         {searching && (
           <p className="text-xs text-[rgb(var(--color-text-muted))]">Söker...</p>
@@ -716,14 +720,14 @@ function InvalidStylesTab() {
       <p className="text-sm text-[rgb(var(--color-text-muted))]">
         {total} danser med danstyp som saknas i stilkonfigurationen
       </p>
-      <div className="divide-y divide-[rgb(var(--color-border))] rounded-lg border border-[rgb(var(--color-border))]">
+      <Card className="divide-y divide-[rgb(var(--color-border))]">
         {dances.map((dance) => (
           <div key={dance.id} className="flex items-start gap-4 px-4 py-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[rgb(var(--color-text))]">{dance.name}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {dance.danceType && (
-                  <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                  <span className="inline-flex items-center rounded-[var(--radius-sm)] bg-[rgb(var(--color-accent-muted))] px-1.5 py-0.5 text-xs font-medium text-[rgb(var(--color-accent))]">
                     {dance.danceType}
                   </span>
                 )}
@@ -737,7 +741,7 @@ function InvalidStylesTab() {
             </span>
           </div>
         ))}
-      </div>
+      </Card>
       <div className="flex gap-2">
         {offset > 0 && (
           <Button variant="ghost" size="sm" onClick={() => setOffset(offset - limit)}>

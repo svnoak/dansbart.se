@@ -245,7 +245,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
               disabled={!youtubeLink}
               className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-[rgb(var(--color-error))] hover:bg-[rgb(var(--color-error))]/8 disabled:opacity-50"
             >
-              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-white group-hover:text-[rgb(var(--color-error))]">
+              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-[rgb(var(--color-bg-elevated))] group-hover:text-[rgb(var(--color-error))]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
@@ -273,7 +273,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setView('menu')} className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">Tillbaka</button>
               <button type="button" onClick={() => setView('fix_main')} className="rounded bg-[rgb(var(--color-border))] px-4 py-2 text-sm font-bold text-[rgb(var(--color-text))]">Nej, r{'\u00e4'}tta</button>
-              <button type="button" onClick={() => handleSubmitStyleTempo()} disabled={isSubmitting} className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Ja, st{'\u00e4'}mmer</button>
+              <button type="button" onClick={() => handleSubmitStyleTempo()} disabled={isSubmitting} className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-accent-hover))] bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] disabled:opacity-50">Ja, st{'\u00e4'}mmer</button>
             </div>
           </div>
         );
@@ -309,7 +309,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                   setCorrectionStyle(track.subStyle ?? track.danceStyle ?? '');
                   setView('ask_tempo');
                 }}
-                className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-white"
+                className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-accent-hover))] bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))]"
               >
                 Ja
               </button>
@@ -339,7 +339,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 type="button"
                 onClick={() => handleSubmitBrokenLink('wrong_track')}
                 disabled={isSubmitting}
-                className="rounded border border-orange-200 bg-orange-50 p-4 text-sm font-bold text-orange-800 disabled:opacity-50"
+                className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-now-playing))] bg-[rgb(var(--color-now-playing-muted))] p-4 text-sm font-semibold text-[rgb(var(--color-now-playing))] disabled:opacity-50"
               >
                 Fel l{'\u00e5'}t
               </button>
@@ -485,7 +485,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 type="button"
                 onClick={() => handleSubmitStyleTempo('half')}
                 disabled={isSubmitting}
-                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-white disabled:opacity-50"
+                className="rounded-[var(--radius)] border border-[rgb(var(--color-accent-hover))] bg-[rgb(var(--color-accent))] py-5 text-sm font-semibold leading-tight text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] disabled:opacity-50"
               >
                 Den {'\u00e4'}r<br />l{'\u00e5'}ngsammare
               </button>
@@ -501,7 +501,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 type="button"
                 onClick={() => handleSubmitStyleTempo('double')}
                 disabled={isSubmitting}
-                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-white disabled:opacity-50"
+                className="rounded-[var(--radius)] border border-[rgb(var(--color-accent-hover))] bg-[rgb(var(--color-accent))] py-5 text-sm font-semibold leading-tight text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] disabled:opacity-50"
               >
                 Den {'\u00e4'}r<br />snabbare
               </button>
@@ -530,8 +530,8 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-sm rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl">
+      <div className="absolute inset-0 bg-[rgb(var(--color-text))]/55" />
+      <div className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
         <button
           type="button"
           onClick={onClose}
@@ -540,7 +540,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
           <CloseIcon className="h-5 w-5" aria-hidden />
         </button>
 
-        <h3 className="mb-5 flex items-center gap-2 border-b border-[rgb(var(--color-border))] pb-3 pr-8 text-lg font-bold text-[rgb(var(--color-text))]">
+        <h2 className="mb-5 flex items-center gap-2 border-b border-[rgb(var(--color-border))] pb-3 pr-8 text-xl font-semibold text-[rgb(var(--color-text))]">
           {view === 'success' ? (
             <span className="text-[rgb(var(--color-success))]">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -553,7 +553,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
             </span>
           )}
           <span>{view === 'success' ? 'Tack!' : 'Rapportera problem'}</span>
-        </h3>
+        </h2>
 
         {error && (
           <div className="mb-4 rounded-[var(--radius)] border border-[rgb(var(--color-error))]/40 bg-[rgb(var(--color-error))]/8 p-3 text-sm text-[rgb(var(--color-error))]">

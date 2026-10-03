@@ -19,12 +19,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {sidebarOpen && (
           <>
             <div
-              className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+              className="fixed inset-0 z-30 bg-[rgb(var(--color-text))]/55 lg:hidden"
               aria-hidden
               onClick={() => setSidebarOpen(false)}
             />
             <aside
-              className="fixed left-0 top-0 z-40 h-full w-72 border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-4 shadow-lg lg:hidden"
+              className="fixed left-0 top-0 z-40 h-full w-72 border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-sunken))] py-4 shadow-[var(--color-card-shadow)] lg:hidden"
               aria-label="Adminmeny"
             >
               <AdminSidebar onNavigate={() => setSidebarOpen(false)} />
@@ -32,7 +32,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </>
         )}
         {/* Desktop sidebar */}
-        <aside className="sticky top-14 hidden h-fit w-56 shrink-0 self-start border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] py-4 lg:block">
+        <aside className="sticky top-14 hidden h-fit w-56 shrink-0 self-start border-r border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-sunken))] py-4 lg:block">
           <AdminSidebar />
         </aside>
         {/* Content */}

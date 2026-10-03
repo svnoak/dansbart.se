@@ -23,10 +23,11 @@ export function ToastContainer() {
       {messages.map((msg) => (
         <div
           key={msg.id}
-          className={`rounded-[var(--radius)] px-4 py-2.5 text-sm font-medium shadow-lg ${
+          role="status"
+          className={`rounded-[var(--radius)] border px-4 py-2.5 text-sm font-medium shadow-[var(--color-card-shadow)] ${
             msg.variant === 'success'
-              ? 'bg-green-600 text-white'
-              : 'bg-red-600 text-white'
+              ? 'border-[rgb(var(--color-selected))] bg-[rgb(var(--color-selected-muted))] text-[rgb(var(--color-selected))]'
+              : 'border-[rgb(var(--color-error))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-error))]'
           }`}
         >
           {msg.text}

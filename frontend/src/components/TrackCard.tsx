@@ -88,7 +88,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                    className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-accent))]"
                     title="Filtrera på huvudstil"
                   >
                     {track.danceStyle}
@@ -99,7 +99,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                        className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-accent))]"
                         title="Filtrera på understil"
                       >
                         {track.subStyle}
@@ -113,7 +113,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-accent))]"
                     title="Filtrera på huvudstil (AI-gissning)"
                   >
                     {track.danceStyle}
@@ -125,7 +125,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                        className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-accent))]"
                         title="Filtrera på understil (AI-gissning)"
                       >
                         {track.subStyle}
@@ -139,7 +139,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-now-playing))]/40 bg-[rgb(var(--color-now-playing-muted))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-now-playing))] transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-now-playing))]/40 bg-[rgb(var(--color-now-playing-muted))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-now-playing))] transition-colors hover:border-[rgb(var(--color-now-playing))]"
                     title="Filtrera på huvudstil (Osäker)"
                   >
                     {track.danceStyle}
@@ -151,7 +151,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-[rgb(var(--color-now-playing))]/40 bg-[rgb(var(--color-now-playing-muted))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-now-playing))] transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                        className="rounded-full border border-[rgb(var(--color-now-playing))]/40 bg-[rgb(var(--color-now-playing-muted))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-now-playing))] transition-colors hover:border-[rgb(var(--color-now-playing))]"
                         title="Filtrera på understil (Osäker)"
                       >
                         {track.subStyle}
@@ -235,7 +235,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                 onClick={() => setMenuOpen(false)}
               />
               <ul
-                className="absolute right-0 top-full z-20 mt-1 w-48 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+                className="absolute right-0 top-full z-20 mt-1 w-48 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
                 role="menu"
               >
                 <li role="none">

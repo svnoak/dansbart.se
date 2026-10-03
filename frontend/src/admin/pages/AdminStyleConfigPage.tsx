@@ -6,7 +6,7 @@ import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { FormField } from '@/admin/components/forms/FormField';
 import { FormActions } from '@/admin/components/forms/FormActions';
-import { Button } from '@/ui';
+import { Button, PageHeader, fieldClassName } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface StyleConfig {
@@ -203,7 +203,7 @@ export function AdminStyleConfigPage() {
           aria-label={cfg.isActive ? 'Inaktivera' : 'Aktivera'}
         >
           <span
-            className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-[rgb(var(--color-bg-elevated))] shadow-[var(--color-card-shadow)] transition-transform ${
               cfg.isActive ? 'translate-x-4' : ''
             }`}
           />
@@ -225,7 +225,7 @@ export function AdminStyleConfigPage() {
           <button
             type="button"
             onClick={() => setDeleteModal(cfg)}
-            className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
+            className="min-h-9 px-2 py-1 text-sm font-medium text-[rgb(var(--color-error))] hover:underline"
           >
             Radera
           </button>
@@ -264,7 +264,7 @@ export function AdminStyleConfigPage() {
           max={12}
           value={formBeatsPerBar}
           onChange={(e) => setFormBeatsPerBar(parseInt(e.target.value, 10) || 3)}
-          className="w-20 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))]"
+          className={`${fieldClassName} w-24`}
         />
       </FormField>
       {editModal && (
@@ -273,7 +273,7 @@ export function AdminStyleConfigPage() {
             type="checkbox"
             checked={formIsActive}
             onChange={(e) => setFormIsActive(e.target.checked)}
-            className="rounded"
+            className="h-5 w-5 rounded-[var(--radius-sm)] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
           />
           Aktiv
         </label>
@@ -283,17 +283,15 @@ export function AdminStyleConfigPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Stilkonfiguration</h1>
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            Taktslag per takt för varje dansstil. Används för att korrigera taktstreck efter klassificering.
-          </p>
-        </div>
-        <Button variant="primary" size="sm" onClick={openCreate}>
-          Lägg till stil
-        </Button>
-      </div>
+      <PageHeader
+        title="Stilkonfiguration"
+        description="Taktslag per takt för varje dansstil. Används för att korrigera taktstreck efter klassificering."
+        action={
+          <Button variant="primary" size="sm" onClick={openCreate}>
+            Lägg till stil
+          </Button>
+        }
+      />
 
       <DataTable
         columns={columns}
@@ -334,8 +332,7 @@ export function AdminStyleConfigPage() {
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setDeleteModal(null)}>Avbryt</Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleDelete}
           >
             Radera

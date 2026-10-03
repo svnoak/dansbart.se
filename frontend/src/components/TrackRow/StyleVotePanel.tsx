@@ -83,7 +83,7 @@ function StyleVoteDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgb(var(--color-text))]/55 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -91,7 +91,7 @@ function StyleVoteDialog({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-sm rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-xl">
+      <div className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
         <IconButton
           aria-label="Stäng"
           onClick={onClose}
@@ -100,9 +100,9 @@ function StyleVoteDialog({
           <CloseIcon className="h-4 w-4" aria-hidden />
         </IconButton>
 
-        <h3 id={titleId} className="mb-1 pr-8 text-lg font-bold text-[rgb(var(--color-text))]">
+        <h2 id={titleId} className="mb-1 pr-8 text-xl font-semibold text-[rgb(var(--color-text))]">
           {trackTitle}
-        </h3>
+        </h2>
         <p className="mb-4 text-sm text-[rgb(var(--color-text-muted))]">
           {currentStyle ? `Nuvarande dansstil: ${currentStyle}` : 'Dansstil saknas'}
         </p>

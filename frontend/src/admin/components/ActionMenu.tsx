@@ -26,7 +26,7 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-7 w-7 items-center justify-center rounded-[var(--radius)] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
+        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius)] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-text))]/6 hover:text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))]"
         aria-label="Åtgärder"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -34,7 +34,7 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg">
+        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]">
           {actions.map((action) => (
             <button
               key={action.label}
@@ -43,9 +43,9 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
                 setOpen(false);
                 action.onClick();
               }}
-              className={`w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-[rgb(var(--color-border))]/50 ${
+              className={`min-h-11 w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-[rgb(var(--color-pill-bg))] ${
                 action.variant === 'danger'
-                  ? 'text-red-600 dark:text-red-400'
+                  ? 'text-[rgb(var(--color-error))]'
                   : 'text-[rgb(var(--color-text))]'
               }`}
             >

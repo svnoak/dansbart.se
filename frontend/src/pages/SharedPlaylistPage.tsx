@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { getPlaylistByShareToken } from '@/api/generated/playlists/playlists';
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
@@ -7,6 +7,7 @@ import { TrackRow } from '@/components/TrackRow';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
+import { Badge, EmptyState, LinkButton, PageHeader } from '@/ui';
 
 const TEMPO_LABELS: Record<string, string> = {
   Slow: 'Långsamt',
@@ -52,12 +53,9 @@ export function SharedPlaylistPage() {
 
   if (notFound || !playlist) {
     return (
-      <div className="space-y-3">
-        <p className="text-[rgb(var(--color-text))]">Den här länken är inte längre giltig.</p>
-        <Link to="/" className="text-sm text-[rgb(var(--color-accent))] hover:underline">
-          Gå till startsidan
-        </Link>
-      </div>
+      <EmptyState action={<LinkButton to="/">Gå till startsidan</LinkButton>}>
+        Den här länken är inte längre giltig.
+      </EmptyState>
     );
   }
 
@@ -73,75 +71,64 @@ export function SharedPlaylistPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">{playlist.name}</h1>
+      <PageHeader
+        title={playlist.name}
+        meta={`${contextTracks.length} ${contextTracks.length === 1 ? 'låt' : 'låtar'}`}
+        description={playlist.description}
+      />
 
-        {playlist.description && (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">{playlist.description}</p>
-        )}
-
-        {/* Owner */}
-        {playlist.ownerGroup ? (
-          <p className="text-xs text-[rgb(var(--color-text-muted))]">
-            Av gruppen {playlist.ownerGroup.name}
-          </p>
-        ) : (
-          playlist.owner && (
-            <p className="text-xs text-[rgb(var(--color-text-muted))]">
-              Av {playlist.owner.displayName ?? playlist.owner.username}
-            </p>
-          )
-        )}
-
-        {/* Tags */}
-        {(styleColor || tLabel) && (
-          <div className="flex flex-wrap gap-1.5">
-            {styleColor && playlist.danceStyle && (
-              <span
-                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-                style={{
-                  backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                  color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                }}
-              >
-                {playlist.danceStyle.charAt(0).toUpperCase() + playlist.danceStyle.slice(1)}
-              </span>
-            )}
-            {styleColor && playlist.subStyle && (
-              <span
-                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium opacity-80"
-                style={{
-                  backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                  color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                }}
-              >
-                {playlist.subStyle.charAt(0).toUpperCase() + playlist.subStyle.slice(1)}
-              </span>
-            )}
-            {tLabel && (
-              <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border))] px-2.5 py-1 text-xs font-medium text-[rgb(var(--color-text-muted))]">
-                {tLabel}
-              </span>
-            )}
-          </div>
-        )}
-
-        <p className="text-xs text-[rgb(var(--color-text-muted))]">
-          {contextTracks.length} {contextTracks.length === 1 ? 'låt' : 'låtar'}
+      {/* Owner */}
+      {playlist.ownerGroup ? (
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">
+          Av gruppen {playlist.ownerGroup.name}
         </p>
-      </div>
+      ) : (
+        playlist.owner && (
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            Av {playlist.owner.displayName ?? playlist.owner.username}
+          </p>
+        )
+      )}
+
+      {/* Tags */}
+      {(styleColor || tLabel) && (
+        <div className="flex flex-wrap gap-1.5">
+          {styleColor && playlist.danceStyle && (
+            <Badge
+              size="md"
+              style={{
+                backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+              }}
+            >
+              {playlist.danceStyle.charAt(0).toUpperCase() + playlist.danceStyle.slice(1)}
+            </Badge>
+          )}
+          {styleColor && playlist.subStyle && (
+            <Badge
+              size="md"
+              className="opacity-80"
+              style={{
+                backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+                color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+              }}
+            >
+              {playlist.subStyle.charAt(0).toUpperCase() + playlist.subStyle.slice(1)}
+            </Badge>
+          )}
+          {tLabel && (
+            <Badge size="md" variant="muted">
+              {tLabel}
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Login CTA */}
       {!user && (
-        <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3">
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            <Link to="/login" className="text-[rgb(var(--color-accent))] hover:underline">
-              Logga in
-            </Link>{' '}
-            för att spara den här spellistan till ditt konto.
-          </p>
-        </div>
+        <EmptyState action={<LinkButton to="/login">Logga in</LinkButton>}>
+          Logga in för att spara den här spellistan till ditt konto.
+        </EmptyState>
       )}
 
       {/* Track list */}

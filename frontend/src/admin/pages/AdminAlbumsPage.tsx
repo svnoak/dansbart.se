@@ -10,7 +10,7 @@ import { FilterBar } from '@/admin/components/FilterBar';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, InlineError, LoadError, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface AlbumRow {
@@ -129,7 +129,7 @@ export function AdminAlbumsPage() {
         <button
           type="button"
           onClick={() => { setRejectModal(a); setRejectError(null); }}
-          className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
+          className="min-h-9 px-2 py-1 text-sm font-medium text-[rgb(var(--color-error))] hover:underline"
         >
           Radera & blockera
         </button>
@@ -140,7 +140,7 @@ export function AdminAlbumsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Album</h1>
+      <PageHeader title="Album" />
 
       <FilterBar>
         <div className="flex-1 min-w-50">
@@ -195,8 +195,7 @@ export function AdminAlbumsPage() {
             Avbryt
           </Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleReject}
           >
             Radera & blockera

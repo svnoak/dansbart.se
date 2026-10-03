@@ -144,10 +144,10 @@ function NavLinkItem({ item }: { item: NavItem }) {
   return (
     <Link
       to={item.to}
-      className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm font-medium transition-colors ${
+      className={`mx-2 flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
         active
-          ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] border-r-3 border-[rgb(var(--color-accent))]'
-          : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
+          ? 'bg-[rgb(var(--color-selected-muted))] font-semibold text-[rgb(var(--color-selected))] shadow-[inset_3px_0_0_rgb(var(--color-selected))]'
+          : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-bg-elevated))]'
       }`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-current opacity-90">
@@ -172,7 +172,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="mt-6 px-3">
         <Link
           to="/"
-          className="flex items-center gap-2 text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] transition-colors"
+          className="flex min-h-11 items-center gap-2 text-sm font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 transition-colors hover:decoration-[rgb(var(--color-accent))]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
             <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />

@@ -15,8 +15,8 @@ import type { DanceListEntryDto } from '@/api/models/danceListEntryDto';
 import type { Dance } from '@/api/models/dance';
 import type { PlaylistTrackDto } from '@/api/models/playlistTrackDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import { Button, Card, InlineError } from '@/ui';
-import { PlusIcon, PlayIcon } from '@/icons';
+import { Button, Card, EmptyState, InlineError, ListRow, PageHeader, SelectField, fieldClassName, fieldLabelClassName } from '@/ui';
+import { MusicNoteIcon, PlusIcon, PlayIcon } from '@/icons';
 import { usePlayer } from '@/player/usePlayer';
 import { SelectableSearchResults } from '@/components';
 
@@ -305,25 +305,25 @@ export default function DanceListPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">{danceList.name}</h1>
-        {danceList.description && (
-          <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">{danceList.description}</p>
-        )}
-      </div>
-
-      {canManage && activeSearch === null && (
-        <Button onClick={openDanceSearch}>
-          <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
-          Lägg till dans
-        </Button>
-      )}
+      <PageHeader
+        title={danceList.name}
+        meta={`${entries.length} ${entries.length === 1 ? 'dans' : 'danser'}`}
+        description={danceList.description}
+        action={
+          canManage && activeSearch === null && (
+            <Button onClick={openDanceSearch}>
+              <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+              Lägg till dans
+            </Button>
+          )
+        }
+      />
 
       {canManage && activeSearch === 'dance' && (
         <Card className="p-4">
           <div className="space-y-3">
-            <div>
-              <label htmlFor="dance-search" className="block text-sm font-medium text-[rgb(var(--color-text))]">
+            <div className="space-y-1">
+              <label htmlFor="dance-search" className={fieldLabelClassName}>
                 Sök efter dans
               </label>
               <input
@@ -336,7 +336,7 @@ export default function DanceListPage() {
                 }}
                 placeholder="Sök..."
                 autoFocus
-                className="mt-1 min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className={fieldClassName}
               />
             </div>
 
@@ -377,7 +377,7 @@ export default function DanceListPage() {
       )}
 
       {entries.length === 0 ? (
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">Danslistan har inga danser ännu.</p>
+        <EmptyState>Danslistan har inga danser ännu.</EmptyState>
       ) : (
         <ul className="space-y-3">
           {entries.map((entry) => {
@@ -392,9 +392,9 @@ export default function DanceListPage() {
               <li key={entry.id}>
                 <Card className="space-y-3 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-[rgb(var(--color-text))]">
+                    <h2 className="min-w-0 truncate text-xl font-semibold text-[rgb(var(--color-text))]">
                       {entry.danceName ?? entry.freeTextName}
-                    </span>
+                    </h2>
                     <div className="flex items-center gap-2">
                       {tracks.length > 0 && (
                         <Button size="sm" variant="secondary" onClick={() => handlePlayEntry(entry)}>
@@ -431,25 +431,20 @@ export default function DanceListPage() {
                   <InlineError>{entryRemoveErrors[entry.id ?? '']}</InlineError>
 
                   {canManage && (
-                    <div>
-                      <label
-                        htmlFor={`play-mode-${entry.id}`}
-                        className="mr-2 text-sm font-medium text-[rgb(var(--color-text))]"
-                      >
-                        Spelläge
-                      </label>
-                      <select
+                    <div className="space-y-1">
+                      <SelectField
                         id={`play-mode-${entry.id}`}
+                        label="Spelläge"
                         value={entry.playMode ?? 'in_order'}
-                        onChange={(e) => handlePlayModeChange(entry.id as string, e.target.value)}
-                        className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                        onChange={(value) => handlePlayModeChange(entry.id as string, value)}
+                        className="max-w-xs"
                       >
                         {PLAY_MODE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
                         ))}
-                      </select>
+                      </SelectField>
                       <InlineError>{playModeErrors[entry.id ?? '']}</InlineError>
                     </div>
                   )}
@@ -457,52 +452,50 @@ export default function DanceListPage() {
                   {tracks.length === 0 ? (
                     <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga låtar länkade ännu.</p>
                   ) : (
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {tracks.map((pt) => {
                         const isConfirmingTrackRemoval =
                           confirmRemoval?.kind === 'track' &&
                           confirmRemoval.entryId === entry.id &&
                           confirmRemoval.trackId === pt.id;
                         return (
-                          <li
-                            key={pt.id}
-                            className="flex items-center justify-between gap-3 border-t border-[rgb(var(--color-border))]/50 pt-2 first:border-t-0 first:pt-0"
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                                {pt.track?.title ?? 'Okänd låt'}
-                              </p>
-                              <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
-                                {pt.track?.artistName ?? 'Okänd artist'}
-                              </p>
-                              <InlineError>{trackRemoveErrors[pt.id ?? '']}</InlineError>
-                            </div>
-                            {canManage &&
-                              (isConfirmingTrackRemoval ? (
-                                <div className="flex shrink-0 gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="danger"
-                                    onClick={() => handleRemoveTrack(entry.id as string, pt.id as string)}
-                                  >
-                                    Ja, ta bort
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => setConfirmRemoval(null)}>
-                                    Avbryt
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="shrink-0"
-                                  onClick={() =>
-                                    setConfirmRemoval({ kind: 'track', entryId: entry.id ?? '', trackId: pt.id ?? '' })
-                                  }
-                                >
-                                  Ta bort låt
-                                </Button>
-                              ))}
+                          <li key={pt.id} className="space-y-1">
+                            <ListRow
+                              icon={<MusicNoteIcon className="h-5 w-5" aria-hidden />}
+                              title={pt.track?.title ?? 'Okänd låt'}
+                              subtitle={pt.track?.artistName ?? 'Okänd artist'}
+                              trailing={
+                                canManage
+                                  ? isConfirmingTrackRemoval
+                                    ? (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="danger"
+                                          onClick={() => handleRemoveTrack(entry.id as string, pt.id as string)}
+                                        >
+                                          Ja, ta bort
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => setConfirmRemoval(null)}>
+                                          Avbryt
+                                        </Button>
+                                      </>
+                                    )
+                                    : (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          setConfirmRemoval({ kind: 'track', entryId: entry.id ?? '', trackId: pt.id ?? '' })
+                                        }
+                                      >
+                                        Ta bort låt
+                                      </Button>
+                                    )
+                                  : undefined
+                              }
+                            />
+                            <InlineError>{trackRemoveErrors[pt.id ?? '']}</InlineError>
                           </li>
                         );
                       })}
@@ -518,11 +511,8 @@ export default function DanceListPage() {
 
                   {canManage && isTrackSearchOpen && (
                     <Card className="space-y-3 p-3">
-                      <div>
-                        <label
-                          htmlFor={`track-search-${entry.id}`}
-                          className="block text-sm font-medium text-[rgb(var(--color-text))]"
-                        >
+                      <div className="space-y-1">
+                        <label htmlFor={`track-search-${entry.id}`} className={fieldLabelClassName}>
                           Sök efter låt
                         </label>
                         <input
@@ -535,7 +525,7 @@ export default function DanceListPage() {
                           }}
                           placeholder="Sök..."
                           autoFocus
-                          className="mt-1 min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                          className={fieldClassName}
                         />
                       </div>
 

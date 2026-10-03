@@ -4,7 +4,7 @@ import { getEditablePlaylists, addTrack, createPlaylist } from '@/api/generated/
 import type { EditablePlaylistDto } from '@/api/models/editablePlaylistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { CloseIcon, PlaylistIcon, PlusIcon } from '@/icons';
-import { InlineError, toast } from '@/ui';
+import { Button, InlineError, fieldClassName, toast } from '@/ui';
 
 interface AddToPlaylistModalProps {
   open: boolean;
@@ -87,20 +87,20 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
         if (e.currentTarget === e.target) onClose();
       }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-sm rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl">
+      <div className="absolute inset-0 bg-[rgb(var(--color-text))]/55" />
+      <div className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-[var(--radius)] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-text))]/6 hover:text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))]"
         >
           <CloseIcon className="h-5 w-5" aria-hidden />
         </button>
 
-        <h3 className="mb-5 flex items-center gap-2 border-b border-[rgb(var(--color-border))] pb-3 pr-8 text-lg font-bold text-[rgb(var(--color-text))]">
+        <h2 className="mb-5 flex items-center gap-2 border-b border-[rgb(var(--color-border))] pb-3 pr-8 text-xl font-semibold text-[rgb(var(--color-text))]">
           <PlaylistIcon className="h-5 w-5 text-[rgb(var(--color-accent))]" aria-hidden />
           Lägg till i spellista
-        </h3>
+        </h2>
 
         {loading && (
           <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar...</p>
@@ -167,15 +167,11 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
                     }}
                     placeholder="Namn på spellistan"
                     autoFocus
-                    className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                    className={`${fieldClassName} flex-1`}
                   />
-                  <button
-                    type="submit"
-                    disabled={creating || !newName.trim()}
-                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                  >
+                  <Button type="submit" disabled={creating || !newName.trim()}>
                     Skapa
-                  </button>
+                  </Button>
                 </form>
                 <InlineError>{createError}</InlineError>
               </>

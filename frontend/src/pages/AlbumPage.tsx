@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getAlbum } from '@/api/generated/albums/albums';
 import type { AlbumDto } from '@/api/models/albumDto';
-import { ArtworkPlaceholder, IconButton, SectionTitle } from '@/ui';
+import { ArtworkPlaceholder, EmptyState, IconButton, PageHeader, SectionTitle } from '@/ui';
 import { BackArrowIcon } from '@/icons';
 import { TrackRow } from '@/components';
 
@@ -57,37 +57,32 @@ export function AlbumPage() {
       <IconButton aria-label="Tillbaka" onClick={() => navigate(-1)}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
-      <div className="flex gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
         <ArtworkPlaceholder
           aspect="square"
-          className="h-40 w-40 shrink-0 rounded-[var(--radius-lg)]"
+          className="h-40 w-40 shrink-0 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))]"
         />
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-            {album.title ?? 'Okänt album'}
-          </h1>
-          {album.artist && (
-            <Link
-              to={`/artist/${album.artist.id ?? ''}`}
-              className="mt-1 block text-[rgb(var(--color-accent))] hover:underline"
-            >
-              {album.artist.name ?? 'Okänd artist'}
-            </Link>
-          )}
-          {album.releaseDate && (
-            <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
-              {new Date(album.releaseDate).getFullYear()}
-            </p>
-          )}
-        </div>
+        <PageHeader
+          className="min-w-0 flex-1"
+          title={album.title ?? 'Okänt album'}
+          meta={album.releaseDate ? String(new Date(album.releaseDate).getFullYear()) : undefined}
+          description={
+            album.artist && (
+              <Link
+                to={`/artist/${album.artist.id ?? ''}`}
+                className="font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
+              >
+                {album.artist.name ?? 'Okänd artist'}
+              </Link>
+            )
+          }
+        />
       </div>
 
       <section aria-labelledby="album-tracks-heading">
         <SectionTitle id="album-tracks-heading">Låtar</SectionTitle>
         {tracks.length === 0 ? (
-          <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">
-            Inga låtar i detta album.
-          </p>
+          <EmptyState className="mt-3">Inga låtar i detta album.</EmptyState>
         ) : (
           <ul className="mt-3 space-y-0">
             {tracks.map((track) => (

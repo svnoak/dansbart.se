@@ -1,6 +1,7 @@
 import { useAuth } from '@/auth/useAuth';
 import { useTheme } from '@/theme/useTheme';
 import { IconButton } from '@/ui';
+import { RosetteIcon } from '@/icons';
 
 export function AdminHeader({
   onOpenSidebar,
@@ -11,7 +12,7 @@ export function AdminHeader({
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
+    <header className="sticky top-0 z-20 border-b border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))]">
       <div className="flex items-center gap-3 px-4 py-3">
         <IconButton
           aria-label="Öppna meny"
@@ -24,10 +25,8 @@ export function AdminHeader({
         </IconButton>
 
         <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[rgb(var(--color-text))] text-[rgb(var(--color-bg-elevated))] font-bold text-lg">
-            D
-          </span>
-          <span className="text-lg font-semibold text-[rgb(var(--color-text))]">
+          <RosetteIcon className="h-9 w-9 text-[rgb(var(--color-accent))]" aria-hidden />
+          <span className="font-display text-lg font-semibold text-[rgb(var(--color-text))]">
             Admin
           </span>
         </div>
@@ -53,7 +52,7 @@ export function AdminHeader({
           <button
             type="button"
             onClick={logout}
-            className="ml-2 flex items-center gap-1.5 rounded-[var(--radius)] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))] transition-colors"
+            className="ml-2 flex min-h-11 items-center gap-1.5 rounded-[var(--radius)] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--color-text))] transition-colors hover:bg-[rgb(var(--color-text))]/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))]"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
               <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />

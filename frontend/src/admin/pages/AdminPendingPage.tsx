@@ -11,7 +11,7 @@ import type { Column } from '@/admin/components/DataTable';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, InlineError, LoadError, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface PendingArtistRow {
@@ -156,7 +156,7 @@ export function AdminPendingPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-red-600 dark:text-red-400"
+              className="text-[rgb(var(--color-error))]"
               onClick={() => { setRejectModal(a); setRejectError(null); }}
             >
               Avvisa
@@ -199,7 +199,7 @@ export function AdminPendingPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Väntande</h1>
+      <PageHeader title="Väntande" />
 
       <div className="flex gap-1 border-b border-[rgb(var(--color-border))]">
         <button
@@ -284,8 +284,7 @@ export function AdminPendingPage() {
             Avbryt
           </Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleReject}
           >
             Avvisa

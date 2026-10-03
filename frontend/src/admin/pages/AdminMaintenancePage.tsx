@@ -7,7 +7,7 @@ import {
 } from '@/api/generated/admin-maintenance/admin-maintenance';
 import { apiFetch } from '@/api/http-client';
 import { Modal } from '@/admin/components/Modal';
-import { Button, InlineError } from '@/ui';
+import { Button, InlineError, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 type PauseStatus = Record<string, boolean>;
@@ -190,12 +190,12 @@ export function AdminMaintenancePage() {
         return res.json();
       }),
       extraContent: (
-        <label className="mt-2 flex items-center gap-2 text-xs text-[rgb(var(--color-text-muted))]">
+        <label className="mt-2 flex min-h-11 items-center gap-2 text-sm text-[rgb(var(--color-text))]">
           <input
             type="checkbox"
             checked={retrainReclassify}
             onChange={(e) => setRetrainReclassify(e.target.checked)}
-            className="rounded border-[rgb(var(--color-border))]"
+            className="h-5 w-5 rounded-[var(--radius-sm)] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
           />
           Omklassificera alla spår efteråt
         </label>
@@ -218,7 +218,7 @@ export function AdminMaintenancePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Underhåll</h1>
+      <PageHeader title="Underhåll" />
 
       {/* Queue pause/resume controls */}
       <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
@@ -242,15 +242,15 @@ export function AdminMaintenancePage() {
               <button
                 onClick={() => handleToggleQueue(queue)}
                 disabled={pauseLoading !== null}
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-full)] border px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
                   paused
-                    ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-                    : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                    ? 'border-[rgb(var(--color-error))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-error))]'
+                    : 'border-[rgb(var(--color-selected))] bg-[rgb(var(--color-selected-muted))] text-[rgb(var(--color-selected))]'
                 } ${pauseLoading !== null ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
               >
                 <span
                   className={`inline-block h-2 w-2 rounded-full ${
-                    paused ? 'bg-red-500' : 'bg-green-500'
+                    paused ? 'bg-[rgb(var(--color-error))]' : 'bg-[rgb(var(--color-selected))]'
                   }`}
                 />
                 {QUEUE_LABELS[queue] ?? queue}

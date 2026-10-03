@@ -6,7 +6,7 @@ import {
   mergeAllDuplicates,
 } from '@/api/generated/admin-duplicates/admin-duplicates';
 import { Modal } from '@/admin/components/Modal';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, InlineError, LoadError, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface DuplicateGroup {
@@ -101,7 +101,7 @@ export function AdminDuplicatesPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Dubbletter</h1>
+        <PageHeader title="Dubbletter" />
         <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
       </div>
     );
@@ -109,19 +109,21 @@ export function AdminDuplicatesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Dubbletter</h1>
-        {groups.length > 0 && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => { setMergeAllModal(true); setMergeAllError(null); }}
-            disabled={merging}
-          >
-            Sammanfoga alla
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Dubbletter"
+        action={
+          groups.length > 0 && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => { setMergeAllModal(true); setMergeAllError(null); }}
+              disabled={merging}
+            >
+              Sammanfoga alla
+            </Button>
+          )
+        }
+      />
 
       {loadError && <LoadError message={loadError} onRetry={fetchData} />}
 

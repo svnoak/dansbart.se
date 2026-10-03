@@ -17,7 +17,7 @@ import { TextInput } from '@/admin/components/forms/TextInput';
 import { Select } from '@/admin/components/forms/Select';
 import { FormField } from '@/admin/components/forms/FormField';
 import { FormActions } from '@/admin/components/forms/FormActions';
-import { Button } from '@/ui';
+import { Button, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface StyleConfig {
@@ -207,12 +207,12 @@ export function AdminKeywordsPage() {
           type="button"
           onClick={() => handleToggleActive(kw)}
           className={`relative h-5 w-9 rounded-full transition-colors ${
-            kw.isActive ? 'bg-[rgb(var(--color-accent))]' : 'bg-[rgb(var(--color-border))]'
+            kw.isActive ? 'bg-[rgb(var(--color-selected))]' : 'bg-[rgb(var(--color-border-strong))]'
           }`}
           aria-label={kw.isActive ? 'Inaktivera' : 'Aktivera'}
         >
           <span
-            className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-[rgb(var(--color-bg-elevated))] shadow-[var(--color-card-shadow)] transition-transform ${
               kw.isActive ? 'translate-x-4' : ''
             }`}
           />
@@ -227,14 +227,14 @@ export function AdminKeywordsPage() {
           <button
             type="button"
             onClick={() => openEdit(kw)}
-            className="px-2 py-1 text-xs text-[rgb(var(--color-accent))] hover:underline"
+            className="min-h-9 px-2 py-1 text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
           >
             Redigera
           </button>
           <button
             type="button"
             onClick={() => setDeleteModal(kw)}
-            className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
+            className="min-h-9 px-2 py-1 text-sm font-medium text-[rgb(var(--color-error))] hover:underline"
           >
             Radera
           </button>
@@ -298,7 +298,7 @@ export function AdminKeywordsPage() {
             type="checkbox"
             checked={formIsActive}
             onChange={(e) => setFormIsActive(e.target.checked)}
-            className="rounded"
+            className="h-5 w-5 rounded-[var(--radius-sm)] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
           />
           Aktiv
         </label>
@@ -308,12 +308,14 @@ export function AdminKeywordsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Nyckelord</h1>
-        <Button variant="primary" size="sm" onClick={openCreate}>
-          Skapa nyckelord
-        </Button>
-      </div>
+      <PageHeader
+        title="Nyckelord"
+        action={
+          <Button variant="primary" size="sm" onClick={openCreate}>
+            Skapa nyckelord
+          </Button>
+        }
+      />
 
       <FilterBar>
         <div className="flex-1 min-w-50">
@@ -388,8 +390,7 @@ export function AdminKeywordsPage() {
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setDeleteModal(null)}>Avbryt</Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleDelete}
           >
             Radera

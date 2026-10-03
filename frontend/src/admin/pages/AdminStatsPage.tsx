@@ -24,6 +24,7 @@ import {
 } from '@/api/generated/admin-analytics/admin-analytics';
 import { StatCard } from '@/admin/components/StatCard';
 import { Select } from '@/admin/components/forms/Select';
+import { PageHeader } from '@/ui';
 
 interface DayData {
   date: string;
@@ -298,7 +299,7 @@ export function AdminStatsPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Statistik</h1>
+        <PageHeader title="Statistik" />
         <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
       </div>
     );
@@ -306,19 +307,22 @@ export function AdminStatsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Statistik</h1>
-        <Select
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="w-auto"
-        >
-          <option value={1}>Senaste 24 timmar</option>
-          <option value={7}>Senaste 7 dagar</option>
-          <option value={30}>Senaste 30 dagar</option>
-          <option value={90}>Senaste 90 dagar</option>
-        </Select>
-      </div>
+      <PageHeader
+        title="Statistik"
+        action={
+          <Select
+            aria-label="Period"
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className="w-auto"
+          >
+            <option value={1}>Senaste 24 timmar</option>
+            <option value={7}>Senaste 7 dagar</option>
+            <option value={30}>Senaste 30 dagar</option>
+            <option value={90}>Senaste 90 dagar</option>
+          </Select>
+        }
+      />
 
       {/* Library stats */}
       <div>
@@ -476,11 +480,11 @@ export function AdminStatsPage() {
           </h2>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text))]">{nudgeShown}</p>
+              <p className="font-display text-2xl font-semibold text-[rgb(var(--color-text))]">{nudgeShown}</p>
               <p className="text-xs text-[rgb(var(--color-text-muted))]">Visade</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-500">{nudgeCompleted}</p>
+              <p className="font-display text-2xl font-semibold text-[rgb(var(--color-success))]">{nudgeCompleted}</p>
               <p className="text-xs text-[rgb(var(--color-text-muted))]">
                 Slutförda
                 {nudgeShown > 0 && (
@@ -489,7 +493,7 @@ export function AdminStatsPage() {
               </p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text-muted))]">{nudgeDismissed}</p>
+              <p className="font-display text-2xl font-semibold text-[rgb(var(--color-text-muted))]">{nudgeDismissed}</p>
               <p className="text-xs text-[rgb(var(--color-text-muted))]">
                 Avvisade
                 {nudgeShown > 0 && (
@@ -501,7 +505,7 @@ export function AdminStatsPage() {
           {nudgeShown > 0 && (
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
               <div
-                className="h-full rounded-full bg-green-500"
+                className="h-full rounded-full bg-[rgb(var(--color-success))]"
                 style={{ width: `${Math.min(100, (nudgeCompleted / nudgeShown) * 100)}%` }}
               />
             </div>

@@ -11,8 +11,22 @@ import {
 } from '@/api/generated/playlists/playlists';
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
-import { BackArrowIcon } from '@/icons';
-import { IconButton, InlineError, toast, Card, SectionTitle, Button, TextField } from '@/ui';
+import { BackArrowIcon, GroupIcon } from '@/icons';
+import {
+  AvatarPlaceholder,
+  Badge,
+  Button,
+  Card,
+  IconButton,
+  InlineError,
+  PageHeader,
+  SectionTitle,
+  SelectField,
+  TextField,
+  fieldClassName,
+  fieldLabelClassName,
+  toast,
+} from '@/ui';
 import { ConfirmDeleteByName } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
@@ -242,13 +256,11 @@ export function PlaylistSettingsPage() {
   return (
     <div className="space-y-8">
       {/* Back */}
-      <div className="flex items-center gap-3">
+      <div className="space-y-6">
         <IconButton aria-label="Tillbaka" onClick={() => navigate(`/playlists/${id}`)}>
           <BackArrowIcon className="h-5 w-5" aria-hidden />
         </IconButton>
-        <h1 className="text-xl font-bold text-[rgb(var(--color-text))]">
-          Inställningar — {playlist.name}
-        </h1>
+        <PageHeader title="Inställningar" meta={playlist.name} />
       </div>
 
       {/* Om spellistan */}
@@ -257,10 +269,7 @@ export function PlaylistSettingsPage() {
           <SectionTitle>Om spellistan</SectionTitle>
           <Card className="space-y-3 p-4">
             <div className="space-y-1">
-              <label
-                htmlFor="playlist-description"
-                className="block text-sm font-medium text-[rgb(var(--color-text))]"
-              >
+              <label htmlFor="playlist-description" className={fieldLabelClassName}>
                 Beskrivning
               </label>
               <textarea
@@ -271,7 +280,7 @@ export function PlaylistSettingsPage() {
                   setDescriptionError(null);
                 }}
                 rows={4}
-                className="w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+                className={fieldClassName}
               />
             </div>
             <Button onClick={handleSaveDescription} disabled={savingDescription}>
@@ -285,28 +294,22 @@ export function PlaylistSettingsPage() {
       {/* Synlighet */}
       {isOwner && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
-            Synlighet
-          </h2>
-          <div className="flex items-center justify-between rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3">
+          <SectionTitle>Synlighet</SectionTitle>
+          <Card className="flex items-center justify-between gap-3 p-4">
             <div>
-              <p className="text-sm font-medium text-[rgb(var(--color-text))]">
+              <p className="text-sm font-semibold text-[rgb(var(--color-text))]">
                 {playlist.isPublic ? 'Offentlig' : 'Privat'}
               </p>
-              <p className="text-xs text-[rgb(var(--color-text-muted))]">
+              <p className="text-sm text-[rgb(var(--color-text-muted))]">
                 {playlist.isPublic
                   ? 'Alla kan se den här spellistan'
                   : 'Bara du och samarbetare ser den'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleTogglePublic}
-              className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-xs font-medium text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
-            >
+            <Button variant="secondary" size="sm" onClick={handleTogglePublic}>
               {playlist.isPublic ? 'Gör privat' : 'Gör offentlig'}
-            </button>
-          </div>
+            </Button>
+          </Card>
           <InlineError>{visibilityError}</InlineError>
         </section>
       )}
@@ -314,159 +317,156 @@ export function PlaylistSettingsPage() {
       {/* Delningslänk */}
       {canManageShare && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
-            Delningslänk
-          </h2>
-          <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
+          <SectionTitle>Delningslänk</SectionTitle>
+          <Card className="space-y-3 p-4">
             {shareToken ? (
               <>
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                <p className="text-sm text-[rgb(var(--color-text-muted))]">
                   Alla med länken kan se och spela den här spellistan.
                 </p>
                 <div className="flex gap-2">
                   <input
                     readOnly
+                    aria-label="Delningslänk"
                     value={shareUrl ?? ''}
-                    className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-1.5 text-xs text-[rgb(var(--color-text-muted))] focus:outline-none"
+                    className={`${fieldClassName} flex-1 text-sm text-[rgb(var(--color-text-muted))]`}
                   />
-                  <button
-                    type="button"
-                    onClick={copyLink}
-                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-                  >
-                    Kopiera
-                  </button>
+                  <Button onClick={copyLink}>Kopiera</Button>
                 </div>
                 <InlineError>{copyLinkError}</InlineError>
-                <button
-                  type="button"
-                  onClick={removeLink}
-                  className="text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] underline"
-                >
+                <Button variant="ghost" size="sm" onClick={removeLink}>
                   Ogiltigförklara länk
-                </button>
+                </Button>
                 <InlineError>{removeLinkError}</InlineError>
               </>
             ) : (
               <>
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                <p className="text-sm text-[rgb(var(--color-text-muted))]">
                   Ingen delningslänk är aktiv.
                 </p>
-                <button
-                  type="button"
-                  onClick={createLink}
-                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-                >
+                <Button variant="secondary" onClick={createLink}>
                   Skapa delningslänk
-                </button>
+                </Button>
                 <InlineError>{createLinkError}</InlineError>
               </>
             )}
-          </div>
+          </Card>
         </section>
       )}
 
       {/* Delad med */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
-          Delad med
-        </h2>
+        <SectionTitle>Delad med</SectionTitle>
 
-        {/* Owner row */}
-        <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] divide-y divide-[rgb(var(--color-border))]">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div>
+        <Card className="divide-y divide-[rgb(var(--color-border))]">
+          {/* Owner row */}
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
               {playlist.ownerGroup ? (
-                <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                  Ägs av gruppen{' '}
-                  <Link
-                    to={`/groups/${playlist.ownerGroup.id}`}
-                    className="text-[rgb(var(--color-accent))] hover:underline"
-                  >
-                    {playlist.ownerGroup.name}
-                  </Link>
-                </p>
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text-muted))]"
+                  aria-hidden
+                >
+                  <GroupIcon className="h-5 w-5" />
+                </span>
               ) : (
-                <>
-                  <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                    {playlist.owner?.displayName ?? playlist.owner?.username ?? 'Okänd'}
-                  </p>
-                  <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                    {playlist.owner?.username}
-                  </p>
-                </>
+                <AvatarPlaceholder size="md" />
               )}
+              <div className="min-w-0">
+                {playlist.ownerGroup ? (
+                  <p className="text-sm font-semibold text-[rgb(var(--color-text))]">
+                    Ägs av gruppen{' '}
+                    <Link
+                      to={`/groups/${playlist.ownerGroup.id}`}
+                      className="text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
+                    >
+                      {playlist.ownerGroup.name}
+                    </Link>
+                  </p>
+                ) : (
+                  <>
+                    <p className="truncate text-sm font-semibold text-[rgb(var(--color-text))]">
+                      {playlist.owner?.displayName ?? playlist.owner?.username ?? 'Okänd'}
+                    </p>
+                    <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
+                      {playlist.owner?.username}
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
-            <span className="rounded-full bg-[rgb(var(--color-accent))]/10 px-2 py-0.5 text-[10px] font-medium text-[rgb(var(--color-accent))]">
-              Ägare
-            </span>
+            <Badge>Ägare</Badge>
           </div>
 
-          {(playlist.collaborators ?? []).map((collab) => (
-            <div key={collab.id} className="px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                    {collab.groupId
-                      ? collab.groupName
-                      : (collab.displayName ?? collab.username ?? collab.userId)}
-                  </p>
-                  <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                    {collab.username}
-                    {collab.status === 'pending' && (
-                      <span className="ml-1.5 rounded-full bg-[rgb(var(--color-border))] px-1.5 py-0.5 text-[10px]">
-                        {statusLabel(collab.status)}
+          {(playlist.collaborators ?? []).map((collab) => {
+            const collabName = collab.groupId
+              ? collab.groupName
+              : (collab.displayName ?? collab.username ?? collab.userId);
+            return (
+              <div key={collab.id} className="space-y-1 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {collab.groupId ? (
+                      <span
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text-muted))]"
+                        aria-hidden
+                      >
+                        <GroupIcon className="h-5 w-5" />
+                      </span>
+                    ) : (
+                      <AvatarPlaceholder size="md" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[rgb(var(--color-text))]">{collabName}</p>
+                      <p className="flex flex-wrap items-center gap-1.5 text-sm text-[rgb(var(--color-text-muted))]">
+                        {collab.username}
+                        {collab.status === 'pending' && (
+                          <Badge variant="muted">{statusLabel(collab.status)}</Badge>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isOwner ? (
+                      <SelectField
+                        id={`collab-permission-${collab.id}`}
+                        label={`Behörighet för ${collabName}`}
+                        hideLabel
+                        value={collab.permission ?? 'view'}
+                        onChange={(value) => handleChangePermission(collab.id!, value)}
+                        className="w-32"
+                      >
+                        <option value="edit">Redigera</option>
+                        <option value="view">Se</option>
+                      </SelectField>
+                    ) : (
+                      <span className="text-sm text-[rgb(var(--color-text-muted))]">
+                        {PERMISSION_LABELS[collab.permission ?? ''] ?? collab.permission}
                       </span>
                     )}
-                  </p>
+                    {isOwner && (
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveCollaborator(collab.id!)}>
+                        Ta bort
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {isOwner ? (
-                    <select
-                      value={collab.permission ?? 'view'}
-                      onChange={(e) => handleChangePermission(collab.id!, e.target.value)}
-                      className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1 text-xs text-[rgb(var(--color-text))] focus:outline-none"
-                    >
-                      <option value="edit">Redigera</option>
-                      <option value="view">Se</option>
-                    </select>
-                  ) : (
-                    <span className="text-xs text-[rgb(var(--color-text-muted))]">
-                      {PERMISSION_LABELS[collab.permission ?? ''] ?? collab.permission}
-                    </span>
-                  )}
-                  {isOwner && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCollaborator(collab.id!)}
-                      className="text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-error))]"
-                    >
-                      Ta bort
-                    </button>
-                  )}
-                </div>
+                <InlineError>{collaboratorErrors[collab.id!]}</InlineError>
               </div>
-              <InlineError>{collaboratorErrors[collab.id!]}</InlineError>
-            </div>
-          ))}
-        </div>
+            );
+          })}
+        </Card>
 
         {/* Invite form — owner only */}
         {isOwner && !showInviteForm && (
-          <button
-            type="button"
-            onClick={() => setShowInviteForm(true)}
-            className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm font-medium text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
-          >
+          <Button variant="secondary" onClick={() => setShowInviteForm(true)}>
             + Bjud in till spellista
-          </button>
+          </Button>
         )}
         {isOwner && showInviteForm && (
           <form onSubmit={handleInvite} className="space-y-3">
             <fieldset className="space-y-1">
-              <legend className="block text-sm font-medium text-[rgb(var(--color-text))]">
-                Bjud in
-              </legend>
+              <legend className={fieldLabelClassName}>Bjud in</legend>
               <div className="flex gap-4">
                 <label
                   htmlFor="invite-type-user"
@@ -506,32 +506,30 @@ export function PlaylistSettingsPage() {
                   autoComplete="off"
                 />
               </div>
-              <select
+              <SelectField
+                id="invite-permission"
+                label="Behörighet"
                 value={invitePermission}
-                onChange={(e) => setInvitePermission(e.target.value as 'edit' | 'view')}
-                className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
+                onChange={(value) => setInvitePermission(value as 'edit' | 'view')}
+                className="w-32"
               >
                 <option value="view">Se</option>
                 <option value="edit">Redigera</option>
-              </select>
-              <button
-                type="submit"
-                disabled={inviting || !inviteValue.trim()}
-                className="min-h-[44px] rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-              >
+              </SelectField>
+              <Button type="submit" disabled={inviting || !inviteValue.trim()}>
                 Bjud in
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => {
                   setShowInviteForm(false);
                   setInviteValue('');
                   setInviteError(null);
                 }}
-                className="min-h-[44px] rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50"
               >
                 Avbryt
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -541,22 +539,22 @@ export function PlaylistSettingsPage() {
       {/* Överlåt ägarskap — owner only */}
       {isOwner && acceptedCollaborators.length > 0 && !playlist.ownerGroup && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
-            Överlåt ägarskap
-          </h2>
-          <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
-            <p className="text-xs text-[rgb(var(--color-text-muted))]">
+          <SectionTitle>Överlåt ägarskap</SectionTitle>
+          <Card className="space-y-3 p-4">
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Du blir redaktör och den valda användaren blir ny ägare.
             </p>
-            <div className="flex gap-2">
-              <select
+            <div className="flex flex-wrap items-end gap-2">
+              <SelectField
+                id="transfer-target"
+                label="Ny ägare"
                 value={transferTarget}
-                onChange={(e) => {
-                  setTransferTarget(e.target.value);
+                onChange={(value) => {
+                  setTransferTarget(value);
                   setTransferConfirm(false);
                   setTransferError(null);
                 }}
-                className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1.5 text-sm text-[rgb(var(--color-text))] focus:outline-none"
+                className="min-w-48 flex-1"
               >
                 <option value="">Välj samarbetare</option>
                 {acceptedCollaborators.map((c) => (
@@ -564,49 +562,34 @@ export function PlaylistSettingsPage() {
                     {c.displayName ?? c.username ?? c.userId}
                   </option>
                 ))}
-              </select>
+              </SelectField>
               {!transferConfirm ? (
-                <button
-                  type="button"
-                  disabled={!transferTarget}
-                  onClick={() => setTransferConfirm(true)}
-                  className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))] disabled:opacity-50 hover:bg-[rgb(var(--color-border))]/50"
-                >
+                <Button variant="secondary" disabled={!transferTarget} onClick={() => setTransferConfirm(true)}>
                   Överlåt
-                </button>
+                </Button>
               ) : (
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    onClick={handleTransferOwnership}
-                    className="rounded-[var(--radius)] border border-[rgb(var(--color-error-hover))] bg-[rgb(var(--color-error))] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--color-error-foreground))] hover:bg-[rgb(var(--color-error-hover))]"
-                  >
+                <div className="flex gap-2">
+                  <Button variant="danger" onClick={handleTransferOwnership}>
                     Bekräfta
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTransferConfirm(false)}
-                    className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))]"
-                  >
+                  </Button>
+                  <Button variant="ghost" onClick={() => setTransferConfirm(false)}>
                     Avbryt
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
             <InlineError>{transferError}</InlineError>
-          </div>
+          </Card>
         </section>
       )}
 
       {/* Radera spellista — owner only */}
       {isOwner && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[rgb(var(--color-error))]">
-            Farlig zon
-          </h2>
-          <div className="rounded-lg border border-[rgb(var(--color-error))]/40 bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
-            <p className="text-sm font-medium text-[rgb(var(--color-text))]">Radera spellista</p>
-            <p className="text-xs text-[rgb(var(--color-text-muted))]">
+          <SectionTitle>Farlig zon</SectionTitle>
+          <Card className="space-y-3 border-[rgb(var(--color-error))] p-4">
+            <p className="text-sm font-semibold text-[rgb(var(--color-text))]">Radera spellista</p>
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">
               Det här går inte att ångra. Skriv in spellistans namn för att bekräfta.
             </p>
             <ConfirmDeleteByName
@@ -615,7 +598,7 @@ export function PlaylistSettingsPage() {
               onConfirm={handleDelete}
             />
             <InlineError>{deleteError}</InlineError>
-          </div>
+          </Card>
         </section>
       )}
     </div>

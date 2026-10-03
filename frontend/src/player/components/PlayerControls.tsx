@@ -127,7 +127,7 @@ export function PlayerControls({
                 ? 'Pausa'
                 : 'Spela'
           }
-          className={`rounded-full shrink-0 flex items-center justify-center shadow-lg transition-all active:scale-95 w-14 h-14 text-white ${
+          className={`rounded-full shrink-0 flex items-center justify-center shadow-[var(--color-card-shadow)] transition-all active:scale-95 w-14 h-14 text-[rgb(var(--color-accent-foreground))] ${
             controlsDisabled
               ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
               : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
@@ -204,7 +204,7 @@ export function PlayerControls({
           )}
           {repeatMode === 'one' && (
             <span
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-[rgb(var(--color-accent))]"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-[rgb(var(--color-bg-elevated))] px-0.5 leading-none rounded-sm text-[rgb(var(--color-accent))]"
               aria-hidden
             >
               1
@@ -301,7 +301,7 @@ export function PlayerControls({
                 ? 'Pause'
                 : 'Play'
           }
-          className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square text-white ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
+          className={`rounded-full flex items-center justify-center shadow-[var(--color-card-shadow)] transition-all active:scale-95 shrink-0 aspect-square text-[rgb(var(--color-accent-foreground))] ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
             controlsDisabled
               ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
               : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
@@ -376,7 +376,7 @@ export function PlayerControls({
             <RepeatIcon className="w-5 h-5" />
           )}
           {repeatMode === 'one' && (
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-[rgb(var(--color-accent))]" aria-hidden>
+            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-[rgb(var(--color-bg-elevated))] px-0.5 leading-none rounded-sm text-[rgb(var(--color-accent))]" aria-hidden>
               1
             </span>
           )}

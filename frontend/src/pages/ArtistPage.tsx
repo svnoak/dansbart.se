@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getArtist, getArtistAlbums } from '@/api/generated/artists/artists';
 import type { Artist } from '@/api/models/artist';
 import type { Album } from '@/api/models/album';
-import { AvatarPlaceholder, IconButton, SectionTitle } from '@/ui';
+import { AvatarPlaceholder, EmptyState, IconButton, PageHeader, SectionTitle } from '@/ui';
 import { BackArrowIcon, FlagIcon } from '@/icons';
 import { AlbumCard } from '@/components/AlbumCard';
 import { FlagArtistModal } from '@/components/FlagArtistModal';
@@ -36,7 +36,7 @@ export function ArtistPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Kunde inte hamta artist');
+          setError(err instanceof Error ? err.message : 'Kunde inte hämta artist');
           setArtist(null);
           setAlbums([]);
         }
@@ -63,21 +63,18 @@ export function ArtistPage() {
       <IconButton aria-label="Tillbaka" onClick={() => navigate(-1)}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         <AvatarPlaceholder size="lg" />
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-              {artist.name ?? 'Okand artist'}
-            </h1>
+        <PageHeader
+          className="min-w-0 flex-1"
+          title={artist.name ?? 'Okänd artist'}
+          description={artist.isVerified ? 'Verifierad artist' : undefined}
+          action={
             <IconButton aria-label="Rapportera artist" onClick={() => setFlagOpen(true)}>
               <FlagIcon className="h-5 w-5" aria-hidden />
             </IconButton>
-          </div>
-          {artist.isVerified && (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">Verifierad artist</p>
-          )}
-        </div>
+          }
+        />
       </div>
       <FlagArtistModal
         open={flagOpen}
@@ -89,9 +86,7 @@ export function ArtistPage() {
       <section aria-labelledby="albums-heading">
         <SectionTitle id="albums-heading">Album</SectionTitle>
         {albums.length === 0 ? (
-          <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">
-            Inga album hittades for denna artist.
-          </p>
+          <EmptyState className="mt-3">Inga album hittades för denna artist.</EmptyState>
         ) : (
           <ul className="mt-3 space-y-2">
             {albums.map((album) => (

@@ -25,7 +25,7 @@ import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { Select } from '@/admin/components/forms/Select';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, InlineError, LoadError, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 import { formatDurationMs } from '@/utils/formatDuration';
 import { usePlayer } from '@/player/usePlayer';
@@ -34,6 +34,13 @@ import { PlayIcon, PauseIcon } from '@/icons';
 type StatusCounts = Record<string, number>;
 
 const STATUS_ORDER = ['PENDING', 'PROCESSING', 'REANALYZING', 'DONE', 'FAILED'] as const;
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Väntar',
+  PROCESSING: 'Bearbetas',
+  REANALYZING: 'Analyseras igen',
+  DONE: 'Klar',
+  FAILED: 'Misslyckades',
+};
 
 async function fetchStatusCounts(): Promise<StatusCounts> {
   const res = await apiFetch('/api/admin/tracks/status-counts');
@@ -410,7 +417,7 @@ export function AdminLibraryPage() {
           <StatusBadge status={t.processingStatus} />
           {t.isFlagged && (
             <span
-              className="text-orange-500"
+              className="text-[rgb(var(--color-now-playing))]"
               title={t.flagReason ?? 'Flaggad'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -488,16 +495,16 @@ export function AdminLibraryPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Bibliotek</h1>
+      <PageHeader title="Bibliotek" />
 
       {/* Status counts bar */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => updateParam('status', '')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
             !status
-              ? 'bg-[rgb(var(--color-text))]/10 text-[rgb(var(--color-text))] ring-1 ring-[rgb(var(--color-text))]/20'
-              : 'bg-[rgb(var(--color-bg))] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50'
+              ? 'border-[rgb(var(--color-accent))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
+              : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-pill-bg))]'
           }`}
         >
           Alla
@@ -510,13 +517,13 @@ export function AdminLibraryPage() {
             <button
               key={s}
               onClick={() => updateParam('status', isActive ? '' : s)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
                 isActive
-                  ? 'ring-1 ring-current'
-                  : 'opacity-80 hover:opacity-100'
+                  ? 'border-current'
+                  : 'border-transparent opacity-80 hover:opacity-100'
               } ${statusStyle(s)}`}
             >
-              {s}
+              {STATUS_LABELS[s]}
               <span className="tabular-nums">{count}</span>
             </button>
           );
@@ -538,11 +545,11 @@ export function AdminLibraryPage() {
           className="w-auto min-w-35"
         >
           <option value="">Alla statusar</option>
-          <option value="PENDING">PENDING</option>
-          <option value="PROCESSING">PROCESSING</option>
-          <option value="REANALYZING">REANALYZING</option>
-          <option value="DONE">DONE</option>
-          <option value="FAILED">FAILED</option>
+          <option value="PENDING">Väntar</option>
+          <option value="PROCESSING">Bearbetas</option>
+          <option value="REANALYZING">Analyseras igen</option>
+          <option value="DONE">Klar</option>
+          <option value="FAILED">Misslyckades</option>
         </Select>
         <Select
           value={flagged ?? ''}
@@ -557,7 +564,7 @@ export function AdminLibraryPage() {
 
       {/* Bulk action bar */}
       {hasSelection && !bulkOp && (
-        <div className="sticky top-0 z-10 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2.5 shadow-sm">
+        <div className="sticky top-0 z-10 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2.5 shadow-[var(--color-card-shadow)]">
           <span className="text-sm font-medium text-[rgb(var(--color-text))]">
             {selectedIds.size} markerade
           </span>
@@ -571,7 +578,7 @@ export function AdminLibraryPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-red-600 hover:text-red-700"
+              className="text-[rgb(var(--color-error))]"
               onClick={() => setBulkRejectModal(true)}
             >
               Radera & blockera
@@ -579,7 +586,7 @@ export function AdminLibraryPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-red-600 hover:text-red-700"
+              className="text-[rgb(var(--color-error))]"
               onClick={() => setBulkDeleteModal(true)}
             >
               Radera
@@ -650,8 +657,7 @@ export function AdminLibraryPage() {
             Avbryt
           </Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleDelete}
           >
             Radera
@@ -681,8 +687,7 @@ export function AdminLibraryPage() {
             Avbryt
           </Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleReject}
           >
             Radera & blockera
@@ -711,8 +716,7 @@ export function AdminLibraryPage() {
             Avbryt
           </Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleBulkReject}
           >
             Radera & blockera ({selectedIds.size})
@@ -734,8 +738,7 @@ export function AdminLibraryPage() {
             Avbryt
           </Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleBulkDelete}
           >
             Radera {selectedIds.size} spår
@@ -829,16 +832,15 @@ export function AdminLibraryPage() {
 function statusStyle(s: string): string {
   switch (s) {
     case 'PENDING':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300';
+      return 'bg-[rgb(var(--color-now-playing-muted))] text-[rgb(var(--color-now-playing))]';
     case 'PROCESSING':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
     case 'REANALYZING':
-      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300';
+      return 'bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text))]';
     case 'DONE':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
+      return 'bg-[rgb(var(--color-selected-muted))] text-[rgb(var(--color-success))]';
     case 'FAILED':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+      return 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-error))]';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300';
+      return 'bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text-muted))]';
   }
 }

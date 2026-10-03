@@ -3,9 +3,9 @@ export function ConfidenceBadge({ value }: { value?: number }) {
   const pct = Math.round(value * 100);
   const color =
     pct >= 80
-      ? 'text-green-700 dark:text-green-400'
+      ? 'text-[rgb(var(--color-success))]'
       : pct >= 50
-        ? 'text-yellow-700 dark:text-yellow-400'
-        : 'text-red-700 dark:text-red-400';
-  return <span className={`text-xs font-medium ${color}`}>{pct}%</span>;
+        ? 'text-[rgb(var(--color-now-playing))]'
+        : 'text-[rgb(var(--color-error))]';
+  return <span className={`text-sm font-medium ${color}`}>{pct}%</span>;
 }

@@ -77,7 +77,7 @@ function ToggleSwitch({
         className="sr-only peer"
         aria-label={ariaLabel}
       />
-      <div className="h-5 w-9 rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-border))]/50 peer-focus-visible:outline peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(var(--color-accent))] peer-focus-visible:ring-offset-2 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-[rgb(var(--color-border))] after:bg-white after:transition-all peer-checked:bg-[rgb(var(--color-accent))] peer-checked:after:translate-x-4 dark:after:bg-[rgb(var(--color-bg-elevated))]" />
+      <div className="h-5 w-9 rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-border))]/50 peer-focus-visible:outline peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(var(--color-accent))] peer-focus-visible:ring-offset-2 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-[rgb(var(--color-border))] after:bg-[rgb(var(--color-bg-elevated))] after:transition-all peer-checked:bg-[rgb(var(--color-accent))] peer-checked:after:translate-x-4" />
     </label>
   );
 }
@@ -405,7 +405,7 @@ export function FilterBar({
             onClick={() => setFilters({ vocals: value, offset: 0 })}
             className={`px-3 py-1.5 text-sm font-medium transition-colors border-l first:border-l-0 border-[rgb(var(--color-border))] ${
               filters.vocals === value
-                ? 'bg-[rgb(var(--color-accent))] text-white'
+                ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
                 : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/30'
             }`}
             aria-pressed={filters.vocals === value}
@@ -628,7 +628,7 @@ export function FilterBar({
           </span>
           <span className="flex items-center gap-2">
             {activeFilterCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-xs font-bold text-white">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-xs font-bold text-[rgb(var(--color-accent-foreground))]">
                 {activeFilterCount}
               </span>
             )}

@@ -14,7 +14,7 @@ import type { Column } from '@/admin/components/DataTable';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, InlineError, LoadError, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 type Kind = 'content' | 'dance_style';
@@ -192,7 +192,7 @@ export function AdminSuggestionsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 dark:text-red-400"
+                className="text-[rgb(var(--color-error))]"
                 onClick={() => { setRejectTarget(s); setRejectError(null); }}
               >
                 Avvisa
@@ -246,7 +246,7 @@ export function AdminSuggestionsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-red-600 dark:text-red-400"
+                  className="text-[rgb(var(--color-error))]"
                   onClick={() => { setRejectTarget(s); setRejectError(null); }}
                 >
                   Avvisa
@@ -274,7 +274,7 @@ export function AdminSuggestionsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Förslag</h1>
+      <PageHeader title="Förslag" />
 
       <div className="flex gap-1 border-b border-[rgb(var(--color-border))]">
         {(['content', 'dance_style'] as Kind[]).map((k) => (
@@ -299,10 +299,10 @@ export function AdminSuggestionsPage() {
             key={s || 'all'}
             type="button"
             onClick={() => updateParam('status', s)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`min-h-9 rounded-[var(--radius-full)] border px-3 py-1 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
               status === s
-                ? 'bg-[rgb(var(--color-accent))] text-white'
-                : 'bg-[rgb(var(--color-border))]/30 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
+                ? 'border-[rgb(var(--color-accent))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
+                : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-pill-bg))]'
             }`}
           >
             {s ? statusLabel[s] : 'Alla'}
@@ -348,7 +348,7 @@ export function AdminSuggestionsPage() {
           <Button variant="ghost" onClick={() => { setRejectTarget(null); setRejectNote(''); setRejectError(null); }}>
             Avbryt
           </Button>
-          <Button variant="primary" className="bg-red-600 hover:bg-red-700" onClick={handleReject}>
+          <Button variant="danger" onClick={handleReject}>
             Avvisa
           </Button>
         </div>
@@ -366,7 +366,7 @@ export function AdminSuggestionsPage() {
               {activatePreview.preview.subStyle ? ` / ${activatePreview.preview.subStyle}` : ''} med{' '}
               <strong>{activatePreview.preview.proposedBeatsPerBar}</strong> taktslag per takt?
             </p>
-            <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+            <p className="mt-2 text-sm text-[rgb(var(--color-now-playing))]">
               Detta uppdaterar produktion och kan ta upp till 5 minuter innan det påverkar
               bearbetning. Det påverkar {activatePreview.preview.affectedTrackCount} redan
               klassificerade {activatePreview.preview.affectedTrackCount === 1 ? 'låt' : 'låtar'}{' '}
@@ -390,13 +390,13 @@ export function AdminSuggestionsPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-    accepted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    activated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    pending: 'bg-[rgb(var(--color-now-playing-muted))] text-[rgb(var(--color-now-playing))]',
+    accepted: 'bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text))]',
+    activated: 'bg-[rgb(var(--color-selected-muted))] text-[rgb(var(--color-success))]',
+    rejected: 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-error))]',
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${colors[status] ?? ''}`}>
+    <span className={`inline-flex items-center rounded-[var(--radius-sm)] px-2 py-0.5 text-xs font-medium ${colors[status] ?? ''}`}>
       {statusLabel[status] ?? status}
     </span>
   );

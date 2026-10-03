@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/api/http-client';
 import { useAuth } from '@/auth/useAuth';
+import { Card, PageHeader } from '@/ui';
 
 interface AdminUser {
   id: string;
@@ -47,7 +48,7 @@ export function AdminUsersPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Användare</h1>
+        <PageHeader title="Användare" />
         <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
       </div>
     );
@@ -55,20 +56,20 @@ export function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Användare</h1>
+      <PageHeader title="Användare" />
 
       {error && (
-        <p className="text-sm text-red-500">{error}</p>
+        <p className="text-sm text-[rgb(var(--color-error))]" role="alert">{error}</p>
       )}
 
-      <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] overflow-hidden">
+      <Card className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[rgb(var(--color-border))] text-left text-[rgb(var(--color-text-muted))]">
-              <th className="px-4 py-3 font-medium">Användare</th>
-              <th className="px-4 py-3 font-medium">Senaste inloggning</th>
-              <th className="px-4 py-3 font-medium">Roll</th>
-              <th className="px-4 py-3 font-medium"></th>
+            <tr className="border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-sunken))] text-left text-sm font-semibold text-[rgb(var(--color-text))]">
+              <th className="px-4 py-3">Användare</th>
+              <th className="px-4 py-3">Senaste inloggning</th>
+              <th className="px-4 py-3">Roll</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -78,7 +79,7 @@ export function AdminUsersPage() {
               return (
                 <tr
                   key={user.id}
-                  className="border-b border-[rgb(var(--color-border))] last:border-0"
+                  className="border-b border-[rgb(var(--color-border))] last:border-b-0"
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium text-[rgb(var(--color-text))]">
@@ -99,7 +100,7 @@ export function AdminUsersPage() {
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         user.role === 'ADMIN'
                           ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
-                          : 'bg-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))]'
+                          : 'bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text))]'
                       }`}
                     >
                       {user.role === 'ADMIN' ? 'Admin' : 'Användare'}
@@ -124,7 +125,7 @@ export function AdminUsersPage() {
             })}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   );
 }

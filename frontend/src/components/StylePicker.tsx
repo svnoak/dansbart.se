@@ -63,7 +63,7 @@ export function StylePicker({
           type="button"
           onClick={() => onSelect(o.value)}
           disabled={disabled}
-          className={`py-6 px-2 rounded-xl font-bold text-sm shadow-sm transition-all border bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] hover:shadow-md active:scale-95 break-words leading-tight disabled:opacity-50 ${
+          className={`py-6 px-2 rounded-[var(--radius-lg)] font-bold text-sm shadow-[var(--color-card-shadow)] transition-all border bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] active:scale-95 break-words leading-tight disabled:opacity-50 ${
             o.bold
               ? 'border-[rgb(var(--color-accent))] text-[rgb(var(--color-accent))]'
               : 'border-[rgb(var(--color-border))]'

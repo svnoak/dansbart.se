@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PageHeader } from '@/ui';
 
 interface StaticPageLayoutProps {
   title: string;
@@ -10,19 +11,19 @@ interface StaticPageLayoutProps {
 export function StaticPageLayout({ title, lastUpdated, showHeaderBack = true, children }: StaticPageLayoutProps) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-8">
+      <header className="mb-8 space-y-4">
         {showHeaderBack && (
           <Link
             to="/"
-            className="mb-4 inline-flex items-center text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
           >
             ← Tillbaka till dansbart.se
           </Link>
         )}
-        <h1 className="mb-2 text-4xl font-bold text-[rgb(var(--color-text))]">{title}</h1>
-        {lastUpdated && (
-          <p className="text-[rgb(var(--color-text-muted))]">Senast uppdaterad: {lastUpdated}</p>
-        )}
+        <PageHeader
+          title={title}
+          description={lastUpdated ? `Senast uppdaterad: ${lastUpdated}` : undefined}
+        />
       </header>
 
       <main className="prose prose-lg max-w-none text-[rgb(var(--color-text))] [&_a]:text-[rgb(var(--color-accent))] [&_a]:hover:underline [&_code]:rounded [&_code]:bg-[rgb(var(--color-border))]/50 [&_code]:px-2 [&_code]:py-1 [&_code]:text-sm">

@@ -5,7 +5,7 @@ import { TrackRow } from '@/components/TrackRow';
 import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
 import { deleteLocalCopy, requestPersistentStorage } from '@/library/localCopies';
 import { useLibraryImport, type ImportResult } from '@/library/useLibraryImport';
-import { Badge, Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
+import { Badge, Button, EmptyState, InlineError, LoadError, PageHeader, toast } from '@/ui';
 
 const SOURCE_LABELS: Record<string, string> = {
   LOCAL: 'Lokalt',
@@ -70,15 +70,17 @@ export function MyLibraryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-4">
-      <SectionTitle>Mina låtar</SectionTitle>
-      <p className="mb-4 text-sm text-[rgb(var(--color-text-muted))]">
-        Ljudet stannar på din enhet. Bara titel, artist och ett fingeravtryck skickas.
-      </p>
-
-      <Button disabled={progress !== null} onClick={() => void handleImportClick()}>
-        Importera låtar
-      </Button>
+    <div className="space-y-6">
+      <PageHeader
+        title="Mina låtar"
+        meta={entries && entries.length > 0 ? (entries.length === 1 ? '1 låt' : `${entries.length} låtar`) : undefined}
+        description="Ljudet stannar på din enhet. Bara titel, artist och ett fingeravtryck skickas."
+        action={
+          <Button disabled={progress !== null} onClick={() => void handleImportClick()}>
+            Importera låtar
+          </Button>
+        }
+      />
       <input
         ref={fileInput}
         type="file"
@@ -91,16 +93,16 @@ export function MyLibraryPage() {
         }}
       />
       {progress && (
-        <p role="status" className="mt-3 text-sm">
+        <p role="status" className="text-base text-[rgb(var(--color-text))]">
           Importerar låt {progress.done + 1} av {progress.total}
         </p>
       )}
       <InlineError>{error}</InlineError>
 
-      <div className="mt-6">
+      <div>
         {loadFailed && <LoadError message="Det gick inte att hämta dina låtar." onRetry={load} />}
         {entries?.length === 0 && (
-          <p>Du har inga låtar än. Importera en låt för att börja.</p>
+          <EmptyState>Du har inga låtar än. Importera en låt för att börja.</EmptyState>
         )}
         <ul>
           {entries?.map((entry) => (

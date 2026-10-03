@@ -1,12 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getGroup, removeMember, createGroupPlaylist } from '@/api/generated/groups/groups';
 import type { GroupDto } from '@/api/models/groupDto';
 import { useAuth } from '@/auth/useAuth';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
-import { Badge, Button, Card, IconButton, InlineError, SectionTitle, toast } from '@/ui';
-import { BackArrowIcon } from '@/icons';
+import {
+  AvatarPlaceholder,
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  InlineError,
+  LinkButton,
+  ListRow,
+  PageHeader,
+  SectionTitle,
+  fieldClassName,
+  fieldLabelClassName,
+  toast,
+} from '@/ui';
+import { BackArrowIcon, PlaylistIcon } from '@/icons';
 
 export function GroupPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,9 +66,9 @@ export function GroupPage() {
         <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
           Gruppen hittades inte.
         </p>
-        <Link to="/groups" className="text-sm text-[rgb(var(--color-accent))] hover:underline">
+        <LinkButton to="/groups" variant="secondary">
           Tillbaka till grupper
-        </Link>
+        </LinkButton>
       </div>
     );
   }
@@ -101,34 +115,33 @@ export function GroupPage() {
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
 
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">{group.name}</h1>
-            <Badge variant={group.isPublic ? 'default' : 'muted'} className="text-base">
+      <PageHeader
+        title={group.name}
+        meta={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <Badge variant={group.isPublic ? 'default' : 'muted'} size="md">
               {group.isPublic ? 'Offentlig' : 'Privat'}
             </Badge>
-          </div>
-          {group.memberCount != null && (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              {group.memberCount} {group.memberCount === 1 ? 'medlem' : 'medlemmar'}
-            </p>
-          )}
-        </div>
-        {canSeeSettings && (
-          <Link
-            to={`/groups/${id}/settings`}
-            className="shrink-0 text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
-          >
-            Inställningar för gruppen
-          </Link>
-        )}
-      </div>
+            {group.memberCount != null && (
+              <span>
+                {group.memberCount} {group.memberCount === 1 ? 'medlem' : 'medlemmar'}
+              </span>
+            )}
+          </span>
+        }
+        action={
+          canSeeSettings && (
+            <LinkButton to={`/groups/${id}/settings`} variant="secondary" size="sm">
+              Inställningar för gruppen
+            </LinkButton>
+          )
+        }
+      />
 
       {group.aboutUs && (
         <section>
           <SectionTitle>Om oss</SectionTitle>
-          <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">{group.aboutUs}</p>
+          <p className="mt-2 text-base text-[rgb(var(--color-text-muted))]">{group.aboutUs}</p>
         </section>
       )}
 
@@ -138,12 +151,12 @@ export function GroupPage() {
           <ul className="mt-2 space-y-2">
             {members.map((member) => (
               <li key={member.id}>
-                <Card className="flex items-center justify-between gap-2 p-3">
-                  <span className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                    {member.displayName ?? member.username}
-                  </span>
+                <ListRow
+                  leading={<AvatarPlaceholder size="md" />}
+                  title={member.displayName ?? member.username}
+                >
                   {member.isAdmin && <Badge>Administratör</Badge>}
-                </Card>
+                </ListRow>
               </li>
             ))}
           </ul>
@@ -156,29 +169,22 @@ export function GroupPage() {
           <ul className="space-y-2">
             {group.playlists.map((playlist) => (
               <li key={playlist.id}>
-                <Card className="space-y-1 p-3">
-                  <Link
-                    to={`/playlists/${playlist.id}`}
-                    className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
-                  >
-                    {playlist.name}
-                  </Link>
-                  {playlist.description && (
-                    <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">
-                      {playlist.description}
-                    </p>
-                  )}
-                  <p className="text-sm text-[rgb(var(--color-text-muted))]">
-                    {playlist.trackCount ?? 0} {playlist.trackCount === 1 ? 'låt' : 'låtar'}
-                  </p>
-                </Card>
+                <ListRow
+                  to={`/playlists/${playlist.id}`}
+                  icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
+                  title={playlist.name}
+                  subtitle={playlist.description}
+                  trailing={
+                    <span>
+                      {playlist.trackCount ?? 0} {playlist.trackCount === 1 ? 'låt' : 'låtar'}
+                    </span>
+                  }
+                />
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            Gruppen har inga spellistor ännu.
-          </p>
+          <EmptyState>Gruppen har inga spellistor ännu.</EmptyState>
         )}
 
         {hasGroupPermission(myMembership, 'canManagePlaylists') &&
@@ -195,10 +201,7 @@ export function GroupPage() {
               className="space-y-2"
             >
               <div className="space-y-1">
-                <label
-                  htmlFor="group-playlist-name"
-                  className="block text-sm font-medium text-[rgb(var(--color-text))]"
-                >
+                <label htmlFor="group-playlist-name" className={fieldLabelClassName}>
                   Spellistans namn
                 </label>
                 <input
@@ -208,7 +211,7 @@ export function GroupPage() {
                     setPlaylistName(e.target.value);
                     setCreatePlaylistError(null);
                   }}
-                  className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+                  className={fieldClassName}
                 />
               </div>
               <InlineError>{createPlaylistError}</InlineError>
@@ -257,16 +260,11 @@ export function GroupPage() {
           )}
         </section>
       ) : authLoading ? null : !isAuthenticated ? (
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">
-          <Link to="/login" className="text-[rgb(var(--color-accent))] hover:underline">
-            Logga in
-          </Link>{' '}
-          för att gå med i grupper.
-        </p>
+        <EmptyState action={<LinkButton to="/login">Logga in</LinkButton>}>
+          Logga in för att gå med i grupper.
+        </EmptyState>
       ) : (
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">
-          Du är inte medlem i gruppen. Be en administratör att bjuda in dig.
-        </p>
+        <EmptyState>Du är inte medlem i gruppen. Be en administratör att bjuda in dig.</EmptyState>
       )}
     </div>
   );

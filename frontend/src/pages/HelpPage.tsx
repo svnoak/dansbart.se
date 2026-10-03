@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StaticPageLayout } from './StaticPageLayout';
+import { Card } from '@/ui';
 
 interface DiscourseTopic {
   id: number;
@@ -75,24 +76,23 @@ function TopicList({
     return <p className="text-sm text-[rgb(var(--color-text-muted))]">{emptyText}</p>;
   }
   return (
-    <ul className="space-y-4">
+    <ul className="space-y-2">
       {topics.map((topic) => (
-        <li
-          key={topic.id}
-          className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4"
-        >
-          <Link
-            to={`/help/topic/${topic.slug}/${topic.id}`}
-            className="font-semibold text-[rgb(var(--color-accent))] hover:underline"
-          >
-            {topic.title}
-          </Link>
-          <p className="mt-1 text-xs text-[rgb(var(--color-text-muted))]">
-            {formatDate(topic.created_at)}
-          </p>
-          {topic.excerpt && (
-            <p className="mt-2 text-sm text-[rgb(var(--color-text))]">{topic.excerpt}</p>
-          )}
+        <li key={topic.id}>
+          <Card className="p-4">
+            <Link
+              to={`/help/topic/${topic.slug}/${topic.id}`}
+              className="font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
+            >
+              {topic.title}
+            </Link>
+            <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
+              {formatDate(topic.created_at)}
+            </p>
+            {topic.excerpt && (
+              <p className="mt-2 text-base text-[rgb(var(--color-text))]">{topic.excerpt}</p>
+            )}
+          </Card>
         </li>
       ))}
     </ul>
@@ -106,7 +106,7 @@ export function HelpPage() {
   return (
     <StaticPageLayout title="Hjälp & Nyheter">
       <section className="mb-10">
-        <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Vanliga frågor</h2>
+        <h2 className="mb-4 text-2xl font-semibold text-[rgb(var(--color-text))]">Vanliga frågor</h2>
         <TopicList
           {...faq}
           emptyText="Inga vanliga frågor publicerade ännu."
@@ -115,7 +115,7 @@ export function HelpPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Nyheter</h2>
+        <h2 className="mb-4 text-2xl font-semibold text-[rgb(var(--color-text))]">Nyheter</h2>
         <TopicList
           {...news}
           emptyText="Inga nyheter just nu."

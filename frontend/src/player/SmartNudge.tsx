@@ -769,7 +769,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* SUCCESS */}
           {step === 'success' && (
-            <div className="bg-green-600 p-5 md:p-4 text-white flex justify-center items-center rounded-[var(--radius-lg)]">
+            <div className="bg-[#1e5438] p-5 md:p-4 text-white flex justify-center items-center rounded-[var(--radius-lg)]">
               <div className="text-base md:text-sm font-bold flex items-center gap-2">
                 <svg
                   className="w-6 h-6 md:w-5 md:h-5"

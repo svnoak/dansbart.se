@@ -13,7 +13,7 @@ import { Modal } from '@/admin/components/Modal';
 import { ActionMenu } from '@/admin/components/ActionMenu';
 import type { ActionItem } from '@/admin/components/ActionMenu';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, InlineError, LoadError, PageHeader } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface ArtistRow {
@@ -135,7 +135,7 @@ export function AdminArtistsPage() {
       key: 'approved',
       header: 'Godkända',
       render: (a) => (
-        <span className="text-xs text-green-600 dark:text-green-400">
+        <span className="text-sm text-[rgb(var(--color-success))]">
           {a.approvedTrackCount ?? '-'}
         </span>
       ),
@@ -144,7 +144,7 @@ export function AdminArtistsPage() {
       key: 'pending',
       header: 'Väntande',
       render: (a) => (
-        <span className="text-xs text-yellow-600 dark:text-yellow-400">
+        <span className="text-sm text-[rgb(var(--color-now-playing))]">
           {a.pendingTrackCount ?? '-'}
         </span>
       ),
@@ -164,7 +164,7 @@ export function AdminArtistsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Artister</h1>
+      <PageHeader title="Artister" />
 
       <FilterBar>
         <div className="flex-1 min-w-50">
@@ -219,8 +219,7 @@ export function AdminArtistsPage() {
             Avbryt
           </Button>
           <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
             onClick={handleReject}
           >
             Radera & blockera

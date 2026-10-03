@@ -68,12 +68,12 @@ export function SuggestDanceStyleModal({ onClose }: SuggestDanceStyleModalProps)
       className="fixed inset-0 z-[70] flex items-center justify-center p-4"
       onClick={(e) => { if (e.currentTarget === e.target) onClose(); }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[rgb(var(--color-text))]/55" />
       <div
-        className="relative w-full max-w-md rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-1 text-lg font-semibold text-[rgb(var(--color-text))]">
+        <h2 className="mb-1 text-xl font-semibold text-[rgb(var(--color-text))]">
           Saknas en dansstil?
         </h2>
         <p className="mb-4 text-xs text-[rgb(var(--color-text-muted))]">

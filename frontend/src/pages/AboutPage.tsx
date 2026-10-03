@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { StaticPageLayout } from './StaticPageLayout';
+import { Card } from '@/ui';
 
 export function AboutPage() {
   return (
     <StaticPageLayout title="Om oss">
-      <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 mb-6">
+      <Card className="mb-6 p-4">
         <p className="mb-2 text-sm text-[rgb(var(--color-text))]">Villkor och integritet:</p>
         <p className="text-sm">
           <Link to="/privacy" className="font-medium text-[rgb(var(--color-accent))] hover:underline">
@@ -15,10 +16,10 @@ export function AboutPage() {
             Användarvillkor
           </Link>
         </p>
-      </div>
+      </Card>
 
       <section className="mb-8">
-        <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Om Dansbart.se</h2>
+        <h2 className="mb-4 text-2xl font-semibold text-[rgb(var(--color-text))]">Om Dansbart.se</h2>
         <p className="mb-4 text-[rgb(var(--color-text))]">
           Dansbart.se är en gratistjänst som hjälper dig hitta rätt musik till dans. Vi gör det
           enkelt att söka och filtrera efter dansstil, tempo och känsla så att du snabbt hittar låtar
@@ -32,7 +33,7 @@ export function AboutPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Funktioner</h2>
+        <h2 className="mb-4 text-2xl font-semibold text-[rgb(var(--color-text))]">Funktioner</h2>
         <ul className="list-disc space-y-2 pl-6 text-[rgb(var(--color-text))]">
           <li>Sökning och filtrering efter dansstil, tempo och andra parametrar</li>
           <li>Uppspelning via Spotify och YouTube</li>
@@ -42,7 +43,7 @@ export function AboutPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-4 text-2xl font-bold text-[rgb(var(--color-text))]">Kontakt</h2>
+        <h2 className="mb-4 text-2xl font-semibold text-[rgb(var(--color-text))]">Kontakt</h2>
         <p className="text-[rgb(var(--color-text))]">
           Har du frågor, hittat ett fel eller vill föreslå en förbättring? Se vår{' '}
           <Link to="/feedback" className="font-medium text-[rgb(var(--color-accent))] hover:underline">

@@ -24,7 +24,7 @@ export function EmbedContainer({
   return (
     <div
       style={style}
-      className={`overflow-hidden rounded-lg border border-[rgb(var(--color-border))] bg-black shadow-xl transition-all duration-300 ease-in-out ${
+      className={`overflow-hidden rounded-lg border border-[rgb(var(--color-border))] bg-black shadow-[var(--color-card-shadow)] transition-all duration-300 ease-in-out ${
         isYouTubeEmbed && !isPlaying && !expanded
           ? 'opacity-0 pointer-events-none'
           : 'opacity-100 pointer-events-auto'

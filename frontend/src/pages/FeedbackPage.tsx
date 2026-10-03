@@ -1,4 +1,5 @@
 import { StaticPageLayout } from './StaticPageLayout';
+import { Card } from '@/ui';
 
 export function FeedbackPage() {
   return (
@@ -8,11 +9,11 @@ export function FeedbackPage() {
         att höra av dig:
       </p>
 
-      <section className="mb-6 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-5">
-        <h2 className="mb-2 text-lg font-semibold text-[rgb(var(--color-text))]">
+      <Card className="mb-6 p-5">
+        <h2 className="mb-2 text-xl font-semibold text-[rgb(var(--color-text))]">
           Gemenskapsforumet
         </h2>
-        <p className="mb-3 text-sm text-[rgb(var(--color-text-muted))]">
+        <p className="mb-3 text-base text-[rgb(var(--color-text-muted))]">
           Det bästa stället för diskussioner, felrapporter och förslag — andra användare kan också
           svara och bidra.
         </p>
@@ -20,24 +21,24 @@ export function FeedbackPage() {
           href="https://folkhub.se/c/dansbart-se/5"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+          className="inline-flex min-h-11 items-center text-base font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
         >
           Gå till forumet →
         </a>
-      </section>
+      </Card>
 
-      <section className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-5">
-        <h2 className="mb-2 text-lg font-semibold text-[rgb(var(--color-text))]">E-post</h2>
-        <p className="mb-3 text-sm text-[rgb(var(--color-text-muted))]">
+      <Card className="p-5">
+        <h2 className="mb-2 text-xl font-semibold text-[rgb(var(--color-text))]">E-post</h2>
+        <p className="mb-3 text-base text-[rgb(var(--color-text-muted))]">
           Föredrar du att skriva direkt? Skicka ett mail så svarar vi så snart vi kan.
         </p>
         <a
           href="mailto:info@dansbart.se"
-          className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+          className="inline-flex min-h-11 items-center text-base font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
         >
           info@dansbart.se
         </a>
-      </section>
+      </Card>
     </StaticPageLayout>
   );
 }

@@ -8,7 +8,7 @@ import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
 import { SharePlaylistPanel } from '@/components/SharePlaylistPanel';
 import { BackArrowIcon, ChevronDownIcon, EditIcon, PlayIcon, PlusIcon, SettingsIcon, ShareIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
-import { Button, IconButton, InlineError, Modal, Pill, toast } from '@/ui';
+import { Button, EmptyState, IconButton, InlineError, LinkButton, Modal, PageHeader, Pill, fieldClassName, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -91,12 +91,12 @@ function MainStyleDropdown({ current, styleNodes, onSelect, onClose }: MainStyle
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
     >
       <button
         type="button"
         onClick={() => onSelect(null)}
-        className="w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/40"
+        className="min-h-11 w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-pill-bg))]"
       >
         Ingen stil
       </button>
@@ -105,7 +105,7 @@ function MainStyleDropdown({ current, styleNodes, onSelect, onClose }: MainStyle
           key={node.name}
           type="button"
           onClick={() => onSelect(node.name ?? null)}
-          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-border))]/40 ${
+          className={`min-h-11 w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-pill-bg))] ${
             current === node.name
               ? 'font-medium text-[rgb(var(--color-accent))]'
               : 'text-[rgb(var(--color-text))]'
@@ -134,12 +134,12 @@ function SubStyleDropdown({ current, subStyles, onSelect, onClose }: SubStyleDro
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
     >
       <button
         type="button"
         onClick={() => onSelect(null)}
-        className="w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/40"
+        className="min-h-11 w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-pill-bg))]"
       >
         Ingen substil
       </button>
@@ -148,7 +148,7 @@ function SubStyleDropdown({ current, subStyles, onSelect, onClose }: SubStyleDro
           key={sub}
           type="button"
           onClick={() => onSelect(sub)}
-          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-border))]/40 ${
+          className={`min-h-11 w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-pill-bg))] ${
             current === sub
               ? 'font-medium text-[rgb(var(--color-accent))]'
               : 'text-[rgb(var(--color-text))]'
@@ -176,12 +176,12 @@ function TempoDropdown({ current, onSelect, onClose }: TempoDropdownProps) {
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
     >
       <button
         type="button"
         onClick={() => onSelect(null)}
-        className="w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/40"
+        className="min-h-11 w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-pill-bg))]"
       >
         Inget tempo
       </button>
@@ -190,7 +190,7 @@ function TempoDropdown({ current, onSelect, onClose }: TempoDropdownProps) {
           key={opt.value}
           type="button"
           onClick={() => onSelect(opt.value)}
-          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-border))]/40 ${
+          className={`min-h-11 w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-pill-bg))] ${
             current === opt.value
               ? 'text-[rgb(var(--color-accent))] font-medium'
               : 'text-[rgb(var(--color-text))]'
@@ -429,60 +429,59 @@ export function PlaylistPage() {
       </IconButton>
 
       {/* Header */}
-      <div className="space-y-2">
-        {/* Name row */}
-        <div className="flex items-start gap-2">
-          {editingName ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSaveName();
-              }}
-              className="flex-1 space-y-1"
-            >
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  type="text"
-                  value={nameValue}
-                  onChange={(e) => {
-                    setNameValue(e.target.value);
-                    setSaveNameError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setEditingName(false);
-                      setNameValue(playlist.name ?? '');
-                    }
-                  }}
-                  className="flex-1 rounded-lg border border-[rgb(var(--color-accent))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1 text-2xl font-bold text-[rgb(var(--color-text))] focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={!nameValue.trim()}
-                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  Spara
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
+      <div className="space-y-3">
+        {editingName ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveName();
+            }}
+            className="space-y-1"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor="playlist-name" className="sr-only">
+                Spellistans namn
+              </label>
+              <input
+                id="playlist-name"
+                autoFocus
+                type="text"
+                value={nameValue}
+                onChange={(e) => {
+                  setNameValue(e.target.value);
+                  setSaveNameError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
                     setEditingName(false);
                     setNameValue(playlist.name ?? '');
-                  }}
-                  className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))]"
-                >
-                  Avbryt
-                </button>
-              </div>
-              <InlineError>{saveNameError}</InlineError>
-            </form>
-          ) : (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <h1 className="min-w-0 truncate text-2xl font-bold text-[rgb(var(--color-text))]">
-                {playlist.name}
-              </h1>
-              {canEdit && (
+                  }
+                }}
+                className={`${fieldClassName} min-w-48 flex-1 text-xl font-semibold`}
+              />
+              <Button type="submit" disabled={!nameValue.trim()}>
+                Spara
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setEditingName(false);
+                  setNameValue(playlist.name ?? '');
+                }}
+              >
+                Avbryt
+              </Button>
+            </div>
+            <InlineError>{saveNameError}</InlineError>
+          </form>
+        ) : (
+          <PageHeader
+            title={playlist.name}
+            meta={`${tracks.length} ${tracks.length === 1 ? 'låt' : 'låtar'}`}
+            description={playlist.description}
+            action={
+              canEdit && (
                 <IconButton
                   aria-label="Ändra namn"
                   onClick={() => {
@@ -490,12 +489,12 @@ export function PlaylistPage() {
                     setEditingName(true);
                   }}
                 >
-                  <EditIcon className="h-4 w-4" aria-hidden />
+                  <EditIcon className="h-5 w-5" aria-hidden />
                 </IconButton>
-              )}
-            </div>
-          )}
-        </div>
+              )
+            }
+          />
+        )}
 
         {/* Owner group */}
         {playlist.ownerGroup && (
@@ -510,11 +509,6 @@ export function PlaylistPage() {
           </p>
         )}
 
-        {/* Description */}
-        {playlist.description && (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">{playlist.description}</p>
-        )}
-
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2">
           {tracks.length > 0 && (
@@ -524,13 +518,10 @@ export function PlaylistPage() {
             </Button>
           )}
           {canEdit && (
-            <Link
-              to={`/search?addTo=${id}`}
-              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] px-4 py-2 text-sm font-medium text-[rgb(var(--color-accent))] hover:opacity-90"
-            >
+            <LinkButton to={`/search?addTo=${id}`} variant="secondary" className="gap-1.5">
               <PlusIcon className="h-4 w-4" aria-hidden />
               Lägg till låtar
-            </Link>
+            </LinkButton>
           )}
           {(canEdit || playlist.isPublic) && (
             <Button
@@ -586,10 +577,10 @@ export function PlaylistPage() {
                   setShowSubStyleDropdown(false);
                   setShowTempoDropdown(false);
                 }}
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
+                className={`inline-flex min-h-9 items-center rounded-[var(--radius-full)] px-3 py-1 text-sm font-medium transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
                   styleColor
                     ? ''
-                    : 'border border-dashed border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))]'
+                    : 'border border-dashed border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text-muted))]'
                 }`}
                 style={
                   styleColor
@@ -606,7 +597,7 @@ export function PlaylistPage() {
               </button>
             ) : styleColor && playlist.danceStyle ? (
               <span
-                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
+                className="inline-flex items-center rounded-[var(--radius-full)] px-3 py-1 text-sm font-medium"
                 style={{
                   backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
                   color: theme === 'dark' ? styleColor.textDark : styleColor.text,
@@ -640,10 +631,10 @@ export function PlaylistPage() {
                       setShowStyleDropdown(false);
                       setShowTempoDropdown(false);
                     }}
-                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
+                    className={`inline-flex min-h-9 items-center rounded-[var(--radius-full)] px-3 py-1 text-sm font-medium transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
                       styleColor
                         ? 'opacity-80'
-                        : 'border border-dashed border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))]'
+                        : 'border border-dashed border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text-muted))]'
                     } ${playlist.subStyle ? '' : 'border border-dashed'}`}
                     style={
                       styleColor && playlist.subStyle
@@ -660,7 +651,7 @@ export function PlaylistPage() {
                   </button>
                 ) : playlist.subStyle ? (
                   <span
-                    className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium opacity-80"
+                    className="inline-flex items-center rounded-[var(--radius-full)] px-3 py-1 text-sm font-medium opacity-80"
                     style={
                       styleColor
                         ? {
@@ -695,16 +686,16 @@ export function PlaylistPage() {
                   setShowStyleDropdown(false);
                   setShowSubStyleDropdown(false);
                 }}
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
+                className={`inline-flex min-h-9 items-center rounded-[var(--radius-full)] px-3 py-1 text-sm font-medium transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
                   tLabel
-                    ? 'bg-[rgb(var(--color-border))] text-[rgb(var(--color-text))]'
-                    : 'border border-dashed border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))]'
+                    ? 'bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text))]'
+                    : 'border border-dashed border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text-muted))]'
                 }`}
               >
                 {tLabel || '+ Tempo'}
               </button>
             ) : tLabel ? (
-              <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border))] px-2.5 py-1 text-xs font-medium text-[rgb(var(--color-text))]">
+              <span className="inline-flex items-center rounded-[var(--radius-full)] bg-[rgb(var(--color-pill-bg))] px-3 py-1 text-sm font-medium text-[rgb(var(--color-text))]">
                 {tLabel}
               </span>
             ) : null}
@@ -718,10 +709,6 @@ export function PlaylistPage() {
           </div>
         </div>
 
-        {/* Track count */}
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">
-          {tracks.length} {tracks.length === 1 ? 'låt' : 'låtar'}
-        </p>
       </div>
 
       {/* Sort + Filter bar */}
@@ -782,12 +769,10 @@ export function PlaylistPage() {
         </div>
       )}
 
-      {tracks.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Spellistan är tom.</p>
-      )}
+      {tracks.length === 0 && <EmptyState>Spellistan är tom.</EmptyState>}
 
       {displayTracks.length === 0 && tracks.length > 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Inga låtar matchar filtret.</p>
+        <EmptyState>Inga låtar matchar filtret.</EmptyState>
       )}
 
       {/* Track list */}

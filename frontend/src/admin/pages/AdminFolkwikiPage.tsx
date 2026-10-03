@@ -5,7 +5,7 @@ import { Pagination } from '@/admin/components/Pagination';
 import { ConfidenceBadge } from '@/admin/components/ConfidenceBadge';
 import { Modal } from '@/admin/components/Modal';
 import { toast } from '@/admin/components/toastEmitter';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, InlineError, LoadError, PageHeader, fieldClassName, fieldLabelClassName } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import { PlayIcon, PauseIcon } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
@@ -390,10 +390,10 @@ export function AdminFolkwikiPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Folkwiki-matchning</h1>
-        <div className="flex items-center gap-4">
-          <div className="text-xs text-[rgb(var(--color-text-muted))]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader title="Folkwiki-matchning" />
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="text-sm text-[rgb(var(--color-text-muted))]">
             <kbd className="rounded border border-[rgb(var(--color-border))] px-1">j/k</kbd> navigera{' '}
             <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Mellanslag</kbd> spela{' '}
             <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Enter</kbd> bekräfta{' '}
@@ -422,7 +422,7 @@ export function AdminFolkwikiPage() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex gap-1 rounded-lg bg-[rgb(var(--color-bg-elevated))] p-1">
+      <div className="flex flex-wrap gap-1 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-sunken))] p-1">
         {STATUS_TABS.map((tab) => {
           const count = counts
             ? tab.value === '' ? counts.total
@@ -433,9 +433,9 @@ export function AdminFolkwikiPage() {
             <button
               key={tab.value}
               onClick={() => updateParam('status', tab.value)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex min-h-9 items-center gap-1.5 rounded-[var(--radius)] px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
                 active
-                  ? 'bg-[rgb(var(--color-bg))] text-[rgb(var(--color-text))] shadow-sm'
+                  ? 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] shadow-[var(--color-card-shadow)]'
                   : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
               }`}
             >
@@ -443,7 +443,7 @@ export function AdminFolkwikiPage() {
               {count != null && (
                 <span className={`rounded-full px-1.5 py-0.5 text-xs ${
                   active ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
-                    : 'bg-[rgb(var(--color-border))]/50'
+                    : 'bg-[rgb(var(--color-pill-bg))]'
                 }`}>
                   {count}
                 </span>
@@ -501,10 +501,10 @@ export function AdminFolkwikiPage() {
                     <span className="truncate text-sm font-medium">{m.trackTitle}</span>
                     <span className="text-[rgb(var(--color-text-muted))]">/</span>
                     <span className="truncate text-sm text-[rgb(var(--color-text-muted))]">{m.folkwikiTitle}</span>
-                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${
+                    <span className={`shrink-0 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-xs font-medium ${
                       m.matchType === 'exact'
-                        ? 'bg-green-500/10 text-green-400'
-                        : 'bg-yellow-500/10 text-yellow-400'
+                        ? 'bg-[rgb(var(--color-selected-muted))] text-[rgb(var(--color-success))]'
+                        : 'bg-[rgb(var(--color-now-playing-muted))] text-[rgb(var(--color-now-playing))]'
                     }`}>
                       {m.matchType === 'exact' ? 'Exakt' : 'Delvis'}
                     </span>
@@ -516,7 +516,7 @@ export function AdminFolkwikiPage() {
                     <span>Folkwiki: {m.folkwikiStyle ?? '?'}</span>
                     {m.folkwikiMeter && <span>({m.folkwikiMeter})</span>}
                     {disagree && (
-                      <span className="font-medium text-red-400">Stilkonflikt</span>
+                      <span className="font-medium text-[rgb(var(--color-error))]">Stilkonflikt</span>
                     )}
                   </div>
                 </div>
@@ -559,10 +559,10 @@ export function AdminFolkwikiPage() {
                   </div>
                 )}
                 {m.matchStatus !== 'pending' && (
-                  <span className={`shrink-0 rounded px-2 py-1 text-xs font-medium ${
+                  <span className={`shrink-0 rounded-[var(--radius-sm)] px-2 py-1 text-xs font-medium ${
                     m.matchStatus === 'confirmed'
-                      ? 'bg-green-500/10 text-green-400'
-                      : 'bg-red-500/10 text-red-400'
+                      ? 'bg-[rgb(var(--color-selected-muted))] text-[rgb(var(--color-success))]'
+                      : 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-error))]'
                   }`}>
                     {m.matchStatus === 'confirmed' ? 'Bekräftad' : 'Avvisad'}
                   </span>
@@ -623,14 +623,15 @@ export function AdminFolkwikiPage() {
 
             {styleModalMode === 'correct' ? (
               <div className="space-y-3">
-                <label className="block text-sm font-medium">
+                <label htmlFor="folkwiki-corrected-style" className={fieldLabelClassName}>
                   Rätt stavning
                 </label>
                 <input
+                  id="folkwiki-corrected-style"
                   type="text"
                   value={correctedStyle}
                   onChange={(e) => { setCorrectedStyle(e.target.value); setStyleModalError(null); }}
-                  className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                  className={fieldClassName}
                 />
                 <p className="text-xs text-[rgb(var(--color-text-muted))]">
                   Sparar <span className="font-medium">{correctedStyle || '...'}</span> direkt i folkwiki-tabellen och bekräftar sedan matchningen.
@@ -698,15 +699,16 @@ export function AdminFolkwikiPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <label className="block text-sm font-medium">
+                <label htmlFor="folkwiki-new-main-style" className={fieldLabelClassName}>
                   Namn på ny huvudstil
                 </label>
                 <input
+                  id="folkwiki-new-main-style"
                   type="text"
                   value={newMainStyle}
                   onChange={(e) => { setNewMainStyle(e.target.value); setStyleModalError(null); }}
                   placeholder={styleModal.folkwikiStyle}
-                  className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                  className={fieldClassName}
                 />
                 <p className="text-xs text-[rgb(var(--color-text-muted))]">
                   Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> läggs
@@ -764,11 +766,12 @@ export function AdminFolkwikiPage() {
 
             {/* Option 2: Override with a different style */}
             <div className="space-y-2">
-              <span className="block text-sm font-medium">Det är en annan stil:</span>
+              <label htmlFor="folkwiki-override-style" className={fieldLabelClassName}>Det är en annan stil:</label>
               <select
+                id="folkwiki-override-style"
                 value={overrideStyle}
                 onChange={(e) => { setOverrideStyle(e.target.value); setRejectModalError(null); }}
-                className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className={`${fieldClassName} pr-9`}
               >
                 <option value="">Välj stil...</option>
                 {rejectModal.styleTree.map((node) => (

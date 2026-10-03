@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   getGroup,
   updateGroup,
@@ -16,8 +16,23 @@ import type { GroupMemberDto } from '@/api/models/groupMemberDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
 import { useAuth } from '@/auth/useAuth';
 import { ConfirmDeleteByName } from '@/components';
-import { BackArrowIcon } from '@/icons';
-import { Badge, Button, Card, IconButton, InlineError, Modal, SectionTitle, TextField, toast } from '@/ui';
+import { BackArrowIcon, PlaylistIcon } from '@/icons';
+import {
+  Badge,
+  Button,
+  Card,
+  IconButton,
+  InlineError,
+  LinkButton,
+  ListRow,
+  Modal,
+  PageHeader,
+  SectionTitle,
+  TextField,
+  fieldClassName,
+  fieldLabelClassName,
+  toast,
+} from '@/ui';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
 
@@ -113,9 +128,9 @@ export function GroupSettingsPage() {
     return (
       <div className="space-y-4">
         <p className="text-[rgb(var(--color-text))]">Du har inte behörighet att ändra gruppen.</p>
-        <Link to={`/groups/${id}`} className="text-[rgb(var(--color-accent))] hover:underline">
+        <LinkButton to={`/groups/${id}`} variant="secondary">
           Tillbaka till gruppen
-        </Link>
+        </LinkButton>
       </div>
     );
   }
@@ -269,13 +284,11 @@ export function GroupSettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3">
+      <div className="space-y-6">
         <IconButton aria-label="Tillbaka till gruppen" onClick={() => navigate(`/groups/${id}`)}>
           <BackArrowIcon className="h-5 w-5" aria-hidden />
         </IconButton>
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-          Inställningar för {group.name}
-        </h1>
+        <PageHeader title="Inställningar" meta={group.name} />
       </div>
 
       {canEditInfo && (
@@ -283,10 +296,7 @@ export function GroupSettingsPage() {
           <SectionTitle>Om gruppen</SectionTitle>
           <Card className="space-y-3 p-4">
             <div className="space-y-1">
-              <label
-                htmlFor="group-settings-name"
-                className="block text-sm font-medium text-[rgb(var(--color-text))]"
-              >
+              <label htmlFor="group-settings-name" className={fieldLabelClassName}>
                 Gruppens namn
               </label>
               <input
@@ -296,14 +306,11 @@ export function GroupSettingsPage() {
                   setName(e.target.value);
                   setInfoError(null);
                 }}
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+                className={fieldClassName}
               />
             </div>
             <div className="space-y-1">
-              <label
-                htmlFor="group-settings-about"
-                className="block text-sm font-medium text-[rgb(var(--color-text))]"
-              >
+              <label htmlFor="group-settings-about" className={fieldLabelClassName}>
                 Om oss
               </label>
               <textarea
@@ -311,7 +318,7 @@ export function GroupSettingsPage() {
                 value={aboutUs}
                 onChange={(e) => setAboutUs(e.target.value)}
                 rows={4}
-                className="w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+                className={fieldClassName}
               />
             </div>
             <div className="flex min-h-11 items-center gap-2">
@@ -320,9 +327,9 @@ export function GroupSettingsPage() {
                 type="checkbox"
                 checked={!!group.isPublic}
                 onChange={handleToggleVisibility}
-                className="h-5 w-5 rounded border-[rgb(var(--color-border))]"
+                className="h-5 w-5 rounded-[var(--radius-sm)] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
               />
-              <label htmlFor="group-settings-visibility" className="text-sm text-[rgb(var(--color-text))]">
+              <label htmlFor="group-settings-visibility" className="text-base text-[rgb(var(--color-text))]">
                 Visa gruppen offentligt
               </label>
             </div>
@@ -422,7 +429,7 @@ export function GroupSettingsPage() {
                               disabled={forcedByAdmin}
                               onChange={() => handleTogglePermission(member, field)}
                               aria-label={`${label} för ${memberName}`}
-                              className="h-5 w-5 rounded border-[rgb(var(--color-border))]"
+                              className="h-5 w-5 rounded-[var(--radius-sm)] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
                             />
                             {label}
                           </label>
@@ -443,21 +450,20 @@ export function GroupSettingsPage() {
           <SectionTitle>Väntande inbjudningar till spellistor</SectionTitle>
           <ul className="space-y-2">
             {invitations.map((inv) => (
-              <li key={inv.id}>
-                <Card className="space-y-2 p-3">
-                  <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                        {inv.playlistName}
-                      </p>
-                      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-                        Inbjuden av {inv.invitedByDisplayName ?? inv.invitedByUserId}
-                        {inv.permission && (
-                          <span className="ml-1.5">&middot; {inv.permission === 'edit' ? 'Redigera' : 'Se'}</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-2">
+              <li key={inv.id} className="space-y-1">
+                <ListRow
+                  icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
+                  title={inv.playlistName}
+                  subtitle={
+                    <>
+                      Inbjuden av {inv.invitedByDisplayName ?? inv.invitedByUserId}
+                      {inv.permission && (
+                        <span className="ml-1.5">&middot; {inv.permission === 'edit' ? 'Redigera' : 'Se'}</span>
+                      )}
+                    </>
+                  }
+                  trailing={
+                    <>
                       <Button
                         size="sm"
                         disabled={respondingInvitationId === inv.id}
@@ -473,10 +479,10 @@ export function GroupSettingsPage() {
                       >
                         Avböj
                       </Button>
-                    </div>
-                  </div>
-                  <InlineError>{inv.id ? invitationErrors[inv.id] : null}</InlineError>
-                </Card>
+                    </>
+                  }
+                />
+                <InlineError>{inv.id ? invitationErrors[inv.id] : null}</InlineError>
               </li>
             ))}
           </ul>

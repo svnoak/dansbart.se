@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Card } from '@/ui';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -33,7 +34,7 @@ function SkeletonRow({ cols }: { cols: number }) {
     <tr>
       {Array.from({ length: cols }, (_, i) => (
         <td key={i} className="px-3 py-3">
-          <div className="h-4 rounded bg-[rgb(var(--color-border))]/60 animate-pulse" />
+          <div className="h-4 animate-pulse rounded-[var(--radius-sm)] bg-[rgb(var(--color-pill-bg))]" />
         </td>
       ))}
     </tr>
@@ -97,10 +98,10 @@ export function DataTable<T>({
   const totalCols = selectable ? columns.length + 1 : columns.length;
 
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))]">
+    <Card className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]">
+          <tr className="border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-sunken))]">
             {selectable && (
               <th className="w-10 px-3 py-2.5">
                 <input
@@ -110,7 +111,8 @@ export function DataTable<T>({
                     if (el) el.indeterminate = someSelected && !allSelected;
                   }}
                   onChange={toggleAll}
-                  className="rounded border-[rgb(var(--color-border))]"
+                  aria-label="Markera alla rader"
+                  className="h-5 w-5 rounded-[var(--radius-sm)] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
                 />
               </th>
             )}
@@ -120,7 +122,7 @@ export function DataTable<T>({
               return (
                 <th
                   key={col.key}
-                  className={`px-3 py-2.5 text-left font-medium text-[rgb(var(--color-text-muted))] ${sortable ? 'cursor-pointer select-none hover:text-[rgb(var(--color-text))]' : ''} ${col.className ?? ''}`}
+                  className={`px-3 py-2.5 text-left text-sm font-semibold text-[rgb(var(--color-text))] ${sortable ? 'cursor-pointer select-none hover:text-[rgb(var(--color-accent))]' : ''} ${col.className ?? ''}`}
                   onClick={sortable ? () => handleSort(col) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -157,10 +159,10 @@ export function DataTable<T>({
               return (
                 <tr
                   key={key}
-                  className={`border-b border-[rgb(var(--color-border))]/50 last:border-b-0 transition-colors ${
+                  className={`border-b border-[rgb(var(--color-border))] last:border-b-0 transition-colors ${
                     isSelected
-                      ? 'bg-[rgb(var(--color-accent))]/5'
-                      : 'hover:bg-[rgb(var(--color-bg))]/50'
+                      ? 'bg-[rgb(var(--color-selected-muted))]'
+                      : 'hover:bg-[rgb(var(--color-pill-bg))]/40'
                   }`}
                 >
                   {selectable && (
@@ -169,7 +171,8 @@ export function DataTable<T>({
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleRow(key)}
-                        className="rounded border-[rgb(var(--color-border))]"
+                        aria-label="Markera rad"
+                        className="h-5 w-5 rounded-[var(--radius-sm)] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
                       />
                     </td>
                   )}
@@ -184,6 +187,6 @@ export function DataTable<T>({
           )}
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }
