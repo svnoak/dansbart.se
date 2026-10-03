@@ -28,6 +28,7 @@ import se.dansbart.jooq.tables.PlaybackLinks;
 import se.dansbart.jooq.tables.PlaylistCollaborators;
 import se.dansbart.jooq.tables.PlaylistTracks;
 import se.dansbart.jooq.tables.Playlists;
+import se.dansbart.jooq.tables.ProviderConnections;
 import se.dansbart.jooq.tables.RejectionLogs;
 import se.dansbart.jooq.tables.StyleKeywords;
 import se.dansbart.jooq.tables.TrackAlbums;
@@ -174,6 +175,11 @@ public class Tables {
      * The table <code>public.playlists</code>.
      */
     public static final Playlists PLAYLISTS = Playlists.PLAYLISTS;
+
+    /**
+     * The table <code>public.provider_connections</code>.
+     */
+    public static final ProviderConnections PROVIDER_CONNECTIONS = ProviderConnections.PROVIDER_CONNECTIONS;
 
     /**
      * The table <code>public.rejection_logs</code>.

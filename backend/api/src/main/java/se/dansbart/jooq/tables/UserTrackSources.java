@@ -37,6 +37,7 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.ProviderConnections.ProviderConnectionsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
 
@@ -196,7 +197,7 @@ public class UserTrackSources extends TableImpl<Record> {
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.USER_TRACK_SOURCES__USER_TRACK_SOURCES_USER_ID_FKEY, Keys.USER_TRACK_SOURCES__USER_TRACK_SOURCES_TRACK_ID_FKEY);
+        return Arrays.asList(Keys.USER_TRACK_SOURCES__USER_TRACK_SOURCES_USER_ID_FKEY, Keys.USER_TRACK_SOURCES__USER_TRACK_SOURCES_TRACK_ID_FKEY, Keys.USER_TRACK_SOURCES__FK_USER_TRACK_SOURCES_CONNECTION);
     }
 
     private transient UsersPath _users;
@@ -221,6 +222,19 @@ public class UserTrackSources extends TableImpl<Record> {
             _tracks = new TracksPath(this, Keys.USER_TRACK_SOURCES__USER_TRACK_SOURCES_TRACK_ID_FKEY, null);
 
         return _tracks;
+    }
+
+    private transient ProviderConnectionsPath _providerConnections;
+
+    /**
+     * Get the implicit join path to the
+     * <code>public.provider_connections</code> table.
+     */
+    public ProviderConnectionsPath providerConnections() {
+        if (_providerConnections == null)
+            _providerConnections = new ProviderConnectionsPath(this, Keys.USER_TRACK_SOURCES__FK_USER_TRACK_SOURCES_CONNECTION, null);
+
+        return _providerConnections;
     }
 
     @Override

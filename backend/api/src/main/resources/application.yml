@@ -95,3 +95,5 @@ dansbart:
   spotify:
     client-id: ${SPOTIPY_CLIENT_ID:}
     client-secret: ${SPOTIPY_CLIENT_SECRET:}
+  tokens:
+    encryption-key: ${TOKEN_ENCRYPTION_KEY:}
