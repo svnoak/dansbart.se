@@ -44,7 +44,7 @@ export function AlbumPage() {
   }
   if (error || !album) {
     return (
-      <p className="text-red-600" role="alert">
+      <p className="text-[rgb(var(--color-error))]" role="alert">
         {error ?? 'Album hittades inte.'}
       </p>
     );

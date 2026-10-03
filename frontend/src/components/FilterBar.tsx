@@ -243,7 +243,7 @@ function ActiveChips({
       <button
         type="button"
         onClick={onClearAll}
-        className="ml-2 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+        className="ml-2 text-xs font-medium text-[rgb(var(--color-error))] hover:text-[rgb(var(--color-error-hover))]"
       >
         Rensa alla
       </button>
@@ -654,7 +654,7 @@ export function FilterBar({
               <button
                 type="button"
                 onClick={onClearFilters}
-                className="w-full py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium"
+                className="w-full py-2 text-sm text-[rgb(var(--color-error))] hover:text-[rgb(var(--color-error-hover))] font-medium"
               >
                 Rensa alla filter
               </button>

@@ -1,12 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <style>
-    rect { fill: #111111; }
-    text { fill: #ffffff; }
+    .ground { fill: #801a1a; }
+    .petal { fill: #fdf6e8; }
+    .heart { fill: #801a1a; }
     @media (prefers-color-scheme: dark) {
-      rect { fill: #ffffff; }
-      text { fill: #111111; }
+      .ground { fill: #e4806c; }
+      .petal { fill: #1d1612; }
+      .heart { fill: #e4806c; }
     }
   </style>
-  <rect width="32" height="32" rx="6"/>
-  <text x="16" y="23" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" text-anchor="middle">D</text>
+  <circle class="ground" cx="16" cy="16" r="16"/>
+  <g class="petal">
+    <path d="M16 5c2.6 3.2 2.6 6.8 0 10-2.6-3.2-2.6-6.8 0-10z"/>
+    <path d="M16 27c-2.6-3.2-2.6-6.8 0-10 2.6 3.2 2.6 6.8 0 10z"/>
+    <path d="M5 16c3.2-2.6 6.8-2.6 10 0-3.2 2.6-6.8 2.6-10 0z"/>
+    <path d="M27 16c-3.2 2.6-6.8 2.6-10 0 3.2-2.6 6.8-2.6 10 0z"/>
+    <path d="M8.2 8.2c4.1.4 6.7 3 7.1 7.1-4.1-.4-6.7-3-7.1-7.1z"/>
+    <path d="M23.8 23.8c-4.1-.4-6.7-3-7.1-7.1 4.1.4 6.7 3 7.1 7.1z"/>
+    <path d="M23.8 8.2c-.4 4.1-3 6.7-7.1 7.1.4-4.1 3-6.7 7.1-7.1z"/>
+    <path d="M8.2 23.8c.4-4.1 3-6.7 7.1-7.1-.4 4.1-3 6.7-7.1 7.1z"/>
+  </g>
+  <circle class="heart" cx="16" cy="16" r="2.2"/>
 </svg>

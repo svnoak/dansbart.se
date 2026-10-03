@@ -226,9 +226,9 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
             <button
               type="button"
               onClick={() => setView('confirm_folk')}
-              className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-amber-300 hover:bg-amber-50"
+              className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-[rgb(var(--color-now-playing))] hover:bg-[rgb(var(--color-now-playing-muted))]"
             >
-              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-white group-hover:text-amber-600">
+              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-[rgb(var(--color-bg-elevated))] group-hover:text-[rgb(var(--color-now-playing))]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} strokeDasharray="2 2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
@@ -243,9 +243,9 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
               type="button"
               onClick={() => setView('options_link')}
               disabled={!youtubeLink}
-              className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-red-300 hover:bg-red-50 disabled:opacity-50"
+              className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-[rgb(var(--color-error))] hover:bg-[rgb(var(--color-error))]/8 disabled:opacity-50"
             >
-              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-white group-hover:text-red-600">
+              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-white group-hover:text-[rgb(var(--color-error))]">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
@@ -262,11 +262,11 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
         return (
           <div>
             <p className="mb-4 text-sm text-[rgb(var(--color-text))]">St{'\u00e4'}mmer detta?</p>
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <div className="text-lg font-bold text-blue-900">
+            <div className="mb-6 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] p-4">
+              <div className="text-lg font-bold text-[rgb(var(--color-text))]">
                 {track.danceStyle}
                 {hasSubStyle && (
-                  <span className="font-normal text-blue-700"> ({track.subStyle})</span>
+                  <span className="font-normal text-[rgb(var(--color-text-muted))]"> ({track.subStyle})</span>
                 )}
               </div>
             </div>
@@ -282,11 +282,11 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
         return (
           <div>
             <p className="mb-4 text-sm text-[rgb(var(--color-text))]">{'\u00c4'}r detta en</p>
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <div className="text-lg font-bold text-blue-900">
+            <div className="mb-6 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] p-4">
+              <div className="text-lg font-bold text-[rgb(var(--color-text))]">
                 {track.danceStyle}
                 {hasSubStyle && (
-                  <span className="font-normal text-blue-700"> ({track.subStyle})</span>
+                  <span className="font-normal text-[rgb(var(--color-text-muted))]"> ({track.subStyle})</span>
                 )}
                 ?
               </div>
@@ -325,7 +325,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
             </p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setView('menu')} className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">Tillbaka</button>
-              <button type="button" onClick={handleSubmitNotFolk} disabled={isSubmitting} className="rounded bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Rapportera</button>
+              <button type="button" onClick={handleSubmitNotFolk} disabled={isSubmitting} className="rounded-[var(--radius)] bg-[rgb(var(--color-now-playing))] px-4 py-2 text-sm font-bold text-[rgb(var(--color-accent-foreground))] disabled:opacity-50">Rapportera</button>
             </div>
           </div>
         );
@@ -347,7 +347,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                 type="button"
                 onClick={() => handleSubmitBrokenLink('broken')}
                 disabled={isSubmitting}
-                className="rounded border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800 disabled:opacity-50"
+                className="rounded-[var(--radius)] border border-[rgb(var(--color-error))]/40 bg-[rgb(var(--color-error))]/8 p-4 text-sm font-bold text-[rgb(var(--color-error))] disabled:opacity-50"
               >
                 Trasig
               </button>
@@ -512,7 +512,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'success':
         return (
           <div className="py-6 text-center">
-            <svg className="mx-auto mb-2 h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="mx-auto mb-2 h-10 w-10 text-[rgb(var(--color-success))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h4 className="text-lg font-bold text-[rgb(var(--color-text))]">Tack!</h4>
@@ -542,13 +542,13 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
 
         <h3 className="mb-5 flex items-center gap-2 border-b border-[rgb(var(--color-border))] pb-3 pr-8 text-lg font-bold text-[rgb(var(--color-text))]">
           {view === 'success' ? (
-            <span className="text-green-500">
+            <span className="text-[rgb(var(--color-success))]">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </span>
           ) : (
-            <span className="text-amber-600">
+            <span className="text-[rgb(var(--color-now-playing))]">
               <FlagIcon className="h-5 w-5" aria-hidden />
             </span>
           )}
@@ -556,7 +556,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
         </h3>
 
         {error && (
-          <div className="mb-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm text-red-600">
+          <div className="mb-4 rounded-[var(--radius)] border border-[rgb(var(--color-error))]/40 bg-[rgb(var(--color-error))]/8 p-3 text-sm text-[rgb(var(--color-error))]">
             {error}
           </div>
         )}

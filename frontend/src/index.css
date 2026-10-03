@@ -3,56 +3,106 @@
 /* Use class-based dark mode (toggle) instead of prefers-color-scheme */
 @custom-variant dark (&& :where(.dark, .dark *));
 
-/* Global theme – semantic tokens for light/dark and customization */
+/*
+ * Typography: one legible sans for everything a person reads at length,
+ * and one warm serif for the words that name a place on the site: page
+ * titles, section headings, the wordmark and the counts in the ledger.
+ */
+@theme {
+  --font-sans: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces Variable', Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --font-display--font-variation-settings: "SOFT" 80, "WONK" 0, "opsz" 48;
+}
+
+/*
+ * Global theme – semantic tokens for light/dark and customization.
+ *
+ * The light theme is a village hall: linen ground, paper surfaces, warm
+ * umber ink, and three colours from Swedish folk craft that each carry one
+ * role. Falu red is the colour a person presses. Spruce green marks what is
+ * selected. Ochre marks the track playing now.
+ */
 :root {
-  --color-bg: 250 247 242;
-  --color-bg-elevated: 255 253 250;
-  --color-border: 229 231 235;
-  --color-text: 17 24 39;
-  --color-text-muted: 107 114 128;
-  --color-accent: 123 30 30;
-  --color-accent-foreground: 255 255 255;
-  --color-accent-hover: 95 20 20;
-  --color-accent-muted: 250 224 224;
-  --color-selected: 10 92 54;
-  --color-now-playing: 204 119 34;
-  --color-success: 21 128 61;
-  --color-error: 185 28 28;
-  --color-error-foreground: 255 255 255;
-  --color-error-hover: 153 27 27;
-  --color-pill-bg: 238 242 255;
-  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.06);
-  --radius: 1rem;
-  --radius-lg: 1.5rem;
+  --color-bg: 245 239 228;
+  --color-bg-sunken: 238 230 214;
+  --color-bg-elevated: 253 250 244;
+  --color-border: 214 200 180;
+  --color-border-strong: 178 160 136;
+  --color-text: 38 28 22;
+  --color-text-muted: 104 84 70;
+  --color-accent: 128 30 26;
+  --color-accent-foreground: 255 250 243;
+  --color-accent-hover: 100 22 20;
+  --color-accent-muted: 243 220 212;
+  --color-selected: 30 84 56;
+  --color-selected-muted: 220 232 222;
+  --color-now-playing: 150 86 16;
+  --color-now-playing-muted: 249 236 214;
+  --color-success: 35 105 60;
+  --color-error: 166 35 30;
+  --color-error-foreground: 255 250 243;
+  --color-error-hover: 130 26 24;
+  --color-pill-bg: 235 226 208;
+  --color-card-shadow: 0 1px 2px rgb(60 40 20 / 0.08), 0 2px 10px rgb(60 40 20 / 0.06);
+  --radius-sm: 0.375rem;
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
   --radius-full: 9999px;
+  --paper-grain-opacity: 0.045;
 }
 
 /* Dark theme – applied when user selects dark mode (data-theme="dark") */
 html.dark,
 [data-theme="dark"] {
-  --color-bg: 26 20 18;
-  --color-bg-elevated: 40 31 28;
-  --color-border: 75 85 99;
-  --color-text: 243 244 246;
-  --color-text-muted: 156 163 175;
-  --color-accent: 224 122 122;
-  --color-accent-foreground: 15 23 42;
-  --color-accent-hover: 240 160 160;
-  --color-accent-muted: 74 26 26;
-  --color-selected: 110 211 163;
-  --color-now-playing: 230 170 90;
-  --color-success: 134 239 172;
-  --color-error: 248 113 113;
-  --color-error-foreground: 15 23 42;
-  --color-error-hover: 252 165 165;
-  --color-pill-bg: 100 90 180;
-  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+  --color-bg: 29 22 18;
+  --color-bg-sunken: 24 18 15;
+  --color-bg-elevated: 42 33 27;
+  --color-border: 88 72 60;
+  --color-border-strong: 124 104 86;
+  --color-text: 240 230 216;
+  --color-text-muted: 184 166 146;
+  --color-accent: 228 128 108;
+  --color-accent-foreground: 35 18 14;
+  --color-accent-hover: 240 156 136;
+  --color-accent-muted: 70 30 26;
+  --color-selected: 122 206 160;
+  --color-selected-muted: 34 56 44;
+  --color-now-playing: 232 176 96;
+  --color-now-playing-muted: 70 52 26;
+  --color-success: 140 220 170;
+  --color-error: 244 120 110;
+  --color-error-foreground: 35 18 14;
+  --color-error-hover: 250 150 140;
+  --color-pill-bg: 70 58 48;
+  --color-card-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 10px rgb(0 0 0 / 0.3);
+  --paper-grain-opacity: 0.06;
 }
 
 body {
   background-color: rgb(var(--color-bg));
   color: rgb(var(--color-text));
   font-family: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* A faint paper grain under everything, so flat surfaces read as linen and paper, not screen. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--paper-grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.12 0 0 0 0 0.06 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* Page titles and section headings speak in the display face. */
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display--font-variation-settings);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 /* Buttons and clickable elements show pointer cursor */
@@ -68,6 +118,34 @@ button,
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/*
+ * Woven band: a thin row of lozenges, like the edge of a woven ribbon.
+ * Used as the seam between the header and the page, above the player, and
+ * under a card that wants a craft edge. Colour follows currentColor, so set
+ * a text colour on the element.
+ */
+@utility folk-band {
+  height: 0.5rem;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='8' viewBox='0 0 16 8'%3E%3Cpath d='M4 0 8 4 4 8 0 4Z'/%3E%3Ccircle cx='12' cy='4' r='1.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='8' viewBox='0 0 16 8'%3E%3Cpath d='M4 0 8 4 4 8 0 4Z'/%3E%3Ccircle cx='12' cy='4' r='1.5'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-size: 16px 8px;
+  mask-size: 16px 8px;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* A short ruled line that trails a heading, like a ledger rule. */
+@utility ledger-rule {
+  flex: 1 1 0%;
+  height: 1px;
+  min-width: 1.5rem;
+  background-color: rgb(var(--color-border));
 }
 
 /* Styles for Discourse cooked HTML (rendered Markdown) */

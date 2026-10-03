@@ -219,7 +219,7 @@ export function MobilePlayerOverlay({
               <button
                 type="button"
                 onClick={() => onToggleStructureMode()}
-                className={`text-xs font-bold uppercase px-3 py-1 transition-colors ${
+                className={`text-xs font-bold px-3 py-1 transition-colors ${
                   structureMode !== 'none'
                     ? 'text-[rgb(var(--color-accent))]'
                     : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'

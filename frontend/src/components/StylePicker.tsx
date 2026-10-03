@@ -40,7 +40,7 @@ export function StylePicker({
         }}
         className={
           'w-full border px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium ' +
-          (compactClassName ?? 'bg-white border-gray-300 text-gray-900')
+          (compactClassName ?? 'bg-[rgb(var(--color-bg-elevated))] border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text))]')
         }
       >
         <option value="" disabled>

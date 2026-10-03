@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { IconButton } from '@/ui';
+import { Button, IconButton } from '@/ui';
+import { RosetteIcon } from '@/icons';
 import { useAuth } from '@/auth/useAuth';
 
 const DISCOURSE_URL = import.meta.env.VITE_DISCOURSE_URL ?? 'https://folkhub.se';
@@ -29,13 +30,13 @@ function UserMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Användarmeny"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+        className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[rgb(var(--color-accent-hover))] bg-[rgb(var(--color-accent))] font-display text-base font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors"
       >
         {initial}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-48 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-52 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)] z-50">
           {!!user?.confirmedTrackCount && (
             <>
               <p className="px-4 py-2 text-xs text-[rgb(var(--color-text-muted))]">
@@ -87,8 +88,8 @@ export function Header({
   const { isAuthenticated, isLoading, login } = useAuth();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
-      <div className="flex items-center gap-3 px-4 py-3">
+    <header className="sticky top-0 z-20 bg-[rgb(var(--color-bg-elevated))]">
+      <div className="flex items-center gap-3 px-4 py-2.5">
         {showMenuButton && onOpenSidebar && (
           <IconButton
             aria-label="Öppna meny"
@@ -102,19 +103,17 @@ export function Header({
         )}
         <Link
           to="/"
-          className="flex shrink-0 items-center gap-2 text-[rgb(var(--color-text))] hover:opacity-90"
+          className="flex shrink-0 items-center gap-2.5 rounded-[var(--radius)] text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))]"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[rgb(var(--color-text))] text-[rgb(var(--color-bg-elevated))] font-bold text-lg">
-            D
-          </span>
-          <span className="text-lg font-semibold">dansbart.se</span>
+          <RosetteIcon className="h-9 w-9 text-[rgb(var(--color-accent))]" aria-hidden />
+          <span className="font-display text-2xl font-semibold leading-none tracking-tight">dansbart.se</span>
         </Link>
 
         <div className="ml-auto flex items-center gap-3">
           {isAuthenticated && (
             <Link
               to="/mina-latar"
-              className="text-sm font-medium text-[rgb(var(--color-text))] hover:underline"
+              className="text-sm font-semibold text-[rgb(var(--color-text))] underline decoration-[rgb(var(--color-border-strong))] underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
             >
               Mina låtar
             </Link>
@@ -123,17 +122,14 @@ export function Header({
             isAuthenticated
               ? <UserMenu />
               : (
-                <button
-                  type="button"
-                  onClick={login}
-                  className="rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-                >
+                <Button size="sm" onClick={login}>
                   Logga in
-                </button>
+                </Button>
               )
           )}
         </div>
       </div>
+      <div className="folk-band text-[rgb(var(--color-accent))]" aria-hidden />
     </header>
   );
 }

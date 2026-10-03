@@ -285,7 +285,7 @@ export function PlaylistSettingsPage() {
       {/* Synlighet */}
       {isOwner && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+          <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
             Synlighet
           </h2>
           <div className="flex items-center justify-between rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3">
@@ -314,7 +314,7 @@ export function PlaylistSettingsPage() {
       {/* Delningslänk */}
       {canManageShare && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+          <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
             Delningslänk
           </h2>
           <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
@@ -368,7 +368,7 @@ export function PlaylistSettingsPage() {
 
       {/* Delad med */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+        <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
           Delad med
         </h2>
 
@@ -439,7 +439,7 @@ export function PlaylistSettingsPage() {
                     <button
                       type="button"
                       onClick={() => handleRemoveCollaborator(collab.id!)}
-                      className="text-xs text-[rgb(var(--color-text-muted))] hover:text-red-500"
+                      className="text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-error))]"
                     >
                       Ta bort
                     </button>
@@ -541,7 +541,7 @@ export function PlaylistSettingsPage() {
       {/* Överlåt ägarskap — owner only */}
       {isOwner && acceptedCollaborators.length > 0 && !playlist.ownerGroup && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+          <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
             Överlåt ägarskap
           </h2>
           <div className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
@@ -579,7 +579,7 @@ export function PlaylistSettingsPage() {
                   <button
                     type="button"
                     onClick={handleTransferOwnership}
-                    className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                    className="rounded-[var(--radius)] border border-[rgb(var(--color-error-hover))] bg-[rgb(var(--color-error))] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--color-error-foreground))] hover:bg-[rgb(var(--color-error-hover))]"
                   >
                     Bekräfta
                   </button>
@@ -601,10 +601,10 @@ export function PlaylistSettingsPage() {
       {/* Radera spellista — owner only */}
       {isOwner && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-red-500">
+          <h2 className="text-lg font-semibold text-[rgb(var(--color-error))]">
             Farlig zon
           </h2>
-          <div className="rounded-lg border border-red-500/30 bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
+          <div className="rounded-lg border border-[rgb(var(--color-error))]/40 bg-[rgb(var(--color-bg-elevated))] px-4 py-3 space-y-3">
             <p className="text-sm font-medium text-[rgb(var(--color-text))]">Radera spellista</p>
             <p className="text-xs text-[rgb(var(--color-text-muted))]">
               Det här går inte att ångra. Skriv in spellistans namn för att bekräfta.

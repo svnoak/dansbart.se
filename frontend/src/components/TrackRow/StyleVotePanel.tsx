@@ -127,7 +127,7 @@ function StyleVoteDialog({
           </div>
         )}
         {failed && (
-          <p role="alert" className="mb-3 text-sm text-red-600">
+          <p role="alert" className="mb-3 text-sm text-[rgb(var(--color-error))]">
             Det gick inte att spara din röst. Försök igen.
           </p>
         )}

@@ -19,10 +19,10 @@ export function StyleShortcutCard({ style }: StyleShortcutCardProps) {
   return (
     <Link
       to={`/search?style=${encodeURIComponent(styleName)}`}
-      className="block rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))]/50 p-3 shadow-[var(--color-card-shadow)] transition-transform hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
-      style={{ backgroundColor: bg, color: text }}
+      className="block rounded-[var(--radius-lg)] border p-3 shadow-[var(--color-card-shadow)] transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
+      style={{ backgroundColor: bg, color: text, borderColor: `color-mix(in srgb, ${text} 35%, transparent)` }}
     >
-      <h3 className="font-semibold">{styleName}</h3>
+      <h3 className="font-display text-lg font-semibold leading-tight">{styleName}</h3>
       <p className="mt-1 text-sm opacity-90">{count} låtar</p>
     </Link>
   );

@@ -15,7 +15,7 @@ export function Badge({
   className = '',
   style,
 }: BadgeProps) {
-  const base = 'inline-flex items-center rounded-[var(--radius)] px-2 py-0.5 font-medium';
+  const base = 'inline-flex items-center rounded-[var(--radius-sm)] px-2 py-0.5 font-medium';
   const sizes = {
     sm: 'text-xs',
     md: 'text-base',

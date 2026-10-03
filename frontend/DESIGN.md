@@ -2,70 +2,81 @@
 name: dansbart.se
 description: A community's shared, hand-kept record of dance-worthy folk music.
 colors:
-  falu-red: "rgb(123 30 30)"
-  falu-red-hover: "rgb(95 20 20)"
-  falu-red-muted: "rgb(250 224 224)"
-  accent-foreground: "rgb(255 255 255)"
-  ochre-now-playing: "rgb(204 119 34)"
-  spruce-selected: "rgb(10 92 54)"
-  warm-ground: "rgb(250 247 242)"
-  warm-ground-elevated: "rgb(255 253 250)"
-  ink: "rgb(17 24 39)"
-  ink-muted: "rgb(107 114 128)"
-  hairline: "rgb(229 231 235)"
-  success: "rgb(21 128 61)"
-  error: "rgb(185 28 28)"
-  pill-bg: "rgb(238 242 255)"
+  linen: "rgb(245 239 228)"
+  linen-sunken: "rgb(238 230 214)"
+  paper: "rgb(253 250 244)"
+  hairline: "rgb(214 200 180)"
+  hairline-strong: "rgb(178 160 136)"
+  ink: "rgb(38 28 22)"
+  ink-muted: "rgb(104 84 70)"
+  falu-red: "rgb(128 30 26)"
+  falu-red-hover: "rgb(100 22 20)"
+  falu-red-muted: "rgb(243 220 212)"
+  accent-foreground: "rgb(255 250 243)"
+  spruce-selected: "rgb(30 84 56)"
+  spruce-selected-muted: "rgb(220 232 222)"
+  ochre-now-playing: "rgb(150 86 16)"
+  ochre-now-playing-muted: "rgb(249 236 214)"
+  success: "rgb(35 105 60)"
+  error: "rgb(166 35 30)"
+  pill-bg: "rgb(235 226 208)"
 typography:
+  display:
+    fontFamily: "'Fraunces Variable', Georgia, 'Iowan Old Style', 'Times New Roman', serif"
+    fontVariationSettings: "'SOFT' 80, 'WONK' 0, 'opsz' 48"
+    fontWeight: 600
+  headline:
+    fontFamily: "{typography.display.fontFamily}"
+    fontSize: "1.875rem"
+    fontWeight: 600
+    lineHeight: 1.2
+  title:
+    fontFamily: "{typography.display.fontFamily}"
+    fontSize: "1.25rem"
+    fontWeight: 600
+    lineHeight: 1.3
   body:
     fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
-  title:
-    fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.125rem"
+  label:
+    fontFamily: "{typography.body.fontFamily}"
+    fontSize: "0.875rem"
     fontWeight: 600
     lineHeight: 1.4
-  headline:
-    fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 700
-    lineHeight: 1.3
-  label:
-    fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 500
-    lineHeight: 1.4
 rounded:
-  sm: "1rem"
-  lg: "1.5rem"
+  sm: "0.375rem"
+  md: "0.5rem"
+  lg: "0.75rem"
   full: "9999px"
 spacing:
   sm: "0.75rem"
   md: "1rem"
   lg: "1.5rem"
-  section: "2rem"
+  section: "2.5rem"
 components:
   button-primary:
     backgroundColor: "{colors.falu-red}"
     textColor: "{colors.accent-foreground}"
-    rounded: "{rounded.sm}"
+    border: "1px solid {colors.falu-red-hover}"
+    rounded: "{rounded.md}"
     padding: "8px 16px"
-  button-primary-hover:
-    backgroundColor: "{colors.falu-red-hover}"
   button-secondary:
-    backgroundColor: "{colors.falu-red-muted}"
+    backgroundColor: "{colors.paper}"
     textColor: "{colors.falu-red}"
-    rounded: "{rounded.sm}"
+    border: "1px solid {colors.hairline-strong}"
+    rounded: "{rounded.md}"
     padding: "8px 16px"
   card:
-    backgroundColor: "{colors.warm-ground-elevated}"
+    backgroundColor: "{colors.paper}"
+    border: "1px solid {colors.hairline}"
     rounded: "{rounded.lg}"
     padding: "16px"
   pill-active:
     backgroundColor: "{colors.falu-red-muted}"
     textColor: "{colors.falu-red}"
+    border: "1px solid {colors.falu-red}"
     rounded: "{rounded.full}"
     padding: "6px 12px"
 ---
@@ -76,120 +87,124 @@ components:
 
 **Creative North Star: "The Village Hall Ledger"**
 
-dansbart.se reads as a community's shared, hand-kept record: warm, plain, and communally maintained, never a corporate music-streaming console. The home page rebuild is the first surface of this world: a warm paper-toned ground, rounded cards that lift gently off it, and one legible sans throughout, carrying the site's actual mechanism — the community votes to confirm a track's dance style and tempo, one entry at a time.
+dansbart.se reads as a community's shared, hand-kept record: a ledger on the table of a village hall, not a music-streaming console. The page is linen, the cards are paper, the ink is warm umber, and the three colours of Swedish folk craft each do one job: Falu red is pressed, spruce green is chosen, ochre is playing. A woven band of lozenges runs under the header, the way a ribbon edges a tablecloth, and the eight-petal rosette of the wordmark is the mark a hand would carve into a chest.
 
-The system is communal and inviting: nothing gated, nothing intimidating, no sales language, no gamification chrome (no points, badges, streaks). Density is moderate — horizontally-scrolling rails of soft-cornered tiles, generous tap targets, and a search field and buttons sized for a 14-to-85-year-old, non-technical audience. Two visual-tone constraints are confirmed by the build: no cover art or imagery anywhere on the home page (copyright), and no separate display face — one voice, sized up or down by weight and size, not by switching fonts.
+Two voices carry the type. A warm serif (Fraunces, with its soft axis turned up) names places: the wordmark, page titles, section headings, and the counts in the ledger. A legible sans (Atkinson Hyperlegible Next) carries everything a person reads at length or taps. The audience is 14 to 85 and non-technical, so the sans never gets smaller on larger screens and every control keeps a word.
 
 **Key Characteristics:**
-- Warm, paper-toned ground with soft-lifted cards, never flat-white or corporate-gray.
-- Falu red as the one primary action color; used sparingly (search button, active links, primary CTA).
-- Fully rounded, soft geometry everywhere — no sharp corners.
-- One sans (Atkinson Hyperlegible Next) at every size; no display/body pairing.
-- Rails of tiles (dance styles, artists, playlists) as the home page's signature composition.
+- Linen ground with a faint paper grain; paper cards with a solid warm edge and a whisper of lift, never flat white or a floating SaaS shadow.
+- Warm umber ink and muted ink, not Tailwind gray.
+- Modest corners (8px on controls, 12px on cards). Pills are reserved for chips, avatars and the badge on a track.
+- A serif display face for headings and the wordmark, a sans for body and controls.
+- Ornament in two places only: the woven band and the rosette. Nothing else is decorated.
 
 ## Colors
 
-The palette draws on Swedish folk-culture color on a warm neutral ground; each accent carries one fixed semantic role, never a decorative one.
-
 ### Primary
-- **Falu Red** (`rgb(123 30 30)`, dark theme `rgb(224 122 122)`): the primary action color — the search button, primary CTA, active section links, focus rings. Used sparingly, on the control a person presses most.
+- **Falu red** (`rgb(128 30 26)`, dark `rgb(228 128 108)`): the colour a person presses. Primary buttons, the search button, active links, focus rings, the favourite heart. Its foreground is warm white (`rgb(255 250 243)`), never pure white.
+- **Falu red muted** (`rgb(243 220 212)`): the fill of an active chip and of a secondary button on hover.
 
 ### Secondary
-- **Ochre** (`rgb(204 119 34)`, dark theme `rgb(230 170 90)`): marks the track playing now. Reserved for the player; not a general-purpose accent.
-- **Spruce Green** (`rgb(10 92 54)`, dark theme `rgb(110 211 163)`): marks a selected or toggled state, for example the active sidebar item's tinted background and text.
+- **Spruce green** (`rgb(30 84 56)`, dark `rgb(122 206 160)`): a selected or toggled state. The active sidebar item sits on `spruce-selected-muted` with a 3px inset spruce bar on its left. Success toasts use the same pair.
+- **Ochre** (`rgb(150 86 16)`, dark `rgb(232 176 96)`): the track playing now, and nothing else. The player's artwork tile, the now-playing chip on a track card, the star on a dance list.
 
 ### Neutral
-- **Warm Ground** (`rgb(250 247 242)`, dark theme `rgb(26 20 18)`): the page background. Warm, not gray.
-- **Warm Ground Elevated** (`rgb(255 253 250)`, dark theme `rgb(40 31 28)`): card and input surfaces, one step lighter than the ground.
-- **Ink** (`rgb(17 24 39)`): primary text.
-- **Ink Muted** (`rgb(107 114 128)`): secondary text, captions, helper copy.
-- **Hairline** (`rgb(229 231 235)`): borders and dividers, always at reduced opacity (`/50`) against a card, never a full-strength rule.
+- **Linen** (`rgb(245 239 228)`, dark `rgb(29 22 18)`): the page ground. `linen-sunken` (`rgb(238 230 214)`) is the sidebar.
+- **Paper** (`rgb(253 250 244)`, dark `rgb(42 33 27)`): cards, inputs, the header, the player.
+- **Ink** (`rgb(38 28 22)`) and **ink muted** (`rgb(104 84 70)`): text. Both pass 4.5:1 on linen and paper.
+- **Hairline** (`rgb(214 200 180)`) and **hairline strong** (`rgb(178 160 136)`): card edges and input borders. Borders are solid, never at half opacity.
+- **Pill background** (`rgb(235 226 208)`): a neutral chip or an informational box.
 
 ### Named Rules
-**The Fixed-Role Accent Rule.** Falu red, ochre, and spruce green each carry exactly one semantic role (primary action, now-playing, selected) system-wide. Do not repurpose one for a new meaning on a new surface; add a new token instead.
+**The Fixed-Role Accent Rule.** Falu red, spruce and ochre each carry exactly one role. Do not repurpose one for a new meaning; add a token instead.
 
-**The Style-Badge Independence Rule.** Each of the eleven dance styles keeps its own fixed badge color (`src/styles/danceStyleColors.ts`, one light/dark pair per style plus family fallbacks for triple/duple meter) wherever a track lists its style. These colors are a separate, per-style system and are never substituted with the primary/selected/now-playing roles.
+**The Style-Badge Independence Rule.** Each of the eleven dance styles keeps its own badge colour (`src/styles/danceStyleColors.ts`) wherever a track lists its style. The tile adds a border in the same hue at 35% so it reads as a painted card, not a flat swatch.
+
+**The No Gray Rule.** No Tailwind gray, slate, blue, indigo or purple appears in the app outside the admin pages and the Spotify and YouTube source identities. The umber neutrals and the folk tokens cover every need.
 
 ## Typography
 
-**Body Font:** Atkinson Hyperlegible Next Variable (with `ui-sans-serif, system-ui, sans-serif` fallback)
+**Display:** Fraunces Variable, served from the site's own origin through fontsource (`@fontsource-variable/fraunces/full.css`). `font-variation-settings: "SOFT" 80, "WONK" 0, "opsz" 48` gives the rounded, hand-cut feel. Tailwind exposes it as `font-display`; `h1` and `h2` use it by default.
 
-**Character:** One legible, humanist sans carries every size and weight; the system commits to a single voice rather than a display/body pairing, in service of a non-technical, all-ages audience.
+**Body:** Atkinson Hyperlegible Next Variable, the default `font-sans`.
 
 ### Hierarchy
-- **Headline** (700, 1.5rem/24px, 1.3 line-height): the page's `<h1>`, e.g. "Bibliotek".
-- **Title** (600, 1.125rem/18px, 1.4 line-height): section headings, e.g. "Dansstilar", card titles.
-- **Body** (400, 1rem/16px, 1.5 line-height): running copy, descriptions, form input text.
-- **Label** (500, 0.875rem/14px, 1.4 line-height): buttons, pills, nav items, captions ("2082 låtar").
+- **Page title** (display, 600, 1.875rem on phones, 2.25rem on desktop): the page's `<h1>`.
+- **Section heading** (display, 600, 1.25rem): `SectionTitle`, trailed by a ledger rule and an optional "Se alla" link.
+- **Ledger numeral** (display, 600, 1.5rem): the counts in the stats strip on the home page.
+- **Body** (sans, 400, 1rem): running copy, inputs, descriptions.
+- **Label** (sans, 600, 0.875rem): buttons, chips, nav items.
 
 ### Named Rules
-**The One Voice Rule.** No second font family is introduced for headlines, numerals, or emphasis. Weight and size carry hierarchy; the family never changes.
+**The Two Voices Rule.** The serif names a place; the sans does the work. Never set a button, a chip, a form label or a track title in the serif. Never set a page title in the sans.
+
+**Sentence case everywhere.** No uppercase tracking labels. A section label is a sentence-case heading in the display face.
 
 ## Layout
 
-The home page composes as a single scrollable column of sections (`space-y-8`), each with a title row (`SectionTitle`, with an optional "Se alla" link) and content below. The signature pattern is a row of fixed-width tiles (`w-36`, 144px) at `gap-3` (12px); sections stack at `space-y-8` (32px). Dansstilar is a fixed, known set (eleven styles today) and wraps onto as many rows as needed (`flex flex-wrap`) rather than scrolling — every style is visible without a "Se alla" link. Utvalda artister and Spellistor are open-ended, unbounded lists and stay horizontally-scrolling rails (`overflow-x-auto` with a hidden scrollbar, the `scrollbar-hide` utility), each with a "Se alla" link to browse the rest.
-
-The layout is responsive by reflow, not by a distinct mobile composition: the same rails and card widths persist from desktop to phone, with the sidebar collapsing to a hamburger-triggered slide-in overlay below the desktop breakpoint (see Navigation).
+A sticky paper header with the rosette and wordmark on the left and the login control on the right, closed by the woven band. Below it, a sunken-linen sidebar on desktop (a slide-in overlay on phones) and a single scrolling column of sections at `space-y-10`. The home page opens with the title, a one-paragraph greeting, the search field, then the ledger strip: one paper card divided into three cells by hairlines, each with a display numeral and a sentence-case caption. Sections follow: the eleven dance styles as a wrapping grid of tiles, and horizontally scrolling rails of artists and playlists.
 
 ## Elevation & Depth
 
-Depth is soft and layered, not flat and not neobrutalist. Cards lift gently off the warm ground with a diffuse, low-contrast shadow; there is no hard-offset or outlined "sticker" shadow anywhere in the built surface.
-
-### Shadow Vocabulary
-- **Card lift** (`box-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.06)`, dark theme `0.45`/`0.3` alpha): the one shadow token in the system (`--color-card-shadow`), used on every `Card` and on `StyleShortcutCard`. No second, heavier "modal" shadow exists.
-
-### Named Rules
-**The Ambient Lift Rule.** Shadows are ambient, not structural: they signal that a surface is a card, not that it is interactive or urgent. Hover state changes background tint or scale, never shadow depth.
+Depth comes from edges, not shadows. Every card has a solid hairline border and the one ambient shadow token (`--color-card-shadow`: a 1px contact line and a soft 10px lift at under 10% umber). The player bar casts the same shadow upward. Modals use the same token; there is no heavier "modal" shadow. Hover changes background tint or lifts a tile by half a pixel, never shadow depth.
 
 ## Shapes
 
-Corners are generously and consistently rounded: `--radius` (1rem/16px) for buttons, inputs, and badges; `--radius-lg` (1.5rem/24px) for cards and the dance-style tiles; `--radius-full` for pills, the search field, and avatar placeholders. No sharp corner appears anywhere in this world. Borders, where present, are hairline and low-opacity (`border-[rgb(var(--color-border))]/50`), never a heavy or colored outline.
+- `--radius-sm` (6px): badges.
+- `--radius` (8px): buttons, inputs, icon buttons, sidebar items, the player's artwork tile.
+- `--radius-lg` (12px): cards, dance-style tiles, modals, the cookie banner.
+- `--radius-full`: chips, avatars, the style badge on a track row, play buttons.
+
+## Ornament
+
+- **Woven band** (`folk-band` utility): an 8px row of lozenges and dots in `currentColor`, masked from an inline SVG. Used under the header in Falu red. It may close a card that wants a craft edge. It is never used as a divider between sections.
+- **Rosette** (`RosetteIcon`, `public/favicon.svg`): eight petals on a Falu red disc, with the petals in the paper colour. It is the site's mark; it does not decorate anything else.
+- **Paper grain**: a fixed `body::before` layer of fractal noise at 4.5% (6% in dark). It sits below content and never above a card.
 
 ## Components
 
 ### Buttons
-- **Shape:** fully rounded corners (`--radius`, 1rem), minimum 44px height (`min-h-11`).
-- **Primary:** Falu red background, white text, `px-4 py-2` at default size; hovers to a darker red (`--color-accent-hover`).
-- **Secondary:** Falu-red-muted background with Falu red text and a hairline border.
-- **Ghost:** transparent, text-colored, hover to a faint black tint.
-- **Danger:** reserved for destructive actions; red background, distinct from Falu red.
+- **Primary:** Falu red fill, warm-white text, a 1px border in the hover red so the edge reads as cut, `--radius`, `min-h-11`.
+- **Secondary:** paper fill, Falu red text, hairline-strong border; hover fills with Falu red muted.
+- **Ghost:** transparent, ink text, hover tints with 6% ink.
+- **Danger:** error red with the same cut edge.
 
 ### Chips / Pills
-- **Style:** fully rounded (`--radius-full`), `px-3 py-1.5`, text-sm font-medium.
-- **State:** inactive pills use a muted hairline-tinted background; active pills use the accent-muted/accent pairing, except the Pill component's `green`/`red` variants which map to Spotify/YouTube source identity, not to the design system's semantic roles.
+- Inactive: paper fill, hairline border, ink text. Active: Falu red muted fill, Falu red text and border. The Spotify (green) and YouTube (red) variants keep their source identity.
 
-### Cards / Containers
-- **Corner Style:** `--radius-lg` (1.5rem).
-- **Background:** warm-ground-elevated, one step lighter than the page ground.
-- **Shadow Strategy:** the single ambient card-lift shadow (see Elevation & Depth).
-- **Border:** hairline, 50%-opacity.
-- **Internal Padding:** `p-3` (12px) for rail tiles, `p-4` (16px) for row-layout cards.
+### Cards
+- Paper fill, hairline border, `--radius-lg`, the one shadow. `p-3` for rail tiles, `p-4` for rows.
 
-### Inputs / Fields
-- **Style:** hairline border, warm-ground-elevated background, fully rounded when it is a search field (`rounded-full`), `--radius` otherwise; minimum 44px height.
-- **Focus:** border shifts to Falu red, with a matching 1px focus ring on the search field and a 2px offset ring on standard fields and buttons.
+### Dance-style tile
+- The style's own fixed colour pair, a border in the text colour at 35%, the style name in the display face at 1.125rem, and the count in the sans.
+
+### Inputs
+- Paper fill, hairline-strong border, `--radius`, `min-h-11`. Focus: Falu red border and a 1px Falu red ring. The home page search field is 48px tall and carries the card shadow.
 
 ### Navigation
-- Sidebar nav items are left-aligned rows with a leading icon and label, weight and a tinted spruce-green background marking the active item (`bg-[--color-selected]/10`, no colored left-border or bar). Inactive items are plain text with a hairline hover tint.
-- On mobile the sidebar becomes a hamburger-triggered slide-in overlay (inside `Layout.tsx`), not a persistent bar.
+- Sidebar items are rounded rows at `--radius`. Active: spruce muted fill, spruce text, a 3px inset bar on the left. Hover: paper fill. Counts sit in a Falu red disc.
 
-### Rail Tile (signature component)
-The tile is the home page's signature shape, reused three times with two distinct treatments:
-- **Dance-style tile** (`StyleShortcutCard`): a solid-colored card in the dance style's own fixed hue, left-aligned title and count, no icon. Wraps in a static grid rather than scrolling (see Layout).
-- **Artist tile** (`ArtistCard`, `layout="tile"`): a neutral `Card` with a centered 56px circular avatar placeholder above a centered name that wraps onto multiple lines rather than truncating.
-- **Playlist tile** (`PlaylistShortcutCard`): a neutral `Card` with a bottom-anchored, left-aligned 40px rounded-square icon tile above the name.
+### Player
+- Paper bar with a hairline-strong top edge and the upward shadow. The artwork tile is ochre on ochre muted with the music-note icon. Layout, controls and embed space are unchanged.
+
+### Listening nudge (`SmartNudge`)
+- Each step is a saturated folk card with warm-white text: umber ink to confirm a style, spruce to add a second style, ochre to confirm a secondary style, Falu red to ask for a style when there is none. The "no" button is a 15% white tint; the "yes" button is paper.
+
+### Toasts
+- Success: spruce text and border on spruce muted. Error: error red text and border on paper. Both carry the card shadow.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** use Falu red only for the primary action and active-link role; do not extend it to decorative accents.
-- **Do** keep every corner fully rounded (`--radius`, `--radius-lg`, or `--radius-full`); a sharp corner does not belong in this world.
-- **Do** keep the one-sans rule: size and weight carry hierarchy, not a second font family.
-- **Do** keep card depth ambient and soft (the single `--color-card-shadow` token); do not introduce a hard-offset or outlined shadow.
-- **Do** keep each dance style's badge color fixed and independent of the primary/selected/now-playing roles, wherever a track lists its style.
+- **Do** set page titles and section headings in the display face, and everything else in the sans.
+- **Do** give every card and input a solid hairline border; depth is an edge, not a shadow.
+- **Do** keep Falu red for the pressed thing, spruce for the chosen thing, ochre for the playing thing.
+- **Do** keep the eleven style colours exactly as they are.
+- **Do** keep all text in sentence case with å, ä and ö.
 
 ### Don't:
-- **Don't** add a hard-offset, outlined, or neobrutalist-style shadow; the built system uses one soft, diffuse shadow only.
-- **Don't** introduce a display or headline typeface; the system commits to one sans voice at every size.
-- **Don't** treat a bottom tab bar as an existing pattern. The home page's own direction contract names one for mobile, but no bottom tab bar exists anywhere in the shipped app; mobile navigation is a hamburger-triggered slide-in sidebar overlay. Building a bottom tab bar is a site-wide navigation change for the maintainer to decide, not an inherited system rule.
-- **Don't** treat the two rail-tile shapes (`ArtistCard` tile vs. `PlaylistShortcutCard`) as fully confirmed: they were corrected in a design review but the reviewed captures only showed the playlists rail's logged-out prompt, never real logged-in playlist data. Reviewed in code, not yet in render.
+- **Don't** reintroduce Tailwind gray, blue, indigo or purple; use the umber neutrals and the folk tokens.
+- **Don't** round a button or input past `--radius`, or a card past `--radius-lg`. Pills are for chips, avatars and the track badge.
+- **Don't** add ornament beyond the woven band and the rosette. One ribbon and one mark are the whole decoration.
+- **Don't** set a control, a label or a track title in the serif.
+- **Don't** add a heavier modal shadow or a hard-offset shadow; the system has one shadow token.

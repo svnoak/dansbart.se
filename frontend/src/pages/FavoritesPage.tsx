@@ -97,7 +97,7 @@ export function FavoritesPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <HeartFilledIcon className="h-6 w-6 text-red-500" aria-hidden />
+        <HeartFilledIcon className="h-6 w-6 text-[rgb(var(--color-accent))]" aria-hidden />
         <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Favoriter</h1>
         <span className="text-sm text-[rgb(var(--color-text-muted))]">({tracks.length})</span>
       </div>

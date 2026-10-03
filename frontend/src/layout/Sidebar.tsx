@@ -28,12 +28,12 @@ function NavLink({
     <Link
       to={to}
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm transition-colors ${
+      className={`flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
         icon != null ? '' : 'pl-2'
       } ${
         active
-          ? 'bg-[rgb(var(--color-selected))]/10 font-semibold text-[rgb(var(--color-selected))]'
-          : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
+          ? 'bg-[rgb(var(--color-selected-muted))] font-semibold text-[rgb(var(--color-selected))] shadow-[inset_3px_0_0_rgb(var(--color-selected))]'
+          : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-bg-elevated))]'
       }`}
     >
       {icon != null && (
@@ -44,7 +44,7 @@ function NavLink({
       <span className="flex-1">{children}</span>
       {isNew && <Pill>Ny</Pill>}
       {badge != null && badge > 0 && (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-sm font-bold text-white">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-sm font-bold text-[rgb(var(--color-accent-foreground))]">
           {badge}
         </span>
       )}
@@ -111,7 +111,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <nav className="flex flex-col gap-1" aria-label="Huvudnavigering">
+    <nav className="flex flex-col gap-0.5 px-2" aria-label="Huvudnavigering">
       <NavLink
         to="/search"
         active={isSearch}
@@ -207,10 +207,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <button
           type="button"
           onClick={() => setOmOpen((o) => !o)}
-          className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+          className={`flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-left text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] ${
             isInfoPage
-              ? 'bg-[rgb(var(--color-selected))]/10 text-[rgb(var(--color-selected))]'
-              : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
+              ? 'bg-[rgb(var(--color-selected-muted))] text-[rgb(var(--color-selected))]'
+              : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-bg-elevated))]'
           }`}
           aria-expanded={omOpen}
           aria-controls="sidebar-om-submenu"
@@ -235,7 +235,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           className={`grid transition-[grid-template-rows] duration-200 ease-out ${omOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="flex flex-col gap-1 border-l-2 border-[rgb(var(--color-border))] ml-5 pl-2 py-1">
+            <div className="flex flex-col gap-0.5 border-l-2 border-[rgb(var(--color-border-strong))] ml-5 pl-2 py-1">
             <NavLink to="/about" active={isAbout} onClick={onNavigate}>
               Om oss
             </NavLink>
@@ -254,11 +254,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {consentStatus && (
-        <div className="mt-4 px-3">
+        <div className="mt-4">
           <button
             type="button"
             onClick={openCookieSettings}
-            className="w-full text-left rounded-none px-3 py-2.5 text-sm font-medium text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))] transition-colors"
+            className="w-full text-left rounded-[var(--radius)] px-3 py-2.5 text-sm font-medium text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-bg-elevated))] hover:text-[rgb(var(--color-text))] transition-colors"
           >
             Cookie-inställningar
           </button>

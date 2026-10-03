@@ -10,6 +10,7 @@ interface SectionTitleProps {
   linkLabel?: string;
 }
 
+/** A section heading in the display face, trailed by a ledger rule, with an optional "Se alla" link. */
 export function SectionTitle({
   children,
   icon,
@@ -19,18 +20,19 @@ export function SectionTitle({
   linkLabel = 'Se alla',
 }: SectionTitleProps) {
   return (
-    <div className={`flex items-center justify-between ${className}`}>
+    <div className={`flex items-center gap-3 ${className}`}>
       <h2
         id={id}
-        className="flex items-center gap-2 text-lg font-semibold text-[rgb(var(--color-text))]"
+        className="flex shrink-0 items-center gap-2 text-xl font-semibold text-[rgb(var(--color-text))]"
       >
         {icon}
         {children}
       </h2>
+      <span className="ledger-rule" aria-hidden />
       {linkTo && (
         <Link
           to={linkTo}
-          className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+          className="shrink-0 text-sm font-semibold text-[rgb(var(--color-accent))] underline decoration-[rgb(var(--color-accent))]/40 underline-offset-4 hover:decoration-[rgb(var(--color-accent))]"
         >
           {linkLabel}
         </Link>

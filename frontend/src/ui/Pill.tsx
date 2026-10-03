@@ -16,16 +16,16 @@ export function Pill({
 }: PillProps) {
   const activeClass =
     variant === 'green' && active
-      ? 'bg-green-200 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+      ? 'border-green-700/40 bg-green-200 text-green-900 dark:border-green-400/40 dark:bg-green-900/50 dark:text-green-200'
       : variant === 'red' && active
-        ? 'bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-200'
+        ? 'border-red-700/40 bg-red-200 text-red-900 dark:border-red-400/40 dark:bg-red-900/50 dark:text-red-200'
         : active
-          ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] dark:bg-[rgb(var(--color-accent-muted))]/60'
-          : 'bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]';
+          ? 'border-[rgb(var(--color-accent))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
+          : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:border-[rgb(var(--color-border-strong))] hover:bg-[rgb(var(--color-pill-bg))]';
   return (
     <button
       type="button"
-      className={`rounded-[var(--radius-full)] px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))] ${activeClass} ${className}`}
+      className={`rounded-[var(--radius-full)] border px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--color-bg))] focus-visible:ring-[rgb(var(--color-accent))] ${activeClass} ${className}`}
       {...props}
     >
       {children}

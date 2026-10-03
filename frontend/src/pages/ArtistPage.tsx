@@ -52,7 +52,7 @@ export function ArtistPage() {
   }
   if (error || !artist || !id) {
     return (
-      <p className="text-red-600" role="alert">
+      <p className="text-[rgb(var(--color-error))]" role="alert">
         {error ?? 'Artist hittades inte.'}
       </p>
     );

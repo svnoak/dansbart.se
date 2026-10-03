@@ -114,13 +114,12 @@ export function HomePage() {
   }
 
   return (
-    <div className="min-w-0 space-y-8">
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Bibliotek
-      </h1>
-
-      <div className="space-y-3">
-        <p className="text-[rgb(var(--color-text-muted))]">
+    <div className="min-w-0 space-y-10">
+      <div className="space-y-4">
+        <h1 className="text-3xl font-semibold text-[rgb(var(--color-text))] sm:text-4xl">
+          Bibliotek
+        </h1>
+        <p className="max-w-2xl text-lg text-[rgb(var(--color-text-muted))]">
           Hej! Här hittar du låtar att dansa till, sorterade efter dansstil, artist och spellista.
           {stats && (
             <> Volontärer har redan bekräftat {stats.coveragePercent ?? 0}% av låtarna.</>
@@ -138,40 +137,46 @@ export function HomePage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Sök låtnamn, artist…"
-              className="min-h-11 w-full rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-2.5 pl-11 pr-5 text-base text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))] focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-accent))]"
+              className="min-h-12 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-2.5 pl-11 pr-5 text-base text-[rgb(var(--color-text))] shadow-[var(--color-card-shadow)] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))] focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-accent))]"
               aria-label="Sök låtar, artister eller album"
             />
           </div>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" size="lg" className="min-h-12">
             Sök
           </Button>
         </form>
       </div>
 
       {stats && (
-        <div className="flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-2 rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm">
-            <MusicNoteIcon className="h-4 w-4 shrink-0 text-[rgb(var(--color-accent))]" aria-hidden />
-            <span className="font-medium text-[rgb(var(--color-text))]">
-              {(stats.totalTracks ?? 0).toLocaleString('sv-SE')}
-            </span>
-            <span className="text-[rgb(var(--color-text-muted))]">låtar</span>
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm">
-            <BadgeCheckIcon className="h-4 w-4 shrink-0 text-[rgb(var(--color-success))]" aria-hidden />
-            <span className="font-medium text-[rgb(var(--color-text))]">
-              {stats.coveragePercent ?? 0}%
-            </span>
-            <span className="text-[rgb(var(--color-text-muted))]">kategoriserade</span>
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm">
-            <CalendarIcon className="h-4 w-4 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
-            <span className="text-[rgb(var(--color-text-muted))]">Senast tillagd</span>
-            <span className="font-medium text-[rgb(var(--color-text))]">
-              {formatLastAdded(stats.lastAdded)}
-            </span>
-          </span>
-        </div>
+        <dl className="grid grid-cols-1 overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-[var(--color-card-shadow)] sm:grid-cols-3">
+          <div className="flex items-center gap-3 border-b border-[rgb(var(--color-border))] px-4 py-3 sm:border-b-0 sm:border-r">
+            <MusicNoteIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-accent))]" aria-hidden />
+            <div>
+              <dd className="font-display text-2xl font-semibold leading-none text-[rgb(var(--color-text))]">
+                {(stats.totalTracks ?? 0).toLocaleString('sv-SE')}
+              </dd>
+              <dt className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">låtar i biblioteket</dt>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 border-b border-[rgb(var(--color-border))] px-4 py-3 sm:border-b-0 sm:border-r">
+            <BadgeCheckIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-selected))]" aria-hidden />
+            <div>
+              <dd className="font-display text-2xl font-semibold leading-none text-[rgb(var(--color-text))]">
+                {stats.coveragePercent ?? 0} %
+              </dd>
+              <dt className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">bekräftade av volontärer</dt>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <CalendarIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-now-playing))]" aria-hidden />
+            <div>
+              <dd className="font-display text-2xl font-semibold leading-none text-[rgb(var(--color-text))]">
+                {formatLastAdded(stats.lastAdded)}
+              </dd>
+              <dt className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">senast tillagd</dt>
+            </div>
+          </div>
+        </dl>
       )}
 
       {/* Style shortcuts */}

@@ -9,7 +9,7 @@ export function LoadError({ message, onRetry }: LoadErrorProps) {
   return (
     <div
       role="alert"
-      className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-error))] bg-[rgb(var(--color-error))]/10 p-4"
+      className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-error))] bg-[rgb(var(--color-error))]/8 p-4"
     >
       <p className="text-sm text-[rgb(var(--color-text))]">{message}</p>
       <div className="mt-2">

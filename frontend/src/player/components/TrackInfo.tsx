@@ -1,4 +1,5 @@
 import { formatDurationMs } from '@/utils/formatDuration';
+import { MusicNoteIcon } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { PlaybackSource } from '@/player/embedUrl';
 
@@ -25,8 +26,11 @@ export function TrackInfo({
 }: TrackInfoProps) {
   return (
     <div className="flex min-w-0 w-1/2 md:w-1/3 items-center gap-3">
-      <div className="w-12 h-12 shrink-0 rounded bg-[rgb(var(--color-border))]/50 flex items-center justify-center text-xl">
-        🎵
+      <div
+        className="w-12 h-12 shrink-0 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-now-playing-muted))] text-[rgb(var(--color-now-playing))] flex items-center justify-center"
+        aria-hidden
+      >
+        <MusicNoteIcon className="h-6 w-6" />
       </div>
       <div className="min-w-0">
         <div className="font-bold truncate text-sm md:text-base text-[rgb(var(--color-text))]">
@@ -48,7 +52,7 @@ export function TrackInfo({
                 e.stopPropagation();
                 onToggleStructureMode();
               }}
-              className={`text-[9px] font-bold uppercase border px-1.5 rounded transition-colors ${
+              className={`text-[10px] font-semibold border px-1.5 rounded-[var(--radius-sm)] transition-colors ${
                 structureMode !== 'none'
                   ? 'bg-[rgb(var(--color-accent))]/10 text-[rgb(var(--color-accent))] border-[rgb(var(--color-accent))]/30'
                   : 'bg-transparent text-[rgb(var(--color-text-muted))] border-[rgb(var(--color-border))]'

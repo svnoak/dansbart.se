@@ -48,7 +48,7 @@ export function CookieBanner() {
       aria-describedby="cookie-banner-desc"
     >
       <div
-        className="pointer-events-auto w-full max-w-2xl rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl sm:p-8"
+        className="pointer-events-auto w-full max-w-2xl rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)] sm:p-8"
         style={{ animation: 'cookie-banner-enter 0.3s ease-out' }}
       >
         <div className="flex items-start gap-4 mb-4">
@@ -86,7 +86,7 @@ export function CookieBanner() {
           <button
             type="button"
             onClick={handleAccept}
-            className="flex-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-6 py-3 font-semibold text-white transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
+            className="flex-1 rounded-[var(--radius)] border border-[rgb(var(--color-accent-hover))] bg-[rgb(var(--color-accent))] px-6 py-3 font-semibold text-[rgb(var(--color-accent-foreground))] transition-colors hover:bg-[rgb(var(--color-accent-hover))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
             aria-label="Acceptera cookies"
           >
             Acceptera
@@ -94,7 +94,7 @@ export function CookieBanner() {
           <button
             type="button"
             onClick={handleDecline}
-            className="flex-1 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-border))]/30 px-6 py-3 font-semibold text-[rgb(var(--color-text))] transition-colors hover:bg-[rgb(var(--color-border))]/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
+            className="flex-1 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-6 py-3 font-semibold text-[rgb(var(--color-text))] transition-colors hover:bg-[rgb(var(--color-pill-bg))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-accent))] focus-visible:ring-offset-2"
             aria-label="Avvisa cookies"
           >
             Avvisa

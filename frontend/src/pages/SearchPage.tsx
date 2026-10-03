@@ -316,7 +316,7 @@ export function SearchPage() {
       />
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
+        <h2 className="text-lg font-semibold text-[rgb(var(--color-text))]">
           Resultat ({total.toLocaleString('sv-SE')})
         </h2>
         {filters.searchType === 'tracks' && (
@@ -343,7 +343,7 @@ export function SearchPage() {
       </div>
 
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
           {error}
         </p>
       )}

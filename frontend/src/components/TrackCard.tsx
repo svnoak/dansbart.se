@@ -97,7 +97,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                    className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                     title="Filtrera på huvudstil"
                   >
                     {track.danceStyle}
@@ -108,7 +108,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                        className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                         title="Filtrera på understil"
                       >
                         {track.subStyle}
@@ -122,11 +122,11 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="inline-flex items-center gap-1 rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                     title="Filtrera på huvudstil (AI-gissning)"
                   >
                     {track.danceStyle}
-                    <SparklesIcon className="h-3 w-3 text-blue-400 dark:text-blue-300" aria-hidden />
+                    <SparklesIcon className="h-3 w-3 text-[rgb(var(--color-text-muted))]" aria-hidden />
                   </button>
                   {hasSubStyle && (
                     <>
@@ -134,7 +134,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200 transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                        className="rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-pill-bg))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-text))] transition-colors hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                         title="Filtrera på understil (AI-gissning)"
                       >
                         {track.subStyle}
@@ -148,11 +148,11 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                   <button
                     type="button"
                     onClick={() => onApplyStyleFilter?.(track.danceStyle!)}
-                    className="inline-flex items-center gap-1 rounded-full border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200 transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-now-playing))]/40 bg-[rgb(var(--color-now-playing-muted))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-now-playing))] transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
                     title="Filtrera på huvudstil (Osäker)"
                   >
                     {track.danceStyle}
-                    <SparklesIcon className="h-3 w-3 text-amber-400 dark:text-amber-300" aria-hidden />
+                    <SparklesIcon className="h-3 w-3 text-[rgb(var(--color-now-playing))]" aria-hidden />
                   </button>
                   {hasSubStyle && (
                     <>
@@ -160,7 +160,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
                       <button
                         type="button"
                         onClick={() => onApplyStyleFilter?.(track.subStyle!)}
-                        className="rounded-full border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200 transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                        className="rounded-full border border-[rgb(var(--color-now-playing))]/40 bg-[rgb(var(--color-now-playing-muted))] px-2 py-0.5 text-xs font-bold text-[rgb(var(--color-now-playing))] transition-colors hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
                         title="Filtrera på understil (Osäker)"
                       >
                         {track.subStyle}

@@ -15,16 +15,16 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center min-h-11 font-medium rounded-[var(--radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))] disabled:opacity-50 disabled:pointer-events-none';
+    'inline-flex items-center justify-center min-h-11 font-semibold rounded-[var(--radius)] border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--color-bg))] focus-visible:ring-[rgb(var(--color-accent))] disabled:opacity-50 disabled:pointer-events-none';
   const variants = {
     primary:
-      'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))]',
+      'border-[rgb(var(--color-accent-hover))] bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))]',
     secondary:
-      'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] hover:opacity-90 border border-[rgb(var(--color-border))]',
+      'border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-muted))]',
     ghost:
-      'bg-transparent text-[rgb(var(--color-text))] hover:bg-black/5 border border-transparent',
+      'border-transparent bg-transparent text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-text))]/6',
     danger:
-      'bg-[rgb(var(--color-error))] text-[rgb(var(--color-error-foreground))] hover:bg-[rgb(var(--color-error-hover))]',
+      'border-[rgb(var(--color-error-hover))] bg-[rgb(var(--color-error))] text-[rgb(var(--color-error-foreground))] hover:bg-[rgb(var(--color-error-hover))]',
   };
   const sizes = {
     sm: 'px-3 py-1.5 text-sm',

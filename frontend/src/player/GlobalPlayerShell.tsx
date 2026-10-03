@@ -374,7 +374,7 @@ export function GlobalPlayerShell() {
 
       {/* Fixed bottom bar: progress on top, then 3-column row */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[120] flex flex-col border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out ${
+        className={`fixed bottom-0 left-0 right-0 z-[120] flex flex-col border-t border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] shadow-[0_-2px_12px_rgb(60_40_20_/_0.08)] transition-transform duration-300 ease-in-out ${
           expanded && isMobile ? 'translate-y-full' : 'translate-y-0'
         }`}
         aria-label="Global spelare"

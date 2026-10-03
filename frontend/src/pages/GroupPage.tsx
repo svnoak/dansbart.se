@@ -49,7 +49,7 @@ export function GroupPage() {
   if (notFound || !group) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
           Gruppen hittades inte.
         </p>
         <Link to="/groups" className="text-sm text-[rgb(var(--color-accent))] hover:underline">
@@ -251,7 +251,7 @@ export function GroupPage() {
             </div>
           )}
           {leaveError && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-[rgb(var(--color-error))]" role="alert">
               {leaveError}
             </p>
           )}

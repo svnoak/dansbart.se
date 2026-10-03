@@ -1,4 +1,5 @@
 import '@fontsource-variable/atkinson-hyperlegible-next'
+import '@fontsource-variable/fraunces/full.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

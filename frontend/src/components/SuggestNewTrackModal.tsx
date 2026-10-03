@@ -162,7 +162,7 @@ export function SuggestNewTrackModal({ onClose }: SuggestNewTrackModalProps) {
           />
         </div>
 
-        {error && <p className="mt-3 text-xs text-red-500">{error}</p>}
+        {error && <p className="mt-3 text-xs text-[rgb(var(--color-error))]">{error}</p>}
 
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>
