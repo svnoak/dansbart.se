@@ -3,6 +3,7 @@ import { listMyTracks, deleteLibraryTrack } from '@/api/generated/library/librar
 import type { LibraryTrackDto } from '@/api/models/libraryTrackDto';
 import { TrackRow } from '@/components/TrackRow';
 import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
+import { deleteLocalCopy, requestPersistentStorage } from '@/library/localCopies';
 import { useLibraryImport, type ImportResult } from '@/library/useLibraryImport';
 import { Badge, Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
 
@@ -45,6 +46,7 @@ export function MyLibraryPage() {
   }
 
   async function handleImportClick() {
+    requestPersistentStorage();
     if (!canKeepHandles()) {
       fileInput.current?.click();
       return;
@@ -59,6 +61,7 @@ export function MyLibraryPage() {
   async function remove(trackId: string) {
     try {
       await deleteLibraryTrack(trackId);
+      await deleteLocalCopy(trackId);
       setEntries((current) => current?.filter((entry) => entry.track?.id !== trackId) ?? null);
       toast('Låten är borttagen');
     } catch {

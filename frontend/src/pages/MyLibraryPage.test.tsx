@@ -56,6 +56,13 @@ vi.mock('@/library/useLibraryImport', () => ({
   useLibraryImport: () => ({ importFiles: importFiles, progress: null, error: null }),
 }));
 
+const deleteLocalCopy = vi.fn();
+const requestPersistentStorage = vi.fn();
+vi.mock('@/library/localCopies', () => ({
+  deleteLocalCopy: (...args: unknown[]) => deleteLocalCopy(...args),
+  requestPersistentStorage: () => requestPersistentStorage(),
+}));
+
 vi.mock('@/components/TrackRow/StyleVotePanel', () => ({
   StyleVotePanel: ({ open, trackId }: { open: boolean; trackId: string }) =>
     open ? <div role="dialog">Röst för {trackId}</div> : null,
@@ -109,12 +116,15 @@ describe('MyLibraryPage', () => {
     importFiles.mockReset();
     canKeepHandles.mockReset();
     pickAudioFiles.mockReset();
+    deleteLocalCopy.mockReset();
+    requestPersistentStorage.mockReset();
     hasLocalFileForTrack.mockResolvedValue(true);
     canKeepHandles.mockReturnValue(false);
     getLocalFileForTrack.mockResolvedValue(new File(['audio bytes'], 'vals.mp3'));
     useAuth.mockReturnValue(loggedInAuthValue({}));
     listMyTracks.mockResolvedValue(entries);
     deleteLibraryTrack.mockResolvedValue({});
+    deleteLocalCopy.mockResolvedValue(undefined);
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -345,5 +355,71 @@ describe('MyLibraryPage', () => {
     toastListeners.delete(listener);
 
     expect(messages).toHaveLength(0);
+  });
+
+  it('deletes the local copy after removing a track', async () => {
+    listMyTracks.mockResolvedValue([entries[0]]);
+
+    await renderPage();
+
+    const menuButton = getMenuButton();
+    expect(menuButton).toBeTruthy();
+
+    await act(async () => {
+      menuButton?.click();
+    });
+
+    const menuItems = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
+    const removeItem = menuItems.find((item) =>
+      item.textContent?.includes('Ta bort från Mina låtar'),
+    );
+
+    await act(async () => {
+      (removeItem as HTMLButtonElement)?.click();
+    });
+
+    await vi.waitFor(() => expect(deleteLibraryTrack).toHaveBeenCalled());
+
+    expect(deleteLocalCopy).toHaveBeenCalledWith('t1');
+  });
+
+  it('keeps the local copy when the removal fails', async () => {
+    listMyTracks.mockResolvedValue([entries[0]]);
+    deleteLibraryTrack.mockRejectedValue(new Error('Network error'));
+
+    await renderPage();
+
+    const menuButton = getMenuButton();
+    expect(menuButton).toBeTruthy();
+
+    await act(async () => {
+      menuButton?.click();
+    });
+
+    const menuItems = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
+    const removeItem = menuItems.find((item) =>
+      item.textContent?.includes('Ta bort från Mina låtar'),
+    );
+
+    await act(async () => {
+      (removeItem as HTMLButtonElement)?.click();
+    });
+
+    await vi.waitFor(() => expect(deleteLibraryTrack).toHaveBeenCalled());
+
+    expect(deleteLocalCopy).not.toHaveBeenCalled();
+  });
+
+  it('asks for persistent storage when an import starts', async () => {
+    listMyTracks.mockResolvedValue(entries);
+    canKeepHandles.mockReturnValue(true);
+    pickAudioFiles.mockResolvedValue([{ file: new File(['audio'], 'track.mp3') }]);
+    importFiles.mockResolvedValue({ imported: 1, skipped: 0 });
+
+    await renderPage();
+
+    await act(async () => getButtons('Importera låtar')[0].click());
+
+    expect(requestPersistentStorage).toHaveBeenCalledTimes(1);
   });
 });
