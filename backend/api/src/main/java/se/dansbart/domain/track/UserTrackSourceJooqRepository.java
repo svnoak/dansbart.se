@@ -117,6 +117,13 @@ public class UserTrackSourceJooqRepository {
         return rowsDeleted > 0;
     }
 
+    public int deleteSourcesOfTrack(UUID trackId, UUID userId) {
+        return dsl.deleteFrom(USER_TRACK_SOURCES)
+            .where(USER_TRACK_SOURCES.TRACK_ID.eq(trackId))
+            .and(USER_TRACK_SOURCES.USER_ID.eq(userId))
+            .execute();
+    }
+
     /** Whether the track of the user's source has the given hash. Empty when the user holds no such source. */
     public Optional<Boolean> trackHasHash(UUID sourceId, UUID userId, String contentHash) {
         return dsl.select(DSL.coalesce(TRACKS.CONTENT_HASH.eq(contentHash), false))

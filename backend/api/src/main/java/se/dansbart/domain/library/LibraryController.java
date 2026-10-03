@@ -36,6 +36,23 @@ public class LibraryController {
         return ResponseEntity.ok(sources);
     }
 
+    @GetMapping("/my-tracks")
+    @Operation(summary = "List the tracks the user holds, newest first")
+    public ResponseEntity<List<LibraryTrackDto>> listMyTracks(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(libraryService.listUserTracks(userId));
+    }
+
+    @DeleteMapping("/tracks/{trackId}")
+    @Operation(summary = "Delete all of the user's sources for a track")
+    public ResponseEntity<Void> deleteTrack(
+            @PathVariable UUID trackId,
+            @AuthenticationPrincipal UUID userId) {
+        if (libraryService.deleteTrack(trackId, userId)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping("/sources/{sourceId}/match")
     @Operation(summary = "Check whether a file hash matches the track of a source")
     public ResponseEntity<MatchResponse> matchHash(
