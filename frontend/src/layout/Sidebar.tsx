@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
 import { Pill } from '@/ui';
-import { LibraryIcon, PlaylistIcon, HeartIcon, GroupIcon, QueueListIcon } from '@/icons';
+import { LibraryIcon, PlaylistIcon, HeartIcon, GroupIcon, QueueListIcon, MusicNoteIcon } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 import { getGroupInvitations } from '@/api/generated/groups/groups';
 
@@ -93,6 +93,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isDanceLists = location.pathname.startsWith('/dance-lists');
   const isGroups = location.pathname.startsWith('/groups');
   const isFavorites = location.pathname === '/favorites';
+  const isMinaLatar = location.pathname === '/mina-latar';
   const isHelp = location.pathname === '/help';
   const isAbout = location.pathname === '/about';
   const isTerms = location.pathname === '/terms';
@@ -179,6 +180,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       >
         Favoriter
       </NavLink>
+      {isAuthenticated && (
+        <NavLink
+          to="/mina-latar"
+          active={isMinaLatar}
+          onClick={onNavigate}
+          icon={<MusicNoteIcon className="h-5 w-5" aria-hidden />}
+        >
+          Mina låtar
+        </NavLink>
+      )}
       <NavLink
         to="/help"
         active={isHelp}
