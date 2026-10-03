@@ -7431,7 +7431,8 @@
         "properties": {
           "sourceId": { "type": "string", "format": "uuid" },
           "trackId": { "type": "string", "format": "uuid" },
-          "linkedToCatalog": { "type": "boolean" }
+          "linkedToCatalog": { "type": "boolean" },
+          "skipped": { "type": "boolean" }
         }
       },
       "MatchRequest": {

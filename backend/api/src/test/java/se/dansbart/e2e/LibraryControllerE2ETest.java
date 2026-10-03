@@ -69,6 +69,20 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
         return objectMapper.readTree(json);
     }
 
+    private JsonNode importTrack(RequestPostProcessor user, String hash, String provider, String fileId, String title, Integer durationMs)
+            throws Exception {
+        return importTrack(user, hash, provider, fileId, title, durationMs, null);
+    }
+
+    private JsonNode importTrack(RequestPostProcessor user, String hash, String provider, String fileId, String title, Integer durationMs, String isrc)
+            throws Exception {
+        String json = mockMvc.perform(post("/api/library/tracks").with(user)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body(hash, provider, fileId, title, durationMs, isrc)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(json);
+    }
+
     private Track catalogTrack(String title, String isrc, int durationMs) {
         Track track = testData.track().withTitle(title).withArtist(artist).withDanceStyle("Polska").complete().build();
         dsl.execute("update tracks set isrc = ?, duration_ms = ? where id = ?", isrc, durationMs, track.getId());
@@ -275,5 +289,89 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
         String json = mockMvc.perform(get("/api/library/tracks").with(user))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(json);
+    }
+
+    @Test
+    @DisplayName("same provider and hash is skipped and keeps the tags")
+    void sameProviderAndHashIsSkippedAndKeepsTheTags() throws Exception {
+        JsonNode first = importTrack(firstSignedIn, HASH_A, "LOCAL", "one.mp3", "First", 180000);
+        assertFalse(first.get("skipped").asBoolean());
+        String firstTrackId = first.get("trackId").asText();
+        String firstSourceId = first.get("sourceId").asText();
+
+        JsonNode second = importTrack(firstSignedIn, HASH_A, "LOCAL", "two.mp3", "Second", 180000);
+        assertTrue(second.get("skipped").asBoolean());
+        assertEquals(firstSourceId, second.get("sourceId").asText());
+        assertEquals(firstTrackId, second.get("trackId").asText());
+
+        JsonNode list = listOf(firstSignedIn);
+        assertEquals(1, list.size());
+        assertEquals("First", list.get(0).get("title").asText());
+    }
+
+    @Test
+    @DisplayName("exact repeat import is skipped")
+    void exactRepeatImportIsSkipped() throws Exception {
+        JsonNode first = importTrack(firstSignedIn, HASH_A, "LOCAL", "one.mp3", "Title", 180000);
+        assertFalse(first.get("skipped").asBoolean());
+        String firstTrackId = first.get("trackId").asText();
+        String firstSourceId = first.get("sourceId").asText();
+
+        JsonNode second = importTrack(firstSignedIn, HASH_A, "LOCAL", "one.mp3", "Changed", 180000);
+        assertTrue(second.get("skipped").asBoolean());
+        assertEquals(firstSourceId, second.get("sourceId").asText());
+        assertEquals(firstTrackId, second.get("trackId").asText());
+
+        JsonNode list = listOf(firstSignedIn);
+        assertEquals(1, list.size());
+        assertEquals("Title", list.get(0).get("title").asText());
+    }
+
+    @Test
+    @DisplayName("same hash from another provider adds a source on the same track")
+    void sameHashFromAnotherProviderAddsASourceOnTheSameTrack() throws Exception {
+        JsonNode first = importTrack(firstSignedIn, HASH_A, "LOCAL", null, "First", 180000);
+        assertFalse(first.get("skipped").asBoolean());
+        String trackId = first.get("trackId").asText();
+
+        JsonNode second = importTrack(firstSignedIn, HASH_A, "GDRIVE", "drive-1", "Second", 180000);
+        assertFalse(second.get("skipped").asBoolean());
+        assertEquals(trackId, second.get("trackId").asText());
+        assertNotEquals(first.get("sourceId").asText(), second.get("sourceId").asText());
+
+        JsonNode list = listOf(firstSignedIn);
+        assertEquals(2, list.size());
+    }
+
+    @Test
+    @DisplayName("repeat import after ISRC link is skipped")
+    void repeatImportAfterIsrcLinkIsSkipped() throws Exception {
+        Track catalog = catalogTrack("Catalog Polska", ISRC, 180000);
+
+        JsonNode first = importTrack(firstSignedIn, HASH_A, "LOCAL", null, "My Polska", 180000, ISRC);
+        assertFalse(first.get("skipped").asBoolean());
+        assertTrue(first.get("linkedToCatalog").asBoolean());
+        assertEquals(catalog.getId().toString(), first.get("trackId").asText());
+
+        JsonNode second = importTrack(firstSignedIn, HASH_A, "LOCAL", null, "My Polska", 180000, null);
+        assertTrue(second.get("skipped").asBoolean());
+        assertEquals(first.get("trackId").asText(), second.get("trackId").asText());
+        assertEquals(first.get("sourceId").asText(), second.get("sourceId").asText());
+    }
+
+    @Test
+    @DisplayName("GDRIVE import with same file id and new hash is not skipped")
+    void driveImportWithSameFileIdAndNewHashIsNotSkipped() throws Exception {
+        JsonNode first = importTrack(firstSignedIn, HASH_A, "GDRIVE", "drive-1", "First", 180000);
+        assertFalse(first.get("skipped").asBoolean());
+        String firstTrackId = first.get("trackId").asText();
+        String firstSourceId = first.get("sourceId").asText();
+
+        JsonNode second = importTrack(firstSignedIn, HASH_B, "GDRIVE", "drive-1", "Second", 180000);
+        assertFalse(second.get("skipped").asBoolean());
+        assertNotEquals(firstSourceId, second.get("sourceId").asText());
+
+        JsonNode list = listOf(firstSignedIn);
+        assertEquals(2, list.size());
     }
 }

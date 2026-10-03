@@ -5,5 +5,6 @@ import java.util.UUID;
 public record LibraryImportResponse(
     UUID sourceId,
     UUID trackId,
-    boolean linkedToCatalog
+    boolean linkedToCatalog,
+    boolean skipped
 ) {}

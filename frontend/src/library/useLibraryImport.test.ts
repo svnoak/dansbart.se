@@ -78,4 +78,32 @@ describe('useLibraryImport', () => {
     expect(init.body as string).not.toContain('audio bytes');
     expect(saveLocalFile).toHaveBeenCalledWith('s1', { file }, 't1');
   });
+
+  it('returns the imported and skipped counts and saves the file handle of a skipped file', async () => {
+    await act(async () => root.render(createElement(Probe)));
+    const file1 = new File(['audio bytes 1'], 'vals.mp3');
+    const file2 = new File(['audio bytes 2'], 'polka.mp3');
+
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ sourceId: 's1', trackId: 't1', linkedToCatalog: false, skipped: false }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ sourceId: 's2', trackId: 't2', linkedToCatalog: false, skipped: true }),
+        ),
+      );
+
+    let result;
+    await act(async () => {
+      result = await hook.current!.importFiles([{ file: file1 }, { file: file2 }]);
+    });
+
+    expect(result).toEqual({ imported: 1, skipped: 1 });
+    expect(saveLocalFile).toHaveBeenCalledTimes(2);
+    expect(saveLocalFile).toHaveBeenCalledWith('s1', { file: file1 }, 't1');
+    expect(saveLocalFile).toHaveBeenCalledWith('s2', { file: file2 }, 't2');
+  });
 });

@@ -8,7 +8,7 @@ import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
 import { requestLocalFile } from '@/library/requestLocalFile';
 import { usePlayer } from '@/player/usePlayer';
 import { UNKNOWN_STYLE_COLOR } from '@/styles/danceStyleColors';
-import { useLibraryImport } from '@/library/useLibraryImport';
+import { useLibraryImport, type ImportResult } from '@/library/useLibraryImport';
 import { RelinkButton } from '@/components/TrackRow/RelinkButton';
 import { Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
 
@@ -20,6 +20,13 @@ function toTrack(source: LibrarySourceDto): TrackListDto {
     playable: true,
     playbackLinks: [],
   };
+}
+
+function importResultText({ imported, skipped }: ImportResult): string {
+  const importedText = `${imported} ${imported === 1 ? 'låt importerad' : 'låtar importerade'}`;
+  if (skipped === 0) return importedText;
+  if (imported === 0) return `${skipped} ${skipped === 1 ? 'låt fanns' : 'låtar fanns'} redan`;
+  return `${importedText}, ${skipped} fanns redan`;
 }
 
 export function MyLibraryPage() {
@@ -46,7 +53,8 @@ export function MyLibraryPage() {
   }, []);
 
   async function importAndReload(picked: Parameters<typeof importFiles>[0]) {
-    await importFiles(picked);
+    const result = await importFiles(picked);
+    if (result.imported > 0 || result.skipped > 0) toast(importResultText(result));
     await load();
   }
 
