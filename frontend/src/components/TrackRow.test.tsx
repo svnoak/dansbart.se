@@ -81,6 +81,17 @@ const track: TrackListDto = {
   durationMs: 180000,
 };
 
+const trackWithAlbum: TrackListDto = {
+  id: 'track-2',
+  title: 'Test Track',
+  artistName: 'Spelman',
+  albumTitle: 'Skiva',
+  danceStyle: 'Polska',
+  tempoCategory: 'Medium',
+  confidence: 0.85,
+  durationMs: 180000,
+};
+
 describe('TrackRow add to playlist', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -417,5 +428,59 @@ describe('TrackRow availability', () => {
 
     expect(getLocalFileForTrack).toHaveBeenCalledWith('track-1', { askPermission: true });
     expect(playMock).toHaveBeenCalledWith(ownTrack, undefined);
+  });
+});
+
+describe('TrackRow album display', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    root.unmount();
+    container.remove();
+    vi.clearAllMocks();
+  });
+
+  it('shows the album after the artist when showAlbum is set', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={trackWithAlbum} showAlbum />
+        </ThemeProvider>,
+      );
+    });
+
+    expect(container.textContent).toContain('Spelman · Skiva');
+  });
+
+  it('shows only the artist without showAlbum', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={trackWithAlbum} />
+        </ThemeProvider>,
+      );
+    });
+
+    expect(container.textContent).toContain('Spelman');
+    expect(container.textContent).not.toContain('Skiva');
+  });
+
+  it('renders badges under the artist', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <TrackRow track={track} badges={<span>Google Drive</span>} />
+        </ThemeProvider>,
+      );
+    });
+
+    expect(container.textContent).toContain('Google Drive');
   });
 });

@@ -161,6 +161,8 @@ export * from './inviteCollaboratorRequest';
 export * from './inviteMemberRequest';
 export * from './libraryImportResponse';
 export * from './librarySourceDto';
+export * from './librarySourceRefDto';
+export * from './libraryTrackDto';
 export * from './matchRequest';
 export * from './matchResponse';
 export * from './mergeAllDuplicates200';

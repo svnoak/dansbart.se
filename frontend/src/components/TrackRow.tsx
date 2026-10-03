@@ -17,6 +17,7 @@ import { useMissingLocalFile } from '@/library/useMissingLocalFile';
 import { StyleBadge } from './TrackRow/StyleBadge';
 import { TrackActionsModal } from './TrackRow/TrackActionsModal';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
+import type { ExtraMenuItem } from './TrackRow/trackRowMenuItems';
 import { Button, IconButton, toast } from '@/ui';
 import { HeartIcon, HeartFilledIcon } from '@/icons';
 import { addTrack } from '@/api/generated/playlists/playlists';
@@ -42,6 +43,10 @@ interface TrackRowProps {
   contextTracks?: TrackListDto[];
   addToPlaylistId?: string;
   action?: ReactNode;
+  showAlbum?: boolean;
+  badges?: ReactNode;
+  extraMenuItems?: ExtraMenuItem[];
+  isPrivate?: boolean;
 }
 
 export function TrackRow({
@@ -49,6 +54,10 @@ export function TrackRow({
   contextTracks,
   addToPlaylistId,
   action,
+  showAlbum,
+  badges,
+  extraMenuItems,
+  isPrivate,
 }: TrackRowProps) {
   const { play, addToQueue, currentTrack, isPlaying } = usePlayer();
   const { isAuthenticated } = useAuth();
@@ -154,7 +163,9 @@ export function TrackRow({
           {/* Bottom line: Artist */}
           <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">
             {track.artistName ?? 'Okänd artist'}
+            {showAlbum && track.albumTitle ? ` · ${track.albumTitle}` : ''}
           </p>
+          {badges}
         </div>
 
         {/* Right: Duration + Heart + Menu */}
@@ -187,6 +198,8 @@ export function TrackRow({
           onAddToQueue={() => addToQueue(track)}
           onFlag={() => setFlagModalOpen(true)}
           onAddToPlaylist={isAuthenticated ? () => setAddToPlaylistOpen(true) : undefined}
+          extraItems={extraMenuItems}
+          isPrivate={isPrivate}
         />
         </div>
       </div>
@@ -213,6 +226,8 @@ export function TrackRow({
         onAddToQueue={() => addToQueue(track)}
         onFlag={() => setFlagModalOpen(true)}
         onAddToPlaylist={isAuthenticated ? () => setAddToPlaylistOpen(true) : undefined}
+        extraItems={extraMenuItems}
+        isPrivate={isPrivate}
       />
     </>
   );

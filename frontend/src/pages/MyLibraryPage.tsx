@@ -1,26 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listTracks, deleteSource } from '@/api/generated/library/library';
-import type { LibrarySourceDto } from '@/api/models/librarySourceDto';
-import type { TrackListDto } from '@/api/models/trackListDto';
-import { PlayButton } from '@/components/TrackRow/PlayButton';
-import { StyleVotePanel } from '@/components/TrackRow/StyleVotePanel';
+import { listMyTracks, deleteLibraryTrack } from '@/api/generated/library/library';
+import type { LibraryTrackDto } from '@/api/models/libraryTrackDto';
+import { TrackRow } from '@/components/TrackRow';
 import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
-import { requestLocalFile } from '@/library/requestLocalFile';
-import { usePlayer } from '@/player/usePlayer';
-import { UNKNOWN_STYLE_COLOR } from '@/styles/danceStyleColors';
 import { useLibraryImport, type ImportResult } from '@/library/useLibraryImport';
-import { RelinkButton } from '@/components/TrackRow/RelinkButton';
-import { Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
+import { Badge, Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
 
-function toTrack(source: LibrarySourceDto): TrackListDto {
-  return {
-    id: source.trackId,
-    title: source.title,
-    artistName: source.artist,
-    playable: true,
-    playbackLinks: [],
-  };
-}
+const SOURCE_LABELS: Record<string, string> = {
+  LOCAL: 'Lokalt',
+  GDRIVE: 'Google Drive',
+  HIDRIVE: 'HiDrive',
+};
 
 function importResultText({ imported, skipped }: ImportResult): string {
   const importedText = `${imported} ${imported === 1 ? 'låt importerad' : 'låtar importerade'}`;
@@ -30,18 +20,14 @@ function importResultText({ imported, skipped }: ImportResult): string {
 }
 
 export function MyLibraryPage() {
-  const [sources, setSources] = useState<LibrarySourceDto[] | null>(null);
+  const [entries, setEntries] = useState<LibraryTrackDto[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [votingOn, setVotingOn] = useState<LibrarySourceDto | null>(null);
-  const [removeError, setRemoveError] = useState<{ sourceId: string; text: string } | null>(null);
-  const [missingTrackIds, setMissingTrackIds] = useState<string[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const { importFiles, progress, error } = useLibraryImport();
-  const { play, togglePlayPause, currentTrack, isPlaying } = usePlayer();
 
   const load = useCallback(async () => {
     try {
-      setSources(await listTracks());
+      setEntries(await listMyTracks());
       setLoadFailed(false);
     } catch {
       setLoadFailed(true);
@@ -49,7 +35,7 @@ export function MyLibraryPage() {
   }, []);
 
   useEffect(() => {
-    listTracks().then(setSources, () => setLoadFailed(true));
+    listMyTracks().then(setEntries, () => setLoadFailed(true));
   }, []);
 
   async function importAndReload(picked: Parameters<typeof importFiles>[0]) {
@@ -70,25 +56,13 @@ export function MyLibraryPage() {
     }
   }
 
-  async function handlePlay(source: LibrarySourceDto) {
-    if (currentTrack?.id === source.trackId) {
-      togglePlayPause();
-      return;
-    }
-    const access = await requestLocalFile(source.trackId!);
-    if (access === 'missing') setMissingTrackIds((ids) => [...ids, source.trackId!]);
-    if (access !== 'ready') return;
-    play(toTrack(source), sources?.map(toTrack));
-  }
-
-  async function handleRemove(sourceId: string) {
-    setRemoveError(null);
+  async function remove(trackId: string) {
     try {
-      await deleteSource(sourceId);
-      setSources((current) => current?.filter((s) => s.sourceId !== sourceId) ?? null);
+      await deleteLibraryTrack(trackId);
+      setEntries((current) => current?.filter((entry) => entry.track?.id !== trackId) ?? null);
       toast('Låten är borttagen');
     } catch {
-      setRemoveError({ sourceId, text: 'Det gick inte att ta bort låten. Försök igen.' });
+      toast('Det gick inte att ta bort låten. Försök igen.', 'error');
     }
   }
 
@@ -122,57 +96,32 @@ export function MyLibraryPage() {
 
       <div className="mt-6">
         {loadFailed && <LoadError message="Det gick inte att hämta dina låtar." onRetry={load} />}
-        {sources?.length === 0 && (
+        {entries?.length === 0 && (
           <p>Du har inga låtar än. Importera en låt för att börja.</p>
         )}
-        <ul className="divide-y divide-[rgb(var(--color-border))]">
-          {sources?.map((source) => (
-            <li key={source.sourceId} className="flex flex-wrap items-center gap-3 py-3">
-              {missingTrackIds.includes(source.trackId!) ? (
-                <RelinkButton
-                  trackId={source.trackId!}
-                  onRelinked={() =>
-                    setMissingTrackIds((ids) => ids.filter((id) => id !== source.trackId))
-                  }
-                />
-              ) : (
-                <PlayButton
-                  track={toTrack(source)}
-                  isCurrent={currentTrack?.id === source.trackId}
-                  isPlaying={isPlaying}
-                  styleColor={UNKNOWN_STYLE_COLOR}
-                  onPlay={() => void handlePlay(source)}
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{source.title}</p>
-                <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">
-                  {source.artist}
-                </p>
-                {removeError && removeError.sourceId === source.sourceId && (
-                  <InlineError>{removeError.text}</InlineError>
-                )}
-              </div>
-              <Button variant="secondary" size="sm" onClick={() => setVotingOn(source)}>
-                Kategorisera
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => void handleRemove(source.sourceId!)}>
-                Ta bort
-              </Button>
+        <ul>
+          {entries?.map((entry) => (
+            <li key={entry.track!.id}>
+              <TrackRow
+                track={entry.track!}
+                contextTracks={entries.map((e) => e.track!)}
+                showAlbum
+                badges={<div className="mt-1 flex flex-wrap gap-1">
+                  {entry.sources?.map((source) => (
+                    <Badge key={source.sourceId} variant="muted">
+                      {SOURCE_LABELS[source.provider!]}
+                    </Badge>
+                  ))}
+                </div>}
+                extraMenuItems={[
+                  { label: 'Ta bort från Mina låtar', onClick: () => remove(entry.track!.id!) },
+                ]}
+                isPrivate={!entry.linkedToCatalog}
+              />
             </li>
           ))}
         </ul>
       </div>
-
-      {votingOn && (
-        <StyleVotePanel
-          open
-          trackId={votingOn.trackId!}
-          trackTitle={votingOn.title ?? ''}
-          currentStyle={undefined}
-          onClose={() => setVotingOn(null)}
-        />
-      )}
     </div>
   );
 }

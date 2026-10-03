@@ -43,7 +43,7 @@ public class LibraryController {
     }
 
     @DeleteMapping("/tracks/{trackId}")
-    @Operation(summary = "Delete all of the user's sources for a track")
+    @Operation(summary = "Delete all of the user's sources for a track", operationId = "deleteLibraryTrack")
     public ResponseEntity<Void> deleteTrack(
             @PathVariable UUID trackId,
             @AuthenticationPrincipal UUID userId) {

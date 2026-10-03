@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { IconButton } from '@/ui';
 import { MoreVerticalIcon } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import { getTrackRowMenuItems, isActionItem } from './trackRowMenuItems';
+import { getTrackRowMenuItems, isActionItem, type ExtraMenuItem } from './trackRowMenuItems';
 
 interface TrackRowMenuProps {
   track: TrackListDto;
@@ -12,6 +12,8 @@ interface TrackRowMenuProps {
   onAddToQueue: () => void;
   onFlag: () => void;
   onAddToPlaylist?: () => void;
+  extraItems?: ExtraMenuItem[];
+  isPrivate?: boolean;
 }
 
 export function TrackRowMenu({
@@ -22,12 +24,16 @@ export function TrackRowMenu({
   onAddToQueue,
   onFlag,
   onAddToPlaylist,
+  extraItems,
+  isPrivate,
 }: TrackRowMenuProps) {
   const items = getTrackRowMenuItems({
     track,
     onAddToQueue,
     onFlag,
     onAddToPlaylist,
+    extraItems,
+    isPrivate,
   });
 
   return (

@@ -118,4 +118,39 @@ describe('getTrackRowMenuItems', () => {
     expect(clipboardWriteText).toHaveBeenCalledWith(expectedUrl);
     expect(toast).toHaveBeenCalledWith('Länk kopierad');
   });
+
+  it('appends extra items', () => {
+    const mockExtraItem = { label: 'Ta bort från Mina låtar', onClick: vi.fn() };
+
+    const items = getTrackRowMenuItems({
+      track: mockTrack,
+      onAddToQueue: mockOnAddToQueue,
+      onFlag: mockOnFlag,
+      extraItems: [mockExtraItem],
+    });
+
+    const lastItem = items[items.length - 1];
+    expect(lastItem.label).toBe('Ta bort från Mina låtar');
+  });
+
+  it('omits share and flag for a private track', () => {
+    const itemsWithoutPrivate = getTrackRowMenuItems({
+      track: mockTrack,
+      onAddToQueue: mockOnAddToQueue,
+      onFlag: mockOnFlag,
+    });
+
+    expect(itemsWithoutPrivate.some((item) => item.label === 'Dela')).toBe(true);
+    expect(itemsWithoutPrivate.some((item) => item.label === 'Rapportera problem')).toBe(true);
+
+    const itemsWithPrivate = getTrackRowMenuItems({
+      track: mockTrack,
+      onAddToQueue: mockOnAddToQueue,
+      onFlag: mockOnFlag,
+      isPrivate: true,
+    });
+
+    expect(itemsWithPrivate.some((item) => item.label === 'Dela')).toBe(false);
+    expect(itemsWithPrivate.some((item) => item.label === 'Rapportera problem')).toBe(false);
+  });
 });

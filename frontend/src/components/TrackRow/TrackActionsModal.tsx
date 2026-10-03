@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button, Modal } from '@/ui';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import { getTrackRowMenuItems, isActionItem } from './trackRowMenuItems';
+import { getTrackRowMenuItems, isActionItem, type ExtraMenuItem } from './trackRowMenuItems';
 
 interface TrackActionsModalProps {
   open: boolean;
@@ -9,6 +9,8 @@ interface TrackActionsModalProps {
   onAddToQueue: () => void;
   onFlag: () => void;
   onAddToPlaylist?: () => void;
+  extraItems?: ExtraMenuItem[];
+  isPrivate?: boolean;
   onClose: () => void;
 }
 
@@ -20,13 +22,22 @@ export function TrackActionsModal({
   onAddToQueue,
   onFlag,
   onAddToPlaylist,
+  extraItems,
+  isPrivate,
   onClose,
 }: TrackActionsModalProps) {
   const title = track.title ?? 'Okänd låt';
 
   if (!open) return null;
 
-  const items = getTrackRowMenuItems({ track, onAddToQueue, onFlag, onAddToPlaylist });
+  const items = getTrackRowMenuItems({
+    track,
+    onAddToQueue,
+    onFlag,
+    onAddToPlaylist,
+    extraItems,
+    isPrivate,
+  });
 
   return (
     <Modal open={open} onClose={onClose} label={title}>
