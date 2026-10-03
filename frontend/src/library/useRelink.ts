@@ -8,10 +8,12 @@ import { pickAudioFiles, saveLocalFile } from './localHandles';
 export function useRelink() {
   const relink = useCallback(async (trackId: string) => {
     try {
+      // Firefox requires the picker to open inside the click's user activation.
+      const [picked] = await pickAudioFiles();
+      if (!picked) return false;
       const sources = await listTracks();
       const source = sources.find((s) => s.trackId === trackId && s.provider === 'LOCAL');
-      if (!source) return false;
-      const [picked] = await pickAudioFiles();
+      if (!source) throw new Error('No local source for the track');
       const { matches } = await matchHash(source.sourceId!, {
         contentHash: await computeAudioHash(picked.file),
       });
@@ -22,6 +24,7 @@ export function useRelink() {
       await saveLocalFile(source.sourceId!, picked, trackId);
       return true;
     } catch {
+      toast('Det gick inte att välja filen igen. Försök igen.', 'error');
       return false;
     }
   }, []);
