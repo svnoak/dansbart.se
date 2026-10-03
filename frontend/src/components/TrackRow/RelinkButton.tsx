@@ -1,4 +1,4 @@
-import { Button } from '@/ui';
+import { ArrowPathIcon } from '@/icons';
 import { useRelink } from '@/library/useRelink';
 
 interface RelinkButtonProps {
@@ -9,14 +9,16 @@ interface RelinkButtonProps {
 export function RelinkButton({ trackId, onRelinked }: RelinkButtonProps) {
   const { relink } = useRelink();
   return (
-    <Button
-      variant="secondary"
-      size="sm"
+    <button
+      type="button"
       onClick={async () => {
         if (await relink(trackId)) onRelinked();
       }}
+      className="flex h-12 w-12 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))] bg-[rgb(var(--color-error))]/10 text-[rgb(var(--color-error))]"
+      aria-label="Välj filen igen"
+      title="Välj filen igen"
     >
-      Välj filen igen
-    </Button>
+      <ArrowPathIcon className="h-5 w-5" aria-hidden />
+    </button>
   );
 }

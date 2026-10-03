@@ -276,7 +276,7 @@ describe('MyLibraryPage', () => {
 
     await renderPage();
 
-    expect(getButtons('Välj filen igen')).toHaveLength(1);
+    expect(document.body.querySelectorAll('button[aria-label="Välj filen igen"]')).toHaveLength(1);
     expect(document.body.querySelectorAll('button[aria-label="Spela"]')).toHaveLength(0);
     expect(play).not.toHaveBeenCalled();
   });

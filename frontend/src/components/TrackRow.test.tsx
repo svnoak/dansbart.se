@@ -402,7 +402,7 @@ describe('TrackRow availability', () => {
     await renderRow({ ...track, playable: true, playbackLinks: [] });
 
     expect(hasLocalFileForTrack).toHaveBeenCalledWith('track-1');
-    expect(container.textContent).toContain('Välj filen igen');
+    expect(container.querySelector('button[aria-label="Välj filen igen"]')).not.toBeNull();
     expect(container.querySelector('button[aria-label="Spela"]')).toBeNull();
   });
 
@@ -412,7 +412,7 @@ describe('TrackRow availability', () => {
 
     await renderRow({ ...track, playable: true, playbackLinks: [] });
 
-    expect(container.textContent).not.toContain('Välj filen igen');
+    expect(container.querySelector('button[aria-label="Välj filen igen"]')).toBeNull();
     expect(container.querySelector('button[aria-label="Spela"]')).not.toBeNull();
   });
 

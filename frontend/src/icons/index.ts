@@ -1,4 +1,5 @@
 export type { IconProps } from './IconProps';
+export { ArrowPathIcon } from './ArrowPathIcon';
 export { FlagIcon } from './FlagIcon';
 export { SparklesIcon } from './SparklesIcon';
 export { PlayIcon } from './PlayIcon';
