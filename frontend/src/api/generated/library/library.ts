@@ -7,36 +7,12 @@
 import type {
   ImportTrackRequest,
   LibraryImportResponse,
-  LibrarySourceDto,
   LibraryTrackDto,
   MatchRequest,
   MatchResponse
 } from '../../models';
 
 import { httpClient } from '../../http-client';
-
-/**
- * @summary List user's track sources
- */
-export const getListTracksUrl = () => {
-
-
-  
-
-  return `/api/library/tracks`
-}
-
-export const listTracks = async ( options?: RequestInit): Promise<LibrarySourceDto[]> => {
-  
-  return httpClient<LibrarySourceDto[]>(getListTracksUrl(),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-  
 
 /**
  * @summary Import a track to library
@@ -99,29 +75,6 @@ export const getDeleteLibraryTrackUrl = (trackId: string,) => {
 export const deleteLibraryTrack = async (trackId: string, options?: RequestInit): Promise<void> => {
   
   return httpClient<void>(getDeleteLibraryTrackUrl(trackId),
-  {      
-    ...options,
-    method: 'DELETE'
-    
-    
-  }
-);}
-  
-
-/**
- * @summary Delete a track source
- */
-export const getDeleteSourceUrl = (sourceId: string,) => {
-
-
-  
-
-  return `/api/library/sources/${sourceId}`
-}
-
-export const deleteSource = async (sourceId: string, options?: RequestInit): Promise<void> => {
-  
-  return httpClient<void>(getDeleteSourceUrl(sourceId),
   {      
     ...options,
     method: 'DELETE'

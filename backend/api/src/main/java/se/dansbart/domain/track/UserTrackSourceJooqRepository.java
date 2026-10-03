@@ -109,14 +109,6 @@ public class UserTrackSourceJooqRepository {
             ));
     }
 
-    public boolean deleteSourceIfOwner(UUID sourceId, UUID userId) {
-        int rowsDeleted = dsl.deleteFrom(USER_TRACK_SOURCES)
-            .where(USER_TRACK_SOURCES.ID.eq(sourceId))
-            .and(USER_TRACK_SOURCES.USER_ID.eq(userId))
-            .execute();
-        return rowsDeleted > 0;
-    }
-
     public int deleteSourcesOfTrack(UUID trackId, UUID userId) {
         return dsl.deleteFrom(USER_TRACK_SOURCES)
             .where(USER_TRACK_SOURCES.TRACK_ID.eq(trackId))

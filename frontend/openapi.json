@@ -1907,24 +1907,6 @@
       }
     },
     "/api/library/tracks": {
-      "get": {
-        "tags": ["Library"],
-        "summary": "List user's track sources",
-        "operationId": "listTracks",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/LibrarySourceDto" }
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": ["Library"],
         "summary": "Import a track to library",
@@ -1977,22 +1959,6 @@
         "parameters": [
           {
             "name": "trackId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          }
-        ],
-        "responses": { "200": { "description": "OK" } }
-      }
-    },
-    "/api/library/sources/{sourceId}": {
-      "delete": {
-        "tags": ["Library"],
-        "summary": "Delete a track source",
-        "operationId": "deleteSource",
-        "parameters": [
-          {
-            "name": "sourceId",
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
@@ -7481,19 +7447,6 @@
         "type": "object",
         "properties": {
           "matches": { "type": "boolean" }
-        }
-      },
-      "LibrarySourceDto": {
-        "type": "object",
-        "properties": {
-          "sourceId": { "type": "string", "format": "uuid" },
-          "trackId": { "type": "string", "format": "uuid" },
-          "title": { "type": "string" },
-          "artist": { "type": "string" },
-          "album": { "type": "string" },
-          "provider": { "type": "string" },
-          "addedAt": { "type": "string", "format": "date-time" },
-          "linkedToCatalog": { "type": "boolean" }
         }
       },
       "LibrarySourceRefDto": {

@@ -6,13 +6,13 @@ import { toastListeners } from '@/ui/toastEmitter';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const listTracks = vi.fn();
+const listMyTracks = vi.fn();
 const matchHash = vi.fn();
 const pickAudioFiles = vi.fn();
 const saveLocalFile = vi.fn();
 
 vi.mock('@/api/generated/library/library', () => ({
-  listTracks: () => listTracks(),
+  listMyTracks: () => listMyTracks(),
   matchHash: (...args: unknown[]) => matchHash(...args),
 }));
 vi.mock('./audioHash', () => ({ computeAudioHash: async () => 'a'.repeat(64) }));
@@ -36,13 +36,19 @@ describe('useRelink', () => {
   }
 
   beforeEach(async () => {
-    listTracks.mockReset();
+    listMyTracks.mockReset();
     matchHash.mockReset();
     pickAudioFiles.mockReset();
     saveLocalFile.mockReset();
-    listTracks.mockResolvedValue([
-      { sourceId: 'cloud', trackId: 't1', provider: 'GOOGLE_DRIVE' },
-      { sourceId: 's1', trackId: 't1', provider: 'LOCAL' },
+    listMyTracks.mockResolvedValue([
+      {
+        track: { id: 't1' },
+        linkedToCatalog: true,
+        sources: [
+          { sourceId: 'cloud', provider: 'GOOGLE_DRIVE' },
+          { sourceId: 's1', provider: 'LOCAL' },
+        ],
+      },
     ]);
     pickAudioFiles.mockResolvedValue([picked]);
     container = document.createElement('div');
@@ -94,11 +100,17 @@ describe('useRelink', () => {
       callOrder.push('pickAudioFiles');
       return Promise.resolve([picked]);
     });
-    listTracks.mockImplementation(() => {
-      callOrder.push('listTracks');
+    listMyTracks.mockImplementation(() => {
+      callOrder.push('listMyTracks');
       return Promise.resolve([
-        { sourceId: 'cloud', trackId: 't1', provider: 'GOOGLE_DRIVE' },
-        { sourceId: 's1', trackId: 't1', provider: 'LOCAL' },
+        {
+          track: { id: 't1' },
+          linkedToCatalog: true,
+          sources: [
+            { sourceId: 'cloud', provider: 'GOOGLE_DRIVE' },
+            { sourceId: 's1', provider: 'LOCAL' },
+          ],
+        },
       ]);
     });
     matchHash.mockResolvedValue({ matches: true });
@@ -108,12 +120,12 @@ describe('useRelink', () => {
       result = await hook.current!.relink('t1');
     });
 
-    expect(callOrder).toEqual(['pickAudioFiles', 'listTracks']);
+    expect(callOrder).toEqual(['pickAudioFiles', 'listMyTracks']);
     expect(result).toBe(true);
   });
 
   it('shows a message when the relink fails', async () => {
-    listTracks.mockRejectedValue(new Error('Network error'));
+    listMyTracks.mockRejectedValue(new Error('Network error'));
     const messages: unknown[] = [];
     toastListeners.add((message) => messages.push(message));
 
@@ -143,6 +155,6 @@ describe('useRelink', () => {
 
     expect(result).toBe(false);
     expect(messages).toEqual([]);
-    expect(listTracks).not.toHaveBeenCalled();
+    expect(listMyTracks).not.toHaveBeenCalled();
   });
 });

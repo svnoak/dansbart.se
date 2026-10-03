@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { listTracks, matchHash } from '@/api/generated/library/library';
+import { listMyTracks, matchHash } from '@/api/generated/library/library';
 import { toast } from '@/ui';
 import { computeAudioHash } from './audioHash';
 import { pickAudioFiles, saveLocalFile } from './localHandles';
@@ -11,17 +11,18 @@ export function useRelink() {
       // Firefox requires the picker to open inside the click's user activation.
       const [picked] = await pickAudioFiles();
       if (!picked) return false;
-      const sources = await listTracks();
-      const source = sources.find((s) => s.trackId === trackId && s.provider === 'LOCAL');
-      if (!source) throw new Error('No local source for the track');
-      const { matches } = await matchHash(source.sourceId!, {
+      const entries = await listMyTracks();
+      const entry = entries.find((e) => e.track?.id === trackId);
+      const source = entry?.sources?.find((s) => s.provider === 'LOCAL');
+      if (!source?.sourceId) throw new Error('No local source for the track');
+      const { matches } = await matchHash(source.sourceId, {
         contentHash: await computeAudioHash(picked.file),
       });
       if (!matches) {
         toast('Filen hör inte till den här låten. Välj en annan fil.', 'error');
         return false;
       }
-      await saveLocalFile(source.sourceId!, picked, trackId);
+      await saveLocalFile(source.sourceId, picked, trackId);
       return true;
     } catch {
       toast('Det gick inte att välja filen igen. Försök igen.', 'error');
