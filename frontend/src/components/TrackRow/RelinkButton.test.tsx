@@ -6,6 +6,12 @@ import { RelinkButton } from './RelinkButton';
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const relink = vi.fn();
+const requestPersistentStorage = vi.fn();
+
+vi.mock('@/library/localCopies', () => ({
+  requestPersistentStorage: () => requestPersistentStorage(),
+}));
+
 vi.mock('@/library/useRelink', () => ({
   useRelink: () => ({ relink }),
 }));
@@ -16,6 +22,7 @@ describe('RelinkButton', () => {
 
   beforeEach(() => {
     relink.mockReset();
+    requestPersistentStorage.mockReset();
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -78,5 +85,24 @@ describe('RelinkButton', () => {
     await vi.waitFor(() => {
       expect(onRelinked).toHaveBeenCalledTimes(expectedCalls);
     });
+  });
+
+  it('asks for persistent storage when the person picks the file again', async () => {
+    const onRelinked = vi.fn();
+
+    await act(async () => {
+      root.render(
+        <RelinkButton trackId="track-1" onRelinked={onRelinked} />
+      );
+    });
+
+    const button = container.querySelector<HTMLButtonElement>('button[aria-label="Välj filen igen"]');
+    expect(button).toBeDefined();
+
+    await act(async () => {
+      button?.click();
+    });
+
+    expect(requestPersistentStorage).toHaveBeenCalledTimes(1);
   });
 });
