@@ -5,11 +5,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackJooqRepository;
+import se.dansbart.domain.track.UserTrackSource;
 import se.dansbart.domain.track.UserTrackSourceJooqRepository;
+import se.dansbart.dto.TrackListDto;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -64,6 +70,35 @@ public class LibraryService {
             .map(source -> new LibrarySourceDto(source.id(), source.trackId(), source.title(), source.artist(),
                 source.album(), source.provider(), source.addedAt(), !source.trackIsPrivate()))
             .toList();
+    }
+
+    public List<LibraryTrackDto> listUserTracks(UUID userId) {
+        Map<UUID, List<UserTrackSource>> sourcesByTrack = sourceRepository.findUserSourcesNewestFirst(userId).stream()
+            .collect(Collectors.groupingBy(UserTrackSource::trackId, LinkedHashMap::new, Collectors.toList()));
+        List<UUID> trackIds = List.copyOf(sourcesByTrack.keySet());
+        List<TrackListDto> trackDtos = trackRepository.findTrackListDtosByIds(trackIds);
+        List<LibraryTrackDto> entries = new ArrayList<>();
+        for (int i = 0; i < trackDtos.size(); i++) {
+            TrackListDto track = trackDtos.get(i);
+            if (track == null) continue;
+            List<UserTrackSource> sources = sourcesByTrack.get(trackIds.get(i));
+            boolean isPrivate = sources.get(0).trackIsPrivate();
+            track.setPlayable(true);
+            track.setPlaybackLinks(List.of());
+            if (isPrivate) {
+                UserTrackSource earliest = sources.get(sources.size() - 1);
+                track.setTitle(earliest.title());
+                if (earliest.artist() != null) track.setArtistName(earliest.artist());
+                if (earliest.album() != null) track.setAlbumTitle(earliest.album());
+            }
+            entries.add(new LibraryTrackDto(track, !isPrivate,
+                sources.stream().map(s -> new LibrarySourceRefDto(s.id(), s.provider())).toList()));
+        }
+        return entries;
+    }
+
+    public boolean deleteTrack(UUID trackId, UUID userId) {
+        return sourceRepository.deleteSourcesOfTrack(trackId, userId) > 0;
     }
 
     public boolean deleteSource(UUID sourceId, UUID userId) {

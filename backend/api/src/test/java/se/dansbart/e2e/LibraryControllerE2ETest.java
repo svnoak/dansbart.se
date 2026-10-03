@@ -13,6 +13,7 @@ import se.dansbart.domain.track.Track;
 import se.dansbart.domain.user.User;
 import se.dansbart.e2e.base.AbstractE2ETest;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -60,6 +61,14 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
             + ",\"isrc\":" + (isrc == null ? "null" : "\"" + isrc + "\"") + "}";
     }
 
+    private String body(String hash, String provider, String fileId, String title, Integer durationMs, String artist, String album) {
+        return "{\"contentHash\":\"" + hash + "\",\"provider\":\"" + provider + "\",\"providerFileId\":"
+            + (fileId == null ? "null" : "\"" + fileId + "\"") + ",\"title\":\"" + title
+            + "\",\"artist\":" + (artist == null ? "null" : "\"" + artist + "\"")
+            + ",\"album\":" + (album == null ? "null" : "\"" + album + "\"")
+            + ",\"durationMs\":" + durationMs + "}";
+    }
+
     private JsonNode importTrack(RequestPostProcessor user, String hash, String title, Integer durationMs, String isrc)
             throws Exception {
         String json = mockMvc.perform(post("/api/library/tracks").with(user)
@@ -79,6 +88,15 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
         String json = mockMvc.perform(post("/api/library/tracks").with(user)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body(hash, provider, fileId, title, durationMs, isrc)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(json);
+    }
+
+    private JsonNode importTrack(RequestPostProcessor user, String hash, String provider, String fileId, String title, Integer durationMs, String artist, String album)
+            throws Exception {
+        String json = mockMvc.perform(post("/api/library/tracks").with(user)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body(hash, provider, fileId, title, durationMs, artist, album)))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(json);
     }
@@ -105,6 +123,8 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
             .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/library/tracks")).andExpect(status().isUnauthorized());
         mockMvc.perform(delete("/api/library/sources/{id}", UUID.randomUUID())).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/library/my-tracks")).andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/library/tracks/{id}", UUID.randomUUID())).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -373,5 +393,133 @@ class LibraryControllerE2ETest extends AbstractE2ETest {
 
         JsonNode list = listOf(firstSignedIn);
         assertEquals(2, list.size());
+    }
+
+    @Test
+    @DisplayName("my-tracks lists each track once, newest first by latest source")
+    void myTracksListsEachTrackOnce() throws Exception {
+        importTrack(firstSignedIn, HASH_A, "LOCAL", "a.mp3", "First", 180000);
+        importTrack(firstSignedIn, HASH_A, "GDRIVE", "drive-a", "Second", 180000);
+        importTrack(firstSignedIn, HASH_B, "LOCAL", null, "Newer", 170000);
+
+        String json = mockMvc.perform(get("/api/library/my-tracks").with(firstSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode myTracks = objectMapper.readTree(json);
+
+        assertEquals(2, myTracks.size());
+        JsonNode firstEntry = myTracks.get(0);
+        JsonNode secondEntry = myTracks.get(1);
+
+        assertEquals("Newer", firstEntry.get("track").get("title").asText());
+        assertTrue(firstEntry.get("track").get("playable").asBoolean());
+        assertTrue(secondEntry.get("track").get("playable").asBoolean());
+
+        JsonNode firstPlaybackLinks = firstEntry.get("track").get("playbackLinks");
+        JsonNode secondPlaybackLinks = secondEntry.get("track").get("playbackLinks");
+        assertEquals(0, firstPlaybackLinks.size());
+        assertEquals(0, secondPlaybackLinks.size());
+
+        assertFalse(firstEntry.get("linkedToCatalog").asBoolean());
+        assertFalse(secondEntry.get("linkedToCatalog").asBoolean());
+
+        assertEquals(2, secondEntry.get("sources").size());
+
+        String jsonB = mockMvc.perform(get("/api/library/my-tracks").with(secondSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode myTracksB = objectMapper.readTree(jsonB);
+        assertEquals(0, myTracksB.size());
+    }
+
+    @Test
+    @DisplayName("my-tracks shows catalog track linked by ISRC with catalog title and artist")
+    void myTracksPlaysCatalogLinkedTrackFromOwnSource() throws Exception {
+        Track catalog = catalogTrack("Catalog Polska", ISRC, 180000);
+
+        importTrack(firstSignedIn, HASH_A, "My Polska", 180000, ISRC);
+
+        String json = mockMvc.perform(get("/api/library/my-tracks").with(firstSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode myTracks = objectMapper.readTree(json);
+
+        assertEquals(1, myTracks.size());
+        JsonNode entry = myTracks.get(0);
+
+        assertTrue(entry.get("linkedToCatalog").asBoolean());
+        assertTrue(entry.get("track").get("playable").asBoolean());
+
+        JsonNode playbackLinks = entry.get("track").get("playbackLinks");
+        assertEquals(0, playbackLinks.size());
+
+        assertEquals("Catalog Polska", entry.get("track").get("title").asText());
+        assertEquals(artist.getName(), entry.get("track").get("artistName").asText());
+    }
+
+    @Test
+    @DisplayName("my-tracks uses earliest source tags for private track")
+    void myTracksUsesEarliestSourceTagsForPrivateTrack() throws Exception {
+        importTrack(firstSignedIn, HASH_A, "LOCAL", null, "Första", 180000, null);
+        importTrack(firstSignedIn, HASH_A, "GDRIVE", "drive-file", "Andra", 180000, null);
+
+        String json = mockMvc.perform(get("/api/library/my-tracks").with(firstSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        JsonNode myTracks = objectMapper.readTree(json);
+
+        assertEquals(1, myTracks.size());
+        JsonNode entry = myTracks.get(0);
+
+        assertEquals("Första", entry.get("track").get("title").asText());
+        assertEquals("Tag Artist", entry.get("track").get("artistName").asText());
+        assertEquals("Tag Album", entry.get("track").get("albumTitle").asText());
+    }
+
+    @Test
+    @DisplayName("my-tracks keeps title when earliest source has no artist or album")
+    void myTracksKeepsTitleWhenEarliestSourceHasNoArtistOrAlbum() throws Exception {
+        importTrack(firstSignedIn, HASH_A, "LOCAL", null, "Utan taggar", 180000, null, null);
+
+        String json = mockMvc.perform(get("/api/library/my-tracks").with(firstSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        JsonNode myTracks = objectMapper.readTree(json);
+
+        assertEquals(1, myTracks.size());
+        JsonNode entry = myTracks.get(0);
+
+        assertEquals("Utan taggar", entry.get("track").get("title").asText());
+        assertTrue(entry.get("track").get("artistName").isNull());
+        assertTrue(entry.get("track").get("albumTitle").isNull());
+    }
+
+    @Test
+    @DisplayName("delete-track returns 404 when person holds no source")
+    void deleteTrackReturns404WhenPersonHoldsNoSource() throws Exception {
+        JsonNode hashAByFirst = importTrack(firstSignedIn, HASH_A, "LOCAL", null, "Mine", 180000);
+        importTrack(firstSignedIn, HASH_A, "GDRIVE", "drive-file", "Mine", 180000);
+        JsonNode hashBBySecond = importTrack(secondSignedIn, HASH_B, "LOCAL", null, "OnlyTheirs", 170000);
+
+        String trackAId = hashAByFirst.get("trackId").asText();
+
+        mockMvc.perform(delete("/api/library/tracks/{trackId}", trackAId).with(secondSignedIn))
+            .andExpect(status().isNotFound());
+
+        String json = mockMvc.perform(get("/api/library/my-tracks").with(firstSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode myTracksFirst = objectMapper.readTree(json);
+        assertEquals(1, myTracksFirst.size());
+
+        mockMvc.perform(delete("/api/library/tracks/{trackId}", trackAId).with(firstSignedIn))
+            .andExpect(status().isNoContent());
+
+        String jsonAfterDelete = mockMvc.perform(get("/api/library/my-tracks").with(firstSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode myTracksAfterDelete = objectMapper.readTree(jsonAfterDelete);
+        assertEquals(0, myTracksAfterDelete.size());
+
+        mockMvc.perform(delete("/api/library/tracks/{trackId}", trackAId).with(firstSignedIn))
+            .andExpect(status().isNotFound());
+
+        String jsonB = mockMvc.perform(get("/api/library/my-tracks").with(secondSignedIn))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode myTracksB = objectMapper.readTree(jsonB);
+        assertEquals(1, myTracksB.size());
     }
 }
