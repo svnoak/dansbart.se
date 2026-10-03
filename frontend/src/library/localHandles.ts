@@ -1,3 +1,5 @@
+import { hasLocalCopy, readLocalCopy, writeLocalCopy } from './localCopies';
+
 export interface PickedFile {
   file: File;
   handle?: FileSystemFileHandle;
@@ -98,8 +100,12 @@ export async function saveLocalFile(sourceId: string, { file, handle }: PickedFi
       await runRequest('readwrite', (store) => store.put({ trackId, handle }, sourceId));
       return;
     } catch {
-      // The session map holds the file when IndexedDB is unavailable.
+      // The local copy or the session map holds the file when IndexedDB is unavailable.
     }
+  }
+  if (await writeLocalCopy(trackId, file)) {
+    sessionFiles.delete(sourceId);
+    return;
   }
   sessionFiles.set(sourceId, { trackId, file });
 }
@@ -140,12 +146,13 @@ export async function getLocalFileForTrack(
     const stored = await runRequest<StoredFile[]>('readonly', (store) => store.getAll());
     match = stored.find((entry) => entry.trackId === trackId);
   } catch {
-    return undefined;
+    // Without IndexedDB the local copy is the only source.
   }
-  if (!match) return undefined;
-  const file = await readHandle(match.handle, askPermission).catch(() => undefined);
-  if (!file && askPermission) throw new LocalFilePermissionDenied();
-  return file;
+  const file = match && (await readHandle(match.handle, askPermission).catch(() => undefined));
+  if (file) return file;
+  const copy = await readLocalCopy(trackId);
+  if (!copy && match && askPermission) throw new LocalFilePermissionDenied();
+  return copy;
 }
 
 /** True when the browser stores a file or a handle for the track. Never asks for permission. */
@@ -155,8 +162,9 @@ export async function hasLocalFileForTrack(trackId: string): Promise<boolean> {
   }
   try {
     const stored = await runRequest<StoredFile[]>('readonly', (store) => store.getAll());
-    return stored.some((entry) => entry.trackId === trackId);
+    if (stored.some((entry) => entry.trackId === trackId)) return true;
   } catch {
-    return false;
+    // Without IndexedDB the local copy is the only source.
   }
+  return hasLocalCopy(trackId);
 }

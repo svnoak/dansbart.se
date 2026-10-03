@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getLocalFileForTrack, saveLocalFile, pickAudioFiles } from './localHandles';
+import { installFakeOpfs } from '@/test/fakeOpfs';
 
 describe('localHandles', () => {
   const realCreate = document.createElement.bind(document);
@@ -66,5 +67,94 @@ describe('localHandles', () => {
     const result = await pickAudioFiles();
 
     expect(result).toEqual([]);
+  });
+});
+
+describe('localHandles local copies', () => {
+  let fakeOpfs: ReturnType<typeof installFakeOpfs>;
+
+  const loadFresh = async () => {
+    vi.resetModules();
+    return import('./localHandles');
+  };
+
+  beforeEach(() => {
+    fakeOpfs = installFakeOpfs();
+  });
+
+  afterEach(() => {
+    fakeOpfs.restore();
+    vi.resetModules();
+  });
+
+  it('saving a file without a handle writes a copy named by the track', async () => {
+    const { saveLocalFile } = await loadFresh();
+    const file = new File(['audio bytes'], 'vals.mp3');
+
+    await saveLocalFile('s1', { file }, 't1');
+
+    const directory = await fakeOpfs.root.getDirectoryHandle('mina-latar');
+    const copy = await (await directory.getFileHandle('t1')).getFile();
+    expect(await copy.text()).toBe('audio bytes');
+  });
+
+  it('a saved file plays after a reload from its copy', async () => {
+    const first = await loadFresh();
+    await first.saveLocalFile('s1', { file: new File(['audio bytes'], 'vals.mp3') }, 't1');
+
+    const reloaded = await loadFresh();
+
+    const file = await reloaded.getLocalFileForTrack('t1');
+    expect(await file?.text()).toBe('audio bytes');
+    expect(await reloaded.hasLocalFileForTrack('t1')).toBe(true);
+    expect(await reloaded.hasLocalFileForTrack('t2')).toBe(false);
+  });
+
+  it('a failed copy keeps the file for the session', async () => {
+    fakeOpfs.restore();
+    fakeOpfs = installFakeOpfs({
+      createWritableRejects: new DOMException('Quota', 'QuotaExceededError'),
+    });
+    const first = await loadFresh();
+    const file = new File(['audio bytes'], 'vals.mp3');
+
+    await first.saveLocalFile('s1', { file }, 't1');
+
+    expect(await first.getLocalFileForTrack('t1')).toBe(file);
+    const reloaded = await loadFresh();
+    expect(await reloaded.getLocalFileForTrack('t1')).toBeUndefined();
+  });
+
+  it('a copy written later replaces the session file', async () => {
+    fakeOpfs.root.setCreateWritableRejects(new DOMException('Quota', 'QuotaExceededError'));
+    const { saveLocalFile, getLocalFileForTrack } = await loadFresh();
+    await saveLocalFile('s1', { file: new File(['old bytes'], 'vals.mp3') }, 't1');
+    fakeOpfs.root.setCreateWritableRejects(undefined);
+
+    await saveLocalFile('s1', { file: new File(['new bytes'], 'vals.mp3') }, 't1');
+
+    expect(await (await getLocalFileForTrack('t1'))?.text()).toBe('new bytes');
+  });
+
+  it('asking for permission returns the copy without an error', async () => {
+    const first = await loadFresh();
+    await first.saveLocalFile('s1', { file: new File(['audio bytes'], 'vals.mp3') }, 't1');
+
+    const reloaded = await loadFresh();
+
+    const file = await reloaded.getLocalFileForTrack('t1', { askPermission: true });
+    expect(await file?.text()).toBe('audio bytes');
+  });
+
+  it('without OPFS a saved file lasts only for the session', async () => {
+    fakeOpfs.restore();
+    const first = await loadFresh();
+    const file = new File(['audio bytes'], 'vals.mp3');
+
+    await first.saveLocalFile('s1', { file }, 't1');
+
+    expect(await first.getLocalFileForTrack('t1')).toBe(file);
+    const reloaded = await loadFresh();
+    expect(await reloaded.getLocalFileForTrack('t1')).toBeUndefined();
   });
 });
