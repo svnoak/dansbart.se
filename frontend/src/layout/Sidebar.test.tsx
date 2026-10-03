@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { loggedInAuthValue } from '@/test/authValue';
+import { loggedInAuthValue, authValue } from '@/test/authValue';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -72,5 +72,25 @@ describe('Sidebar', () => {
     );
     expect(link).toBeDefined();
     expect(link?.getAttribute('href')).toBe('/dance-lists');
+  });
+
+  it('shows a link to Mina låtar for a signed-in person', async () => {
+    await renderSidebar();
+
+    const link = Array.from(document.body.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Mina låtar'),
+    );
+    expect(link).toBeDefined();
+    expect(link?.getAttribute('href')).toMatch(/\/mina-latar$/);
+  });
+
+  it('hides the Mina låtar link for a signed-out person', async () => {
+    useAuth.mockReturnValue(authValue());
+    await renderSidebar();
+
+    const link = Array.from(document.body.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Mina låtar'),
+    );
+    expect(link).toBeUndefined();
   });
 });
