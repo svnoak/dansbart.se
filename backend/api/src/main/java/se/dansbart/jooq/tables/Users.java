@@ -46,6 +46,7 @@ import se.dansbart.jooq.tables.Groups.GroupsPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
+import se.dansbart.jooq.tables.ProviderConnections.ProviderConnectionsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks.UserDancePrimaryTracksPath;
 import se.dansbart.jooq.tables.UserTrackFavorites.UserTrackFavoritesPath;
@@ -363,6 +364,19 @@ public class Users extends TableImpl<Record> {
             _playlists = new PlaylistsPath(this, null, Keys.PLAYLISTS__PLAYLISTS_USER_ID_FKEY.getInverseKey());
 
         return _playlists;
+    }
+
+    private transient ProviderConnectionsPath _providerConnections;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.provider_connections</code> table
+     */
+    public ProviderConnectionsPath providerConnections() {
+        if (_providerConnections == null)
+            _providerConnections = new ProviderConnectionsPath(this, null, Keys.PROVIDER_CONNECTIONS__PROVIDER_CONNECTIONS_USER_ID_FKEY.getInverseKey());
+
+        return _providerConnections;
     }
 
     private transient TracksPath _tracks;

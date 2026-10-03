@@ -35,6 +35,7 @@ import se.dansbart.jooq.tables.PlaybackLinks;
 import se.dansbart.jooq.tables.PlaylistCollaborators;
 import se.dansbart.jooq.tables.PlaylistTracks;
 import se.dansbart.jooq.tables.Playlists;
+import se.dansbart.jooq.tables.ProviderConnections;
 import se.dansbart.jooq.tables.RejectionLogs;
 import se.dansbart.jooq.tables.StyleKeywords;
 import se.dansbart.jooq.tables.TrackAlbums;
@@ -190,6 +191,11 @@ public class Public extends SchemaImpl {
     public final Playlists PLAYLISTS = Playlists.PLAYLISTS;
 
     /**
+     * The table <code>public.provider_connections</code>.
+     */
+    public final ProviderConnections PROVIDER_CONNECTIONS = ProviderConnections.PROVIDER_CONNECTIONS;
+
+    /**
      * The table <code>public.rejection_logs</code>.
      */
     public final RejectionLogs REJECTION_LOGS = RejectionLogs.REJECTION_LOGS;
@@ -324,6 +330,7 @@ public class Public extends SchemaImpl {
             PlaylistCollaborators.PLAYLIST_COLLABORATORS,
             PlaylistTracks.PLAYLIST_TRACKS,
             Playlists.PLAYLISTS,
+            ProviderConnections.PROVIDER_CONNECTIONS,
             RejectionLogs.REJECTION_LOGS,
             StyleKeywords.STYLE_KEYWORDS,
             TrackAlbums.TRACK_ALBUMS,
