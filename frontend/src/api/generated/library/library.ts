@@ -8,6 +8,7 @@ import type {
   ImportTrackRequest,
   LibraryImportResponse,
   LibrarySourceDto,
+  LibraryTrackDto,
   MatchRequest,
   MatchResponse
 } from '../../models';
@@ -57,6 +58,52 @@ export const importTrack = async (importTrackRequest: ImportTrackRequest, option
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       importTrackRequest,)
+  }
+);}
+  
+
+/**
+ * @summary List the tracks the user holds, newest first
+ */
+export const getListMyTracksUrl = () => {
+
+
+  
+
+  return `/api/library/my-tracks`
+}
+
+export const listMyTracks = async ( options?: RequestInit): Promise<LibraryTrackDto[]> => {
+  
+  return httpClient<LibraryTrackDto[]>(getListMyTracksUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Delete all of the user's sources for a track
+ */
+export const getDeleteLibraryTrackUrl = (trackId: string,) => {
+
+
+  
+
+  return `/api/library/tracks/${trackId}`
+}
+
+export const deleteLibraryTrack = async (trackId: string, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getDeleteLibraryTrackUrl(trackId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
   }
 );}
   

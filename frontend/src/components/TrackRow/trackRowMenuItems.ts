@@ -15,6 +15,11 @@ interface LinkItem {
   onSelect?: never;
 }
 
+export interface ExtraMenuItem {
+  label: string;
+  onClick: () => void | Promise<void>;
+}
+
 type MenuItem = ActionItem | LinkItem;
 
 export function isActionItem(item: MenuItem): item is ActionItem {
@@ -26,6 +31,8 @@ export interface GetTrackRowMenuItemsProps {
   onAddToQueue: () => void;
   onFlag: () => void;
   onAddToPlaylist?: () => void;
+  extraItems?: ExtraMenuItem[];
+  isPrivate?: boolean;
 }
 
 export function getTrackRowMenuItems({
@@ -33,6 +40,8 @@ export function getTrackRowMenuItems({
   onAddToQueue,
   onFlag,
   onAddToPlaylist,
+  extraItems,
+  isPrivate,
 }: GetTrackRowMenuItemsProps): MenuItem[] {
   const items: MenuItem[] = [];
 
@@ -50,19 +59,21 @@ export function getTrackRowMenuItems({
     });
   }
 
-  items.push({
-    key: 'share',
-    label: 'Dela',
-    onSelect: async () => {
-      const url = `${window.location.origin}?track=${track.id ?? ''}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        toast('Länk kopierad');
-      } catch {
-        toast('Kunde inte kopiera länk', 'error');
-      }
-    },
-  });
+  if (!isPrivate) {
+    items.push({
+      key: 'share',
+      label: 'Dela',
+      onSelect: async () => {
+        const url = `${window.location.origin}?track=${track.id ?? ''}`;
+        try {
+          await navigator.clipboard.writeText(url);
+          toast('Länk kopierad');
+        } catch {
+          toast('Kunde inte kopiera länk', 'error');
+        }
+      },
+    });
+  }
 
   if (track.artistId) {
     items.push({
@@ -80,11 +91,17 @@ export function getTrackRowMenuItems({
     });
   }
 
-  items.push({
-    key: 'flag',
-    label: 'Rapportera problem',
-    onSelect: onFlag,
-  });
+  if (!isPrivate) {
+    items.push({
+      key: 'flag',
+      label: 'Rapportera problem',
+      onSelect: onFlag,
+    });
+  }
+
+  for (const extra of extraItems ?? []) {
+    items.push({ key: `extra-${extra.label}`, label: extra.label, onSelect: extra.onClick });
+  }
 
   return items;
 }

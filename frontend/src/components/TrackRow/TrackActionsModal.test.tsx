@@ -185,4 +185,45 @@ describe('TrackActionsModal', () => {
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).toBeNull();
   });
+
+  it('shows an extra item and calls it', async () => {
+    const onClose = vi.fn();
+    const onAddToQueue = vi.fn();
+    const onFlag = vi.fn();
+    const mockExtraItemHandler = vi.fn();
+
+    const extraItems = [
+      { label: 'Ta bort från Mina låtar', onClick: mockExtraItemHandler },
+    ];
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <TrackActionsModal
+            open
+            track={track}
+            onAddToQueue={onAddToQueue}
+            onFlag={onFlag}
+            onClose={onClose}
+            extraItems={extraItems}
+          />
+        </MemoryRouter>,
+      );
+    });
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('Ta bort från Mina låtar');
+
+    const buttons = Array.from(document.body.querySelectorAll('button'));
+    const removeButton = buttons.find(btn => btn.textContent?.includes('Ta bort från Mina låtar'));
+
+    expect(removeButton).toBeTruthy();
+
+    await act(async () => {
+      removeButton?.click();
+    });
+
+    expect(mockExtraItemHandler).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
