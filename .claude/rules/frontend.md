@@ -29,7 +29,7 @@ Users are non-technical and span ages 14 to 85. Apply these rules to each compon
 - Do not make text smaller on larger screens.
 - Meet WCAG 2.2 AA tap targets: at least 24x24 CSS px, or enough spacing around a smaller target. Primary touch controls aim for 44x44px.
 - Give every control a strong clickability cue: a button shape and a visible icon or word.
-- Use a visible word when the action is new or has no widely known icon.
+- Use a visible word when the action is new or has no widely known icon, unless the icon and the result of the click make the action clear.
 - Give every control an accessible name with a verb.
 - Give each control one behaviour in all states. If the look of the control shows its next behaviour, for example a sort button with a direction arrow, a second behaviour is allowed.
 - Show every status with a word. A widely known icon, for example a sort direction arrow, may stand alone if it has an accessible name.
