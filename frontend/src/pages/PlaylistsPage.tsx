@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAnalyticsFlag } from '@/analytics/useAnalyticsFlag';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   getMyPlaylists1,
   createPlaylist,
@@ -9,23 +9,27 @@ import {
 } from '@/api/generated/playlists/playlists';
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
-import { PlaylistIcon, PlusIcon, PlayIcon } from '@/icons';
-import { toast, Card, Badge, Button, InlineError, LoadError, SectionTitle } from '@/ui';
+import { ChevronRightIcon, PlaylistIcon, PlusIcon, StarMarkIcon } from '@/icons';
+import { toast, Card, Button, EmptyState, InlineError, LoadError, RowSkeleton } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
 
-const TEMPO_LABELS: Record<string, string> = {
-  Slow: 'Långsamt',
-  SlowMed: 'Lugnt',
-  Medium: 'Lagom',
-  Fast: 'Snabbt',
-  Turbo: 'Väldigt snabbt',
-};
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+const listClass =
+  'overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] divide-y divide-[rgb(var(--color-border))]';
+
+const badgeClass =
+  'inline-flex h-6 items-center rounded-[var(--radius-full)] border border-[rgb(var(--color-border))] px-2 text-[13px] font-medium text-[rgb(var(--color-text-muted))]';
+
+const primaryLinkClass =
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] transition-colors hover:bg-[rgb(var(--color-accent-hover))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
 
 export function PlaylistsPage() {
   useAnalyticsFlag('playlists');
-  const navigate = useNavigate();
   const { theme } = useTheme();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistListItemDto[]>([]);
@@ -139,20 +143,29 @@ export function PlaylistsPage() {
     setCreateError(null);
   }
 
+  const isDark = theme === 'dark';
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Spellistor</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+            Spellistor
+          </h1>
+          <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+            Samla låtar i egna listor och dela dem med andra.
+          </p>
+        </div>
         {isAuthenticated && (
-          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
-            <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+          <Button size="sm" onClick={() => setShowForm((s) => !s)} aria-expanded={showForm}>
+            <PlusIcon className="h-4 w-4" aria-hidden />
             Ny spellista
           </Button>
         )}
       </div>
 
       {showForm && (
-        <Card className="p-4">
+        <Card className="p-5">
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">
               <label
@@ -170,10 +183,10 @@ export function PlaylistsPage() {
                   setCreateError(null);
                 }}
                 autoFocus
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={creating || !newName.trim()}>
                 Skapa spellista
               </Button>
@@ -186,26 +199,29 @@ export function PlaylistsPage() {
         </Card>
       )}
 
-      {loading && <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>}
+      {loading && <RowSkeleton rows={4} label="Laddar spellistor" />}
 
       {!loading && invitations.length > 0 && (
         <section className="space-y-3">
-          <SectionTitle>Inbjudningar</SectionTitle>
-          <ul className="space-y-2">
+          <h2 className="text-xl font-bold text-[rgb(var(--color-text))]">Inbjudningar</h2>
+          <ul className={listClass}>
             {invitations.map((inv) => (
-              <li key={inv.id} className="space-y-1">
-                <Card className="flex items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
+              <li key={inv.id} className="space-y-2 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text-muted))]"
+                    aria-hidden
+                  >
+                    <PlaylistIcon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-bold text-[rgb(var(--color-text))]">
                       {inv.playlistName ?? 'Okänd spellista'}
                     </p>
-                    <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                    <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">
                       Inbjuden av {inv.invitedByDisplayName ?? inv.invitedByUserId}
                       {inv.permission && (
-                        <span className="ml-1.5">
-                          &middot;{' '}
-                          {inv.permission === 'edit' ? 'Redigera' : 'Se'}
-                        </span>
+                        <span> · {inv.permission === 'edit' ? 'Redigera' : 'Se'}</span>
                       )}
                     </p>
                   </div>
@@ -219,15 +235,15 @@ export function PlaylistsPage() {
                     </Button>
                     <Button
                       size="sm"
-                      variant="secondary"
+                      variant="outline"
                       disabled={respondingId === inv.id}
                       onClick={() => handleRespond(inv.id!, false)}
                     >
                       Avböj
                     </Button>
                   </div>
-                </Card>
-                {respondErrors[inv.id!] && <InlineError>{respondErrors[inv.id!]}</InlineError>}
+                </div>
+                <InlineError>{respondErrors[inv.id!]}</InlineError>
               </li>
             ))}
           </ul>
@@ -235,110 +251,95 @@ export function PlaylistsPage() {
       )}
 
       {!loading && !isAuthenticated && (
-        <Card className="flex flex-col items-center gap-3 p-8 text-center">
-          <PlaylistIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
-          <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-            Logga in för att skapa och hantera dina egna spellistor.
-          </p>
-          <Link
-            to="/login"
-            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            Logga in
-          </Link>
-        </Card>
+        <EmptyState
+          icon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
+          title="Logga in för att se dina spellistor"
+          description="Med ett konto kan du skapa egna spellistor och dela dem med andra."
+          action={
+            <Link to="/login" className={primaryLinkClass}>
+              Logga in
+            </Link>
+          }
+        />
       )}
 
       {!loading && isAuthenticated && (
         <section className="space-y-3">
-          <SectionTitle>Mina spellistor</SectionTitle>
+          <h2 className="text-xl font-bold text-[rgb(var(--color-text))]">Mina spellistor</h2>
           {error ? (
             <LoadError
               message="Det gick inte att hämta spellistorna."
               onRetry={() => setReloadToken((t) => t + 1)}
             />
           ) : playlists.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">Du har inga spellistor ännu.</p>
+            <EmptyState
+              icon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
+              title="Du har inga spellistor ännu"
+              description="Skapa en spellista och lägg till låtar från sökningen."
+              action={
+                <Button onClick={() => setShowForm(true)}>
+                  <PlusIcon className="h-4 w-4" aria-hidden />
+                  Skapa spellista
+                </Button>
+              }
+            />
           ) : (
             <>
-              <ul className="space-y-2">
+              <ul className={listClass}>
                 {playlists.map((pl) => {
-                  const styleColor = pl.danceStyle ? getStyleColor(pl.danceStyle) : null;
-                  const tempoLabel = pl.tempoCategory ? TEMPO_LABELS[pl.tempoCategory] : null;
+                  const color = pl.danceStyle ? getStyleColor(pl.danceStyle) : null;
+                  const tileStyle: React.CSSProperties | undefined = color
+                    ? {
+                        backgroundColor: isDark ? color.bgDark : color.bg,
+                        color: isDark ? color.textDark : color.text,
+                      }
+                    : undefined;
+                  const trackCount = pl.trackCount ?? 0;
+                  const summaryParts = [
+                    `${trackCount} ${trackCount === 1 ? 'låt' : 'låtar'}`,
+                    pl.danceStyle ? capitalize(pl.danceStyle) : 'Blandat',
+                  ];
+                  if (pl.ownerGroup?.name) summaryParts.push(pl.ownerGroup.name);
                   return (
-                    <li key={pl.id} className="space-y-1">
-                      <div className="flex items-stretch gap-2">
-                        <button
-                          type="button"
-                          aria-label={`Spela ${pl.name}`}
-                          onClick={() => navigate(`/playlists/${pl.id}?autoplay=true`)}
-                          className="flex shrink-0 items-center justify-center rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors"
+                    <li key={pl.id}>
+                      <Link
+                        to={`/playlists/${pl.id}`}
+                        className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:bg-[rgb(var(--color-accent-muted))]"
+                      >
+                        <span
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] ${
+                            color ? '' : 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text-muted))]'
+                          }`}
+                          style={tileStyle}
+                          aria-hidden
                         >
-                          <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
-                        </button>
-
-                        <Link
-                          to={`/playlists/${pl.id}`}
-                          className="flex min-w-0 flex-1"
-                        >
-                          <Card className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors">
-                              <PlaylistIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                                    {pl.name}
-                                    <span className="ml-1.5 font-normal text-[rgb(var(--color-text-muted))]">
-                                      &middot;{' '}
-                                      {pl.ownerGroup
-                                        ? pl.ownerGroup.name
-                                        : pl.ownerDisplayName
-                                          ? `Delad av ${pl.ownerDisplayName}`
-                                          : 'Du'}
-                                    </span>
-                                  </p>
-                                  {pl.description && (
-                                    <p className="truncate text-sm text-[rgb(var(--color-text-muted))]">{pl.description}</p>
-                                  )}
-                                  {(styleColor || tempoLabel) && (
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                      {styleColor && pl.danceStyle && (
-                                        <Badge
-                                          size="md"
-                                          style={{
-                                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                                          }}
-                                        >
-                                          {pl.danceStyle.charAt(0).toUpperCase() + pl.danceStyle.slice(1)}
-                                        </Badge>
-                                      )}
-                                      {styleColor && pl.subStyle && (
-                                        <Badge
-                                          size="md"
-                                          className="opacity-80"
-                                          style={{
-                                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                                          }}
-                                        >
-                                          {pl.subStyle.charAt(0).toUpperCase() + pl.subStyle.slice(1)}
-                                        </Badge>
-                                      )}
-                                      {tempoLabel && (
-                                        <Badge size="md" variant="muted">
-                                          {tempoLabel}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                {(pl.trackCount ?? 0) > 0 && (
-                                  <span className="shrink-0 text-sm text-[rgb(var(--color-text-muted))]">
-                                    {pl.trackCount} {pl.trackCount === 1 ? 'låt' : 'låtar'}
-                                  </span>
-                                )}
-                          </Card>
-                        </Link>
-                      </div>
+                          <StarMarkIcon className="h-5 w-5" aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-bold text-[rgb(var(--color-text))]">{pl.name}</p>
+                          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-[rgb(var(--color-text-muted))]">
+                            <span className="truncate">
+                              {summaryParts.map((part, i) => (
+                                <span key={i}>
+                                  {i > 0 && ' · '}
+                                  {part}
+                                </span>
+                              ))}
+                            </span>
+                            {pl.isPublic && <span className={badgeClass}>Offentlig</span>}
+                            {pl.ownerDisplayName && (
+                              <span className={badgeClass}>Delad av {pl.ownerDisplayName}</span>
+                            )}
+                          </p>
+                          {pl.description && (
+                            <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">{pl.description}</p>
+                          )}
+                        </span>
+                        <ChevronRightIcon
+                          className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]"
+                          aria-hidden
+                        />
+                      </Link>
                     </li>
                   );
                 })}

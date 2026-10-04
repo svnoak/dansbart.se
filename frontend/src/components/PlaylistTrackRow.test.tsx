@@ -68,16 +68,17 @@ describe('PlaylistTrackRow', () => {
     vi.clearAllMocks();
   });
 
-  it('shows Ta bort in place of the heart', async () => {
+  it('keeps the heart and offers removal in the row menu', async () => {
     const onRemove = vi.fn();
 
     await act(async () => {
       root.render(
         <ThemeProvider>
-          <ul>
+          <ol>
             <PlaylistTrackRow
               track={track}
               contextTracks={[track]}
+              position={1}
               isDragOver={false}
               onRemove={onRemove}
               onDragStart={() => {}}
@@ -85,36 +86,81 @@ describe('PlaylistTrackRow', () => {
               onDrop={() => {}}
               onDragEnd={() => {}}
             />
-          </ul>
+          </ol>
         </ThemeProvider>,
       );
     });
 
-    const heartButton = Array.from(container.querySelectorAll('button')).find(
-      (btn) => {
-        const label = btn.getAttribute('aria-label');
-        return label === 'Favoritmarkera' || label === 'Sluta favoritmarkera';
-      },
-    );
-    expect(heartButton).toBeFalsy();
+    // The heart stays in the action slot.
+    const heartButton = Array.from(container.querySelectorAll('button')).find((btn) => {
+      const label = btn.getAttribute('aria-label');
+      return label === 'Favoritmarkera' || label === 'Sluta favoritmarkera';
+    });
+    expect(heartButton).toBeTruthy();
 
+    // No separate remove button sits in the row.
+    const removeButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Ta bort från spellista',
+    );
+    expect(removeButton).toBeFalsy();
+
+    // The handle is a labelled button that names the track's position.
+    const handle = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Flytta låt 1',
+    );
+    expect(handle).toBeTruthy();
+
+    // Removal is the last item in the row menu.
     const menuButton = Array.from(container.querySelectorAll('button')).find(
       (btn) => btn.getAttribute('aria-label') === 'Mer',
     );
     expect(menuButton).toBeTruthy();
-    const menuWrapper = menuButton!.parentElement;
-    const rightGroup = menuWrapper!.parentElement;
 
-    const removeButton = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.getAttribute('aria-label') === 'Ta bort från spellista',
+    await act(async () => {
+      menuButton!.click();
+    });
+
+    const removeItem = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
+      (item) => item.textContent?.trim() === 'Ta bort från spellistan',
+    ) as HTMLButtonElement | undefined;
+    expect(removeItem).toBeTruthy();
+
+    await act(async () => {
+      removeItem!.click();
+    });
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no removal item without onRemove', async () => {
+    await act(async () => {
+      root.render(
+        <ThemeProvider>
+          <ol>
+            <PlaylistTrackRow
+              track={track}
+              contextTracks={[track]}
+              position={2}
+              isDragOver={false}
+              onDragStart={() => {}}
+              onDragOver={() => {}}
+              onDrop={() => {}}
+              onDragEnd={() => {}}
+            />
+          </ol>
+        </ThemeProvider>,
+      );
+    });
+
+    const menuButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label') === 'Mer',
     );
-    expect(removeButton).toBeTruthy();
+    await act(async () => {
+      menuButton!.click();
+    });
 
-    // The remove button sits in the row's right-hand group, directly before the menu trigger.
-    expect(removeButton!.parentElement).toBe(rightGroup);
-    expect(removeButton!.nextElementSibling).toBe(menuWrapper);
-
-    // The remove button is always visible, also on touch screens.
-    expect(removeButton!.classList.contains('invisible')).toBe(false);
+    const removeItem = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
+      (item) => item.textContent?.trim() === 'Ta bort från spellistan',
+    );
+    expect(removeItem).toBeFalsy();
   });
 });

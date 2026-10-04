@@ -87,6 +87,12 @@ describe('PlaylistSettingsPage', () => {
     );
   }
 
+  function getSegmentButton(text: string) {
+    return Array.from(document.body.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === text,
+    );
+  }
+
   it('a group playlist shows the group as owner and no transfer', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({
@@ -508,13 +514,12 @@ describe('PlaylistSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const toggleButton = Array.from(document.body.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.trim() === 'Gör offentlig',
-    );
-    expect(toggleButton).toBeTruthy();
+    const toggleSwitch = getInputByLabel('Offentlig spellista') as HTMLInputElement | null;
+    expect(toggleSwitch).toBeTruthy();
+    expect(toggleSwitch?.checked).toBe(false);
 
     await act(async () => {
-      toggleButton?.click();
+      toggleSwitch?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
@@ -554,7 +559,7 @@ describe('PlaylistSettingsPage', () => {
     ) as HTMLSelectElement;
     expect(permissionSelect).toBeTruthy();
 
-    const row = permissionSelect.closest('.px-4.py-3');
+    const row = permissionSelect.closest('li');
     expect(row).toBeTruthy();
 
     await act(async () => {
@@ -593,11 +598,11 @@ describe('PlaylistSettingsPage', () => {
     });
 
     const removeButton = Array.from(document.body.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.trim() === 'Ta bort',
+      (btn) => btn.getAttribute('aria-label') === 'Ta bort User 2',
     );
     expect(removeButton).toBeTruthy();
 
-    const row = removeButton?.closest('.px-4.py-3');
+    const row = removeButton?.closest('li');
     expect(row).toBeTruthy();
 
     await act(async () => {
@@ -719,7 +724,7 @@ describe('PlaylistSettingsPage', () => {
     });
 
     const errorAlert = Array.from(document.body.querySelectorAll('[role="alert"]')).find((el) =>
-      el.closest('section')?.textContent?.includes('Farlig zon'),
+      el.closest('section')?.textContent?.includes('Radera spellista'),
     );
     expect(errorAlert?.textContent).toBe('Kunde inte radera spellista');
     expect(toast).not.toHaveBeenCalledWith(expect.anything(), 'error');
@@ -751,7 +756,7 @@ describe('PlaylistSettingsPage', () => {
     });
 
     const removeLinkButton = Array.from(document.body.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.trim() === 'Ogiltigförklara länk',
+      (btn) => btn.textContent?.trim() === 'Ta bort länk',
     );
     expect(removeLinkButton).toBeTruthy();
 
@@ -791,7 +796,7 @@ describe('PlaylistSettingsPage', () => {
     });
 
     const createLinkButton = Array.from(document.body.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.trim() === 'Skapa delningslänk',
+      (btn) => btn.textContent?.trim() === 'Skapa länk',
     );
     expect(createLinkButton).toBeTruthy();
 
@@ -870,15 +875,6 @@ describe('PlaylistSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.includes('Bjud in till spellista'),
-    );
-    expect(inviteButton).toBeTruthy();
-
-    await act(async () => {
-      inviteButton?.click();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
 
     const permissionSelects = Array.from(document.body.querySelectorAll('select'));
     const permissionSelect = permissionSelects[permissionSelects.length - 1];
@@ -917,14 +913,6 @@ describe('PlaylistSettingsPage', () => {
         vi.advanceTimersByTime(100);
       });
 
-      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
-        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
-      );
-      expect(inviteButton).toBeTruthy();
-
-      await act(async () => {
-        inviteButton?.click();
-      });
 
       const usernameInput = getInputByLabel('Användarnamn');
       expect(usernameInput).toBeTruthy();
@@ -979,14 +967,6 @@ describe('PlaylistSettingsPage', () => {
         vi.advanceTimersByTime(100);
       });
 
-      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
-        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
-      );
-      expect(inviteButton).toBeTruthy();
-
-      await act(async () => {
-        inviteButton?.click();
-      });
 
       const usernameInput = getInputByLabel('Användarnamn');
       expect(usernameInput).toBeTruthy();
@@ -1037,16 +1017,8 @@ describe('PlaylistSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
-    );
-    expect(inviteButton).toBeTruthy();
 
-    await act(async () => {
-      inviteButton?.click();
-    });
-
-    const groupRadio = getInputByLabel('Grupp');
+    const groupRadio = getSegmentButton('Grupp');
     expect(groupRadio).toBeTruthy();
 
     await act(async () => {
@@ -1100,16 +1072,8 @@ describe('PlaylistSettingsPage', () => {
         vi.advanceTimersByTime(100);
       });
 
-      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
-        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
-      );
-      expect(inviteButton).toBeTruthy();
 
-      await act(async () => {
-        inviteButton?.click();
-      });
-
-      const groupRadio = getInputByLabel('Grupp');
+      const groupRadio = getSegmentButton('Grupp');
       expect(groupRadio).toBeTruthy();
 
       await act(async () => {
@@ -1167,14 +1131,6 @@ describe('PlaylistSettingsPage', () => {
         vi.advanceTimersByTime(100);
       });
 
-      const inviteButton = Array.from(document.body.querySelectorAll('button')).find(
-        (btn) => btn.textContent?.trim() === '+ Bjud in till spellista',
-      );
-      expect(inviteButton).toBeTruthy();
-
-      await act(async () => {
-        inviteButton?.click();
-      });
 
       const usernameInput = getInputByLabel('Användarnamn');
       expect(usernameInput).toBeTruthy();
@@ -1198,7 +1154,7 @@ describe('PlaylistSettingsPage', () => {
         'Ingen användare heter så. Kontrollera stavningen.',
       );
 
-      const groupRadio = getInputByLabel('Grupp');
+      const groupRadio = getSegmentButton('Grupp');
       expect(groupRadio).toBeTruthy();
 
       await act(async () => {

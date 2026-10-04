@@ -102,6 +102,45 @@ describe('PlaylistPage', () => {
     );
   }
 
+  /** Opens the header's "Fler alternativ" menu and returns the "Ändra inställningar" item, if any. */
+  async function openSettingsMenuItem() {
+    const moreButton = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.getAttribute('aria-label') === 'Fler alternativ',
+    );
+    if (!moreButton) return undefined;
+    await act(async () => {
+      moreButton.click();
+    });
+    return Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((item) =>
+      item.textContent?.includes('Ändra inställningar'),
+    ) as HTMLElement | undefined;
+  }
+
+  /** Opens a track row's menu and clicks "Ta bort från spellistan". */
+  async function removeTrackViaMenu(row: Element) {
+    const menuButton = Array.from(row.querySelectorAll('button')).find(
+      (b) => b.getAttribute('aria-label') === 'Mer',
+    );
+    expect(menuButton).toBeDefined();
+    await act(async () => {
+      menuButton?.click();
+    });
+    const removeItem = Array.from(row.querySelectorAll('[role="menuitem"]')).find(
+      (item) => item.textContent?.trim() === 'Ta bort från spellistan',
+    ) as HTMLButtonElement | undefined;
+    expect(removeItem).toBeDefined();
+    await act(async () => {
+      removeItem?.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+  }
+
+  function getTrackRow(title: string) {
+    return Array.from(document.body.querySelectorAll('li')).find((li) =>
+      li.textContent?.includes(title),
+    );
+  }
+
   it('a group playlist shows the group as owner', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({
@@ -126,7 +165,7 @@ describe('PlaylistPage', () => {
     const groupLink = getLinkByText('Barngruppen');
     expect(groupLink).toBeDefined();
     expect(groupLink?.getAttribute('href')).toBe('/groups/g1');
-    const settingsButton = getButtonByText('Ändra inställningar');
+    const settingsButton = await openSettingsMenuItem();
     expect(settingsButton).toBeDefined();
   });
 
@@ -150,7 +189,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const settingsButton = getButtonByText('Ändra inställningar');
+    const settingsButton = await openSettingsMenuItem();
     expect(settingsButton).toBeUndefined();
   });
 
@@ -188,8 +227,8 @@ describe('PlaylistPage', () => {
 
     const playButton = getButtonByText('Spela');
     const addButton = getLinkByText('Lägg till låtar');
-    const shareButton = getButtonByText('Dela spellista');
-    const settingsButton = getButtonByText('Ändra inställningar');
+    const shareButton = getButtonByText('Dela');
+    const settingsButton = await openSettingsMenuItem();
 
     expect(playButton).toBeDefined();
     expect(addButton).toBeDefined();
@@ -305,7 +344,7 @@ describe('PlaylistPage', () => {
 
     const playButton = getButtonByText('Spela');
     const addLink = getLinkByText('Lägg till låtar');
-    const settingsButton = getButtonByText('Ändra inställningar');
+    const settingsButton = await openSettingsMenuItem();
 
     expect(playButton).toBeDefined();
     expect(addLink).toBeUndefined();
@@ -347,7 +386,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const shareButton = getButtonByText('Dela spellista');
+    const shareButton = getButtonByText('Dela');
     expect(shareButton).toBeDefined();
 
     if (shareButton) {
@@ -406,7 +445,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const shareButton = getButtonByText('Dela spellista');
+    const shareButton = getButtonByText('Dela');
     expect(shareButton).toBeDefined();
 
     if (shareButton) {
@@ -423,7 +462,7 @@ describe('PlaylistPage', () => {
     expect(createLinkButton).toBeUndefined();
   });
 
-  it('Dela spellista is hidden for a private playlist the viewer cannot manage', async () => {
+  it('Dela is hidden for a private playlist the viewer cannot manage', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getPlaylist.mockResolvedValue({
       id: 'p1',
@@ -456,7 +495,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const shareButton = getButtonByText('Dela spellista');
+    const shareButton = getButtonByText('Dela');
     expect(shareButton).toBeUndefined();
   });
 
@@ -602,7 +641,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const shareButton = getButtonByText('Dela spellista');
+    const shareButton = getButtonByText('Dela');
     expect(shareButton).toBeDefined();
 
     if (shareButton) {
@@ -649,7 +688,7 @@ describe('PlaylistPage', () => {
     expect(generateShareToken).toHaveBeenCalledTimes(1);
   });
 
-  it('Dela spellista opens the share panel in a dialog', async () => {
+  it('Dela opens the share panel in a dialog', async () => {
     generateShareToken.mockResolvedValue({ shareToken: 'new-token' });
 
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
@@ -684,7 +723,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const shareButton = getButtonByText('Dela spellista');
+    const shareButton = getButtonByText('Dela');
     expect(shareButton).toBeDefined();
 
     if (shareButton) {
@@ -742,7 +781,7 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const shareButton = getButtonByText('Dela spellista');
+    const shareButton = getButtonByText('Dela');
     expect(shareButton).toBeDefined();
 
     if (shareButton) {
@@ -1185,17 +1224,11 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const removeButton = Array.from(document.body.querySelectorAll('button')).find(
-      (b) => b.getAttribute('aria-label') === 'Ta bort från spellista',
-    );
-    expect(removeButton).toBeDefined();
+    const trackRow = getTrackRow('Test Track');
+    expect(trackRow).toBeDefined();
 
-    await act(async () => {
-      removeButton?.click();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await removeTrackViaMenu(trackRow!);
 
-    const trackRow = removeButton?.closest('li');
     const alert = trackRow?.querySelector('[role="alert"]');
     expect(alert?.textContent).toBe('Kunde inte ta bort låt');
     expect(toastSpy).not.toHaveBeenCalledWith('Kunde inte ta bort låt', 'error');
@@ -1252,25 +1285,16 @@ describe('PlaylistPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const removeButtons = Array.from(document.body.querySelectorAll('button')).filter(
-      (b) => b.getAttribute('aria-label') === 'Ta bort från spellista',
-    );
-    const rowA = removeButtons.find((b) => b.closest('li')?.textContent?.includes('Track A'))?.closest('li');
-    const rowB = removeButtons.find((b) => b.closest('li')?.textContent?.includes('Track B'))?.closest('li');
-    const removeA = rowA?.querySelector('button[aria-label="Ta bort från spellista"]');
-    const removeB = rowB?.querySelector('button[aria-label="Ta bort från spellista"]');
+    const rowA = getTrackRow('Track A');
+    const rowB = getTrackRow('Track B');
+    expect(rowA).toBeDefined();
+    expect(rowB).toBeDefined();
 
-    await act(async () => {
-      (removeA as HTMLButtonElement)?.click();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await removeTrackViaMenu(rowA!);
 
     expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Kunde inte ta bort låt');
 
-    await act(async () => {
-      (removeB as HTMLButtonElement)?.click();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await removeTrackViaMenu(rowB!);
 
     expect(rowA?.querySelector('[role="alert"]')?.textContent).toBe('Kunde inte ta bort låt');
   });
