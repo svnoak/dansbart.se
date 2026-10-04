@@ -34,12 +34,15 @@ export function FlagArtistModal({ open, onClose, artistId, artistName }: FlagArt
 
   return (
     <Modal open={open} onClose={handleClose} label="Rapportera artist">
-      <p className="mb-4 text-[rgb(var(--color-text))]">
+      <h2 className="mb-2 text-[20px] font-bold leading-tight text-[rgb(var(--color-text))]">
+        Rapportera artist
+      </h2>
+      <p className="mb-4 text-[15px] text-[rgb(var(--color-text))]">
         Är du säker på att du vill rapportera {artistName} som inte dansbar?
       </p>
       <InlineError>{error}</InlineError>
       <div className="mt-4 flex justify-end gap-2">
-        <Button variant="ghost" onClick={handleClose}>Avbryt</Button>
+        <Button variant="outline" onClick={handleClose}>Avbryt</Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>Rapportera</Button>
       </div>
     </Modal>

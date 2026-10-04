@@ -16,6 +16,9 @@ interface TrackRowMenuProps {
   isPrivate?: boolean;
 }
 
+const itemClassName =
+  'flex w-full min-h-11 items-center px-4 text-left text-[15px] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:bg-[rgb(var(--color-accent-muted))]';
+
 export function TrackRowMenu({
   track,
   open,
@@ -38,7 +41,7 @@ export function TrackRowMenu({
 
   return (
     <div className="relative shrink-0">
-      <IconButton aria-label="Mer" onClick={onToggle}>
+      <IconButton aria-label="Mer" aria-haspopup="menu" aria-expanded={open} onClick={onToggle}>
         <MoreVerticalIcon className="w-5 h-5" aria-hidden />
       </IconButton>
       {open && (
@@ -49,7 +52,7 @@ export function TrackRowMenu({
             onClick={onClose}
           />
           <ul
-            className="absolute right-0 top-full z-20 mt-1 w-48 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+            className="absolute right-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
             role="menu"
           >
             {items.map((item) => (
@@ -58,7 +61,7 @@ export function TrackRowMenu({
                   <button
                     type="button"
                     role="menuitem"
-                    className="w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
+                    className={itemClassName}
                     onClick={async () => {
                       await item.onSelect();
                       onClose();
@@ -70,7 +73,7 @@ export function TrackRowMenu({
                   <Link
                     to={item.to}
                     role="menuitem"
-                    className="block w-full px-4 py-2 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50"
+                    className={itemClassName}
                     onClick={onClose}
                   >
                     {item.label}

@@ -123,8 +123,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const path = location.pathname;
   const isHome = path === '/';
   const isSearch = path === '/search';
-  const isStyles = path === '/dance-styles';
-  const isDances = path.startsWith('/dance') && !path.startsWith('/dance-lists') && !isStyles;
+  const isDances = path.startsWith('/dance') && !path.startsWith('/dance-lists');
   const isArtists = path.startsWith('/artist') || path.startsWith('/album');
   const isPlaylists = path.startsWith('/playlists');
   const isDanceLists = path.startsWith('/dance-lists');
@@ -147,7 +146,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <GroupLabel>Utforska</GroupLabel>
       <NavLink
         to="/#dansstilar"
-        active={isStyles}
+        active={false}
         onClick={onNavigate}
         icon={<StarMarkIcon className="h-5 w-5" aria-hidden />}
       >

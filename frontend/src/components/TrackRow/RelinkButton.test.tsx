@@ -34,7 +34,7 @@ describe('RelinkButton', () => {
     vi.clearAllMocks();
   });
 
-  it('shows a circular arrow button named Välj filen igen without visible text', async () => {
+  it('shows a chip named Välj filen igen with a link icon and the word Hitta filen', async () => {
     const onRelinked = vi.fn();
 
     await act(async () => {
@@ -44,13 +44,13 @@ describe('RelinkButton', () => {
     });
 
     const button = container.querySelector<HTMLButtonElement>('button[aria-label="Välj filen igen"]');
-    expect(button).toBeDefined();
+    expect(button).not.toBeNull();
     expect(button?.title).toBe('Välj filen igen');
-    expect(button?.querySelector('svg')).toBeDefined();
-    expect(button?.textContent?.trim()).toBe('');
+    expect(button?.querySelector('svg')).not.toBeNull();
+    expect(button?.textContent?.trim()).toBe('Hitta filen');
   });
 
-  it('matches the size of the play button', async () => {
+  it('is at least 44 px tall like the play button', async () => {
     const onRelinked = vi.fn();
 
     await act(async () => {
@@ -60,9 +60,7 @@ describe('RelinkButton', () => {
     });
 
     const button = container.querySelector<HTMLButtonElement>('button[aria-label="Välj filen igen"]');
-    // PlayButton uses h-12 w-12 for size
-    expect(button?.classList.contains('h-12')).toBe(true);
-    expect(button?.classList.contains('w-12')).toBe(true);
+    expect(button?.classList.contains('min-h-11')).toBe(true);
   });
 
   it.each([[true, 1], [false, 0]])('calls onRelinked after a successful relink (relink resolves %s)', async (relinkResult, expectedCalls) => {

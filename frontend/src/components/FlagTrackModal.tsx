@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon, FlagIcon } from '@/icons';
+import { CheckIcon, CloseIcon, FlagIcon } from '@/icons';
 import { flagTrack } from '@/api/generated/tracks/tracks';
 import { useStyleVote } from '@/hooks/useStyleVote';
 import { StylePicker } from '@/components/StylePicker';
 import { TEMPO_OPTIONS } from '@/utils/tempoOptions';
+import { Button, IconButton, InlineError } from '@/ui';
 import type { TrackListDto } from '@/api/models/trackListDto';
 
 type View =
@@ -28,6 +29,44 @@ interface FlagTrackModalProps {
   onRefresh?: () => void;
 }
 
+const headingClass = 'text-[15px] font-bold text-[rgb(var(--color-text))]';
+const hintClass = 'text-[13px] text-[rgb(var(--color-text-muted))]';
+
+/** One choice in the opening menu: a 56 px row with an icon tile and two lines of text. */
+function MenuOption({
+  icon,
+  title,
+  hint,
+  onClick,
+  disabled,
+}: {
+  icon: ReactNode;
+  title: string;
+  hint: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full min-h-14 items-center gap-3 rounded-[var(--radius)] border border-[rgb(var(--color-border))] px-3 py-2 text-left transition-colors hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-50"
+    >
+      <span
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]"
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className={`block ${headingClass}`}>{title}</span>
+        <span className={`block ${hintClass}`}>{hint}</span>
+      </span>
+    </button>
+  );
+}
+
 export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackModalProps) {
   const [view, setView] = useState<View>('menu');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +81,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleId = useId();
 
   const hasStyle =
     typeof track.danceStyle === 'string' &&
@@ -129,8 +169,8 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       }
       finish(
         reason === 'wrong_track'
-          ? 'Rapporterad: Fel l\u00e5t'
-          : 'Rapporterad: Trasig l\u00e4nk',
+          ? 'Rapporterad: Fel låt'
+          : 'Rapporterad: Trasig länk',
       );
     } catch {
       setError('Kunde inte skicka');
@@ -140,14 +180,14 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
 
   async function handleSubmitStyleTempo(tempoOverride?: string) {
     if (!correctionStyle) {
-      setError('V\u00e4lj stil');
+      setError('Välj stil');
       return;
     }
     if (!track.id) return;
     setIsSubmitting(true);
     const { success } = await styleVote.submit(correctionStyle, tempoOverride ?? correctionTempo);
     if (success) {
-      finish('Tack f\u00f6r att du bidrar till att g\u00f6ra sidan b\u00e4ttre!');
+      finish('Tack för att du bidrar till att göra sidan bättre!');
     } else {
       setError('Kunde inte skicka');
       setIsSubmitting(false);
@@ -175,7 +215,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
   function renderStylePicker(flowType: 'ask' | 'fix', showSubs: boolean) {
     const items = showSubs
       ? [
-          { value: correctionMain, label: `Vet ej / Allm\u00e4n ${correctionMain}`, bold: true },
+          { value: correctionMain, label: `Vet ej / Allmän ${correctionMain}`, bold: true },
           ...currentSubStyles.map((s) => ({ value: s, label: s })),
         ]
       : styleVote.mainCategories.map((c) => ({ value: c, label: c }));
@@ -184,7 +224,7 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       <StylePicker
         presentation="full"
         options={items}
-        placeholder={showSubs ? 'V\u00e4lj variant...' : 'V\u00e4lj kategori...'}
+        placeholder={showSubs ? 'Välj variant...' : 'Välj kategori...'}
         onSelect={(value) =>
           showSubs ? selectSub(value, flowType) : selectMain(value, flowType)
         }
@@ -192,16 +232,32 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
     );
   }
 
+  /** The style the track has today, shown as a quiet card for the person to confirm. */
+  function renderCurrentStyleCard(trailing = '') {
+    return (
+      <div className="mb-5 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-3">
+        <div className="text-[17px] font-bold text-[rgb(var(--color-text))]">
+          {track.danceStyle}
+          {hasSubStyle && (
+            <span className="font-normal text-[rgb(var(--color-text-muted))]"> ({track.subStyle})</span>
+          )}
+          {trailing}
+        </div>
+      </div>
+    );
+  }
+
   function renderContent() {
     switch (view) {
       case 'menu':
         return (
-          <div className="flex flex-col gap-3">
-            <p className="mb-1 text-sm text-[rgb(var(--color-text-muted))]">
-              Vad {'\u00e4'}r fel med den h{'\u00e4'}r l{'\u00e5'}ten?
+          <div className="flex flex-col gap-2">
+            <p className="mb-1 text-[15px] text-[rgb(var(--color-text-muted))]">
+              Vad {'ä'}r fel med den h{'ä'}r l{'å'}ten?
             </p>
-            <button
-              type="button"
+            <MenuOption
+              title="Dansstil / tempo"
+              hint={`Korrigera eller bekräfta`}
               onClick={() =>
                 setView(
                   hasStyle && hasTempo
@@ -211,69 +267,48 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
                       : 'ask_main',
                 )
               }
-              className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent))]/5"
-            >
-              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-[rgb(var(--color-bg))] group-hover:text-[rgb(var(--color-accent))]">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              icon={
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                 </svg>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-[rgb(var(--color-text))]">Dansstil / Tempo</div>
-                <div className="text-xs text-[rgb(var(--color-text-muted))]">Korrigera eller bekr{'\u00e4'}fta</div>
-              </div>
-            </button>
-            <button
-              type="button"
+              }
+            />
+            <MenuOption
+              title="Inte dansbart"
+              hint="Går inte att dansa folkdans till"
               onClick={() => setView('confirm_folk')}
-              className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-amber-300 hover:bg-amber-50"
-            >
-              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-white group-hover:text-amber-600">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              icon={
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} strokeDasharray="2 2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
                 </svg>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-[rgb(var(--color-text))]">Inte dansbart</div>
-                <div className="text-xs text-[rgb(var(--color-text-muted))]">Går inte att dansa folkdans till</div>
-              </div>
-            </button>
-            <button
-              type="button"
+              }
+            />
+            <MenuOption
+              title={`Länk / uppspelning`}
+              hint={`Trasig länk eller fel låt`}
               onClick={() => setView('options_link')}
               disabled={!youtubeLink}
-              className="group flex w-full items-center gap-3 rounded-lg border border-[rgb(var(--color-border))] p-3 text-left transition-all hover:border-red-300 hover:bg-red-50 disabled:opacity-50"
-            >
-              <div className="rounded-full bg-[rgb(var(--color-border))]/50 p-2.5 text-[rgb(var(--color-text-muted))] group-hover:bg-white group-hover:text-red-600">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              icon={
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-[rgb(var(--color-text))]">L{'\u00e4'}nk / Uppspelning</div>
-                <div className="text-xs text-[rgb(var(--color-text-muted))]">Trasig l{'\u00e4'}nk eller fel l{'\u00e5'}t</div>
-              </div>
-            </button>
+              }
+            />
           </div>
         );
 
       case 'verify_style_tempo':
         return (
           <div>
-            <p className="mb-4 text-sm text-[rgb(var(--color-text))]">St{'\u00e4'}mmer detta?</p>
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <div className="text-lg font-bold text-blue-900">
-                {track.danceStyle}
-                {hasSubStyle && (
-                  <span className="font-normal text-blue-700"> ({track.subStyle})</span>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setView('menu')} className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">Tillbaka</button>
-              <button type="button" onClick={() => setView('fix_main')} className="rounded bg-[rgb(var(--color-border))] px-4 py-2 text-sm font-bold text-[rgb(var(--color-text))]">Nej, r{'\u00e4'}tta</button>
-              <button type="button" onClick={() => handleSubmitStyleTempo()} disabled={isSubmitting} className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Ja, st{'\u00e4'}mmer</button>
+            <p className="mb-3 text-[15px] text-[rgb(var(--color-text))]">St{'ä'}mmer detta?</p>
+            {renderCurrentStyleCard()}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" onClick={() => setView('menu')}>Tillbaka</Button>
+              <Button variant="outline" onClick={() => setView('fix_main')}>Nej, r{'ä'}tta</Button>
+              <Button variant="primary" onClick={() => handleSubmitStyleTempo()} disabled={isSubmitting}>
+                Ja, st{'ä'}mmer
+              </Button>
             </div>
           </div>
         );
@@ -281,38 +316,28 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'verify_style_only':
         return (
           <div>
-            <p className="mb-4 text-sm text-[rgb(var(--color-text))]">{'\u00c4'}r detta en</p>
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <div className="text-lg font-bold text-blue-900">
-                {track.danceStyle}
-                {hasSubStyle && (
-                  <span className="font-normal text-blue-700"> ({track.subStyle})</span>
-                )}
-                ?
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setView('menu')} className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">Tillbaka</button>
-              <button
-                type="button"
+            <p className="mb-3 text-[15px] text-[rgb(var(--color-text))]">{'Ä'}r detta en</p>
+            {renderCurrentStyleCard('?')}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" onClick={() => setView('menu')}>Tillbaka</Button>
+              <Button
+                variant="outline"
                 onClick={() => {
                   setCorrectionStyle('');
                   setView('ask_main');
                 }}
-                className="rounded bg-[rgb(var(--color-border))] px-4 py-2 text-sm font-bold text-[rgb(var(--color-text))]"
               >
                 Nej
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
                 onClick={() => {
                   setCorrectionStyle(track.subStyle ?? track.danceStyle ?? '');
                   setView('ask_tempo');
                 }}
-                className="rounded bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-bold text-white"
               >
                 Ja
-              </button>
+              </Button>
             </div>
           </div>
         );
@@ -320,12 +345,12 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'confirm_folk':
         return (
           <div>
-            <p className="mb-4 text-sm text-[rgb(var(--color-text))]">
-              {'\u00c4'}r du s{'\u00e4'}ker p{'\u00e5'} att du vill rapportera <strong>{track.title}</strong> som <strong>inte dansbart</strong>?
+            <p className="mb-5 text-[15px] text-[rgb(var(--color-text))]">
+              {'Ä'}r du s{'ä'}ker p{'å'} att du vill rapportera <strong>{track.title}</strong> som <strong>inte dansbart</strong>?
             </p>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setView('menu')} className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">Tillbaka</button>
-              <button type="button" onClick={handleSubmitNotFolk} disabled={isSubmitting} className="rounded bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Rapportera</button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" onClick={() => setView('menu')}>Tillbaka</Button>
+              <Button variant="primary" onClick={handleSubmitNotFolk} disabled={isSubmitting}>Rapportera</Button>
             </div>
           </div>
         );
@@ -333,27 +358,27 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'options_link':
         return (
           <div>
-            <p className="mb-4 text-sm text-[rgb(var(--color-text))]">Vad {'\u00e4'}r fel med YouTube-l{'\u00e4'}nken?</p>
-            <div className="mb-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
+            <p className="mb-4 text-[15px] text-[rgb(var(--color-text))]">Vad {'ä'}r fel med YouTube-l{'ä'}nken?</p>
+            <div className="mb-5 grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="min-h-14"
                 onClick={() => handleSubmitBrokenLink('wrong_track')}
                 disabled={isSubmitting}
-                className="rounded border border-orange-200 bg-orange-50 p-4 text-sm font-bold text-orange-800 disabled:opacity-50"
               >
-                Fel l{'\u00e5'}t
-              </button>
-              <button
-                type="button"
+                Fel l{'å'}t
+              </Button>
+              <Button
+                variant="outline"
+                className="min-h-14"
                 onClick={() => handleSubmitBrokenLink('broken')}
                 disabled={isSubmitting}
-                className="rounded border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800 disabled:opacity-50"
               >
-                Trasig
-              </button>
+                Trasig l{'ä'}nk
+              </Button>
             </div>
-            <div className="text-center">
-              <button type="button" onClick={() => setView('menu')} className="text-xs text-[rgb(var(--color-text-muted))] underline">Tillbaka</button>
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={() => setView('menu')}>Tillbaka</Button>
             </div>
           </div>
         );
@@ -361,17 +386,11 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'ask_main':
         return (
           <div>
-            <p className="mb-1 text-sm font-bold text-[rgb(var(--color-text))]">Vad kan man dansa?</p>
-            <p className="mb-4 text-xs text-[rgb(var(--color-text-muted))]">V{'\u00e4'}lj huvudkategori</p>
+            <p className={`mb-1 ${headingClass}`}>Vad kan man dansa?</p>
+            <p className={`mb-4 ${hintClass}`}>V{'ä'}lj huvudkategori</p>
             {renderStylePicker('ask', false)}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setView('menu')}
-                className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]"
-              >
-                Tillbaka
-              </button>
+            <div className="mt-3 flex justify-end">
+              <Button variant="ghost" onClick={() => setView('menu')}>Tillbaka</Button>
             </div>
           </div>
         );
@@ -379,18 +398,17 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'ask_sub':
         return (
           <div>
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-sm font-bold text-[rgb(var(--color-text))]">Vilken typ av {correctionMain}?</p>
-              <button
-                type="button"
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className={headingClass}>Vilken typ av {correctionMain}?</p>
+              <Button
+                variant="ghost"
                 onClick={() => {
                   setView('ask_main');
                   setCorrectionMain('');
                 }}
-                className="text-xs text-[rgb(var(--color-accent))] hover:underline"
               >
-                {'\u00c4'}ndra
-              </button>
+                {'Ä'}ndra
+              </Button>
             </div>
             {renderStylePicker('ask', true)}
           </div>
@@ -399,45 +417,36 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'ask_tempo':
         return (
           <div>
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-[rgb(var(--color-text))]">Hur snabb {'\u00e4'}r {correctionStyle}n?</p>
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">V{'\u00e4'}lj tempokategori</p>
+                <p className={headingClass}>Hur snabb {'ä'}r {correctionStyle}n?</p>
+                <p className={hintClass}>V{'ä'}lj tempokategori</p>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() => setView(currentSubStyles.length ? 'ask_sub' : 'ask_main')}
-                className="text-xs text-[rgb(var(--color-text-muted))]"
               >
                 Tillbaka
-              </button>
+              </Button>
             </div>
-            <div className="mb-6">
-              <StylePicker
-                presentation="full"
-                options={TEMPO_OPTIONS.map((t) => ({ value: t.key, label: t.label }))}
-                placeholder="Välj tempo..."
-                onSelect={(key) => handleSubmitStyleTempo(key)}
-                disabled={isSubmitting}
-              />
-            </div>
+            <StylePicker
+              presentation="full"
+              options={TEMPO_OPTIONS.map((t) => ({ value: t.key, label: t.label }))}
+              placeholder="Välj tempo..."
+              onSelect={(key) => handleSubmitStyleTempo(key)}
+              disabled={isSubmitting}
+            />
           </div>
         );
 
       case 'fix_main':
         return (
           <div>
-            <p className="mb-1 text-sm font-bold text-[rgb(var(--color-text))]">Korrekt dansstil</p>
-            <p className="mb-4 text-xs text-[rgb(var(--color-text-muted))]">V{'\u00e4'}lj huvudkategori</p>
+            <p className={`mb-1 ${headingClass}`}>Korrekt dansstil</p>
+            <p className={`mb-4 ${hintClass}`}>V{'ä'}lj huvudkategori</p>
             {renderStylePicker('fix', false)}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setView('menu')}
-                className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]"
-              >
-                Tillbaka
-              </button>
+            <div className="mt-3 flex justify-end">
+              <Button variant="ghost" onClick={() => setView('menu')}>Tillbaka</Button>
             </div>
           </div>
         );
@@ -445,18 +454,17 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'fix_sub':
         return (
           <div>
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-sm font-bold text-[rgb(var(--color-text))]">Vilken typ av {correctionMain}?</p>
-              <button
-                type="button"
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className={headingClass}>Vilken typ av {correctionMain}?</p>
+              <Button
+                variant="ghost"
                 onClick={() => {
                   setView('fix_main');
                   setCorrectionMain('');
                 }}
-                className="text-xs text-[rgb(var(--color-accent))] hover:underline"
               >
-                {'\u00c4'}ndra
-              </button>
+                {'Ä'}ndra
+              </Button>
             </div>
             {renderStylePicker('fix', true)}
           </div>
@@ -465,58 +473,59 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
       case 'fix_tempo':
         return (
           <div>
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-bold text-[rgb(var(--color-text))]">
-                  {'\u00c4'}r {correctionStyle || 'dansen'} r{'\u00e4'}tt tempo?
+                <p className={headingClass}>
+                  {'Ä'}r {correctionStyle || 'dansen'} r{'ä'}tt tempo?
                 </p>
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">Bekr{'\u00e4'}fta eller korrigera tempot</p>
+                <p className={hintClass}>Bekr{'ä'}fta eller korrigera tempot</p>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() => setView(currentSubStyles.length ? 'fix_sub' : 'fix_main')}
-                className="text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
               >
                 Tillbaka
-              </button>
+              </Button>
             </div>
-            <div className="mb-6 grid grid-cols-3 gap-3">
-              <button
-                type="button"
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                className="min-h-16 leading-tight"
                 onClick={() => handleSubmitStyleTempo('half')}
                 disabled={isSubmitting}
-                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-white disabled:opacity-50"
               >
-                Den {'\u00e4'}r<br />l{'\u00e5'}ngsammare
-              </button>
-              <button
-                type="button"
+                Den {'ä'}r<br />l{'å'}ngsammare
+              </Button>
+              <Button
+                variant="primary"
+                className="min-h-16 leading-tight"
                 onClick={() => handleSubmitStyleTempo('ok')}
                 disabled={isSubmitting}
-                className="rounded-lg border-2 border-[rgb(var(--color-accent))] bg-[rgb(var(--color-bg))] py-5 text-sm font-bold text-[rgb(var(--color-accent))] disabled:opacity-50"
               >
-                Ja, det {'\u00e4'}r<br />r{'\u00e4'}tt
-              </button>
-              <button
-                type="button"
+                Ja, det {'ä'}r<br />r{'ä'}tt
+              </Button>
+              <Button
+                variant="outline"
+                className="min-h-16 leading-tight"
                 onClick={() => handleSubmitStyleTempo('double')}
                 disabled={isSubmitting}
-                className="rounded-lg bg-[rgb(var(--color-accent))] py-5 text-sm font-bold leading-tight text-white disabled:opacity-50"
               >
-                Den {'\u00e4'}r<br />snabbare
-              </button>
+                Den {'ä'}r<br />snabbare
+              </Button>
             </div>
           </div>
         );
 
       case 'success':
         return (
-          <div className="py-6 text-center">
-            <svg className="mx-auto mb-2 h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h4 className="text-lg font-bold text-[rgb(var(--color-text))]">Tack!</h4>
-            <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">{successMessage}</p>
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <span
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-[rgb(var(--color-success))]/15 text-[rgb(var(--color-success))]"
+              aria-hidden
+            >
+              <CheckIcon className="h-6 w-6" aria-hidden />
+            </span>
+            <p className="text-[15px] font-bold text-[rgb(var(--color-text))]">{successMessage}</p>
           </div>
         );
     }
@@ -525,39 +534,31 @@ export function FlagTrackModal({ open, onClose, track, onRefresh }: FlagTrackMod
   return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-sm rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
-        >
+      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
+        <IconButton aria-label="Stäng" onClick={onClose} className="absolute right-3 top-3">
           <CloseIcon className="h-5 w-5" aria-hidden />
-        </button>
+        </IconButton>
 
-        <h3 className="mb-5 flex items-center gap-2 border-b border-[rgb(var(--color-border))] pb-3 pr-8 text-lg font-bold text-[rgb(var(--color-text))]">
-          {view === 'success' ? (
-            <span className="text-green-500">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </span>
-          ) : (
-            <span className="text-amber-600">
-              <FlagIcon className="h-5 w-5" aria-hidden />
-            </span>
+        <div className="mb-5 flex items-center gap-2 pr-12">
+          {view !== 'success' && (
+            <FlagIcon className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]" aria-hidden />
           )}
-          <span>{view === 'success' ? 'Tack!' : 'Rapportera problem'}</span>
-        </h3>
+          <h3 id={titleId} className="text-[20px] font-bold leading-tight text-[rgb(var(--color-text))]">
+            {view === 'success' ? 'Tack!' : 'Rapportera problem'}
+          </h3>
+        </div>
 
         {error && (
-          <div className="mb-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm text-red-600">
-            {error}
+          <div className="mb-4">
+            <InlineError>{error}</InlineError>
           </div>
         )}
 

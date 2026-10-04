@@ -45,6 +45,7 @@ export function StyleBadge({
         trackId={trackId}
         trackTitle={trackTitle}
         currentStyle={shownStyle}
+        currentConfidence={shownConfidence}
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
         onVoted={(style, confirmed) => {

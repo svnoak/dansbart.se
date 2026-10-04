@@ -76,7 +76,7 @@ export function QueuePanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
+            className="rounded-[var(--radius)] p-2 min-h-11 min-w-11 inline-flex items-center justify-center text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))]"
             aria-label="Stäng kö"
           >
             <CloseIcon className="h-5 w-5" aria-hidden />
