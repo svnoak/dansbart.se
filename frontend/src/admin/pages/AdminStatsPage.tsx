@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
+  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import type { ReactNode } from 'react';
 import {
   getAdminStats,
   getDashboard,
@@ -24,6 +26,7 @@ import {
 } from '@/api/generated/admin-analytics/admin-analytics';
 import { StatCard } from '@/admin/components/StatCard';
 import { Select } from '@/admin/components/forms/Select';
+import { Card, RowSkeleton } from '@/ui';
 
 interface DayData {
   date: string;
@@ -295,407 +298,531 @@ export function AdminStatsPage() {
   const classifyVotes = classifyEvents.classify_vote ?? 0;
   const classifyAbandon = classifyEvents.classify_abandon ?? 0;
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Statistik</h1>
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
-      </div>
-    );
-  }
+
+  const periodLabel = days === 1 ? 'senaste 24 timmarna' : `senaste ${days} dagarna`;
+  const firstLoad = loading && libraryStats === null && dashboard === null;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Statistik</h1>
-        <Select
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="w-auto"
+      <div className="space-y-2">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Statistik
+        </h1>
+        <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
+          Hur biblioteket växer och hur besökarna använder sidan. Perioden gäller alla siffror
+          nedan utom bibliotekets totaler.
+        </p>
+      </div>
+
+      <Card className="flex flex-wrap items-end gap-4 px-4 py-3">
+        <div className="flex min-w-55 flex-col gap-1.5">
+          <label
+            htmlFor="stats-period"
+            className="text-sm font-medium text-[rgb(var(--color-text))]"
+          >
+            Period
+          </label>
+          <Select
+            id="stats-period"
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className="min-h-11"
+          >
+            <option value={1}>Senaste 24 timmarna</option>
+            <option value={7}>Senaste 7 dagarna</option>
+            <option value={30}>Senaste 30 dagarna</option>
+            <option value={90}>Senaste 90 dagarna</option>
+          </Select>
+        </div>
+      </Card>
+
+      {firstLoad ? (
+        <RowSkeleton rows={5} label="Laddar statistik" />
+      ) : (
+        <div
+          aria-busy={loading}
+          className={`space-y-8 transition-opacity ${loading ? 'opacity-60' : ''}`}
         >
-          <option value={1}>Senaste 24 timmar</option>
-          <option value={7}>Senaste 7 dagar</option>
-          <option value={30}>Senaste 30 dagar</option>
-          <option value={90}>Senaste 90 dagar</option>
-        </Select>
-      </div>
+          <Section title="Bibliotek">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <StatCard label="Totalt antal spår" value={totalTracks} />
+              <StatCard label="Analyserade" value={analyzedCount} sub={`${coveragePct}%`} />
+              <StatCard label="Misslyckade" value={failedTracks} />
+              <StatCard label="I kö" value={queuedTracks} />
+              <StatCard label="Väntar klassificering" value={pendingClassification} />
+              <StatCard label="Spellistor" value={totalPlaylists} />
+              <StatCard label="Privata låtar" value={privateTrackCount} />
+              <StatCard label="Personer som använder Mina låtar" value={libraryUserCount} />
+              <StatCard label="Spelningar av offentliga låtar" value={publicPlayCount} />
+              <StatCard label="Spelningar av privata låtar" value={privatePlayCount} />
+            </div>
+          </Section>
 
-      {/* Library stats */}
-      <div>
-        <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Bibliotek</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard label="Totalt antal spår" value={totalTracks} />
-          <StatCard label="Analyserade" value={analyzedCount} sub={`${coveragePct}%`} />
-          <StatCard label="Misslyckade" value={failedTracks} />
-          <StatCard label="I kö" value={queuedTracks} />
-          <StatCard label="Väntar klassificering" value={pendingClassification} />
-          <StatCard label="Spellistor" value={totalPlaylists} />
-          <StatCard label="Privata låtar" value={privateTrackCount} />
-          <StatCard label="Personer som använder Mina låtar" value={libraryUserCount} />
-          <StatCard label="Spelningar av offentliga låtar" value={publicPlayCount} />
-          <StatCard label="Spelningar av privata låtar" value={privatePlayCount} />
-        </div>
-      </div>
+          <Section title="Besökare" aside={periodLabel}>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <StatCard label="Unika besökare" value={totalVisitors} delta={prevVisitors ? totalVisitors - prevVisitors.totalVisitors : undefined} />
+              <StatCard label="Inloggade" value={authenticatedVisitors} delta={prevVisitors ? authenticatedVisitors - prevVisitors.authenticatedVisitors : undefined} />
+              <StatCard label="Anonyma" value={anonymousVisitors} delta={prevVisitors ? anonymousVisitors - prevVisitors.anonymousVisitors : undefined} />
+              <StatCard label="Mobila besökare" value={mobileVisitors} />
+              <StatCard label="Datorbesökare" value={desktopVisitors} />
+              <StatCard label="Sidvisningar" value={totalPageViews} delta={prevVisitors ? totalPageViews - prevVisitors.totalPageViews : undefined} />
+              <StatCard label="Snitt sessionslängd" value={avgDurationSeconds > 0 ? avgDurationFormatted : '–'} />
+              <StatCard label="Registrerade användare" value={totalUsers} />
+            </div>
+          </Section>
 
-      {/* Visitor stats */}
-      <div>
-        <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Besökare — senaste {days} dagar</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          <StatCard label="Unika besökare" value={totalVisitors} delta={prevVisitors ? totalVisitors - prevVisitors.totalVisitors : undefined} />
-          <StatCard label="Inloggade" value={authenticatedVisitors} delta={prevVisitors ? authenticatedVisitors - prevVisitors.authenticatedVisitors : undefined} />
-          <StatCard label="Anonyma" value={anonymousVisitors} delta={prevVisitors ? anonymousVisitors - prevVisitors.anonymousVisitors : undefined} />
-          <StatCard label="Mobila besökare" value={mobileVisitors} />
-          <StatCard label="Datorbesökare" value={desktopVisitors} />
-          <StatCard label="Sidvisningar" value={totalPageViews} delta={prevVisitors ? totalPageViews - prevVisitors.totalPageViews : undefined} />
-          <StatCard label="Snitt sessionslängd" value={avgDurationSeconds > 0 ? avgDurationFormatted : '–'} />
-          <StatCard label="Registrerade användare" value={totalUsers} />
-        </div>
-      </div>
+          {/* Visitor chart — hourly when days=1, daily otherwise */}
+          <Card className="p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+              <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">
+                {showHourly ? 'Besök per timme' : 'Besök per dag'}
+              </h2>
+              <ul className="flex items-center gap-4 text-[13px] text-[rgb(var(--color-text-muted))]" aria-label="Serier">
+                <li className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                    style={{ background: SERIES.first }}
+                    aria-hidden
+                  />
+                  Inloggade
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-[2px]"
+                    style={{ background: SERIES.second }}
+                    aria-hidden
+                  />
+                  Anonyma
+                </li>
+              </ul>
+            </div>
 
-      {/* Listen time */}
-      <div>
-        <h2 className="mb-2 text-sm font-medium text-[rgb(var(--color-text-muted))]">Lyssning — senaste {days} dagar</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <StatCard
-            label="Total lyssnad tid"
-            value={totalHours > 0 ? `${totalHours} h` : totalMinutesListened > 0 ? `${totalMinutesListened} min` : '0 min'}
-          />
-          {platforms.map((p) => (
-            <StatCard
-              key={p.platform}
-              label={p.platform === 'youtube' ? 'YouTube-spelningar' : p.platform === 'spotify' ? 'Spotify-spelningar' : `${p.platform}-spelningar`}
-              value={p.playCount}
-              sub={formatMinutes(p.totalDuration)}
-            />
-          ))}
-        </div>
-      </div>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart
+                data={chartData}
+                margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+                barCategoryGap="25%"
+                maxBarSize={24}
+              >
+                <CartesianGrid vertical={false} stroke={CHART_GRID} strokeWidth={1} />
+                <XAxis
+                  dataKey="key"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 13, fill: CHART_TEXT }}
+                  tickMargin={8}
+                  tickFormatter={
+                    showHourly
+                      ? (v: string) => `${v.padStart(2, '0')}:00`
+                      : (v: string) => v.slice(5)
+                  }
+                  interval={showHourly ? 5 : days <= 7 ? 0 : days <= 30 ? 4 : 14}
+                />
+                <YAxis
+                  width={40}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 13, fill: CHART_TEXT }}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgb(var(--color-accent-muted))', fillOpacity: 0.6 }}
+                  content={(props) => (
+                    <ChartTooltip
+                      active={props.active}
+                      payload={props.payload}
+                      label={
+                        showHourly
+                          ? `${String(props.label ?? '').padStart(2, '0')}:00`
+                          : String(props.label ?? '')
+                      }
+                    />
+                  )}
+                />
+                <Bar
+                  dataKey="anonymous"
+                  name="Anonyma"
+                  stackId="a"
+                  fill={SERIES.second}
+                  stroke={CHART_SURFACE}
+                  strokeWidth={1}
+                />
+                <Bar
+                  dataKey="authenticated"
+                  name="Inloggade"
+                  stackId="a"
+                  fill={SERIES.first}
+                  stroke={CHART_SURFACE}
+                  strokeWidth={1}
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
 
-      {/* Most played tracks */}
-      <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-        <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-          Mest spelade spår — senaste {days} dagar
-        </h2>
-        {mostPlayed.length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga spelningar registrerade ännu.</p>
-        ) : (
-          <>
-            <div className="space-y-2">
-              {mostPlayed.map((t, i) => (
-                <div key={t.trackId} className="flex items-center gap-3">
-                  <span className="w-5 shrink-0 text-right text-xs text-[rgb(var(--color-text-muted))]">{i + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-[rgb(var(--color-text))]">{t.title}</p>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
-                      <div
-                        className="h-full rounded-full bg-[rgb(var(--color-accent))]"
-                        style={{ width: `${Math.min(100, t.completionRate)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-xs font-medium text-[rgb(var(--color-text))]">{t.playCount} spelningar</p>
-                    <p className="text-[10px] text-[rgb(var(--color-text-muted))]">{formatMinutes(t.totalDurationSeconds)} totalt</p>
-                  </div>
-                </div>
+          <Section title="Lyssning" aside={periodLabel}>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <StatCard
+                label="Total lyssnad tid"
+                value={totalHours > 0 ? `${totalHours} h` : totalMinutesListened > 0 ? `${totalMinutesListened} min` : '0 min'}
+              />
+              {platforms.map((p) => (
+                <StatCard
+                  key={p.platform}
+                  label={p.platform === 'youtube' ? 'YouTube-spelningar' : p.platform === 'spotify' ? 'Spotify-spelningar' : `${p.platform}-spelningar`}
+                  value={p.playCount}
+                  sub={formatMinutes(p.totalDuration)}
+                />
               ))}
             </div>
-            <p className="mt-2 text-[10px] text-[rgb(var(--color-text-muted))]">Stapeln visar genomföringsgrad</p>
-          </>
-        )}
-      </div>
+          </Section>
 
-      {/* Visitor chart — hourly when days=1, daily otherwise */}
-      <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
-            {showHourly ? 'Besök per timme' : 'Dagliga besök'}
-          </h2>
-          <div className="flex items-center gap-3 text-[10px] text-[rgb(var(--color-text-muted))]">
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-3 rounded-sm" style={{ background: 'rgb(var(--color-accent))' }} />
-              Autentiserade
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-3 rounded-sm" style={{ background: 'rgb(var(--color-accent))', opacity: 0.3 }} />
-              Anonyma
-            </span>
-          </div>
-        </div>
+          {/* Most played tracks */}
+          <Card className="p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">Mest spelade spår</h2>
+              <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{periodLabel}</p>
+            </div>
+            {mostPlayed.length === 0 ? (
+              <p className="text-[15px] text-[rgb(var(--color-text-muted))]">Inga spelningar registrerade ännu.</p>
+            ) : (
+              <>
+                <ol className="space-y-3">
+                  {mostPlayed.map((t, i) => (
+                    <li key={t.trackId} className="flex items-center gap-3">
+                      <span className="w-6 shrink-0 text-right text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] text-[rgb(var(--color-text))]">{t.title}</p>
+                        <Meter value={t.completionRate} max={100} label={`Genomföringsgrad ${Math.round(t.completionRate)} %`} />
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-[13px] font-medium tabular-nums text-[rgb(var(--color-text))]">{t.playCount} spelningar</p>
+                        <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{formatMinutes(t.totalDurationSeconds)} totalt</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-3 text-[13px] text-[rgb(var(--color-text-muted))]">Stapeln visar genomföringsgrad.</p>
+              </>
+            )}
+          </Card>
 
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart
-            data={chartData}
-            margin={{ top: 4, right: 4, bottom: 4, left: 0 }}
-            barCategoryGap="20%"
-          >
-            <XAxis
-              dataKey="key"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fontSize: 10, fill: 'rgb(var(--color-text-muted))' }}
-              tickFormatter={
-                showHourly
-                  ? (v: string) => `${v.padStart(2, '0')}:00`
-                  : (v: string) => v.slice(5)
-              }
-              interval={showHourly ? 5 : days <= 7 ? 0 : days <= 30 ? 4 : 14}
-            />
-            <YAxis
-              width={32}
-              tickLine={false}
-              axisLine={false}
-              tick={{ fontSize: 10, fill: 'rgb(var(--color-text-muted))' }}
-              allowDecimals={false}
-            />
-            <Tooltip
-              contentStyle={{
-                background: 'rgb(var(--color-bg))',
-                border: '1px solid rgb(var(--color-border))',
-                borderRadius: '6px',
-                fontSize: '12px',
-                color: 'rgb(var(--color-text))',
-              }}
-              cursor={{ fill: 'rgb(var(--color-border))', opacity: 0.5 }}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              labelFormatter={(label: any) =>
-                showHourly ? `${String(label).padStart(2, '0')}:00` : String(label)
-              }
-            />
-            <Bar dataKey="anonymous" name="Anonyma" stackId="a" fill="rgb(var(--color-accent))" fillOpacity={0.3} />
-            <Bar dataKey="authenticated" name="Autentiserade" stackId="a" fill="rgb(var(--color-accent))" radius={[2, 2, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* SmartNudge funnel */}
-      {nudgeShown > 0 && (
-        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-            SmartNudge — senaste {days} dagar
-          </h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text))]">{nudgeShown}</p>
-              <p className="text-xs text-[rgb(var(--color-text-muted))]">Visade</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-500">{nudgeCompleted}</p>
-              <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                Slutförda
-                {nudgeShown > 0 && (
-                  <span className="ml-1">({Math.round((nudgeCompleted / nudgeShown) * 100)}%)</span>
-                )}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text-muted))]">{nudgeDismissed}</p>
-              <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                Avvisade
-                {nudgeShown > 0 && (
-                  <span className="ml-1">({Math.round((nudgeDismissed / nudgeShown) * 100)}%)</span>
-                )}
-              </p>
-            </div>
-          </div>
+          {/* SmartNudge funnel */}
           {nudgeShown > 0 && (
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
-              <div
-                className="h-full rounded-full bg-green-500"
-                style={{ width: `${Math.min(100, (nudgeCompleted / nudgeShown) * 100)}%` }}
-              />
-            </div>
+            <Card className="p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">Påminnelser om klassificering</h2>
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{periodLabel}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <Figure value={nudgeShown} label="Visade" />
+                <Figure
+                  value={nudgeCompleted}
+                  label="Slutförda"
+                  sub={`${Math.round((nudgeCompleted / nudgeShown) * 100)} %`}
+                />
+                <Figure
+                  value={nudgeDismissed}
+                  label="Avvisade"
+                  sub={`${Math.round((nudgeDismissed / nudgeShown) * 100)} %`}
+                />
+              </div>
+              <div className="mt-4">
+                <Meter
+                  value={nudgeCompleted}
+                  max={nudgeShown}
+                  label={`Andel slutförda ${Math.round((nudgeCompleted / nudgeShown) * 100)} %`}
+                  thick
+                />
+              </div>
+            </Card>
+          )}
+
+          {/* Behavioral area usage */}
+          {totalVisitors > 0 && (
+            <Card className="p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">Funktionsanvändning</h2>
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{periodLabel}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {(
+                  [
+                    { label: 'Bibliotek', value: behavioralTotals.usedLibrary },
+                    { label: 'Sök', value: behavioralTotals.usedSearch },
+                    { label: 'Spellistor', value: behavioralTotals.usedPlaylists },
+                    { label: 'Klassificering', value: behavioralTotals.usedDiscovery },
+                  ] as const
+                ).map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="mb-1 text-[13px] text-[rgb(var(--color-text-muted))]">{label}</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-bold text-[rgb(var(--color-text))]">{value}</span>
+                      <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                        {Math.round((value / totalVisitors) * 100)} % av besöken
+                      </span>
+                    </div>
+                    <Meter value={value} max={totalVisitors} label={`${label}: ${Math.round((value / totalVisitors) * 100)} % av besöken`} />
+                  </div>
+                ))}
+              </div>
+              {(() => {
+                const byDevice = behavioralFlags?.byDeviceType ?? [];
+                const mobile = byDevice.find((r) => r.deviceType === 'mobile');
+                const desktop = byDevice.find((r) => r.deviceType === 'desktop');
+                if (!mobile && !desktop) return null;
+                const rows = [
+                  { label: 'Mobil', row: mobile },
+                  { label: 'Dator', row: desktop },
+                ].filter((r): r is { label: string; row: DeviceFeatureRow } => r.row !== undefined);
+                const features = [
+                  { key: 'usedLibrary', label: 'Bibliotek' },
+                  { key: 'usedSearch', label: 'Sök' },
+                  { key: 'usedPlaylists', label: 'Spellistor' },
+                  { key: 'usedDiscovery', label: 'Klassificering' },
+                ] as const;
+                return (
+                  <div className="mt-5 overflow-x-auto border-t border-[rgb(var(--color-border))] pt-4">
+                    <h3 className="mb-2 text-[15px] font-semibold text-[rgb(var(--color-text))]">Per enhet</h3>
+                    <table className="w-full text-[13px]">
+                      <thead>
+                        <tr className="text-left text-[rgb(var(--color-text-muted))]">
+                          <th className="py-1 pr-3 font-medium">Enhet</th>
+                          <th className="py-1 pr-3 font-medium">Sessioner</th>
+                          {features.map((f) => (
+                            <th key={f.key} className="py-1 pr-3 font-medium">{f.label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(({ label, row }) => (
+                          <tr key={label} className="border-t border-[rgb(var(--color-border))] text-[rgb(var(--color-text))]">
+                            <th scope="row" className="py-1.5 pr-3 text-left font-medium">{label}</th>
+                            <td className="py-1.5 pr-3 tabular-nums">{row.total}</td>
+                            {features.map((f) => (
+                              <td key={f.key} className="py-1.5 pr-3 tabular-nums">
+                                {row.total > 0 ? Math.round((row[f.key] / row.total) * 100) : 0} %
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </Card>
+          )}
+
+          {/* Search stats */}
+          {(() => {
+            const sf = (searchStats?.filters as Record<string, number>) ?? {};
+            const total = sf.total ?? 0;
+            const topStyles = (searchStats?.topStyles as { style: string; count: number }[]) ?? [];
+            if (total === 0) return null;
+            const filters = [
+              { label: 'Textfråga',      value: sf.withQuery ?? 0 },
+              { label: 'Dansstil',       value: sf.withStyle ?? 0 },
+              { label: 'Tempo',          value: sf.withTempo ?? 0 },
+              { label: 'Längd',          value: sf.withDuration ?? 0 },
+              { label: 'Studsfull',      value: sf.withBounciness ?? 0 },
+              { label: 'Artikulation',   value: sf.withArticulation ?? 0 },
+            ];
+            return (
+              <Card className="p-4 sm:p-5">
+                <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">Sökanvändning</h2>
+                  <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                    {total.toLocaleString('sv-SE')} sökningar {periodLabel}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div>
+                    <h3 className="mb-2 text-[15px] font-semibold text-[rgb(var(--color-text))]">Filtertyp</h3>
+                    <ul className="space-y-2.5">
+                      {filters.map(({ label, value }) => (
+                        <li key={label} className="flex items-center gap-3">
+                          <span className="w-24 shrink-0 text-[13px] text-[rgb(var(--color-text-muted))]">{label}</span>
+                          <div className="flex-1">
+                            <Meter value={value} max={total} label={`${label}: ${Math.round((value / Math.max(1, total)) * 100)} %`} />
+                          </div>
+                          <span className="w-20 shrink-0 text-right text-[13px] tabular-nums text-[rgb(var(--color-text))]">
+                            {value} ({Math.round((value / Math.max(1, total)) * 100)} %)
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {topStyles.length > 0 && (
+                    <div>
+                      <h3 className="mb-2 text-[15px] font-semibold text-[rgb(var(--color-text))]">Mest sökta stilar</h3>
+                      <ul className="space-y-2.5">
+                        {topStyles.map(({ style, count }) => (
+                          <li key={style} className="flex items-center gap-3">
+                            <span className="w-24 shrink-0 truncate text-[13px] text-[rgb(var(--color-text-muted))]">{style}</span>
+                            <div className="flex-1">
+                              <Meter value={count} max={topStyles[0].count} label={`${style}: ${count} sökningar`} />
+                            </div>
+                            <span className="w-10 shrink-0 text-right text-[13px] font-medium tabular-nums text-[rgb(var(--color-text))]">{count}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })()}
+
+          {/* Top paths */}
+          {topPaths.length > 0 && (
+            <Card className="p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">Mest besökta sidor</h2>
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{periodLabel}</p>
+              </div>
+              <ul className="space-y-2.5">
+                {topPaths.map((p) => (
+                  <li key={p.path} className="flex items-center gap-3">
+                    <code className="min-w-0 flex-1 truncate text-[13px] text-[rgb(var(--color-text-muted))]">{p.path}</code>
+                    <div className="w-28 shrink-0 sm:w-40">
+                      <Meter value={p.total} max={topPaths[0].total} label={`${p.path}: ${p.total} besök`} />
+                    </div>
+                    <span className="w-12 shrink-0 text-right text-[13px] font-medium tabular-nums text-[rgb(var(--color-text))]">{p.total}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Classify activity */}
+          {classifyStart > 0 && (
+            <Card className="p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">Snabbklassificering</h2>
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{periodLabel}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <Figure value={classifyStart} label="Sessioner startade" />
+                <Figure
+                  value={classifyVotes}
+                  label="Röster"
+                  sub={`${Math.round(classifyVotes / classifyStart)} i snitt per session`}
+                />
+                <Figure value={classifyAbandon} label="Avbrutna sessioner" />
+              </div>
+            </Card>
           )}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Behavioral area usage */}
-      {totalVisitors > 0 && (
-        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-            Funktionsanvändning — senaste {days} dagar
-          </h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {(
-              [
-                { label: 'Bibliotek', value: behavioralTotals.usedLibrary },
-                { label: 'Sök', value: behavioralTotals.usedSearch },
-                { label: 'Spellistor', value: behavioralTotals.usedPlaylists },
-                { label: 'Klassificering', value: behavioralTotals.usedDiscovery },
-              ] as const
-            ).map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs text-[rgb(var(--color-text-muted))] mb-1">{label}</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold text-[rgb(var(--color-text))]">{value}</span>
-                  {totalVisitors > 0 && (
-                    <span className="text-xs text-[rgb(var(--color-text-muted))]">
-                      {Math.round((value / totalVisitors) * 100)}% av besök
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
-                  <div
-                    className="h-full rounded-full bg-[rgb(var(--color-accent))]"
-                    style={{ width: `${Math.min(100, (value / Math.max(1, totalVisitors)) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          {(() => {
-            const byDevice = behavioralFlags?.byDeviceType ?? [];
-            const mobile = byDevice.find((r) => r.deviceType === 'mobile');
-            const desktop = byDevice.find((r) => r.deviceType === 'desktop');
-            if (!mobile && !desktop) return null;
-            const rows = [
-              { label: 'Mobil', row: mobile },
-              { label: 'Dator', row: desktop },
-            ].filter((r): r is { label: string; row: DeviceFeatureRow } => r.row !== undefined);
-            return (
-              <div className="mt-4 border-t border-[rgb(var(--color-border))] pt-3">
-                <p className="mb-2 text-xs font-medium text-[rgb(var(--color-text-muted))]">Per enhet</p>
-                <div className="space-y-2">
-                  {rows.map(({ label, row }) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <span className="w-12 shrink-0 text-xs text-[rgb(var(--color-text-muted))]">{label}</span>
-                      <span className="w-12 shrink-0 text-xs text-[rgb(var(--color-text))]">{row.total} sessioner</span>
-                      {([
-                        { key: 'usedLibrary', label: 'Bibliotek' },
-                        { key: 'usedSearch', label: 'Sök' },
-                        { key: 'usedPlaylists', label: 'Spellistor' },
-                        { key: 'usedDiscovery', label: 'Klassificering' },
-                      ] as const).map(({ key, label: feat }) => (
-                        <span key={key} className="text-xs text-[rgb(var(--color-text-muted))]">
-                          {feat} {row.total > 0 ? Math.round((row[key] / row.total) * 100) : 0}%
-                        </span>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
+/* Chart colours come from the design tokens; the two series also differ in lightness. */
+const SERIES = {
+  first: 'rgb(var(--color-link))',
+  second: 'rgb(var(--color-now-playing))',
+};
+const CHART_GRID = 'rgb(var(--color-border))';
+const CHART_TEXT = 'rgb(var(--color-text-muted))';
+const CHART_SURFACE = 'rgb(var(--color-bg-elevated))';
 
-      {/* Search stats */}
-      {(() => {
-        const sf = (searchStats?.filters as Record<string, number>) ?? {};
-        const total = sf.total ?? 0;
-        const topStyles = (searchStats?.topStyles as { style: string; count: number }[]) ?? [];
-        if (total === 0) return null;
-        const filters = [
-          { label: 'Textfråga',      value: sf.withQuery ?? 0 },
-          { label: 'Dansstil',       value: sf.withStyle ?? 0 },
-          { label: 'Tempo',          value: sf.withTempo ?? 0 },
-          { label: 'Längd',          value: sf.withDuration ?? 0 },
-          { label: 'Studsfull',      value: sf.withBounciness ?? 0 },
-          { label: 'Artikulation',   value: sf.withArticulation ?? 0 },
-        ];
-        return (
-          <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-sm font-medium text-[rgb(var(--color-text))]">
-                Sökanvändning — senaste {days} dagar
-              </h2>
-              <span className="text-xs text-[rgb(var(--color-text-muted))]">{total} sökningar</span>
-            </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <p className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-2">Filtertyp</p>
-                <div className="space-y-2">
-                  {filters.map(({ label, value }) => (
-                    <div key={label} className="flex items-center gap-2">
-                      <span className="w-24 shrink-0 text-xs text-[rgb(var(--color-text-muted))]">{label}</span>
-                      <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
-                        <div
-                          className="h-full rounded-full bg-[rgb(var(--color-accent))]/70"
-                          style={{ width: `${Math.min(100, (value / Math.max(1, total)) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="w-16 shrink-0 text-right text-xs text-[rgb(var(--color-text))]">
-                        {value} ({Math.round((value / Math.max(1, total)) * 100)}%)
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {topStyles.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-2">Mest sökta stilar</p>
-                  <div className="space-y-2">
-                    {topStyles.map(({ style, count }) => (
-                      <div key={style} className="flex items-center gap-2">
-                        <span className="w-24 shrink-0 truncate text-xs text-[rgb(var(--color-text-muted))]">{style}</span>
-                        <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
-                          <div
-                            className="h-full rounded-full bg-[rgb(var(--color-accent))]"
-                            style={{ width: `${Math.min(100, (count / Math.max(1, topStyles[0].count)) * 100)}%` }}
-                          />
-                        </div>
-                        <span className="w-8 shrink-0 text-right text-xs font-medium text-[rgb(var(--color-text))]">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+interface SectionProps {
+  title: string;
+  aside?: string;
+  children: ReactNode;
+}
 
-      {/* Top paths */}
-      {topPaths.length > 0 && (
-        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-            Mest besökta sidor — senaste {days} dagar
-          </h2>
-          <div className="space-y-2">
-            {topPaths.map((p) => (
-              <div key={p.path} className="flex items-center gap-3">
-                <code className="min-w-0 flex-1 truncate text-xs text-[rgb(var(--color-text-muted))]">{p.path}</code>
-                <div className="w-24 shrink-0">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--color-border))]">
-                    <div
-                      className="h-full rounded-full bg-[rgb(var(--color-accent))]/60"
-                      style={{ width: `${Math.min(100, (p.total / Math.max(1, topPaths[0].total)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <span className="w-10 shrink-0 text-right text-xs font-medium text-[rgb(var(--color-text))]">{p.total}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+function Section({ title, aside, children }: SectionProps) {
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">{title}</h2>
+        {aside && <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{aside}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
-      {/* Classify activity */}
-      {classifyStart > 0 && (
-        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4">
-          <h2 className="mb-3 text-sm font-medium text-[rgb(var(--color-text))]">
-            Snabbklassificering — senaste {days} dagar
-          </h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text))]">{classifyStart}</p>
-              <p className="text-xs text-[rgb(var(--color-text-muted))]">Sessioner startade</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-[rgb(var(--color-accent))]">{classifyVotes}</p>
-              <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                Röster
-                {classifyStart > 0 && (
-                  <span className="ml-1">({Math.round(classifyVotes / classifyStart)} snitt/session)</span>
-                )}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text-muted))]">{classifyAbandon}</p>
-              <p className="text-xs text-[rgb(var(--color-text-muted))]">Avbrutna sessioner</p>
-            </div>
-          </div>
-        </div>
+interface FigureProps {
+  value: number;
+  label: string;
+  sub?: string;
+}
+
+/** One number with its label. Text wears text tokens, never a series colour. */
+function Figure({ value, label, sub }: FigureProps) {
+  return (
+    <div className="text-center">
+      <p className="text-2xl font-semibold text-[rgb(var(--color-text))]">{value.toLocaleString('sv-SE')}</p>
+      <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+        {label}
+        {sub && <span className="ml-1">({sub})</span>}
+      </p>
+    </div>
+  );
+}
+
+interface MeterProps {
+  value: number;
+  max: number;
+  label: string;
+  thick?: boolean;
+}
+
+/** A thin single-series bar. The track is a neutral tint, the fill the first series colour. */
+function Meter({ value, max, label, thick = false }: MeterProps) {
+  const pct = Math.min(100, (value / Math.max(1, max)) * 100);
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className={`mt-1 w-full overflow-hidden rounded-full bg-[rgb(var(--color-accent-muted))] ${thick ? 'h-2' : 'h-1.5'}`}
+    >
+      <div
+        className="h-full rounded-full"
+        style={{ width: `${pct}%`, background: SERIES.first }}
+      />
+    </div>
+  );
+}
+
+interface ChartTooltipEntry {
+  name?: unknown;
+  value?: unknown;
+  color?: string;
+  dataKey?: unknown;
+}
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: ReadonlyArray<ChartTooltipEntry>;
+  label: string;
+}
+
+/** A floating card: the values lead, the series names follow, keyed by a short line in the series colour. */
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const rows = [...payload].reverse();
+  const total = rows.reduce((sum, r) => sum + Number(r.value ?? 0), 0);
+  return (
+    <div className="min-w-40 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[13px] text-[rgb(var(--color-text))]">
+      <p className="mb-1 font-semibold">{label}</p>
+      <ul className="space-y-0.5">
+        {rows.map((r) => (
+          <li key={String(r.dataKey ?? r.name)} className="flex items-center gap-2">
+            <span className="inline-block h-0.5 w-3 shrink-0 rounded-full" style={{ background: r.color }} aria-hidden />
+            <span className="font-semibold tabular-nums">{Number(r.value ?? 0).toLocaleString('sv-SE')}</span>
+            <span className="text-[rgb(var(--color-text-muted))]">{String(r.name ?? '')}</span>
+          </li>
+        ))}
+      </ul>
+      {rows.length > 1 && (
+        <p className="mt-1 border-t border-[rgb(var(--color-border))] pt-1 text-[rgb(var(--color-text-muted))]">
+          Totalt <span className="font-semibold tabular-nums text-[rgb(var(--color-text))]">{total.toLocaleString('sv-SE')}</span>
+        </p>
       )}
     </div>
   );

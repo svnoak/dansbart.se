@@ -5,7 +5,9 @@ import { Pagination } from '@/admin/components/Pagination';
 import { ConfidenceBadge } from '@/admin/components/ConfidenceBadge';
 import { Modal } from '@/admin/components/Modal';
 import { toast } from '@/admin/components/toastEmitter';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Badge, Button, Card, EmptyState, IconButton, InlineError, LoadError, RowSkeleton } from '@/ui';
+import { StylePill } from '@/components/TrackRow/StylePill';
+import { stylePillState } from '@/components/TrackRow/stylePillState';
 import { usePlayer } from '@/player/usePlayer';
 import { PlayIcon, PauseIcon } from '@/icons';
 import type { TrackListDto } from '@/api/models/trackListDto';
@@ -62,7 +64,7 @@ export function AdminFolkwikiPage() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const player = usePlayer();
 
@@ -388,17 +390,40 @@ export function AdminFolkwikiPage() {
   const stylesDisagree = (m: FolkwikiMatch) =>
     m.dbStyle && m.folkwikiStyle && m.dbStyle.toLowerCase() !== m.folkwikiStyle.toLowerCase();
 
+  const segment = (active: boolean) =>
+    `inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] ${
+      active
+        ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
+        : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
+    }`;
+
+  const inputClass =
+    'min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]';
+
+  const kbdClass =
+    'rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] px-1.5 py-0.5 text-[13px] text-[rgb(var(--color-text))]';
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Folkwiki-matchning</h1>
-        <div className="flex items-center gap-4">
-          <div className="text-xs text-[rgb(var(--color-text-muted))]">
-            <kbd className="rounded border border-[rgb(var(--color-border))] px-1">j/k</kbd> navigera{' '}
-            <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Mellanslag</kbd> spela{' '}
-            <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Enter</kbd> bekräfta{' '}
-            <kbd className="rounded border border-[rgb(var(--color-border))] px-1">Backspace</kbd> avvisa
-          </div>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Folkwiki-matchning
+        </h1>
+        <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
+          Låtar i biblioteket som liknar en låt på folkwiki.se. Bekräfta en matchning för att
+          ta över dansstilen från Folkwiki, eller avvisa den och behåll stilen som den är.
+        </p>
+      </div>
+
+      {/* Import */}
+      <Card className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">Importera från Folkwiki</h2>
+          <p className="mt-1 text-[13px] text-[rgb(var(--color-text-muted))]">
+            Ladda upp en JSON-export från folkwiki.se. Nya låtar matchas mot biblioteket direkt.
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
           <input
             ref={fileInputRef}
             type="file"
@@ -410,8 +435,7 @@ export function AdminFolkwikiPage() {
             }}
           />
           <Button
-            variant="secondary"
-            size="sm"
+            variant="primary"
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
           >
@@ -419,104 +443,113 @@ export function AdminFolkwikiPage() {
           </Button>
           {importError && <InlineError>{importError}</InlineError>}
         </div>
-      </div>
+      </Card>
 
       {/* Status tabs */}
-      <div className="flex gap-1 rounded-lg bg-[rgb(var(--color-bg-elevated))] p-1">
-        {STATUS_TABS.map((tab) => {
-          const count = counts
-            ? tab.value === '' ? counts.total
-            : counts[tab.value as keyof Omit<StatusCounts, 'total'>]
-            : null;
-          const active = status === tab.value;
-          return (
-            <button
-              key={tab.value}
-              onClick={() => updateParam('status', tab.value)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                active
-                  ? 'bg-[rgb(var(--color-bg))] text-[rgb(var(--color-text))] shadow-sm'
-                  : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-              }`}
-            >
-              {tab.label}
-              {count != null && (
-                <span className={`rounded-full px-1.5 py-0.5 text-xs ${
-                  active ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'
-                    : 'bg-[rgb(var(--color-border))]/50'
-                }`}>
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div
+          role="group"
+          aria-label="Status"
+          className="inline-flex flex-wrap rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] p-0.5"
+        >
+          {STATUS_TABS.map((tab) => {
+            const count = counts
+              ? tab.value === '' ? counts.total
+              : counts[tab.value as keyof Omit<StatusCounts, 'total'>]
+              : null;
+            const active = status === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => updateParam('status', tab.value)}
+                className={segment(active)}
+              >
+                {tab.label}
+                {count != null && (
+                  <span className={`text-[13px] tabular-nums ${active ? 'opacity-80' : 'text-[rgb(var(--color-text-muted))]'}`}>
+                    {count.toLocaleString('sv-SE')}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+          <kbd className={kbdClass}>j</kbd>/<kbd className={kbdClass}>k</kbd> navigera{' '}
+          <kbd className={kbdClass}>Mellanslag</kbd> spela{' '}
+          <kbd className={kbdClass}>Enter</kbd> bekräfta{' '}
+          <kbd className={kbdClass}>Backspace</kbd> avvisa
+        </p>
       </div>
 
       {/* Match list */}
       {loadError && <LoadError message={loadError} onRetry={fetchMatches} />}
 
       {!loadError && (loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-[rgb(var(--color-bg-elevated))]" />
-          ))}
-        </div>
+        <RowSkeleton rows={8} label="Laddar matchningar" />
       ) : matches.length === 0 ? (
-        <div className="py-12 text-center text-[rgb(var(--color-text-muted))]">
-          Inga matchningar att visa
-        </div>
+        <EmptyState
+          title="Inga matchningar att visa"
+          description="Importera en ny JSON-export från Folkwiki eller byt status ovan."
+        />
       ) : (
-        <div ref={listRef} className="space-y-1">
+        <ul
+          ref={listRef}
+          className="divide-y divide-[rgb(var(--color-border))] overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]"
+          aria-label="Matchningar"
+        >
           {matches.map((m, i) => {
             const disagree = stylesDisagree(m);
             const active = i === activeIndex;
+            const isPlaying = player.currentTrack?.id === m.trackId && player.isPlaying;
             return (
-              <div
+              <li
                 key={`${m.trackId}-${m.folkwikiTuneId}`}
                 onClick={() => setActiveIndex(i)}
-                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors cursor-pointer ${
+                aria-current={active ? 'true' : undefined}
+                className={`flex flex-wrap items-center gap-3 border-l-[3px] px-3 py-2.5 transition-colors sm:flex-nowrap ${
                   active
-                    ? 'border-[rgb(var(--color-accent))] bg-[rgb(var(--color-accent-muted))]/30'
-                    : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] hover:border-[rgb(var(--color-border))]/80'
+                    ? 'border-l-[rgb(var(--color-selected))] bg-[rgb(var(--color-selected))]/8'
+                    : 'border-l-transparent hover:bg-[rgb(var(--color-bg))]/60'
                 }`}
               >
                 {/* Play button */}
-                <button
-                  type="button"
+                <IconButton
+                  aria-label={isPlaying ? `Pausa ${m.trackTitle}` : `Spela ${m.trackTitle}`}
                   onClick={(e) => { e.stopPropagation(); handlePlay(m); }}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
-                  aria-label={player.currentTrack?.id === m.trackId && player.isPlaying ? 'Pausa' : 'Spela'}
+                  className="shrink-0"
                 >
-                  {player.currentTrack?.id === m.trackId && player.isPlaying ? (
-                    <PauseIcon className="h-4 w-4" />
+                  {isPlaying ? (
+                    <PauseIcon className="h-5 w-5" />
                   ) : (
-                    <PlayIcon className="h-4 w-4 ml-0.5" />
+                    <PlayIcon className="ml-0.5 h-5 w-5" />
                   )}
-                </button>
+                </IconButton>
 
                 {/* Track info */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{m.trackTitle}</span>
-                    <span className="text-[rgb(var(--color-text-muted))]">/</span>
-                    <span className="truncate text-sm text-[rgb(var(--color-text-muted))]">{m.folkwikiTitle}</span>
-                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${
-                      m.matchType === 'exact'
-                        ? 'bg-green-500/10 text-green-400'
-                        : 'bg-yellow-500/10 text-yellow-400'
-                    }`}>
-                      {m.matchType === 'exact' ? 'Exakt' : 'Delvis'}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="truncate text-[15px] font-medium text-[rgb(var(--color-text))]">{m.trackTitle}</span>
+                    <span className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">{m.folkwikiTitle}</span>
+                    <Badge variant={m.matchType === 'exact' ? 'default' : 'muted'}>
+                      {m.matchType === 'exact' ? 'Exakt träff' : 'Delvis träff'}
+                    </Badge>
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-[rgb(var(--color-text-muted))]">
-                    <span>DB: {m.dbStyle ?? '(ingen)'}</span>
-                    {m.dbConfidence != null && <ConfidenceBadge value={m.dbConfidence} />}
-                    <span className="text-[rgb(var(--color-border))]">|</span>
-                    <span>Folkwiki: {m.folkwikiStyle ?? '?'}</span>
-                    {m.folkwikiMeter && <span>({m.folkwikiMeter})</span>}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[rgb(var(--color-text-muted))]">
+                    <span className="inline-flex items-center gap-1.5">
+                      Biblioteket:
+                      <StylePill style={m.dbStyle} state={stylePillState(m.dbStyle, m.dbConfidence)} />
+                      {m.dbConfidence != null && <ConfidenceBadge value={m.dbConfidence} />}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      Folkwiki:
+                      <StylePill style={m.folkwikiStyle} state={m.folkwikiStyle ? 'guess' : 'unknown'} />
+                      {m.folkwikiMeter && <span>({m.folkwikiMeter})</span>}
+                    </span>
                     {disagree && (
-                      <span className="font-medium text-red-400">Stilkonflikt</span>
+                      <span className="font-medium text-[rgb(var(--color-error))]">Stilkonflikt</span>
                     )}
                   </div>
                 </div>
@@ -527,15 +560,14 @@ export function AdminFolkwikiPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="shrink-0 text-xs text-[rgb(var(--color-accent))] hover:underline"
-                  title="Visa på folkwiki.se"
+                  className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-[rgb(var(--color-link))] hover:underline"
                 >
-                  folkwiki
+                  Visa på folkwiki.se
                 </a>
 
                 {/* Actions */}
                 {m.matchStatus === 'pending' && (
-                  <div className="flex shrink-0 gap-1.5">
+                  <div className="flex shrink-0 gap-2">
                     <Button
                       variant="primary"
                       size="sm"
@@ -547,7 +579,7 @@ export function AdminFolkwikiPage() {
                       Bekräfta
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
@@ -559,21 +591,17 @@ export function AdminFolkwikiPage() {
                   </div>
                 )}
                 {m.matchStatus !== 'pending' && (
-                  <span className={`shrink-0 rounded px-2 py-1 text-xs font-medium ${
-                    m.matchStatus === 'confirmed'
-                      ? 'bg-green-500/10 text-green-400'
-                      : 'bg-red-500/10 text-red-400'
-                  }`}>
+                  <Badge variant={m.matchStatus === 'confirmed' ? 'default' : 'muted'} className="shrink-0">
                     {m.matchStatus === 'confirmed' ? 'Bekräftad' : 'Avvisad'}
-                  </span>
+                  </Badge>
                 )}
                 {rowErrors[matchKey(m)] && (
                   <InlineError>{rowErrors[matchKey(m)]}</InlineError>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       ))}
 
       {total > limit && (
@@ -593,28 +621,30 @@ export function AdminFolkwikiPage() {
       >
         {styleModal && (
           <div className="space-y-4">
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
               Stilen <span className="font-medium text-[rgb(var(--color-text))]">{styleModal.folkwikiStyle}</span> finns
               inte bland nyckelorden. Välj hur den ska läggas till:
             </p>
 
             {/* Mode tabs */}
-            <div className="flex gap-1 rounded-lg bg-[rgb(var(--color-bg))] p-1">
+            <div
+              role="group"
+              aria-label="Hur stilen ska läggas till"
+              className="inline-flex flex-wrap rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] p-0.5"
+            >
               {(
                 [
                   { value: 'correct', label: 'Rätta stavning' },
-                  { value: 'pick', label: 'Substil till befintlig' },
+                  { value: 'pick', label: 'Understil till befintlig' },
                   { value: 'new', label: 'Ny huvudstil' },
                 ] as { value: 'correct' | 'pick' | 'new'; label: string }[]
               ).map((tab) => (
                 <button
                   key={tab.value}
+                  type="button"
+                  aria-pressed={styleModalMode === tab.value}
                   onClick={() => { setStyleModalMode(tab.value); setStyleModalError(null); }}
-                  className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                    styleModalMode === tab.value
-                      ? 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] shadow-sm'
-                      : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-                  }`}
+                  className={segment(styleModalMode === tab.value)}
                 >
                   {tab.label}
                 </button>
@@ -623,26 +653,26 @@ export function AdminFolkwikiPage() {
 
             {styleModalMode === 'correct' ? (
               <div className="space-y-3">
-                <label className="block text-sm font-medium">
+                <label htmlFor="fw-corrected-style" className="block text-sm font-medium text-[rgb(var(--color-text))]">
                   Rätt stavning
                 </label>
                 <input
+                  id="fw-corrected-style"
                   type="text"
                   value={correctedStyle}
                   onChange={(e) => { setCorrectedStyle(e.target.value); setStyleModalError(null); }}
-                  className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                  className={inputClass}
                 />
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
                   Sparar <span className="font-medium">{correctedStyle || '...'}</span> direkt i folkwiki-tabellen och bekräftar sedan matchningen.
                 </p>
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
                   {styleModalError && <InlineError>{styleModalError}</InlineError>}
-                  <Button variant="ghost" size="sm" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
+                  <Button variant="ghost" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
                     Avbryt
                   </Button>
                   <Button
                     variant="primary"
-                    size="sm"
                     disabled={!correctedStyle.trim() || addingKeyword}
                     onClick={handleCorrectStyleAndConfirm}
                   >
@@ -652,43 +682,51 @@ export function AdminFolkwikiPage() {
               </div>
             ) : styleModalMode === 'pick' ? (
               <div className="space-y-3">
-                <label className="block text-sm font-medium">
+                <span id="fw-main-style-label" className="block text-sm font-medium text-[rgb(var(--color-text))]">
                   Huvudstil
-                </label>
-                <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
-                  {styleModal.styleTree.map((node) => (
-                    <button
-                      key={node.name}
-                      onClick={() => setSelectedMainStyle(node.name ?? '')}
-                      className={`rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                        selectedMainStyle === node.name
-                          ? 'border-[rgb(var(--color-accent))] bg-[rgb(var(--color-accent-muted))]/30 text-[rgb(var(--color-text))]'
-                          : 'border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))] hover:border-[rgb(var(--color-border))]/80'
-                      }`}
-                    >
-                      <span className="font-medium">{node.name}</span>
-                      {node.subStyles && node.subStyles.length > 0 && (
-                        <span className="ml-1 text-xs opacity-60">
-                          ({node.subStyles.length} sub)
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                </span>
+                <div
+                  role="group"
+                  aria-labelledby="fw-main-style-label"
+                  className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto"
+                >
+                  {styleModal.styleTree.map((node) => {
+                    const selected = selectedMainStyle === node.name;
+                    return (
+                      <button
+                        key={node.name}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setSelectedMainStyle(node.name ?? '')}
+                        className={`flex min-h-11 flex-wrap items-center gap-x-2 rounded-[var(--radius)] border px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] ${
+                          selected
+                            ? 'border-[rgb(var(--color-selected))] bg-[rgb(var(--color-selected))]/10 text-[rgb(var(--color-text))]'
+                            : 'border-[rgb(var(--color-border))] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
+                        }`}
+                      >
+                        <span className="font-medium">{node.name}</span>
+                        {node.subStyles && node.subStyles.length > 0 && (
+                          <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                            {node.subStyles.length} understilar
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 {selectedMainStyle && (
-                  <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                    Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> läggs
-                    till som substil under <span className="font-medium">{selectedMainStyle}</span>
+                  <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                    Nyckelordet <span className="font-medium">{styleModal.folkwikiStyle}</span> läggs
+                    till som understil under <span className="font-medium">{selectedMainStyle}</span>.
                   </p>
                 )}
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
                   {styleModalError && <InlineError>{styleModalError}</InlineError>}
-                  <Button variant="ghost" size="sm" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
+                  <Button variant="ghost" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
                     Avbryt
                   </Button>
                   <Button
                     variant="primary"
-                    size="sm"
                     disabled={!selectedMainStyle || addingKeyword}
                     onClick={() => handleAddKeywordAndConfirm(selectedMainStyle, styleModal.folkwikiStyle)}
                   >
@@ -698,28 +736,28 @@ export function AdminFolkwikiPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <label className="block text-sm font-medium">
+                <label htmlFor="fw-new-main-style" className="block text-sm font-medium text-[rgb(var(--color-text))]">
                   Namn på ny huvudstil
                 </label>
                 <input
+                  id="fw-new-main-style"
                   type="text"
                   value={newMainStyle}
                   onChange={(e) => { setNewMainStyle(e.target.value); setStyleModalError(null); }}
                   placeholder={styleModal.folkwikiStyle}
-                  className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))]/50 focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                  className={inputClass}
                 />
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                  Nyckelord <span className="font-medium">{styleModal.folkwikiStyle}</span> läggs
-                  till som ny huvudstil <span className="font-medium">{newMainStyle || styleModal.folkwikiStyle}</span>
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                  Nyckelordet <span className="font-medium">{styleModal.folkwikiStyle}</span> läggs
+                  till som ny huvudstil <span className="font-medium">{newMainStyle || styleModal.folkwikiStyle}</span>.
                 </p>
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
                   {styleModalError && <InlineError>{styleModalError}</InlineError>}
-                  <Button variant="ghost" size="sm" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
+                  <Button variant="ghost" onClick={() => { setStyleModal(null); setStyleModalError(null); }}>
                     Avbryt
                   </Button>
                   <Button
                     variant="primary"
-                    size="sm"
                     disabled={addingKeyword}
                     onClick={() => handleAddKeywordAndConfirm(
                       newMainStyle || styleModal.folkwikiStyle,
@@ -743,19 +781,20 @@ export function AdminFolkwikiPage() {
       >
         {rejectModal && (
           <div className="space-y-4">
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
               <span className="font-medium text-[rgb(var(--color-text))]">{rejectModal.match.trackTitle}</span>
-              {' '}matchad mot folkwiki-stil{' '}
+              {' '}matchad mot folkwiki-stilen{' '}
               <span className="font-medium text-[rgb(var(--color-text))]">{rejectModal.match.folkwikiStyle ?? '?'}</span>
             </p>
 
             {/* Option 1: DB style is already correct */}
             <button
+              type="button"
               onClick={() => handleRejectSimple(rejectModal.match)}
-              className="w-full rounded-lg border border-[rgb(var(--color-border))] px-4 py-3 text-left transition-colors hover:border-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-muted))]/20"
+              className="w-full rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] px-4 py-3 text-left transition-colors hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
             >
-              <span className="block text-sm font-medium">Stilen var redan korrekt</span>
-              <span className="block text-xs text-[rgb(var(--color-text-muted))]">
+              <span className="block text-[15px] font-medium text-[rgb(var(--color-text))]">Stilen var redan korrekt</span>
+              <span className="mt-0.5 block text-[13px] text-[rgb(var(--color-text-muted))]">
                 Behåll nuvarande stil: {rejectModal.match.dbStyle ?? '(ingen)'}
                 {rejectModal.match.dbSubStyle && ` / ${rejectModal.match.dbSubStyle}`}
               </span>
@@ -764,13 +803,16 @@ export function AdminFolkwikiPage() {
 
             {/* Option 2: Override with a different style */}
             <div className="space-y-2">
-              <span className="block text-sm font-medium">Det är en annan stil:</span>
+              <label htmlFor="fw-override-style" className="block text-sm font-medium text-[rgb(var(--color-text))]">
+                Det är en annan stil
+              </label>
               <select
+                id="fw-override-style"
                 value={overrideStyle}
                 onChange={(e) => { setOverrideStyle(e.target.value); setRejectModalError(null); }}
-                className="w-full rounded-md border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className={inputClass}
               >
-                <option value="">Välj stil...</option>
+                <option value="">Välj stil</option>
                 {rejectModal.styleTree.map((node) => (
                   <optgroup key={node.name} label={node.name}>
                     <option value={node.name}>{node.name}</option>
@@ -782,14 +824,13 @@ export function AdminFolkwikiPage() {
                   </optgroup>
                 ))}
               </select>
-              <div className="flex items-center justify-end gap-2 pt-1">
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
                 {rejectModalError && overrideStyle && <InlineError>{rejectModalError}</InlineError>}
-                <Button variant="ghost" size="sm" onClick={() => { setRejectModal(null); setRejectModalError(null); }}>
+                <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectModalError(null); }}>
                   Avbryt
                 </Button>
                 <Button
                   variant="primary"
-                  size="sm"
                   disabled={!overrideStyle || rejecting}
                   onClick={handleRejectWithOverride}
                 >

@@ -14,7 +14,10 @@ import type { Column } from '@/admin/components/DataTable';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button, InlineError, LoadError } from '@/ui';
+import { FormField } from '@/admin/components/forms/FormField';
+import { FormActions } from '@/admin/components/forms/FormActions';
+import { Badge, Button, Card, InlineError, LoadError, Pill } from '@/ui';
+import { StylePill } from '@/components/TrackRow/StylePill';
 import { toast } from '@/admin/components/toastEmitter';
 
 type Kind = 'content' | 'dance_style';
@@ -135,17 +138,35 @@ export function AdminSuggestionsPage() {
     }
   };
 
+  const pendingActions = (s: SuggestionDto) => (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <Button variant="primary" size="sm" onClick={() => handleAccept(s)}>
+          Godkänn
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => { setRejectTarget(s); setRejectError(null); }}
+        >
+          Avvisa
+        </Button>
+      </div>
+      {rowErrors[s.id] && <InlineError>{rowErrors[s.id]}</InlineError>}
+    </div>
+  );
+
   const contentColumns: Column<SuggestionDto>[] = [
     {
       key: 'title',
       header: 'Titel',
       render: (s) => (
         <div>
-          <span className="font-medium text-[rgb(var(--color-text))]">
-            {String(s.payload.title ?? '-')}
+          <span className="text-[15px] font-medium text-[rgb(var(--color-text))]">
+            {String(s.payload.title ?? '–')}
           </span>
           {!!s.payload.artistName && (
-            <p className="text-xs text-[rgb(var(--color-text-muted))]">
+            <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
               {String(s.payload.artistName)}
             </p>
           )}
@@ -155,11 +176,19 @@ export function AdminSuggestionsPage() {
     {
       key: 'style',
       header: 'Föreslagen stil',
-      render: (s) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">
-          {[s.payload.suggestedMainStyle, s.payload.suggestedSubStyle].filter(Boolean).join(' / ') || '-'}
-        </span>
-      ),
+      render: (s) =>
+        s.payload.suggestedMainStyle ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <StylePill style={String(s.payload.suggestedMainStyle)} state="guess" />
+            {!!s.payload.suggestedSubStyle && (
+              <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                {String(s.payload.suggestedSubStyle)}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-[13px] text-[rgb(var(--color-text-muted))]">–</span>
+        ),
     },
     {
       key: 'link',
@@ -170,38 +199,20 @@ export function AdminSuggestionsPage() {
             href={String(s.payload.externalUrl)}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-[rgb(var(--color-accent))] hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-[rgb(var(--color-link))] hover:underline"
           >
-            Öppna
+            Öppna länk
           </a>
         ) : (
-          <span className="text-xs text-[rgb(var(--color-text-muted))]">-</span>
+          <span className="text-[13px] text-[rgb(var(--color-text-muted))]">–</span>
         ),
     },
-    { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.status} /> },
+    { key: 'status', header: 'Status', render: (s) => <SuggestionStatusBadge status={s.status} /> },
     {
       key: 'actions',
       header: '',
-      render: (s) =>
-        s.status === 'pending' ? (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <Button variant="primary" size="sm" onClick={() => handleAccept(s)}>
-                Godkänn
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 dark:text-red-400"
-                onClick={() => { setRejectTarget(s); setRejectError(null); }}
-              >
-                Avvisa
-              </Button>
-            </div>
-            {rowErrors[s.id] && <InlineError>{rowErrors[s.id]}</InlineError>}
-          </div>
-        ) : null,
-      className: 'w-48',
+      render: (s) => (s.status === 'pending' ? pendingActions(s) : null),
+      className: 'w-52',
     },
   ];
 
@@ -210,51 +221,32 @@ export function AdminSuggestionsPage() {
       key: 'style',
       header: 'Dansstil',
       render: (s) => (
-        <div>
-          <span className="font-medium text-[rgb(var(--color-text))]">
-            {String(s.payload.proposedMainStyle ?? '-')}
-          </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <StylePill style={String(s.payload.proposedMainStyle ?? '')} state={s.payload.proposedMainStyle ? 'guess' : 'unknown'} />
           {!!s.payload.proposedSubStyle && (
-            <p className="text-xs text-[rgb(var(--color-text-muted))]">
+            <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
               {String(s.payload.proposedSubStyle)}
-            </p>
+            </span>
           )}
         </div>
       ),
     },
     {
       key: 'bpb',
-      header: 'Taktslag',
+      header: 'Taktslag per takt',
       render: (s) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">
-          {String(s.payload.proposedBeatsPerBar ?? '-')}
+        <span className="text-[15px] tabular-nums text-[rgb(var(--color-text))]">
+          {String(s.payload.proposedBeatsPerBar ?? '–')}
         </span>
       ),
     },
-    { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.status} /> },
+    { key: 'status', header: 'Status', render: (s) => <SuggestionStatusBadge status={s.status} /> },
     {
       key: 'actions',
       header: '',
       render: (s) => {
         if (s.status === 'pending') {
-          return (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <Button variant="primary" size="sm" onClick={() => handleAccept(s)}>
-                  Godkänn
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-600 dark:text-red-400"
-                  onClick={() => { setRejectTarget(s); setRejectError(null); }}
-                >
-                  Avvisa
-                </Button>
-              </div>
-              {rowErrors[s.id] && <InlineError>{rowErrors[s.id]}</InlineError>}
-            </div>
-          );
+          return pendingActions(s);
         }
         if (s.status === 'accepted') {
           return (
@@ -268,47 +260,71 @@ export function AdminSuggestionsPage() {
         }
         return null;
       },
-      className: 'w-48',
+      className: 'w-52',
     },
   ];
 
+  const segment = (active: boolean) =>
+    `inline-flex min-h-9 items-center rounded-full px-3.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] ${
+      active
+        ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
+        : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
+    }`;
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Förslag</h1>
-
-      <div className="flex gap-1 border-b border-[rgb(var(--color-border))]">
-        {(['content', 'dance_style'] as Kind[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => updateParam('kind', k)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              kind === k
-                ? 'border-[rgb(var(--color-accent))] text-[rgb(var(--color-accent))]'
-                : 'border-transparent text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-            }`}
-          >
-            {k === 'content' ? 'Låtar/album' : 'Dansstilar'}
-          </button>
-        ))}
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Förslag
+        </h1>
+        <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
+          Låtar, album och dansstilar som besökare föreslagit. Godkänn det som hör hemma i
+          biblioteket och avvisa resten med en kort motivering.
+        </p>
       </div>
 
-      <div className="flex gap-2">
-        {(['pending', 'accepted', 'activated', 'rejected', ''] as StatusFilter[]).map((s) => (
-          <button
-            key={s || 'all'}
-            type="button"
-            onClick={() => updateParam('status', s)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              status === s
-                ? 'bg-[rgb(var(--color-accent))] text-white'
-                : 'bg-[rgb(var(--color-border))]/30 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-            }`}
+      <Card className="flex flex-wrap items-end gap-x-6 gap-y-4 px-4 py-3">
+        <div className="flex flex-col gap-1.5">
+          <span id="suggestion-kind-label" className="text-sm font-medium text-[rgb(var(--color-text))]">
+            Typ av förslag
+          </span>
+          <div
+            role="group"
+            aria-labelledby="suggestion-kind-label"
+            className="inline-flex rounded-full border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] p-0.5"
           >
-            {s ? statusLabel[s] : 'Alla'}
-          </button>
-        ))}
-      </div>
+            {(['content', 'dance_style'] as Kind[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                onClick={() => updateParam('kind', k)}
+                className={segment(kind === k)}
+              >
+                {k === 'content' ? 'Låtar/album' : 'Dansstilar'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span id="suggestion-status-label" className="text-sm font-medium text-[rgb(var(--color-text))]">
+            Status
+          </span>
+          <div role="group" aria-labelledby="suggestion-status-label" className="flex flex-wrap gap-2">
+            {(['pending', 'accepted', 'activated', 'rejected', ''] as StatusFilter[]).map((s) => (
+              <Pill
+                key={s || 'all'}
+                active={status === s}
+                aria-pressed={status === s}
+                onClick={() => updateParam('status', s)}
+              >
+                {s ? statusLabel[s] : 'Alla'}
+              </Pill>
+            ))}
+          </div>
+        </div>
+      </Card>
 
       {loadError && <LoadError message={loadError} onRetry={fetchItems} />}
 
@@ -336,22 +352,28 @@ export function AdminSuggestionsPage() {
         onClose={() => { setRejectTarget(null); setRejectNote(''); setRejectError(null); }}
         title="Avvisa förslag"
       >
-        <div className="mt-1">
+        <FormField label="Motivering (valfritt)" htmlFor="reject-note">
           <TextInput
-            placeholder="Motivering (valfritt)"
+            id="reject-note"
+            placeholder="Till exempel: finns redan i biblioteket"
             value={rejectNote}
             onChange={(e) => { setRejectNote(e.target.value); setRejectError(null); }}
+            className="min-h-11"
           />
-        </div>
-        <div className="mt-4 flex items-center justify-end gap-2">
-          {rejectError && <InlineError>{rejectError}</InlineError>}
+        </FormField>
+        {rejectError && (
+          <div className="mt-3">
+            <InlineError>{rejectError}</InlineError>
+          </div>
+        )}
+        <FormActions>
           <Button variant="ghost" onClick={() => { setRejectTarget(null); setRejectNote(''); setRejectError(null); }}>
             Avbryt
           </Button>
-          <Button variant="primary" className="bg-red-600 hover:bg-red-700" onClick={handleReject}>
+          <Button variant="primary" onClick={handleReject}>
             Avvisa
           </Button>
-        </div>
+        </FormActions>
       </Modal>
 
       <Modal
@@ -361,26 +383,30 @@ export function AdminSuggestionsPage() {
       >
         {activatePreview && (
           <>
-            <p className="text-sm text-[rgb(var(--color-text))]">
+            <p className="text-[15px] text-[rgb(var(--color-text))]">
               Aktivera <strong>{activatePreview.preview.mainStyle}</strong>
               {activatePreview.preview.subStyle ? ` / ${activatePreview.preview.subStyle}` : ''} med{' '}
               <strong>{activatePreview.preview.proposedBeatsPerBar}</strong> taktslag per takt?
             </p>
-            <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-              Detta uppdaterar produktion och kan ta upp till 5 minuter innan det påverkar
-              bearbetning. Det påverkar {activatePreview.preview.affectedTrackCount} redan
+            <p className="mt-3 text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
+              Det här uppdaterar produktion och kan ta upp till fem minuter innan det påverkar
+              bearbetningen. Det påverkar {activatePreview.preview.affectedTrackCount} redan
               klassificerade {activatePreview.preview.affectedTrackCount === 1 ? 'låt' : 'låtar'}{' '}
               i den här stilen.
             </p>
-            <div className="mt-4 flex items-center justify-end gap-2">
-              {activateError && <InlineError>{activateError}</InlineError>}
+            {activateError && (
+              <div className="mt-3">
+                <InlineError>{activateError}</InlineError>
+              </div>
+            )}
+            <FormActions>
               <Button variant="ghost" onClick={() => { setActivatePreview(null); setActivateError(null); }}>
                 Avbryt
               </Button>
               <Button variant="primary" disabled={activating} onClick={confirmActivate}>
                 {activating ? 'Aktiverar...' : 'Aktivera'}
               </Button>
-            </div>
+            </FormActions>
           </>
         )}
       </Modal>
@@ -388,16 +414,26 @@ export function AdminSuggestionsPage() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-    accepted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    activated: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${colors[status] ?? ''}`}>
-      {statusLabel[status] ?? status}
-    </span>
-  );
+/** The status as a word. Amber is kept for the one state that still waits on someone. */
+function SuggestionStatusBadge({ status }: { status: string }) {
+  const label = statusLabel[status] ?? status;
+  if (status === 'pending') {
+    return (
+      <Badge
+        style={{
+          backgroundColor: 'rgb(var(--color-now-playing) / 0.16)',
+          color: 'rgb(var(--color-now-playing-text))',
+        }}
+      >
+        {label}
+      </Badge>
+    );
+  }
+  if (status === 'activated') {
+    return <Badge style={{ color: 'rgb(var(--color-success))' }}>{label}</Badge>;
+  }
+  if (status === 'rejected') {
+    return <Badge variant="muted">{label}</Badge>;
+  }
+  return <Badge>{label}</Badge>;
 }
