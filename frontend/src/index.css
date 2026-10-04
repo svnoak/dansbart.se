@@ -3,56 +3,77 @@
 /* Use class-based dark mode (toggle) instead of prefers-color-scheme */
 @custom-variant dark (&& :where(.dark, .dark *));
 
-/* Global theme – semantic tokens for light/dark and customization */
+/* Global theme – semantic tokens for light/dark and customization.
+   Three colour roles: ink acts, blue links and selects, amber plays. */
 :root {
-  --color-bg: 250 247 242;
-  --color-bg-elevated: 255 253 250;
-  --color-border: 229 231 235;
-  --color-text: 17 24 39;
-  --color-text-muted: 107 114 128;
-  --color-accent: 123 30 30;
+  /* Neutrals: cool stone ground, white surfaces, near-black ink */
+  --color-bg: 243 243 239;
+  --color-bg-elevated: 255 255 255;
+  --color-border: 225 225 219;          /* hairlines, decorative */
+  --color-border-strong: 138 143 150;   /* input and select borders, 3:1 on white */
+  --color-text: 21 24 28;
+  --color-text-muted: 89 96 105;
+  /* Action: ink. Primary buttons, the play control. */
+  --color-accent: 21 24 28;
   --color-accent-foreground: 255 255 255;
-  --color-accent-hover: 95 20 20;
-  --color-accent-muted: 250 224 224;
-  --color-selected: 10 92 54;
-  --color-now-playing: 204 119 34;
-  --color-success: 21 128 61;
+  --color-accent-hover: 50 55 62;
+  --color-accent-muted: 233 233 228;    /* secondary buttons */
+  /* Blue: links, selected state, focus ring */
+  --color-link: 30 74 138;
+  --color-selected: 30 74 138;
+  --color-focus: 30 74 138;
+  /* Amber: playback state only. Fills, never text; use now-playing-text for words. */
+  --color-now-playing: 204 122 31;
+  --color-now-playing-text: 138 75 8;
+  --color-success: 31 107 58;
   --color-error: 185 28 28;
   --color-error-foreground: 255 255 255;
   --color-error-hover: 153 27 27;
-  --color-pill-bg: 238 242 255;
-  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.06);
-  --radius: 1rem;
-  --radius-lg: 1.5rem;
+  --color-pill-bg: 233 233 228;
+  /* Depth: hairlines on cards; this shadow is for floating layers (menus, dialogs, the nudge) */
+  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.12), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+  /* Shape: 8 px controls, 12 px cards and tiles, full for pills */
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
   --radius-full: 9999px;
 }
 
 /* Dark theme – applied when user selects dark mode (data-theme="dark") */
 html.dark,
 [data-theme="dark"] {
-  --color-bg: 26 20 18;
-  --color-bg-elevated: 40 31 28;
-  --color-border: 75 85 99;
-  --color-text: 243 244 246;
-  --color-text-muted: 156 163 175;
-  --color-accent: 224 122 122;
-  --color-accent-foreground: 15 23 42;
-  --color-accent-hover: 240 160 160;
-  --color-accent-muted: 74 26 26;
-  --color-selected: 110 211 163;
-  --color-now-playing: 230 170 90;
-  --color-success: 134 239 172;
+  --color-bg: 22 24 27;
+  --color-bg-elevated: 32 35 42;
+  --color-border: 58 62 68;
+  --color-border-strong: 128 134 142;
+  --color-text: 236 237 238;
+  --color-text-muted: 164 170 178;
+  --color-accent: 236 237 238;
+  --color-accent-foreground: 21 24 28;
+  --color-accent-hover: 255 255 255;
+  --color-accent-muted: 44 48 53;
+  --color-link: 138 174 230;
+  --color-selected: 138 174 230;
+  --color-focus: 138 174 230;
+  --color-now-playing: 232 160 70;
+  --color-now-playing-text: 240 196 142;
+  --color-success: 110 211 163;
   --color-error: 248 113 113;
-  --color-error-foreground: 15 23 42;
+  --color-error-foreground: 21 24 28;
   --color-error-hover: 252 165 165;
-  --color-pill-bg: 100 90 180;
-  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+  --color-pill-bg: 44 48 53;
+  --color-card-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.35);
 }
 
 body {
   background-color: rgb(var(--color-bg));
   color: rgb(var(--color-text));
-  font-family: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Visible focus everywhere (WCAG 2.4.7). Components that draw their own ring set outline-none. */
+:focus-visible {
+  outline: 2px solid rgb(var(--color-focus));
+  outline-offset: 2px;
 }
 
 /* Buttons and clickable elements show pointer cursor */

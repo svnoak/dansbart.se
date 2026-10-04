@@ -8,108 +8,121 @@ export interface DanceStyleColor {
   family: MeterFamily;
 }
 
+/**
+ * One colour pair per dance style, used wherever a track lists its style.
+ *
+ * The hue family carries meaning: warm hues are tretakt (triple meter), cool
+ * hues are tvåtakt (duple meter). Light backgrounds sit at one lightness and
+ * text colours at another, so every pair clears WCAG AA (4.5:1) in both
+ * themes and the set reads as one family.
+ *
+ * Confidence is never a colour. A confirmed style is a filled pill, a guess is
+ * a dashed outline in the same colour, an unknown style is grey.
+ */
 export const DANCE_STYLE_COLORS: Record<string, DanceStyleColor> = {
+  // Tretakt: warm hues
   polska: {
-    bg: '#DBEAFE',
-    text: '#1E4FAA',
-    bgDark: '#1E3A5F',
-    textDark: '#93B8F0',
-    family: 'triple',
-  },
-  slangpolska: {
-    bg: '#EDE9FE',
-    text: '#5B21B6',
-    bgDark: '#2E1065',
-    textDark: '#C4B5FD',
-    family: 'triple',
-  },
-  vals: {
-    bg: '#FCE4EC',
-    text: '#88305A',
-    bgDark: '#3D1A2E',
-    textDark: '#E8A0B8',
-    family: 'triple',
-  },
-  menuett: {
-    bg: '#E0E7FF',
-    text: '#3730A3',
-    bgDark: '#1E1B4B',
-    textDark: '#A5B4FC',
+    bg: '#F8E1DE',
+    text: '#932A23',
+    bgDark: '#3B2320',
+    textDark: '#F0B3AB',
     family: 'triple',
   },
   hambo: {
-    bg: '#FFEDD5',
-    text: '#9A3412',
-    bgDark: '#431407',
-    textDark: '#FDBA74',
+    bg: '#FAE6D3',
+    text: '#8A4A0E',
+    bgDark: '#3A2A18',
+    textDark: '#F0C48E',
     family: 'triple',
   },
-  ganglat: {
-    bg: '#ECFCCB',
-    text: '#3F6212',
-    bgDark: '#1A2E05',
-    textDark: '#BEF264',
+  vals: {
+    bg: '#F6EBC6',
+    text: '#6E5410',
+    bgDark: '#363018',
+    textDark: '#E9D48A',
     family: 'triple',
   },
   mazurka: {
-    bg: '#FAE8FF',
-    text: '#86198F',
-    bgDark: '#4A044E',
-    textDark: '#F0ABFC',
+    bg: '#FBE1EA',
+    text: '#932D5A',
+    bgDark: '#3B2330',
+    textDark: '#F0B3CB',
     family: 'triple',
   },
+  slangpolska: {
+    bg: '#F2E1F2',
+    text: '#7A2A78',
+    bgDark: '#35233A',
+    textDark: '#E3B3E3',
+    family: 'triple',
+  },
+  menuett: {
+    bg: '#E9E3F7',
+    text: '#4F3496',
+    bgDark: '#2B2640',
+    textDark: '#C9BCF0',
+    family: 'triple',
+  },
+  // Tvåtakt: cool hues
   polka: {
-    bg: '#DCFCE7',
-    text: '#166534',
-    bgDark: '#14332A',
-    textDark: '#86EFAC',
+    bg: '#DDEFE0',
+    text: '#1F6B3A',
+    bgDark: '#1F3327',
+    textDark: '#A6DDB5',
     family: 'duple',
   },
   schottis: {
-    bg: '#E0F7FA',
-    text: '#155E63',
-    bgDark: '#133B3E',
-    textDark: '#80DEEA',
+    bg: '#D8EFEC',
+    text: '#11685E',
+    bgDark: '#1C3331',
+    textDark: '#9EDDD3',
     family: 'duple',
   },
   snoa: {
-    bg: '#E0F2FE',
-    text: '#0369A1',
-    bgDark: '#082F49',
-    textDark: '#7DD3FC',
+    bg: '#DAEDF7',
+    text: '#155E85',
+    bgDark: '#1C2F3A',
+    textDark: '#9FD0EE',
     family: 'duple',
   },
   engelska: {
-    bg: '#FEF9C3',
-    text: '#854D0E',
-    bgDark: '#422006',
-    textDark: '#FDE68A',
+    bg: '#DFE7F8',
+    text: '#2B4C9C',
+    bgDark: '#20283C',
+    textDark: '#B3C6F0',
+    family: 'duple',
+  },
+  ganglat: {
+    bg: '#E6EECF',
+    text: '#4E6410',
+    bgDark: '#2A3120',
+    textDark: '#CBDC94',
     family: 'duple',
   },
 };
 
 export const FAMILY_FALLBACK_COLORS: Record<MeterFamily, DanceStyleColor> = {
   triple: {
-    bg: '#E8EDF5',
-    text: '#3B5280',
-    bgDark: '#1E2D45',
-    textDark: '#95ACC8',
+    bg: '#F3E4DA',
+    text: '#7A4530',
+    bgDark: '#352620',
+    textDark: '#E6BFAE',
     family: 'triple',
   },
   duple: {
-    bg: '#E5F2E8',
-    text: '#2D5B3A',
-    bgDark: '#1A3520',
-    textDark: '#88C49A',
+    bg: '#DDE9E6',
+    text: '#2D5B52',
+    bgDark: '#1E302D',
+    textDark: '#A9D2CA',
     family: 'duple',
   },
 };
 
 export const UNKNOWN_STYLE_COLOR: DanceStyleColor = {
-  bg: '#F3F4F6',
-  text: '#6B7280',
-  bgDark: '#374151',
-  textDark: '#9CA3AF',
+  bg: '#ECECE8',
+  text: '#596069',
+  bgDark: '#2C3035',
+  textDark: '#A4AAB2',
   family: 'triple',
 };
 
@@ -119,13 +132,13 @@ const STYLE_FAMILY_MAP: Record<string, MeterFamily> = {
   vals: 'triple',
   menuett: 'triple',
   hambo: 'triple',
-  ganglat: 'triple',
   mazurka: 'triple',
   polka: 'duple',
   schottis: 'duple',
   snoa: 'duple',
   engelska: 'duple',
   marsch: 'duple',
+  ganglat: 'duple',
   gånglåt: 'duple',
 };
 
