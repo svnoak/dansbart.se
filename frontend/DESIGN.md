@@ -80,7 +80,7 @@ components:
 
 **Creative North Star: "The Village Hall Ledger"**
 
-dansbart.se reads as a community's shared, hand-kept record: plain, calm and communally maintained, never a corporate music-streaming console. The home page rebuild is the first surface of this world: a warm paper-toned ground, rounded cards that lift gently off it, and one legible sans throughout, carrying the site's actual mechanism — the community votes to confirm a track's dance style and tempo, one entry at a time.
+dansbart.se reads as a community's shared, hand-kept record: plain, calm and communally maintained, never a corporate music-streaming console. The home page rebuild is the first surface of this world: a cool stone ground, white hairline-bordered cards, and one grotesk throughout, carrying the site's actual mechanism — the community votes to confirm a track's dance style and tempo, one entry at a time.
 
 The system is communal and inviting: nothing gated, nothing intimidating, no sales language, no gamification chrome (no points, badges, streaks). Density is moderate — horizontally-scrolling rails of soft-cornered tiles, generous tap targets, and a search field and buttons sized for a 14-to-85-year-old, non-technical audience. Two visual-tone constraints are confirmed by the build: no cover art or imagery anywhere on the home page (copyright), and no separate display face — one voice, sized up or down by weight and size, not by switching fonts.
 
