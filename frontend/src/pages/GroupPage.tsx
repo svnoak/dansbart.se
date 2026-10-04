@@ -3,15 +3,32 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getGroup, removeMember, createGroupPlaylist } from '@/api/generated/groups/groups';
 import type { GroupDto } from '@/api/models/groupDto';
 import { useAuth } from '@/auth/useAuth';
+import { useTheme } from '@/theme/useTheme';
+import { getStyleColor } from '@/styles/danceStyleColors';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
-import { Badge, Button, Card, IconButton, InlineError, SectionTitle, toast } from '@/ui';
-import { BackArrowIcon } from '@/icons';
+import { Badge, Button, Card, EmptyState, InlineError, RowSkeleton, toast } from '@/ui';
+import { ChevronLeftIcon, ChevronRightIcon, PlaylistIcon, PlusIcon, SettingsIcon, StarMarkIcon } from '@/icons';
+
+const LIST_CLASS =
+  'overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]';
+const ROW_CLASS =
+  'flex items-center gap-3 px-4 py-3 border-b border-[rgb(var(--color-border))] last:border-b-0';
+const INPUT_CLASS =
+  'min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]';
+const OUTLINE_LINK_CLASS =
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 py-2 text-sm font-semibold text-[rgb(var(--color-text))] transition-colors hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
+
+function initialOf(name: string | undefined): string {
+  return (name ?? '').trim().charAt(0).toUpperCase() || '?';
+}
 
 export function GroupPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   const [group, setGroup] = useState<GroupDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,16 +60,20 @@ export function GroupPage() {
   }, [id]);
 
   if (loading) {
-    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
+    return <RowSkeleton rows={3} label="Laddar gruppen" />;
   }
 
   if (notFound || !group) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-[15px] font-medium text-[rgb(var(--color-error))]" role="alert">
           Gruppen hittades inte.
         </p>
-        <Link to="/groups" className="text-sm text-[rgb(var(--color-accent))] hover:underline">
+        <Link
+          to="/groups"
+          className="inline-flex min-h-11 items-center gap-1 text-[15px] font-medium text-[rgb(var(--color-link))] hover:underline"
+        >
+          <ChevronLeftIcon className="h-5 w-5" aria-hidden />
           Tillbaka till grupper
         </Link>
       </div>
@@ -62,6 +83,7 @@ export function GroupPage() {
   const members = (group.members ?? []).filter((m) => m.status === 'accepted');
   const myMembership = members.find((m) => m.userId === user?.id);
   const canSeeSettings = canOpenGroupSettings(myMembership);
+  const canManagePlaylists = hasGroupPermission(myMembership, 'canManagePlaylists');
 
   async function handleLeave() {
     if (!group?.id || !myMembership?.id) return;
@@ -95,106 +117,94 @@ export function GroupPage() {
     }
   }
 
+  const metaParts: string[] = [];
+  if (group.memberCount != null) {
+    metaParts.push(`${group.memberCount} ${group.memberCount === 1 ? 'medlem' : 'medlemmar'}`);
+  }
+  metaParts.push(group.isPublic ? 'Offentlig' : 'Privat');
+
+  const hasPlaylists = !!group.playlists && group.playlists.length > 0;
+
   return (
-    <div className="space-y-6">
-      <IconButton aria-label="Tillbaka till grupper" onClick={() => navigate('/groups')}>
-        <BackArrowIcon className="h-5 w-5" aria-hidden />
-      </IconButton>
+    <div className="space-y-8">
+      <Link
+        to="/groups"
+        className="inline-flex min-h-11 items-center gap-1 text-[15px] font-medium text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
+      >
+        <ChevronLeftIcon className="h-5 w-5" aria-hidden />
+        Grupper
+      </Link>
 
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">{group.name}</h1>
-            <Badge variant={group.isPublic ? 'default' : 'muted'} className="text-base">
-              {group.isPublic ? 'Offentlig' : 'Privat'}
-            </Badge>
-          </div>
-          {group.memberCount != null && (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              {group.memberCount} {group.memberCount === 1 ? 'medlem' : 'medlemmar'}
-            </p>
-          )}
-        </div>
-        {canSeeSettings && (
-          <Link
-            to={`/groups/${id}/settings`}
-            className="shrink-0 text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+      <Card className="p-7">
+        <div className="flex flex-col items-start gap-6 sm:flex-row">
+          <span
+            className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent-muted))] text-[44px] font-bold text-[rgb(var(--color-text))]"
+            aria-hidden
           >
-            Inställningar för gruppen
-          </Link>
-        )}
-      </div>
+            {initialOf(group.name)}
+          </span>
+          <div className="min-w-0 flex-1 space-y-3">
+            <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+              {group.name}
+            </h1>
+            {group.aboutUs && (
+              <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text))]">{group.aboutUs}</p>
+            )}
+            <p className="text-[15px] text-[rgb(var(--color-text-muted))]">{metaParts.join(' · ')}</p>
 
-      {group.aboutUs && (
-        <section>
-          <SectionTitle>Om oss</SectionTitle>
-          <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">{group.aboutUs}</p>
-        </section>
-      )}
-
-      {group.members && (
-        <section>
-          <SectionTitle>Medlemmar</SectionTitle>
-          <ul className="mt-2 space-y-2">
-            {members.map((member) => (
-              <li key={member.id}>
-                <Card className="flex items-center justify-between gap-2 p-3">
-                  <span className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                    {member.displayName ?? member.username}
-                  </span>
-                  {member.isAdmin && <Badge>Administratör</Badge>}
-                </Card>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <SectionTitle>Gruppens spellistor</SectionTitle>
-        {group.playlists && group.playlists.length > 0 ? (
-          <ul className="space-y-2">
-            {group.playlists.map((playlist) => (
-              <li key={playlist.id}>
-                <Card className="space-y-1 p-3">
-                  <Link
-                    to={`/playlists/${playlist.id}`}
-                    className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
-                  >
-                    {playlist.name}
+            {(canManagePlaylists || canSeeSettings || myMembership) && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {canManagePlaylists && !creatingPlaylist && (
+                  <Button onClick={() => setCreatingPlaylist(true)}>
+                    <PlusIcon className="h-4 w-4" aria-hidden />
+                    Ny spellista
+                  </Button>
+                )}
+                {canSeeSettings && (
+                  <Link to={`/groups/${id}/settings`} className={OUTLINE_LINK_CLASS}>
+                    <SettingsIcon className="h-4 w-4" aria-hidden />
+                    Inställningar
                   </Link>
-                  {playlist.description && (
-                    <p className="line-clamp-2 text-sm text-[rgb(var(--color-text-muted))]">
-                      {playlist.description}
-                    </p>
-                  )}
-                  <p className="text-sm text-[rgb(var(--color-text-muted))]">
-                    {playlist.trackCount ?? 0} {playlist.trackCount === 1 ? 'låt' : 'låtar'}
-                  </p>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            Gruppen har inga spellistor ännu.
-          </p>
-        )}
+                )}
+                {myMembership && !confirmingLeave && (
+                  <Button variant="outline" onClick={() => setConfirmingLeave(true)}>
+                    Lämna gruppen
+                  </Button>
+                )}
+              </div>
+            )}
 
-        {hasGroupPermission(myMembership, 'canManagePlaylists') &&
-          (!creatingPlaylist ? (
-            <Button variant="secondary" onClick={() => setCreatingPlaylist(true)}>
-              Ny spellista
-            </Button>
-          ) : (
+            {myMembership && confirmingLeave && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-[15px] text-[rgb(var(--color-text))]">Vill du lämna gruppen?</span>
+                <Button variant="danger" disabled={leaving} onClick={handleLeave}>
+                  Ja, lämna gruppen
+                </Button>
+                <Button variant="ghost" disabled={leaving} onClick={() => setConfirmingLeave(false)}>
+                  Avbryt
+                </Button>
+              </div>
+            )}
+            <InlineError>{leaveError}</InlineError>
+          </div>
+        </div>
+      </Card>
+
+      <section className="space-y-3" aria-labelledby="group-playlists-title">
+        <h2 id="group-playlists-title" className="text-xl font-bold text-[rgb(var(--color-text))]">
+          Gruppens spellistor
+        </h2>
+
+        {canManagePlaylists && creatingPlaylist && (
+          <Card className="p-5">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleCreatePlaylist();
               }}
-              className="space-y-2"
+              className="space-y-4"
             >
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="group-playlist-name"
                   className="block text-sm font-medium text-[rgb(var(--color-text))]"
@@ -204,15 +214,16 @@ export function GroupPage() {
                 <input
                   id="group-playlist-name"
                   value={playlistName}
+                  autoFocus
                   onChange={(e) => {
                     setPlaylistName(e.target.value);
                     setCreatePlaylistError(null);
                   }}
-                  className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
+                  className={INPUT_CLASS}
                 />
               </div>
               <InlineError>{createPlaylistError}</InlineError>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={savingPlaylist || !playlistName.trim()}>
                   Skapa spellista
                 </Button>
@@ -230,44 +241,103 @@ export function GroupPage() {
                 </Button>
               </div>
             </form>
-          ))}
+          </Card>
+        )}
+
+        {hasPlaylists ? (
+          <ul className={LIST_CLASS}>
+            {group.playlists!.map((playlist) => {
+              const color = getStyleColor(null);
+              const trackCount = playlist.trackCount ?? 0;
+              const second = [
+                `${trackCount} ${trackCount === 1 ? 'låt' : 'låtar'}`,
+                playlist.description,
+              ].filter(Boolean);
+              return (
+                <li key={playlist.id} className={ROW_CLASS}>
+                  <span
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)]"
+                    style={{
+                      backgroundColor: isDark ? color.bgDark : color.bg,
+                      color: isDark ? color.textDark : color.text,
+                    }}
+                    aria-hidden
+                  >
+                    <StarMarkIcon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      to={`/playlists/${playlist.id}`}
+                      className="block truncate text-[15px] font-bold text-[rgb(var(--color-text))] hover:underline"
+                    >
+                      {playlist.name}
+                    </Link>
+                    <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">
+                      {second.join(' · ')}
+                    </p>
+                  </div>
+                  <Link
+                    to={`/playlists/${playlist.id}`}
+                    aria-label={`Öppna ${playlist.name ?? 'spellistan'}`}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))]"
+                  >
+                    <ChevronRightIcon className="h-5 w-5" aria-hidden />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState
+            icon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
+            title="Gruppen har inga spellistor ännu."
+            description={
+              canManagePlaylists ? 'Skapa den första med Ny spellista här ovanför.' : undefined
+            }
+          />
+        )}
       </section>
 
-      {myMembership ? (
-        <section className="space-y-2">
-          {!confirmingLeave ? (
-            <Button variant="secondary" onClick={() => setConfirmingLeave(true)}>
-              Lämna gruppen
-            </Button>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-[rgb(var(--color-text))]">Vill du lämna gruppen?</span>
-              <Button variant="danger" disabled={leaving} onClick={handleLeave}>
-                Ja, lämna gruppen
-              </Button>
-              <Button variant="ghost" disabled={leaving} onClick={() => setConfirmingLeave(false)}>
-                Avbryt
-              </Button>
-            </div>
-          )}
-          {leaveError && (
-            <p className="text-sm text-red-600" role="alert">
-              {leaveError}
-            </p>
-          )}
+      {group.members && (
+        <section className="space-y-3" aria-labelledby="group-members-title">
+          <h2 id="group-members-title" className="text-xl font-bold text-[rgb(var(--color-text))]">
+            Medlemmar
+          </h2>
+          <ul className={LIST_CLASS}>
+            {members.map((member) => {
+              const memberName = member.displayName ?? member.username;
+              return (
+                <li key={member.id} className={ROW_CLASS}>
+                  <span
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent-muted))] text-base font-bold text-[rgb(var(--color-text))]"
+                    aria-hidden
+                  >
+                    {initialOf(memberName)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[rgb(var(--color-text))]">
+                    {memberName}
+                  </span>
+                  {member.isAdmin && <Badge>Administratör</Badge>}
+                </li>
+              );
+            })}
+          </ul>
         </section>
-      ) : authLoading ? null : !isAuthenticated ? (
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">
-          <Link to="/login" className="text-[rgb(var(--color-accent))] hover:underline">
-            Logga in
-          </Link>{' '}
-          för att gå med i grupper.
-        </p>
-      ) : (
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">
-          Du är inte medlem i gruppen. Be en administratör att bjuda in dig.
-        </p>
       )}
+
+      {!myMembership &&
+        (authLoading ? null : !isAuthenticated ? (
+          <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+            <Link to="/login" className="font-medium text-[rgb(var(--color-link))] hover:underline">
+              Logga in
+            </Link>{' '}
+            för att gå med i grupper.
+          </p>
+        ) : (
+          <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+            Du är inte medlem i gruppen. Be en administratör att bjuda in dig.
+          </p>
+        ))}
     </div>
   );
 }

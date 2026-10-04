@@ -290,6 +290,18 @@ describe('GroupSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
+    expect(document.body.querySelector('input[type="checkbox"][aria-label]')).toBeNull();
+
+    const permissionsButton = getButtonByText('Behörigheter');
+    expect(permissionsButton).toBeDefined();
+    expect(permissionsButton?.getAttribute('aria-expanded')).toBe('false');
+
+    await act(async () => {
+      permissionsButton?.click();
+    });
+
+    expect(permissionsButton?.getAttribute('aria-expanded')).toBe('true');
+
     const checkbox = getCheckboxByAccessibleName('Hantera spellistor') as HTMLElement | null;
     await act(async () => {
       checkbox?.click();
@@ -318,7 +330,10 @@ describe('GroupSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const removeButton = getButtonByText('Ta bort');
+    const removeButton = document.body.querySelector<HTMLButtonElement>(
+      'button[aria-label="Ta bort Anna ur gruppen"]',
+    );
+    expect(removeButton).not.toBeNull();
     await act(async () => {
       removeButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -327,7 +342,7 @@ describe('GroupSettingsPage', () => {
     expect(document.body.textContent).toContain('Personen kan inte tas bort. En grupp måste ha minst en administratör.');
   });
 
-  it('pending invitations show as Väntande for an inviter', async () => {
+  it('pending invitations show as Väntar for an inviter', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getGroup.mockResolvedValue({
       id: 'g1',
@@ -346,7 +361,7 @@ describe('GroupSettingsPage', () => {
     });
 
     expect(document.body.textContent).toContain('Bob');
-    expect(document.body.textContent).toContain('Väntande');
+    expect(document.body.textContent).toContain('Väntar');
     expect(document.body.querySelector('input[type="checkbox"]')).toBeNull();
   });
 
@@ -771,9 +786,9 @@ describe('GroupSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    expect(document.body.textContent).toContain('Väntande inbjudningar till spellistor');
+    expect(document.body.textContent).toContain('Inbjudningar till spellistor');
     expect(document.body.textContent).toContain('Bröllopsspellistan');
-    expect(document.body.textContent).toContain('Redigera');
+    expect(document.body.textContent).toContain('kan redigera');
     expect(document.body.textContent).toContain('Inbjuden av Anna');
     expect(getButtonByText('Acceptera')).toBeDefined();
     expect(getButtonByText('Avböj')).toBeDefined();
@@ -797,7 +812,7 @@ describe('GroupSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    expect(document.body.textContent).not.toContain('Väntande inbjudningar till spellistor');
+    expect(document.body.textContent).not.toContain('Inbjudningar till spellistor');
   });
 
   it('a non-admin does not see the section', async () => {
@@ -817,7 +832,7 @@ describe('GroupSettingsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    expect(document.body.textContent).not.toContain('Väntande inbjudningar till spellistor');
+    expect(document.body.textContent).not.toContain('Inbjudningar till spellistor');
     expect(getGroupPlaylistInvitations).not.toHaveBeenCalled();
   });
 

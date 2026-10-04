@@ -10,10 +10,21 @@ import {
 import { ApiError } from '@/api/http-client';
 import type { GroupSummaryDto } from '@/api/models/groupSummaryDto';
 import type { GroupInvitationDto } from '@/api/models/groupInvitationDto';
-import { GroupIcon, PlusIcon } from '@/icons';
-import { Badge, Button, Card, InlineError, LoadError, SectionTitle, toast } from '@/ui';
+import { ChevronRightIcon, GroupIcon, PlusIcon } from '@/icons';
+import { Button, Card, EmptyState, InlineError, LoadError, RowSkeleton, toast } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 import { describeGroupError } from '@/utils/describeGroupError';
+
+const LIST_CLASS =
+  'overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]';
+const ROW_CLASS =
+  'flex items-center gap-3 px-4 py-3 border-b border-[rgb(var(--color-border))] last:border-b-0';
+const INPUT_CLASS =
+  'min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]';
+
+function groupInitial(name: string | undefined): string {
+  return (name ?? '').trim().charAt(0).toUpperCase() || '?';
+}
 
 export function GroupsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -175,19 +186,26 @@ export function GroupsPage() {
   const joinablePublicGroups = publicGroups.filter((g) => !myGroupIds.has(g.id));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Grupper</h1>
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+            Grupper
+          </h1>
+          <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+            Dela spellistor med dansvänner, kursdeltagare och spelmanslag.
+          </p>
+        </div>
         {isAuthenticated && (
-          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
-            <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+          <Button onClick={() => setShowForm((s) => !s)} aria-expanded={showForm}>
+            <PlusIcon className="h-4 w-4" aria-hidden />
             Ny grupp
           </Button>
         )}
-      </div>
+      </header>
 
       {showForm && (
-        <Card className="p-4">
+        <Card className="p-5">
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">
               <label
@@ -205,20 +223,20 @@ export function GroupsPage() {
                   setCreateError(null);
                 }}
                 autoFocus
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className={INPUT_CLASS}
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text))]">
+            <label className="flex min-h-11 items-center gap-3 text-[15px] text-[rgb(var(--color-text))]">
               <input
                 type="checkbox"
                 checked={newIsPublic}
                 onChange={(e) => setNewIsPublic(e.target.checked)}
-                className="h-5 w-5 rounded border-[rgb(var(--color-border))]"
+                className="h-5 w-5 shrink-0 rounded-[4px] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
               />
               Offentlig grupp: alla kan se gruppen och dess offentliga spellistor
             </label>
             <InlineError>{createError}</InlineError>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={creating || !newGroupName.trim()}>
                 Skapa grupp
               </Button>
@@ -231,56 +249,72 @@ export function GroupsPage() {
       )}
 
       {!loadingMine && invitations.length > 0 && (
-        <section className="space-y-3">
-          <SectionTitle>Inbjudningar</SectionTitle>
-          <ul className="space-y-2">
+        <section className="space-y-3" aria-labelledby="groups-invitations-title">
+          <h2 id="groups-invitations-title" className="text-xl font-bold text-[rgb(var(--color-text))]">
+            Inbjudningar
+          </h2>
+          <ul className={LIST_CLASS}>
             {invitations.map((inv) => (
-              <li key={inv.id} className="space-y-1">
-                <Card className="flex items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                      {inv.groupName ?? 'Okänd grupp'}
+              <li key={inv.id} className={`${ROW_CLASS} flex-wrap`}>
+                <span
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]"
+                  aria-hidden
+                >
+                  <GroupIcon className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-bold text-[rgb(var(--color-text))]">
+                    {inv.groupName ?? 'Okänd grupp'}
+                  </p>
+                  {inv.invitedByDisplayName && (
+                    <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                      Inbjuden av {inv.invitedByDisplayName}
                     </p>
-                    {inv.invitedByDisplayName && (
-                      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-                        Inbjuden av {inv.invitedByDisplayName}
-                      </p>
-                    )}
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    className="h-10 min-h-10"
+                    disabled={respondingId === inv.id}
+                    onClick={() => handleRespond(inv.id!, true)}
+                  >
+                    Acceptera
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-10 min-h-10"
+                    disabled={respondingId === inv.id}
+                    onClick={() => handleRespond(inv.id!, false)}
+                  >
+                    Avböj
+                  </Button>
+                </div>
+                {respondErrors[inv.id!] && (
+                  <div className="basis-full pl-14">
+                    <InlineError>{respondErrors[inv.id!]}</InlineError>
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      size="sm"
-                      disabled={respondingId === inv.id}
-                      onClick={() => handleRespond(inv.id!, true)}
-                    >
-                      Acceptera
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={respondingId === inv.id}
-                      onClick={() => handleRespond(inv.id!, false)}
-                    >
-                      Avböj
-                    </Button>
-                  </div>
-                </Card>
-                {respondErrors[inv.id!] && <InlineError>{respondErrors[inv.id!]}</InlineError>}
+                )}
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      {isAuthenticated && !loadingMine && (
-        <section className="space-y-3">
-          <SectionTitle>Mina grupper</SectionTitle>
-          {errorMine ? (
+      {isAuthenticated && (
+        <section className="space-y-3" aria-labelledby="groups-mine-title">
+          <h2 id="groups-mine-title" className="text-xl font-bold text-[rgb(var(--color-text))]">
+            Mina grupper
+          </h2>
+          {loadingMine ? (
+            <RowSkeleton rows={2} label="Laddar dina grupper" />
+          ) : errorMine ? (
             <LoadError message="Det gick inte att hämta grupperna." onRetry={loadMine} />
           ) : myGroups.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Du är inte med i någon grupp ännu.
-            </p>
+            <EmptyState
+              icon={<GroupIcon className="h-7 w-7" aria-hidden />}
+              title="Du är inte med i någon grupp ännu."
+              description="Skapa en grupp eller gå med i en offentlig grupp nedan."
+            />
           ) : (
             <GroupList groups={myGroups} />
           )}
@@ -288,38 +322,44 @@ export function GroupsPage() {
       )}
 
       {!authLoading && !isAuthenticated && (
-        <Card className="flex flex-col items-center gap-3 p-8 text-center">
-          <GroupIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
-          <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-            Logga in för att skapa och gå med i grupper.
-          </p>
-          <Link
-            to="/login"
-            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            Logga in
-          </Link>
-        </Card>
+        <EmptyState
+          icon={<GroupIcon className="h-7 w-7" aria-hidden />}
+          title="Logga in för att skapa och gå med i grupper."
+          description="I en grupp delar ni spellistor och bjuder in varandra."
+          action={
+            <Link
+              to="/login"
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))]"
+            >
+              Logga in
+            </Link>
+          }
+        />
       )}
 
       {(!isAuthenticated || !loadingMine) && (
-        <section className="space-y-3">
-          <SectionTitle>Offentliga grupper</SectionTitle>
+        <section className="space-y-3" aria-labelledby="groups-public-title">
+          <h2 id="groups-public-title" className="text-xl font-bold text-[rgb(var(--color-text))]">
+            Offentliga grupper
+          </h2>
           {loadingPublic ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar...</p>
+            <RowSkeleton rows={3} label="Laddar offentliga grupper" />
           ) : errorPublic ? (
             <LoadError message="Det gick inte att hämta grupperna." onRetry={loadPublicGroups} />
           ) : joinablePublicGroups.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Inga offentliga grupper ännu.
-            </p>
+            <EmptyState
+              icon={<GroupIcon className="h-7 w-7" aria-hidden />}
+              title="Inga offentliga grupper ännu."
+            />
           ) : (
             <GroupList groups={joinablePublicGroups} />
           )}
           {hasMore && (
             <div ref={sentinelRef} className="flex justify-center py-4">
               {loadingMore && (
-                <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
+                <p className="text-sm text-[rgb(var(--color-text-muted))]" role="status">
+                  Laddar fler…
+                </p>
               )}
             </div>
           )}
@@ -331,22 +371,32 @@ export function GroupsPage() {
 
 function GroupList({ groups }: { groups: GroupSummaryDto[] }) {
   return (
-    <ul className="space-y-2">
+    <ul className={LIST_CLASS}>
       {groups.map((g) => (
-        <li key={g.id}>
-          <Link to={`/groups/${g.id}`} className="block">
-            <Card className="flex items-center gap-3 p-4 transition-colors hover:border-[rgb(var(--color-accent))]/50">
-              <GroupIcon
-                className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]"
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                {g.name}
-              </span>
-              <Badge variant={g.isPublic ? 'default' : 'muted'} className="text-base">
-                {g.isPublic ? 'Offentlig' : 'Privat'}
-              </Badge>
-            </Card>
+        <li key={g.id} className={ROW_CLASS}>
+          <span
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent-muted))] text-base font-bold text-[rgb(var(--color-text))]"
+            aria-hidden
+          >
+            {groupInitial(g.name)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <Link
+              to={`/groups/${g.id}`}
+              className="block truncate text-[15px] font-bold text-[rgb(var(--color-text))] hover:underline"
+            >
+              {g.name}
+            </Link>
+            <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+              {g.isPublic ? 'Offentlig' : 'Privat'}
+            </p>
+          </div>
+          <Link
+            to={`/groups/${g.id}`}
+            aria-label={`Öppna ${g.name ?? 'gruppen'}`}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))]"
+          >
+            <ChevronRightIcon className="h-5 w-5" aria-hidden />
           </Link>
         </li>
       ))}

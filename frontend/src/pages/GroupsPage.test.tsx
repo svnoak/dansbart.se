@@ -348,7 +348,7 @@ describe('GroupsPage', () => {
     expect(getGroupInvitations).not.toHaveBeenCalled();
   });
 
-  it('renders the new group button small', async () => {
+  it('renders the new group button as a 44 px primary action with a plus icon', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({}));
     getMyGroups.mockResolvedValue([]);
     getPublicGroups.mockResolvedValue({
@@ -366,9 +366,9 @@ describe('GroupsPage', () => {
 
     const newButton = getButtonByText('Ny grupp');
     expect(newButton).toBeDefined();
-    expect(newButton?.className).toContain('px-3');
-    expect(newButton?.className).toContain('py-1.5');
-    expect(newButton?.className).not.toContain('px-4');
+    expect(newButton?.className).toContain('min-h-11');
+    expect(newButton?.className).toContain('bg-[rgb(var(--color-accent))]');
+    expect(newButton?.querySelector('svg')).not.toBeNull();
   });
 
   it('shows that a group name is taken', async () => {
