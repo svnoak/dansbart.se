@@ -1,9 +1,15 @@
 import type { ReactNode } from 'react';
+import { Card } from '@/ui';
 
+/**
+ * The filter row above a backstage table: a card that lays its fields out in
+ * a wrapping row, aligned on their bottom edge so labelled and unlabelled
+ * fields line up.
+ */
 export function FilterBar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3">
+    <Card className="flex flex-wrap items-end gap-3 px-4 py-3">
       {children}
-    </div>
+    </Card>
   );
 }
