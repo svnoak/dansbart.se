@@ -8,6 +8,8 @@ interface SectionTitleProps {
   className?: string;
   linkTo?: string;
   linkLabel?: string;
+  /** A short muted note that sits to the right of the heading, for example a count or a hint. */
+  aside?: ReactNode;
 }
 
 export function SectionTitle({
@@ -17,24 +19,27 @@ export function SectionTitle({
   className = '',
   linkTo,
   linkLabel = 'Se alla',
+  aside,
 }: SectionTitleProps) {
   return (
-    <div className={`flex items-center justify-between ${className}`}>
+    <div className={`flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 ${className}`}>
       <h2
         id={id}
-        className="flex items-center gap-2 text-lg font-semibold text-[rgb(var(--color-text))]"
+        className="flex items-center gap-2 text-xl font-bold leading-tight text-[rgb(var(--color-text))]"
       >
         {icon}
         {children}
       </h2>
-      {linkTo && (
+      {linkTo ? (
         <Link
           to={linkTo}
-          className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+          className="text-sm font-semibold text-[rgb(var(--color-link))] hover:underline"
         >
           {linkLabel}
         </Link>
-      )}
+      ) : aside ? (
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">{aside}</p>
+      ) : null}
     </div>
   );
 }

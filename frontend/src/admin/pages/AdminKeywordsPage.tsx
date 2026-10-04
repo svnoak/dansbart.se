@@ -17,7 +17,8 @@ import { TextInput } from '@/admin/components/forms/TextInput';
 import { Select } from '@/admin/components/forms/Select';
 import { FormField } from '@/admin/components/forms/FormField';
 import { FormActions } from '@/admin/components/forms/FormActions';
-import { Button } from '@/ui';
+import { Button, Pill } from '@/ui';
+import { StylePill } from '@/components/TrackRow/StylePill';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface StyleConfig {
@@ -184,63 +185,59 @@ export function AdminKeywordsPage() {
       key: 'keyword',
       header: 'Nyckelord',
       render: (kw) => (
-        <span className="font-medium text-[rgb(var(--color-text))]">{kw.keyword}</span>
+        <span className="text-[15px] font-medium text-[rgb(var(--color-text))]">{kw.keyword}</span>
       ),
     },
     {
       key: 'mainStyle',
       header: 'Huvudstil',
-      render: (kw) => <span className="text-xs">{kw.mainStyle ?? '-'}</span>,
+      render: (kw) =>
+        kw.mainStyle ? (
+          <StylePill style={kw.mainStyle} state="confirmed" />
+        ) : (
+          <span className="text-[13px] text-[rgb(var(--color-text-muted))]">–</span>
+        ),
     },
     {
       key: 'subStyle',
       header: 'Understil',
       render: (kw) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">{kw.subStyle ?? '-'}</span>
+        <span className="text-[13px] text-[rgb(var(--color-text-muted))]">{kw.subStyle ?? '–'}</span>
       ),
     },
     {
       key: 'isActive',
-      header: 'Aktiv',
+      header: 'Status',
       render: (kw) => (
-        <button
-          type="button"
+        <Pill
+          active={!!kw.isActive}
+          aria-pressed={!!kw.isActive}
+          aria-label={kw.isActive ? `Inaktivera ${kw.keyword ?? 'nyckelordet'}` : `Aktivera ${kw.keyword ?? 'nyckelordet'}`}
           onClick={() => handleToggleActive(kw)}
-          className={`relative h-5 w-9 rounded-full transition-colors ${
-            kw.isActive ? 'bg-[rgb(var(--color-accent))]' : 'bg-[rgb(var(--color-border))]'
-          }`}
-          aria-label={kw.isActive ? 'Inaktivera' : 'Aktivera'}
         >
-          <span
-            className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-              kw.isActive ? 'translate-x-4' : ''
-            }`}
-          />
-        </button>
+          {kw.isActive ? 'Aktiv' : 'Inaktiv'}
+        </Pill>
       ),
     },
     {
       key: 'actions',
       header: '',
       render: (kw) => (
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => openEdit(kw)}
-            className="px-2 py-1 text-xs text-[rgb(var(--color-accent))] hover:underline"
-          >
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => openEdit(kw)}>
             Redigera
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[rgb(var(--color-error))]"
             onClick={() => setDeleteModal(kw)}
-            className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
           >
             Radera
-          </button>
+          </Button>
         </div>
       ),
-      className: 'w-32',
+      className: 'w-56',
     },
   ];
 
@@ -254,12 +251,13 @@ export function AdminKeywordsPage() {
     .sort();
 
   const keywordForm = (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <FormField label="Nyckelord" htmlFor="kw-keyword">
         <TextInput
           id="kw-keyword"
           value={formKeyword}
           onChange={(e) => setFormKeyword(e.target.value)}
+          className="min-h-11"
           required
         />
       </FormField>
@@ -271,9 +269,10 @@ export function AdminKeywordsPage() {
             setFormMainStyle(e.target.value);
             setFormSubStyle('');
           }}
+          className="min-h-11"
           required
         >
-          <option value="">Välj huvudstil...</option>
+          <option value="">Välj huvudstil</option>
           {mainStyles.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
@@ -284,6 +283,7 @@ export function AdminKeywordsPage() {
           id="kw-sub"
           value={formSubStyle}
           onChange={(e) => setFormSubStyle(e.target.value)}
+          className="min-h-11"
           disabled={subStylesForMain.length === 0}
         >
           <option value="">Ingen understil</option>
@@ -293,52 +293,77 @@ export function AdminKeywordsPage() {
         </Select>
       </FormField>
       {editModal && (
-        <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text))]">
+        <label className="flex min-h-11 items-center gap-3 text-[15px] text-[rgb(var(--color-text))]">
           <input
             type="checkbox"
             checked={formIsActive}
             onChange={(e) => setFormIsActive(e.target.checked)}
-            className="rounded"
+            className="h-5 w-5 rounded-[4px] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
           />
-          Aktiv
+          Aktivt nyckelord
         </label>
       )}
     </div>
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Nyckelord</h1>
-        <Button variant="primary" size="sm" onClick={openCreate}>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+            Nyckelord
+          </h1>
+          <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
+            Ord i titlar och beskrivningar som pekar på en dansstil. Analysen använder dem när
+            den gissar stilen på nya låtar.
+          </p>
+        </div>
+        <Button variant="primary" onClick={openCreate}>
           Skapa nyckelord
         </Button>
       </div>
 
       <FilterBar>
-        <div className="flex-1 min-w-50">
+        <div className="flex min-w-55 flex-1 flex-col gap-1.5">
+          <label htmlFor="kw-search" className="text-sm font-medium text-[rgb(var(--color-text))]">
+            Sök nyckelord
+          </label>
           <TextInput
+            id="kw-search"
             type="search"
-            placeholder="Sök nyckelord..."
+            placeholder="Till exempel schottis"
             value={search}
             onChange={(e) => updateParam('search', e.target.value)}
+            className="min-h-11"
           />
         </div>
-        <TextInput
-          placeholder="Filtrera huvudstil..."
-          value={mainStyle}
-          onChange={(e) => updateParam('mainStyle', e.target.value)}
-          className="w-auto min-w-35"
-        />
-        <Select
-          value={isActive ?? ''}
-          onChange={(e) => updateParam('isActive', e.target.value)}
-          className="w-auto min-w-30"
-        >
-          <option value="">Alla</option>
-          <option value="true">Aktiva</option>
-          <option value="false">Inaktiva</option>
-        </Select>
+        <div className="flex min-w-45 flex-col gap-1.5">
+          <label htmlFor="kw-filter-main" className="text-sm font-medium text-[rgb(var(--color-text))]">
+            Huvudstil
+          </label>
+          <TextInput
+            id="kw-filter-main"
+            placeholder="Alla huvudstilar"
+            value={mainStyle}
+            onChange={(e) => updateParam('mainStyle', e.target.value)}
+            className="min-h-11"
+          />
+        </div>
+        <div className="flex min-w-40 flex-col gap-1.5">
+          <label htmlFor="kw-filter-active" className="text-sm font-medium text-[rgb(var(--color-text))]">
+            Status
+          </label>
+          <Select
+            id="kw-filter-active"
+            value={isActive ?? ''}
+            onChange={(e) => updateParam('isActive', e.target.value)}
+            className="min-h-11"
+          >
+            <option value="">Alla</option>
+            <option value="true">Aktiva</option>
+            <option value="false">Inaktiva</option>
+          </Select>
+        </div>
       </FilterBar>
 
       <DataTable
@@ -364,7 +389,7 @@ export function AdminKeywordsPage() {
         <FormActions>
           <Button variant="ghost" onClick={() => setCreateModal(false)}>Avbryt</Button>
           <Button variant="primary" onClick={handleCreate} disabled={!formKeyword || !formMainStyle}>
-            Skapa
+            Skapa nyckelord
           </Button>
         </FormActions>
       </Modal>
@@ -382,19 +407,15 @@ export function AdminKeywordsPage() {
 
       {/* Delete modal */}
       <Modal open={!!deleteModal} onClose={() => setDeleteModal(null)} title="Radera nyckelord">
-        <p className="text-sm text-[rgb(var(--color-text))]">
-          Vill du radera nyckelordet <strong>{deleteModal?.keyword}</strong>?
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
+          Vill du radera nyckelordet <strong>{deleteModal?.keyword}</strong>? Det går inte att ångra.
         </p>
-        <div className="mt-4 flex justify-end gap-2">
+        <FormActions>
           <Button variant="ghost" onClick={() => setDeleteModal(null)}>Avbryt</Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleDelete}
-          >
-            Radera
+          <Button variant="danger" onClick={handleDelete}>
+            Radera nyckelord
           </Button>
-        </div>
+        </FormActions>
       </Modal>
     </div>
   );

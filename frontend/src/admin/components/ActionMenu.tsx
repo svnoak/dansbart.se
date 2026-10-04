@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { IconButton } from '@/ui';
+import { MoreVerticalIcon } from '@/icons';
 
 export interface ActionItem {
   label: string;
@@ -6,6 +8,10 @@ export interface ActionItem {
   variant?: 'default' | 'danger';
 }
 
+/**
+ * A row's overflow menu: a 44 px trigger and a floating card of 44 px rows.
+ * A destructive item is drawn in the error colour.
+ */
 export function ActionMenu({ actions }: { actions: ActionItem[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -17,24 +23,31 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
         setOpen(false);
       }
     };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-7 w-7 items-center justify-center rounded-[var(--radius)] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
+    <div ref={ref} className="relative inline-flex">
+      <IconButton
         aria-label="Åtgärder"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-          <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
-        </svg>
-      </button>
+        <MoreVerticalIcon className="h-5 w-5" aria-hidden />
+      </IconButton>
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg">
+        <div
+          className="absolute right-0 top-full z-10 mt-1 w-56 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
+        >
           {actions.map((action) => (
             <button
               key={action.label}
@@ -43,9 +56,9 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
                 setOpen(false);
                 action.onClick();
               }}
-              className={`w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-[rgb(var(--color-border))]/50 ${
+              className={`flex w-full min-h-11 items-center px-4 text-left text-[15px] transition-colors hover:bg-[rgb(var(--color-accent-muted))] ${
                 action.variant === 'danger'
-                  ? 'text-red-600 dark:text-red-400'
+                  ? 'text-[rgb(var(--color-error))]'
                   : 'text-[rgb(var(--color-text))]'
               }`}
             >

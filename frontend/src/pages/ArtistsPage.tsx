@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getArtists } from '@/api/generated/artists/artists';
 import type { Artist } from '@/api/models/artist';
-import { ArtistCard } from '@/components';
-import { IconButton } from '@/ui';
-import { BackArrowIcon } from '@/icons';
+import { ArtistCard } from '@/components/ArtistCard';
+import { EmptyState, IconButton, RowSkeleton } from '@/ui';
+import { BackArrowIcon, UserIcon } from '@/icons';
 
 const PAGE_SIZE = 20;
 
@@ -14,7 +14,7 @@ export function ArtistsPage() {
   const q = searchParams.get('q') ?? '';
   const offset = Number(searchParams.get('offset') ?? '0');
 
-  const [artists, setArtists] = useState<Artist[]>([]);
+  const [items, setItems] = useState<Artist[]>([]);
   const [total, setTotal] = useState(0);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -56,14 +56,14 @@ export function ArtistsPage() {
 
     getArtists(params, { signal: controller.signal })
       .then((data) => {
-        const items = data?.items ?? [];
-        const totalCount = data?.total ?? items.length;
-        setArtists(
+        const page = data?.items ?? [];
+        const totalCount = data?.total ?? page.length;
+        setItems(
           offset === 0
-            ? items
+            ? page
             : (prev) => {
-                const seen = new Set(prev.map((a) => a.id));
-                return [...prev, ...items.filter((a) => !seen.has(a.id))];
+                const seen = new Set(prev.map((item) => item.id));
+                return [...prev, ...page.filter((item) => !seen.has(item.id))];
               },
         );
         setTotal(totalCount);
@@ -71,7 +71,7 @@ export function ArtistsPage() {
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setArtists([]);
+        setItems([]);
         setTotal(0);
         setLastFetched(fetchKey);
       })
@@ -82,7 +82,7 @@ export function ArtistsPage() {
     return () => controller.abort();
   }, [q, offset, fetchKey]);
 
-  const hasMore = artists.length < total;
+  const hasMore = items.length < total;
 
   const loadMore = useCallback(() => {
     setSearchParams((prev) => {
@@ -111,47 +111,55 @@ export function ArtistsPage() {
 
   return (
     <div className="space-y-6">
-      <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
+      <IconButton aria-label="Gå till startsidan" onClick={() => navigate('/')}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Artister
-      </h1>
 
-      <input
-        type="text"
-        defaultValue={q}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Sök artister..."
-        className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-      />
-
-      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-        {total.toLocaleString('sv-SE')} artister
-      </p>
-
-      {loading && artists.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
-      )}
-
-      {!loading && artists.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">
-          Inga artister hittades.
+      <div className="space-y-1">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Artister
+        </h1>
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">
+          {total.toLocaleString('sv-SE')} artister
         </p>
-      )}
+      </div>
 
-      <ul className="space-y-3">
-        {artists.map((artist, i) => (
-          <li key={artist.id ?? artist.name ?? `artist-${i}`}>
-            <ArtistCard artist={artist} />
-          </li>
-        ))}
-      </ul>
+      <div>
+        <label htmlFor="artists-search" className="sr-only">
+          Sök artister
+        </label>
+        <input
+          id="artists-search"
+          type="search"
+          defaultValue={q}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Sök artister"
+          className="h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-4 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-focus))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] focus-visible:ring-offset-2"
+        />
+      </div>
+
+      {loading && items.length === 0 ? (
+        <RowSkeleton rows={5} label="Laddar artister" />
+      ) : !loading && items.length === 0 ? (
+        <EmptyState
+          icon={<UserIcon className="h-6 w-6" />}
+          title="Inga artister hittades"
+          description={q ? 'Prova ett annat sökord.' : 'Det finns inga artister i katalogen än.'}
+        />
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {items.map((item, i) => (
+            <li key={item.id ?? `item-${i}`}>
+              <ArtistCard artist={item} />
+            </li>
+          ))}
+        </ul>
+      )}
 
       {hasMore && (
-        <div ref={sentinelRef} className="flex justify-center py-4">
+        <div ref={sentinelRef} className="flex justify-center py-4" aria-live="polite">
           {loadingMore && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
           )}
         </div>
       )}

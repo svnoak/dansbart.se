@@ -16,23 +16,23 @@ function extractCssBlock(css: string, selector: string): string {
   return match ? match[1] : '';
 }
 
-describe('serves Atkinson Hyperlegible Next from the site\'s own origin', () => {
+describe('serves Schibsted Grotesk from the site\'s own origin', () => {
   it('has the dependency in package.json', () => {
     expect(
-      packageJson.dependencies?.['@fontsource-variable/atkinson-hyperlegible-next'],
-      'package.json must list @fontsource-variable/atkinson-hyperlegible-next in dependencies'
+      packageJson.dependencies?.['@fontsource-variable/schibsted-grotesk'],
+      'package.json must list @fontsource-variable/schibsted-grotesk in dependencies'
     ).toBeDefined();
   });
 
   it('imports the font in main.tsx', () => {
-    const hasImport = /import\s+['"]@fontsource-variable\/atkinson-hyperlegible-next['"]/.test(mainTsx);
+    const hasImport = /import\s+['"]@fontsource-variable\/schibsted-grotesk['"]/.test(mainTsx);
     expect(
       hasImport,
-      'src/main.tsx must import @fontsource-variable/atkinson-hyperlegible-next'
+      'src/main.tsx must import @fontsource-variable/schibsted-grotesk'
     ).toBe(true);
   });
 
-  it('sets body font-family to start with Atkinson Hyperlegible Next Variable', () => {
+  it('sets body font-family to start with Schibsted Grotesk Variable', () => {
     const bodyBlock = extractCssBlock(indexCss, 'body');
     const fontFamilyMatch = bodyBlock.match(/font-family:\s*([^;]+)/);
     expect(
@@ -42,10 +42,10 @@ describe('serves Atkinson Hyperlegible Next from the site\'s own origin', () => 
 
     if (fontFamilyMatch) {
       const fontStack = fontFamilyMatch[1];
-      const startsWithAtkinson = fontStack.trim().startsWith("'Atkinson Hyperlegible Next Variable'");
+      const startsWithSchibsted = fontStack.trim().startsWith("'Schibsted Grotesk Variable'");
       expect(
-        startsWithAtkinson,
-        `body font-family must start with 'Atkinson Hyperlegible Next Variable', got: ${fontStack}`
+        startsWithSchibsted,
+        `body font-family must start with 'Schibsted Grotesk Variable', got: ${fontStack}`
       ).toBe(true);
     }
   });

@@ -2,30 +2,24 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 interface PillProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
-  /** When active, use green (Spotify) or red (YouTube) instead of accent */
+  /** Kept for callers; every active pill is ink. Source identity comes from the icon and the word. */
   variant?: 'default' | 'green' | 'red';
   children: ReactNode;
 }
 
 export function Pill({
   active = false,
-  variant = 'default',
   className = '',
   children,
   ...props
 }: PillProps) {
-  const activeClass =
-    variant === 'green' && active
-      ? 'bg-green-200 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-      : variant === 'red' && active
-        ? 'bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-200'
-        : active
-          ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] dark:bg-[rgb(var(--color-accent-muted))]/60'
-          : 'bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]';
+  const activeClass = active
+    ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
+    : 'border border-[rgb(var(--color-border))] bg-transparent text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]';
   return (
     <button
       type="button"
-      className={`rounded-[var(--radius-full)] px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))] ${activeClass} ${className}`}
+      className={`rounded-[var(--radius-full)] px-3.5 py-1.5 min-h-9 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] ${activeClass} ${className}`}
       {...props}
     >
       {children}

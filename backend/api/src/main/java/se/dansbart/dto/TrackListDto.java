@@ -42,4 +42,7 @@ public class TrackListDto {
 
     // All working playback links (Spotify, YouTube, etc.) so UI can show both
     private List<PlaybackLinkDto> playbackLinks;
+
+    /** Sheet music on folkwiki.se, when an admin has confirmed the match. Null otherwise. */
+    private String sheetMusicUrl;
 }

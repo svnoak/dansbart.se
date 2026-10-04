@@ -1,9 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConsent } from '@/consent/useConsent';
 import { useAuth } from '@/auth/useAuth';
-import { Pill } from '@/ui';
-import { LibraryIcon, PlaylistIcon, HeartIcon, GroupIcon, QueueListIcon, MusicNoteIcon } from '@/icons';
+import {
+  LibraryIcon,
+  PlaylistIcon,
+  HeartIcon,
+  GroupIcon,
+  QueueListIcon,
+  MusicNoteIcon,
+  StarMarkIcon,
+  UserIcon,
+} from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 import { getGroupInvitations } from '@/api/generated/groups/groups';
 
@@ -11,15 +19,16 @@ function NavLink({
   to,
   active,
   icon,
-  new: isNew = false,
+  hint,
   badge,
   onClick,
   children,
 }: {
   to: string;
   active: boolean;
-  new?: boolean;
-  icon?: React.ReactNode | null;
+  icon: ReactNode;
+  /** A short grey word after the label, for example "namngivna" after Danser. */
+  hint?: string;
   badge?: number;
   onClick?: () => void;
   children: string;
@@ -28,23 +37,20 @@ function NavLink({
     <Link
       to={to}
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-sm transition-colors ${
-        icon != null ? '' : 'pl-2'
-      } ${
+      aria-current={active ? 'page' : undefined}
+      className={`flex w-full min-h-11 items-center gap-3 rounded-[var(--radius)] px-3 text-sm transition-colors ${
         active
           ? 'bg-[rgb(var(--color-selected))]/10 font-semibold text-[rgb(var(--color-selected))]'
-          : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
+          : 'font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
       }`}
     >
-      {icon != null && (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-current opacity-90">
-          {icon}
-        </span>
-      )}
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center text-current">
+        {icon}
+      </span>
       <span className="flex-1">{children}</span>
-      {isNew && <Pill>Ny</Pill>}
+      {hint && <span className="text-xs text-[rgb(var(--color-text-muted))]">{hint}</span>}
       {badge != null && badge > 0 && (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-sm font-bold text-white">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-xs font-bold text-[rgb(var(--color-accent-foreground))]">
           {badge}
         </span>
       )}
@@ -52,6 +58,41 @@ function NavLink({
   );
 }
 
+function GroupLabel({ children }: { children: string }) {
+  return (
+    <p className="mt-4 mb-1 px-3 text-xs font-semibold text-[rgb(var(--color-text-muted))]">
+      {children}
+    </p>
+  );
+}
+
+const SearchIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-5 w-5" aria-hidden>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-3.5-3.5" />
+  </svg>
+);
+
+const HomeIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+    <path d="M3 11l9-8 9 8" />
+    <path d="M5 10v10h14V10" />
+  </svg>
+);
+
+const HelpIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5" />
+    <path d="M12 17v.01" />
+  </svg>
+);
+
+/**
+ * Main navigation, grouped by what a person is doing: Hem and Sök, then
+ * Utforska (public browsing), Mitt (things that belong to the person) and
+ * Gemenskap (other people). Info pages are small links at the bottom.
+ */
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { consentStatus, openCookieSettings } = useConsent();
@@ -64,91 +105,76 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     let cancelled = false;
     getInvitations()
       .then((invitations) => {
-        if (!cancelled) {
-          setInvitationCount(invitations.length);
-        }
+        if (!cancelled) setInvitationCount(invitations.length);
       })
       .catch(() => {
-        if (!cancelled) {
-          setInvitationCount(0);
-        }
+        if (!cancelled) setInvitationCount(0);
       });
     getGroupInvitations()
       .then((invitations) => {
-        if (!cancelled) {
-          setGroupInvitationCount(invitations.length);
-        }
+        if (!cancelled) setGroupInvitationCount(invitations.length);
       })
       .catch(() => {
-        if (!cancelled) {
-          setGroupInvitationCount(0);
-        }
+        if (!cancelled) setGroupInvitationCount(0);
       });
     return () => { cancelled = true; };
   }, [isAuthenticated]);
-  const isSearch = location.pathname === '/search';
-  const isHome = location.pathname === '/';
-  const isDances = location.pathname.startsWith('/dance') && !location.pathname.startsWith('/dance-lists');
-  const isPlaylists = location.pathname.startsWith('/playlists');
-  const isDanceLists = location.pathname.startsWith('/dance-lists');
-  const isGroups = location.pathname.startsWith('/groups');
-  const isFavorites = location.pathname === '/favorites';
-  const isMinaLatar = location.pathname === '/mina-latar';
-  const isHelp = location.pathname === '/help';
-  const isAbout = location.pathname === '/about';
-  const isTerms = location.pathname === '/terms';
-  const isPrivacy = location.pathname === '/privacy';
-  const isFeedback = location.pathname === '/feedback';
-  const isInfoPage = isAbout || isTerms || isPrivacy || isFeedback;
 
-  const [omOpen, setOmOpen] = useState(isInfoPage);
-  const [prevIsInfoPage, setPrevIsInfoPage] = useState(isInfoPage);
-  if (isInfoPage && !prevIsInfoPage) {
-    setOmOpen(true);
-  }
-  if (prevIsInfoPage !== isInfoPage) {
-    setPrevIsInfoPage(isInfoPage);
-  }
+  const path = location.pathname;
+  const isHome = path === '/';
+  const isSearch = path === '/search';
+  const isDances = path.startsWith('/dance') && !path.startsWith('/dance-lists');
+  const isArtists = path.startsWith('/artist') || path.startsWith('/album');
+  const isPlaylists = path.startsWith('/playlists');
+  const isDanceLists = path.startsWith('/dance-lists');
+  const isGroups = path.startsWith('/groups');
+  const isFavorites = path === '/favorites';
+  const isMinaLatar = path === '/mina-latar';
+  const isHelp = path.startsWith('/help');
+
+  const footerLink = 'min-h-8 inline-flex items-center text-[13px] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] hover:underline';
 
   return (
-    <nav className="flex flex-col gap-1" aria-label="Huvudnavigering">
-      <NavLink
-        to="/search"
-        active={isSearch}
-        onClick={onNavigate}
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-          </svg>
-        }
-      >
+    <nav className="flex h-full flex-col gap-0.5 px-2" aria-label="Huvudnavigering">
+      <NavLink to="/" active={isHome} onClick={onNavigate} icon={HomeIcon}>
+        Hem
+      </NavLink>
+      <NavLink to="/search" active={isSearch} onClick={onNavigate} icon={SearchIcon}>
         Sök
       </NavLink>
+
+      <GroupLabel>Utforska</GroupLabel>
       <NavLink
-        to="/"
-        active={isHome}
+        to="/#dansstilar"
+        active={false}
         onClick={onNavigate}
-        icon={<LibraryIcon className="h-5 w-5" aria-hidden />}
+        icon={<StarMarkIcon className="h-5 w-5" aria-hidden />}
       >
-        Bibliotek
+        Dansstilar
       </NavLink>
       <NavLink
         to="/dances"
         active={isDances}
         onClick={onNavigate}
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-          </svg>
-        }
+        hint="namngivna"
+        icon={<MusicNoteIcon className="h-5 w-5" aria-hidden />}
       >
         Danser
       </NavLink>
       <NavLink
+        to="/artists"
+        active={isArtists}
+        onClick={onNavigate}
+        icon={<UserIcon className="h-5 w-5" aria-hidden />}
+      >
+        Artister
+      </NavLink>
+
+      <GroupLabel>Mitt</GroupLabel>
+      <NavLink
         to="/playlists"
         active={isPlaylists}
         onClick={onNavigate}
-        new
         icon={<PlaylistIcon className="h-5 w-5" aria-hidden />}
         badge={invitationCount}
       >
@@ -163,16 +189,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         Danslistor
       </NavLink>
       <NavLink
-        to="/groups"
-        active={isGroups}
-        onClick={onNavigate}
-        new
-        icon={<GroupIcon className="h-5 w-5" aria-hidden />}
-        badge={groupInvitationCount}
-      >
-        Grupper
-      </NavLink>
-      <NavLink
         to="/favorites"
         active={isFavorites}
         onClick={onNavigate}
@@ -185,85 +201,37 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           to="/mina-latar"
           active={isMinaLatar}
           onClick={onNavigate}
-          icon={<MusicNoteIcon className="h-5 w-5" aria-hidden />}
+          icon={<LibraryIcon className="h-5 w-5" aria-hidden />}
         >
           Mina låtar
         </NavLink>
       )}
+
+      <GroupLabel>Gemenskap</GroupLabel>
       <NavLink
-        to="/help"
-        active={isHelp}
+        to="/groups"
+        active={isGroups}
         onClick={onNavigate}
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-          </svg>
-        }
+        icon={<GroupIcon className="h-5 w-5" aria-hidden />}
+        badge={groupInvitationCount}
       >
-        Hjälp & Nyheter
+        Grupper
+      </NavLink>
+      <NavLink to="/help" active={isHelp} onClick={onNavigate} icon={HelpIcon}>
+        Hjälp &amp; nyheter
       </NavLink>
 
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={() => setOmOpen((o) => !o)}
-          className={`flex w-full items-center gap-3 rounded-none px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-            isInfoPage
-              ? 'bg-[rgb(var(--color-selected))]/10 text-[rgb(var(--color-selected))]'
-              : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50'
-          }`}
-          aria-expanded={omOpen}
-          aria-controls="sidebar-om-submenu"
-          id="sidebar-om-button"
-        >
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center text-current opacity-90">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className={`h-5 w-5 transition-transform ${omOpen ? 'rotate-90' : ''}`}
-            >
-              <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.06l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-            </svg>
-          </span>
-          <span>Om</span>
-        </button>
-        <div
-          id="sidebar-om-submenu"
-          role="region"
-          aria-labelledby="sidebar-om-button"
-          className={`grid transition-[grid-template-rows] duration-200 ease-out ${omOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="flex flex-col gap-1 border-l-2 border-[rgb(var(--color-border))] ml-5 pl-2 py-1">
-            <NavLink to="/about" active={isAbout} onClick={onNavigate}>
-              Om oss
-            </NavLink>
-            <NavLink to="/feedback" active={isFeedback} onClick={onNavigate}>
-              Feedback
-            </NavLink>
-            <NavLink to="/privacy" active={isPrivacy} onClick={onNavigate}>
-              Integritetspolicy
-            </NavLink>
-            <NavLink to="/terms" active={isTerms} onClick={onNavigate}>
-              Användarvillkor
-            </NavLink>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {consentStatus && (
-        <div className="mt-4 px-3">
-          <button
-            type="button"
-            onClick={openCookieSettings}
-            className="w-full text-left rounded-none px-3 py-2.5 text-sm font-medium text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))] transition-colors"
-          >
-            Cookie-inställningar
+      <div className="mt-auto flex flex-wrap gap-x-3 gap-y-0 border-t border-[rgb(var(--color-border))] px-3 pt-3 mx-1">
+        <Link to="/about" onClick={onNavigate} className={footerLink}>Om oss</Link>
+        <Link to="/feedback" onClick={onNavigate} className={footerLink}>Feedback</Link>
+        <Link to="/privacy" onClick={onNavigate} className={footerLink}>Integritet</Link>
+        <Link to="/terms" onClick={onNavigate} className={footerLink}>Villkor</Link>
+        {consentStatus && (
+          <button type="button" onClick={openCookieSettings} className={footerLink}>
+            Cookies
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </nav>
   );
 }

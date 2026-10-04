@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { EmptyState, RowSkeleton } from '@/ui';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -28,18 +29,27 @@ interface DataTableProps<T> {
   onSortChange?: (sort: SortState | null) => void;
 }
 
-function SkeletonRow({ cols }: { cols: number }) {
+const CHECKBOX_CLASS =
+  'h-5 w-5 shrink-0 cursor-pointer accent-[rgb(var(--color-accent))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
+
+function SortArrow({ direction }: { direction: SortDirection }) {
   return (
-    <tr>
-      {Array.from({ length: cols }, (_, i) => (
-        <td key={i} className="px-3 py-3">
-          <div className="h-4 rounded bg-[rgb(var(--color-border))]/60 animate-pulse" />
-        </td>
-      ))}
-    </tr>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className={`h-3.5 w-3.5 transition-transform ${direction === 'desc' ? 'rotate-180' : ''}`}
+      aria-hidden
+    >
+      <path fillRule="evenodd" d="M8 3.5a.75.75 0 01.75.75v5.94l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V4.25A.75.75 0 018 3.5z" clipRule="evenodd" />
+    </svg>
   );
 }
 
+/**
+ * The one bulk table for the backstage pages: a hairline card, a muted header
+ * row with sort buttons, 44 px body rows and optional row selection.
+ */
 export function DataTable<T>({
   columns,
   data,
@@ -94,94 +104,101 @@ export function DataTable<T>({
     onSelectionChange(next);
   };
 
-  const totalCols = selectable ? columns.length + 1 : columns.length;
+  if (loading) {
+    return <RowSkeleton rows={8} label="Laddar tabellen" />;
+  }
+
+  if (data.length === 0) {
+    return <EmptyState title={emptyMessage} />;
+  }
 
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))]">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
+      <table className="w-full text-[15px] text-[rgb(var(--color-text))]">
         <thead>
           <tr className="border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))]">
             {selectable && (
-              <th className="w-10 px-3 py-2.5">
+              <th scope="col" className="w-12 px-3 py-2">
                 <input
                   type="checkbox"
+                  aria-label={allSelected ? 'Avmarkera alla rader' : 'Markera alla rader'}
                   checked={allSelected}
                   ref={(el) => {
                     if (el) el.indeterminate = someSelected && !allSelected;
                   }}
                   onChange={toggleAll}
-                  className="rounded border-[rgb(var(--color-border))]"
+                  className={`${CHECKBOX_CLASS} block`}
                 />
               </th>
             )}
             {columns.map((col) => {
               const sortable = !!col.sortKey && !!onSortChange;
-              const isActive = sort?.key === col.sortKey;
+              const isActive = sortable && sort?.key === col.sortKey;
+              const ariaSort = sortable
+                ? isActive
+                  ? sort?.direction === 'desc'
+                    ? 'descending'
+                    : 'ascending'
+                  : 'none'
+                : undefined;
               return (
                 <th
                   key={col.key}
-                  className={`px-3 py-2.5 text-left font-medium text-[rgb(var(--color-text-muted))] ${sortable ? 'cursor-pointer select-none hover:text-[rgb(var(--color-text))]' : ''} ${col.className ?? ''}`}
-                  onClick={sortable ? () => handleSort(col) : undefined}
+                  scope="col"
+                  aria-sort={ariaSort}
+                  className={`px-3 py-2 text-left text-[13px] font-semibold text-[rgb(var(--color-text-muted))] ${col.className ?? ''}`}
                 >
-                  <span className="inline-flex items-center gap-1">
-                    {col.header}
-                    {sortable && isActive && (
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={`h-3.5 w-3.5 transition-transform ${sort?.direction === 'desc' ? 'rotate-180' : ''}`}>
-                        <path fillRule="evenodd" d="M8 3.5a.75.75 0 01.75.75v5.94l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V4.25A.75.75 0 018 3.5z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </span>
+                  {sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSort(col)}
+                      className={`-mx-2 inline-flex min-h-8 items-center gap-1 rounded-[var(--radius)] px-2 transition-colors hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))] ${
+                        isActive ? 'text-[rgb(var(--color-text))]' : ''
+                      }`}
+                    >
+                      {col.header}
+                      {isActive && sort && <SortArrow direction={sort.direction} />}
+                    </button>
+                  ) : (
+                    col.header
+                  )}
                 </th>
               );
             })}
           </tr>
         </thead>
-        <tbody className="bg-[rgb(var(--color-bg-elevated))]">
-          {loading ? (
-            Array.from({ length: 8 }, (_, i) => (
-              <SkeletonRow key={i} cols={totalCols} />
-            ))
-          ) : data.length === 0 ? (
-            <tr>
-              <td
-                colSpan={totalCols}
-                className="px-3 py-12 text-center text-[rgb(var(--color-text-muted))]"
+        <tbody>
+          {data.map((row) => {
+            const key = keyFn(row);
+            const isSelected = selected.has(key);
+            return (
+              <tr
+                key={key}
+                className={`border-b border-[rgb(var(--color-border))] last:border-b-0 transition-colors ${
+                  isSelected
+                    ? 'bg-[rgb(var(--color-selected))]/10'
+                    : 'hover:bg-[rgb(var(--color-accent-muted))]'
+                }`}
               >
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            data.map((row) => {
-              const key = keyFn(row);
-              const isSelected = selected.has(key);
-              return (
-                <tr
-                  key={key}
-                  className={`border-b border-[rgb(var(--color-border))]/50 last:border-b-0 transition-colors ${
-                    isSelected
-                      ? 'bg-[rgb(var(--color-accent))]/5'
-                      : 'hover:bg-[rgb(var(--color-bg))]/50'
-                  }`}
-                >
-                  {selectable && (
-                    <td className="w-10 px-3 py-2.5">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleRow(key)}
-                        className="rounded border-[rgb(var(--color-border))]"
-                      />
-                    </td>
-                  )}
-                  {columns.map((col) => (
-                    <td key={col.key} className={`px-3 py-2.5 ${col.className ?? ''}`}>
-                      {col.render(row)}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })
-          )}
+                {selectable && (
+                  <td className="w-12 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label={isSelected ? 'Avmarkera raden' : 'Markera raden'}
+                      checked={isSelected}
+                      onChange={() => toggleRow(key)}
+                      className={`${CHECKBOX_CLASS} block`}
+                    />
+                  </td>
+                )}
+                {columns.map((col) => (
+                  <td key={col.key} className={`h-11 px-3 py-2 align-middle ${col.className ?? ''}`}>
+                    {col.render(row)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

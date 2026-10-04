@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createSuggestion } from '@/api/manual/suggestions';
-import { Button, toast } from '@/ui';
+import { CloseIcon } from '@/icons';
+import { Button, IconButton, InlineError, toast } from '@/ui';
 
 interface SuggestDanceStyleModalProps {
   onClose: () => void;
 }
 
+const labelClass = 'mb-1 block text-[14px] font-semibold text-[rgb(var(--color-text))]';
 const inputClass =
-  'w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none';
+  'min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]';
 
 /**
  * Suggests a new dance style/sub-style. Never writes directly into dance_style_config —
@@ -24,6 +26,8 @@ export function SuggestDanceStyleModal({ onClose }: SuggestDanceStyleModalProps)
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const id = useId();
+  const titleId = `${id}-title`;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -65,42 +69,53 @@ export function SuggestDanceStyleModal({ onClose }: SuggestDanceStyleModalProps)
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       onClick={(e) => { if (e.currentTarget === e.target) onClose(); }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-1 text-lg font-semibold text-[rgb(var(--color-text))]">
+        <IconButton aria-label="Stäng" onClick={onClose} className="absolute right-3 top-3">
+          <CloseIcon className="h-5 w-5" aria-hidden />
+        </IconButton>
+
+        <h2 id={titleId} className="mb-1 pr-12 text-[20px] font-bold leading-tight text-[rgb(var(--color-text))]">
           Saknas en dansstil?
         </h2>
-        <p className="mb-4 text-xs text-[rgb(var(--color-text-muted))]">
+        <p className="mb-5 pr-12 text-[15px] text-[rgb(var(--color-text-muted))]">
           Föreslå en ny dansstil eller variant som inte finns i listan.
         </p>
 
-        <div className="space-y-3">
-          <input
-            type="text"
-            autoFocus
-            value={mainStyle}
-            onChange={(e) => setMainStyle(e.target.value)}
-            placeholder="Namn på dansstil *"
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={subStyle}
-            onChange={(e) => setSubStyle(e.target.value)}
-            placeholder="Variant (valfritt)"
-            className={inputClass}
-          />
+        <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs text-[rgb(var(--color-text-muted))]">
-              Taktslag per takt (1-12) *
-            </label>
+            <label htmlFor={`${id}-main`} className={labelClass}>Namn på dansstil *</label>
             <input
+              id={`${id}-main`}
+              type="text"
+              autoFocus
+              value={mainStyle}
+              onChange={(e) => setMainStyle(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${id}-sub`} className={labelClass}>Variant (valfritt)</label>
+            <input
+              id={`${id}-sub`}
+              type="text"
+              value={subStyle}
+              onChange={(e) => setSubStyle(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${id}-bpb`} className={labelClass}>Taktslag per takt (1–12) *</label>
+            <input
+              id={`${id}-bpb`}
               type="number"
               min={1}
               max={12}
@@ -109,29 +124,38 @@ export function SuggestDanceStyleModal({ onClose }: SuggestDanceStyleModalProps)
               className={inputClass}
             />
           </div>
-          <input
-            type="text"
-            value={exampleTrack}
-            onChange={(e) => setExampleTrack(e.target.value)}
-            placeholder="Exempellåt (titel eller länk, valfritt)"
-            className={inputClass}
-          />
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Beskrivning (valfritt)"
-            rows={3}
-            className={inputClass}
-          />
+          <div>
+            <label htmlFor={`${id}-example`} className={labelClass}>Exempellåt (valfritt)</label>
+            <input
+              id={`${id}-example`}
+              type="text"
+              value={exampleTrack}
+              onChange={(e) => setExampleTrack(e.target.value)}
+              placeholder="Titel eller länk"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${id}-description`} className={labelClass}>Beskrivning (valfritt)</label>
+            <textarea
+              id={`${id}-description`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className={inputClass}
+            />
+          </div>
         </div>
 
-        {error && <p className="mt-3 text-xs text-red-500">{error}</p>}
+        <div className="mt-3">
+          <InlineError>{error}</InlineError>
+        </div>
 
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
             Avbryt
           </Button>
-          <Button variant="primary" size="sm" disabled={submitting} onClick={handleSubmit}>
+          <Button variant="primary" disabled={submitting} onClick={handleSubmit}>
             {submitting ? 'Skickar...' : 'Skicka förslag'}
           </Button>
         </div>

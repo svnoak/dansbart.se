@@ -6,7 +6,8 @@ import {
   mergeAllDuplicates,
 } from '@/api/generated/admin-duplicates/admin-duplicates';
 import { Modal } from '@/admin/components/Modal';
-import { Button, InlineError, LoadError } from '@/ui';
+import { Button, Card, EmptyState, InlineError, LoadError, RowSkeleton } from '@/ui';
+import { MusicNoteIcon } from '@/icons';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface DuplicateGroup {
@@ -98,72 +99,88 @@ export function AdminDuplicatesPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Dubbletter</h1>
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Dubbletter</h1>
-        {groups.length > 0 && (
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+            Dubbletter
+          </h1>
+          <p className="mt-1 text-[15px] text-[rgb(var(--color-text-muted))]">
+            Spår som delar ISRC-kod och kan sammanfogas till ett. Analysera en grupp för att se detaljerna först.
+          </p>
+        </div>
+        {!loading && groups.length > 0 && (
           <Button
             variant="primary"
-            size="sm"
             onClick={() => { setMergeAllModal(true); setMergeAllError(null); }}
             disabled={merging}
           >
             Sammanfoga alla
           </Button>
         )}
-      </div>
+      </header>
 
-      {loadError && <LoadError message={loadError} onRetry={fetchData} />}
+      {loading && <RowSkeleton rows={4} label="Laddar dubbletter" />}
 
-      {!loadError && (groups.length === 0 ? (
-        <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-8 text-center">
-          <p className="text-[rgb(var(--color-text-muted))]">Inga sammanfogningsbara dubbletter hittades.</p>
-        </div>
+      {!loading && loadError && <LoadError message={loadError} onRetry={fetchData} />}
+
+      {!loading && !loadError && (groups.length === 0 ? (
+        <EmptyState
+          icon={<MusicNoteIcon className="h-6 w-6" aria-hidden />}
+          title="Inga dubbletter"
+          description="Inga sammanfogningsbara dubbletter hittades."
+        />
       ) : (
-        <div className="space-y-2">
-          {groups.map((g) => (
-            <div
-              key={g.isrc}
-              className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3"
-            >
-              <div>
-                <p className="text-sm font-medium text-[rgb(var(--color-text))]">
-                  ISRC: {g.isrc}
-                </p>
-                <p className="text-xs text-[rgb(var(--color-text-muted))]">
-                  {g.count} spår
-                  {g.trackTitles?.length ? ` - ${g.trackTitles[0]}` : ''}
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleAnalyze(g.isrc)}>
-                    Analysera
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleMerge(g.isrc)}
-                    disabled={merging}
-                  >
-                    Sammanfoga
-                  </Button>
-                </div>
-                {rowErrors[g.isrc] && <InlineError>{rowErrors[g.isrc]}</InlineError>}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ul className="space-y-3">
+          {groups.map((g) => {
+            const titles = g.trackTitles ?? [];
+            return (
+              <li key={g.isrc}>
+                <Card className="space-y-4 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[15px] font-semibold text-[rgb(var(--color-text))]">ISRC: {g.isrc}</p>
+                      <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                        {g.count} spår med samma kod
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleAnalyze(g.isrc)}>
+                          Analysera
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleMerge(g.isrc)}
+                          disabled={merging}
+                        >
+                          Sammanfoga
+                        </Button>
+                      </div>
+                      {rowErrors[g.isrc] && <InlineError>{rowErrors[g.isrc]}</InlineError>}
+                    </div>
+                  </div>
+
+                  {titles.length > 0 && (
+                    <ol className="grid gap-2 sm:grid-cols-2">
+                      {titles.map((title, i) => (
+                        <li
+                          key={`${g.isrc}-${i}`}
+                          className="rounded-[var(--radius)] border border-[rgb(var(--color-border))] px-3 py-2"
+                        >
+                          <p className="text-[13px] text-[rgb(var(--color-text-muted))]">Spår {i + 1}</p>
+                          <p className="truncate text-[15px] font-semibold text-[rgb(var(--color-text))]">{title}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </Card>
+              </li>
+            );
+          })}
+        </ul>
       ))}
 
       {/* Analysis result modal */}
@@ -172,11 +189,11 @@ export function AdminDuplicatesPage() {
         onClose={() => { setAnalyzeIsrc(null); setAnalyzeResult(null); }}
         title={`Analys: ${analyzeIsrc}`}
       >
-        <pre className="max-h-64 overflow-auto rounded bg-[rgb(var(--color-bg))] p-3 text-xs text-[rgb(var(--color-text))]">
+        <pre className="max-h-64 overflow-auto rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] p-3 text-[13px] text-[rgb(var(--color-text))]">
           {JSON.stringify(analyzeResult, null, 2)}
         </pre>
-        <div className="mt-4 flex justify-end">
-          <Button variant="ghost" onClick={() => { setAnalyzeIsrc(null); setAnalyzeResult(null); }}>
+        <div className="mt-5 flex justify-end">
+          <Button variant="outline" onClick={() => { setAnalyzeIsrc(null); setAnalyzeResult(null); }}>
             Stäng
           </Button>
         </div>
@@ -188,15 +205,19 @@ export function AdminDuplicatesPage() {
         onClose={() => { setMergeAllModal(false); setMergeAllError(null); }}
         title="Sammanfoga alla dubbletter"
       >
-        <p className="text-sm text-[rgb(var(--color-text))]">
-          Detta sammanfogar alla {groups.length} grupper med dubbletter. Fortsätt?
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
+          Detta sammanfogar alla {groups.length} grupper med dubbletter. Vill du fortsätta?
         </p>
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-5 space-y-3">
           {mergeAllError && <InlineError>{mergeAllError}</InlineError>}
-          <Button variant="ghost" onClick={() => { setMergeAllModal(false); setMergeAllError(null); }}>Avbryt</Button>
-          <Button variant="primary" onClick={handleMergeAll} disabled={merging}>
-            {merging ? 'Sammanfogar...' : 'Sammanfoga alla'}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setMergeAllModal(false); setMergeAllError(null); }}>
+              Avbryt
+            </Button>
+            <Button variant="primary" onClick={handleMergeAll} disabled={merging}>
+              {merging ? 'Sammanfogar…' : 'Sammanfoga alla'}
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

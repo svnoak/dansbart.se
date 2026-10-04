@@ -48,7 +48,6 @@ export function PlayerControls({
   onNext,
   onJumpBack,
   onJumpForward,
-  jumpAmount,
   jumpLabel,
   hasQueue,
   isQueueOpen,
@@ -67,8 +66,8 @@ export function PlayerControls({
           onClick={() => onToggleShuffle()}
           className={`w-8 h-8 flex items-center justify-center transition-colors ${
             isShuffled
-              ? 'text-[rgb(var(--color-accent))]'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              ? 'text-[rgb(var(--color-selected))]'
+              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           {isShuffled ? (
@@ -83,22 +82,22 @@ export function PlayerControls({
           onClick={onJumpBack}
           disabled={controlsDisabled}
           aria-label={`Spola tillbaka ${jumpLabel}`}
-          className={`group relative w-8 h-8 flex items-center justify-center transition-colors ${
+          className={`group relative w-14 h-12 flex flex-col items-center justify-center gap-0.5 transition-colors ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <JumpBackIcon className="w-5 h-5" />
           <span
-            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[7px] font-bold select-none pointer-events-none ${
+            className={`text-[11px] font-bold leading-none select-none pointer-events-none whitespace-nowrap ${
               controlsDisabled
                 ? 'text-[rgb(var(--color-border))]'
-                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-text))]'
             }`}
             aria-hidden
           >
-            {jumpAmount}
+            {jumpLabel}
           </span>
         </button>
 
@@ -110,7 +109,7 @@ export function PlayerControls({
           className={`transition-colors ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <SkipPreviousIcon className="w-7 h-7" />
@@ -127,10 +126,10 @@ export function PlayerControls({
                 ? 'Pausa'
                 : 'Spela'
           }
-          className={`rounded-full shrink-0 flex items-center justify-center shadow-lg transition-all active:scale-95 w-14 h-14 text-white ${
+          className={`rounded-full shrink-0 flex items-center justify-center transition-all active:scale-95 w-16 h-16 text-[rgb(var(--color-accent-foreground))] ${
             controlsDisabled
               ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
-              : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
+              : 'bg-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-hover))]'
           }`}
         >
           {isPlaying ? (
@@ -148,7 +147,7 @@ export function PlayerControls({
           className={`transition-colors ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <SkipNextIcon className="w-7 h-7" />
@@ -159,22 +158,22 @@ export function PlayerControls({
           onClick={onJumpForward}
           disabled={controlsDisabled}
           aria-label={`Spola framåt ${jumpLabel}`}
-          className={`group relative w-8 h-8 flex items-center justify-center transition-colors ${
+          className={`group relative w-14 h-12 flex flex-col items-center justify-center gap-0.5 transition-colors ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <JumpForwardIcon className="w-5 h-5" />
           <span
-            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[7px] font-bold select-none pointer-events-none ${
+            className={`text-[11px] font-bold leading-none select-none pointer-events-none whitespace-nowrap ${
               controlsDisabled
                 ? 'text-[rgb(var(--color-border))]'
-                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-text))]'
             }`}
             aria-hidden
           >
-            {jumpAmount}
+            {jumpLabel}
           </span>
         </button>
 
@@ -193,8 +192,8 @@ export function PlayerControls({
           onClick={() => onCycleRepeat()}
           className={`relative w-8 h-8 flex items-center justify-center transition-colors ${
             repeatMode !== 'none'
-              ? 'text-[rgb(var(--color-accent))]'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              ? 'text-[rgb(var(--color-selected))]'
+              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           {repeatMode === 'stop' ? (
@@ -204,7 +203,7 @@ export function PlayerControls({
           )}
           {repeatMode === 'one' && (
             <span
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-[rgb(var(--color-accent))]"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-extrabold bg-[rgb(var(--color-bg-elevated))] px-0.5 leading-none rounded-sm text-[rgb(var(--color-selected))]"
               aria-hidden
             >
               1
@@ -224,7 +223,7 @@ export function PlayerControls({
       aria-label="Spelarkontroller"
     >
       {controlsDisabled && (
-        <p className="hidden md:block text-[9px] text-[rgb(var(--color-text-muted))] text-center mb-1">
+        <p className="hidden md:block text-[13px] text-[rgb(var(--color-text-muted))] text-center mb-1">
           Använd Spotify-spelaren
         </p>
       )}
@@ -234,7 +233,7 @@ export function PlayerControls({
           aria-label={isShuffled ? 'Shuffle påslaget, klicka för att stänga av' : 'Shuffle avslaget, klicka för att slå på'}
           aria-pressed={isShuffled}
           onClick={() => onToggleShuffle()}
-          className={`relative w-8 h-8 items-center justify-center transition-colors hidden md:flex ${isShuffled ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
+          className={`relative w-8 h-8 items-center justify-center transition-colors hidden md:flex ${isShuffled ? 'text-[rgb(var(--color-selected))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'}`}
         >
           {isShuffled ? (
             <ShuffleIcon className="w-5 h-5" />
@@ -249,22 +248,22 @@ export function PlayerControls({
           disabled={controlsDisabled}
           aria-label={`Spola tillbaka ${jumpLabel}`}
           title={`Rewind ${jumpLabel}`}
-          className={`group relative w-10 h-10 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${
+          className={`group relative w-14 h-11 flex flex-col items-center justify-center gap-0.5 transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <JumpBackIcon className="w-6 h-6" />
           <span
-            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[8px] font-bold select-none pointer-events-none ${
+            className={`text-[11px] font-bold leading-none select-none pointer-events-none whitespace-nowrap ${
               controlsDisabled
                 ? 'text-[rgb(var(--color-border))]'
-                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-text))]'
             }`}
             aria-hidden
           >
-            {jumpAmount}
+            {jumpLabel}
           </span>
         </button>
 
@@ -277,7 +276,7 @@ export function PlayerControls({
           className={`transition-colors ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <SkipPreviousIcon className="w-6 h-6" />
@@ -301,10 +300,10 @@ export function PlayerControls({
                 ? 'Pause'
                 : 'Play'
           }
-          className={`rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 aspect-square text-white ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
+          className={`rounded-full flex items-center justify-center transition-all active:scale-95 shrink-0 aspect-square text-[rgb(var(--color-accent-foreground))] ${fullMode ? 'w-16 h-16' : 'w-12 h-12'} ${
             controlsDisabled
               ? 'bg-[rgb(var(--color-border))] cursor-not-allowed opacity-50'
-              : 'bg-[rgb(var(--color-accent))] hover:opacity-90'
+              : 'bg-[rgb(var(--color-accent))] hover:bg-[rgb(var(--color-accent-hover))]'
           }`}
         >
           {isPlaying ? (
@@ -323,7 +322,7 @@ export function PlayerControls({
           className={`transition-colors ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <SkipNextIcon className="w-6 h-6" />
@@ -335,22 +334,22 @@ export function PlayerControls({
           disabled={controlsDisabled}
           aria-label={`Spola framåt ${jumpLabel}`}
           title={`Forward ${jumpLabel}`}
-          className={`group relative w-10 h-10 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${
+          className={`group relative w-14 h-11 flex flex-col items-center justify-center gap-0.5 transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${
             controlsDisabled
               ? 'text-[rgb(var(--color-border))] cursor-not-allowed'
-              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'
+              : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
           }`}
         >
           <JumpForwardIcon className="w-6 h-6" />
           <span
-            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-px text-[8px] font-bold select-none pointer-events-none ${
+            className={`text-[11px] font-bold leading-none select-none pointer-events-none whitespace-nowrap ${
               controlsDisabled
                 ? 'text-[rgb(var(--color-border))]'
-                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-accent))]'
+                : 'text-[rgb(var(--color-text-muted))] group-hover:text-[rgb(var(--color-text))]'
             }`}
             aria-hidden
           >
-            {jumpAmount}
+            {jumpLabel}
           </span>
         </button>
 
@@ -368,7 +367,7 @@ export function PlayerControls({
           aria-pressed={repeatMode !== 'none'}
           onClick={() => onCycleRepeat()}
           title="Repeat"
-          className={`relative w-8 h-8 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${repeatMode !== 'none' ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
+          className={`relative w-8 h-8 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${repeatMode !== 'none' ? 'text-[rgb(var(--color-selected))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'}`}
         >
           {repeatMode === 'stop' ? (
             <StopAfterIcon className="w-5 h-5" />
@@ -376,7 +375,7 @@ export function PlayerControls({
             <RepeatIcon className="w-5 h-5" />
           )}
           {repeatMode === 'one' && (
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-extrabold bg-white px-0.5 leading-none shadow-sm rounded-sm text-[rgb(var(--color-accent))]" aria-hidden>
+            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-extrabold bg-[rgb(var(--color-bg-elevated))] px-0.5 leading-none rounded-sm text-[rgb(var(--color-selected))]" aria-hidden>
               1
             </span>
           )}
@@ -388,7 +387,7 @@ export function PlayerControls({
           aria-label={isQueueOpen ? 'Stäng kö' : 'Visa kö'}
           aria-pressed={isQueueOpen}
           title={isQueueOpen ? 'Stäng kö' : 'Visa kö'}
-          className={`relative w-8 h-8 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${isQueueOpen || hasQueue ? 'text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]'}`}
+          className={`relative w-8 h-8 flex items-center justify-center transition-colors ${fullMode ? 'flex' : 'hidden md:flex'} ${isQueueOpen || hasQueue ? 'text-[rgb(var(--color-selected))]' : 'text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'}`}
         >
           <QueueListIcon className="w-5 h-5" />
         </button>

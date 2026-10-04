@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Button, Modal } from '@/ui';
 import type { TrackListDto } from '@/api/models/trackListDto';
+import { StylePill } from './StylePill';
+import { stylePillState } from './stylePillState';
 import { getTrackRowMenuItems, isActionItem, type ExtraMenuItem } from './trackRowMenuItems';
 
 interface TrackActionsModalProps {
@@ -14,10 +17,18 @@ interface TrackActionsModalProps {
   onClose: () => void;
 }
 
-const controlClassName = 'w-full min-h-11 justify-start text-left';
+const rowClassName =
+  'flex w-full min-h-12 items-center px-3 text-left text-[15px] font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:bg-[rgb(var(--color-accent-muted))]';
 
-export function TrackActionsModal({
-  open,
+/**
+ * The sheet a long press on a row opens. On a phone it rises from the bottom
+ * edge; on a wider screen it sits in the middle like the other dialogs.
+ */
+export function TrackActionsModal(props: TrackActionsModalProps) {
+  return props.open ? <TrackActionsSheet {...props} /> : null;
+}
+
+function TrackActionsSheet({
   track,
   onAddToQueue,
   onFlag,
@@ -27,8 +38,15 @@ export function TrackActionsModal({
   onClose,
 }: TrackActionsModalProps) {
   const title = track.title ?? 'Okänd låt';
+  const state = stylePillState(track.danceStyle, track.confidence);
 
-  if (!open) return null;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [onClose]);
 
   const items = getTrackRowMenuItems({
     track,
@@ -39,37 +57,59 @@ export function TrackActionsModal({
     isPrivate,
   });
 
-  return (
-    <Modal open={open} onClose={onClose} label={title}>
-      <h2 className="mb-4 text-lg font-semibold text-[rgb(var(--color-text))]">{title}</h2>
-      <div className="flex flex-col gap-2">
-        {items.map((item, index) =>
-          isActionItem(item) ? (
-            <Button
-              key={item.key}
-              autoFocus={index === 0}
-              variant="secondary"
-              className={controlClassName}
-              onClick={async () => {
-                await item.onSelect();
-                onClose();
-              }}
-            >
-              {item.label}
-            </Button>
-          ) : (
-            <Link
-              key={item.key}
-              autoFocus={index === 0}
-              to={item.to}
-              onClick={onClose}
-              className={`inline-flex items-center rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] px-4 py-2 text-sm font-medium text-[rgb(var(--color-accent))] hover:opacity-90 ${controlClassName}`}
-            >
-              {item.label}
-            </Link>
-          ),
-        )}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full rounded-t-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[var(--color-card-shadow)] sm:max-w-sm sm:rounded-[var(--radius-lg)] sm:pb-2">
+        <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-[rgb(var(--color-border-strong))] sm:hidden" aria-hidden />
+        <div className="flex flex-col gap-1 px-4 pb-3 pt-3">
+          <h2 className="text-[20px] font-bold leading-tight text-[rgb(var(--color-text))]">
+            {title}
+          </h2>
+          {track.artistName && (
+            <p className="text-[15px] text-[rgb(var(--color-text-muted))]">{track.artistName}</p>
+          )}
+          <div className="mt-1">
+            <StylePill style={track.danceStyle} state={state} />
+          </div>
+        </div>
+        <ul className="divide-y divide-[rgb(var(--color-border))] border-t border-[rgb(var(--color-border))]">
+          {items.map((item, index) => (
+            <li key={item.key}>
+              {isActionItem(item) ? (
+                <button
+                  type="button"
+                  autoFocus={index === 0}
+                  className={rowClassName}
+                  onClick={async () => {
+                    await item.onSelect();
+                    onClose();
+                  }}
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <Link
+                  autoFocus={index === 0}
+                  to={item.to}
+                  onClick={onClose}
+                  className={rowClassName}
+                >
+                  {item.label}
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
-    </Modal>
+    </div>,
+    document.body,
   );
 }

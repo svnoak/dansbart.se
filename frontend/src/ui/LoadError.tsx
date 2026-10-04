@@ -5,18 +5,17 @@ interface LoadErrorProps {
   onRetry: () => void;
 }
 
+/** The error above content that failed to load, with the one way forward: Försök igen. */
 export function LoadError({ message, onRetry }: LoadErrorProps) {
   return (
     <div
       role="alert"
-      className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-error))] bg-[rgb(var(--color-error))]/10 p-4"
+      className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 sm:flex-row sm:items-center sm:justify-between"
     >
-      <p className="text-sm text-[rgb(var(--color-text))]">{message}</p>
-      <div className="mt-2">
-        <Button variant="secondary" size="sm" onClick={onRetry}>
-          Försök igen
-        </Button>
-      </div>
+      <p className="text-[15px] font-medium text-[rgb(var(--color-error))]">{message}</p>
+      <Button variant="outline" size="sm" onClick={onRetry} className="self-start sm:self-auto">
+        Försök igen
+      </Button>
     </div>
   );
 }

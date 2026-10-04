@@ -89,7 +89,7 @@ describe('GroupPage', () => {
     expect(document.body.textContent).toContain('Vi dansar polska');
     expect(document.body.textContent).not.toContain('medlem');
     expect(getButtonByText('Lämna gruppen')).toBeUndefined();
-    expect(getLinkByText('Inställningar för gruppen')).toBeUndefined();
+    expect(getLinkByText('Inställningar')).toBeUndefined();
     expect(document.body.textContent).toContain('Logga in');
   });
 
@@ -114,7 +114,7 @@ describe('GroupPage', () => {
     expect(document.body.textContent).toContain('Anna');
     expect(document.body.textContent).toContain('Administratör');
     expect(document.body.textContent).not.toContain('medlemmar');
-    expect(getLinkByText('Inställningar för gruppen')).toBeUndefined();
+    expect(getLinkByText('Inställningar')).toBeUndefined();
   });
 
   it('shows the member count to a member who can open settings', async () => {
@@ -137,7 +137,7 @@ describe('GroupPage', () => {
     });
 
     expect(document.body.textContent).toContain('2 medlemmar');
-    const settingsLink = getLinkByText('Inställningar för gruppen');
+    const settingsLink = getLinkByText('Inställningar');
     expect(settingsLink).toBeDefined();
     expect(settingsLink?.getAttribute('href')).toBe('/groups/g1/settings');
   });

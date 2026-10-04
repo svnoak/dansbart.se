@@ -94,7 +94,7 @@ describe('StyleBadge', () => {
 
     const button = container.querySelector<HTMLButtonElement>('button[aria-label="Ange dansstil"]');
     expect(button).toBeDefined();
-    expect(button?.textContent).toContain('Okänd stil');
+    expect(button?.textContent).toContain('Ange stil');
   });
 
   it('opens the style vote panel on click', async () => {

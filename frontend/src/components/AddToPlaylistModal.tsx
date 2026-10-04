@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { getEditablePlaylists, addTrack, createPlaylist } from '@/api/generated/playlists/playlists';
 import type { EditablePlaylistDto } from '@/api/models/editablePlaylistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { CloseIcon, PlaylistIcon, PlusIcon } from '@/icons';
-import { InlineError, toast } from '@/ui';
+import { Button, IconButton, InlineError, toast } from '@/ui';
 
 interface AddToPlaylistModalProps {
   open: boolean;
@@ -21,6 +21,9 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
   const [creating, setCreating] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const id = useId();
+  const titleId = `${id}-title`;
+  const nameId = `${id}-name`;
 
   useEffect(() => {
     if (!open) return;
@@ -82,61 +85,63 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       onClick={(e) => {
         if (e.currentTarget === e.target) onClose();
       }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-sm rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1 text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
-        >
+      <div className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
+        <IconButton aria-label="Stäng" onClick={onClose} className="absolute right-3 top-3">
           <CloseIcon className="h-5 w-5" aria-hidden />
-        </button>
+        </IconButton>
 
-        <h3 className="mb-5 flex items-center gap-2 border-b border-[rgb(var(--color-border))] pb-3 pr-8 text-lg font-bold text-[rgb(var(--color-text))]">
-          <PlaylistIcon className="h-5 w-5 text-[rgb(var(--color-accent))]" aria-hidden />
+        <h2 id={titleId} className="mb-1 pr-12 text-[20px] font-bold leading-tight text-[rgb(var(--color-text))]">
           Lägg till i spellista
-        </h3>
+        </h2>
+        {track.title && (
+          <p className="mb-4 truncate pr-12 text-[15px] text-[rgb(var(--color-text-muted))]">{track.title}</p>
+        )}
 
         {loading && (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar...</p>
+          <p className="py-3 text-[15px] text-[rgb(var(--color-text-muted))]">Laddar...</p>
         )}
 
         {!loading && (
           <>
-            <ul className="mb-4 max-h-64 space-y-1 overflow-y-auto">
+            <ul className="mb-4 max-h-72 divide-y divide-[rgb(var(--color-border))] overflow-y-auto border-y border-[rgb(var(--color-border))]">
               {playlists.map((pl) => (
                 <li key={pl.id}>
                   <button
                     type="button"
                     onClick={() => pl.id && handleAdd(pl.id)}
                     disabled={adding === pl.id}
-                    className="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left hover:bg-[rgb(var(--color-border))]/50 disabled:opacity-50"
+                    className="flex w-full min-h-14 items-center gap-3 px-2 py-2 text-left hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:bg-[rgb(var(--color-accent-muted))] disabled:opacity-50"
                   >
-                    <PlaylistIcon
-                      className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))] mt-0.5"
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text-muted))]"
                       aria-hidden
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-[rgb(var(--color-text))]">
+                    >
+                      <PlaylistIcon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium text-[rgb(var(--color-text))]">
                         {pl.name}
-                      </div>
+                      </span>
                       {pl.ownerGroupName && (
-                        <div className="text-sm text-[rgb(var(--color-text-muted))]">
+                        <span className="block truncate text-[13px] text-[rgb(var(--color-text-muted))]">
                           Grupp: {pl.ownerGroupName}
-                        </div>
+                        </span>
                       )}
-                    </div>
+                    </span>
                   </button>
                 </li>
               ))}
               {playlists.length === 0 && (
                 <li>
-                  <p className="px-3 py-2 text-sm text-[rgb(var(--color-text-muted))]">
+                  <p className="px-2 py-3 text-[15px] text-[rgb(var(--color-text-muted))]">
                     Inga spellistor ännu.
                   </p>
                 </li>
@@ -145,40 +150,39 @@ export function AddToPlaylistModal({ open, onClose, track }: AddToPlaylistModalP
             <InlineError>{addError}</InlineError>
 
             {!showNewForm && (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                className="w-full"
                 onClick={() => setShowNewForm(true)}
-                className="flex w-full items-center gap-2 rounded-lg border border-dashed border-[rgb(var(--color-border))] px-3 py-2.5 text-sm text-[rgb(var(--color-text-muted))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] transition-colors"
               >
                 <PlusIcon className="h-4 w-4" aria-hidden />
                 Ny spellista
-              </button>
+              </Button>
             )}
 
             {showNewForm && (
-              <>
-                <form onSubmit={handleCreate} className="flex gap-2">
+              <form onSubmit={handleCreate} className="space-y-2">
+                <label htmlFor={nameId} className="block text-[14px] font-semibold text-[rgb(var(--color-text))]">
+                  Namn på spellistan
+                </label>
+                <div className="flex gap-2">
                   <input
+                    id={nameId}
                     type="text"
                     value={newName}
                     onChange={(e) => {
                       setNewName(e.target.value);
                       setCreateError(null);
                     }}
-                    placeholder="Namn på spellistan"
                     autoFocus
-                    className="flex-1 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                    className="min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
                   />
-                  <button
-                    type="submit"
-                    disabled={creating || !newName.trim()}
-                    className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                  >
+                  <Button type="submit" variant="primary" disabled={creating || !newName.trim()}>
                     Skapa
-                  </button>
-                </form>
+                  </Button>
+                </div>
                 <InlineError>{createError}</InlineError>
-              </>
+              </form>
             )}
           </>
         )}

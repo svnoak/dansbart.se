@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RowSkeleton } from '@/ui';
 import { StaticPageLayout } from './StaticPageLayout';
 
 function extractMainContent(html: string): string {
@@ -24,22 +25,20 @@ export function PrivacyPage() {
   return (
     <StaticPageLayout title="Integritetspolicy" lastUpdated={LAST_UPDATED}>
       {error && (
-        <p className="text-[rgb(var(--color-text))]">
+        <p className="text-[15px] text-[rgb(var(--color-error))]">
           Kunde inte ladda innehållet.{' '}
           <a
             href="/privacy.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[rgb(var(--color-accent))] hover:underline"
+            className="font-semibold text-[rgb(var(--color-link))] hover:underline"
           >
             Öppna integritetspolicyn i en ny flik
           </a>
           .
         </p>
       )}
-      {!error && content === null && (
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>
-      )}
+      {!error && content === null && <RowSkeleton rows={3} label="Laddar sidan" />}
       {!error && content !== null && (
         <div
           className="static-page-content"

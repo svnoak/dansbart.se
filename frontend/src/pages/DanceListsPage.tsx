@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getMyDanceLists, createDanceList } from '@/api/generated/dance-lists/dance-lists';
 import type { DanceList } from '@/api/models/danceList';
-import { QueueListIcon, PlusIcon } from '@/icons';
-import { Button, Card, InlineError, LoadError, SectionTitle } from '@/ui';
+import { QueueListIcon, PlusIcon, ChevronRightIcon } from '@/icons';
+import { Button, Card, EmptyState, InlineError, LoadError, RowSkeleton, SectionTitle } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
+
+const PRIMARY_LINK_CLASS =
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] transition-colors hover:bg-[rgb(var(--color-accent-hover))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
 
 export function DanceListsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -63,18 +66,25 @@ export function DanceListsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Danslistor</h1>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+            Danslistor
+          </h1>
+          <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+            Kvällens program: danser i ordning, med låtar till varje dans.
+          </p>
+        </div>
         {isAuthenticated && (
-          <Button size="sm" onClick={() => setShowForm((s) => !s)}>
-            <PlusIcon className="mr-1.5 h-4 w-4" aria-hidden />
+          <Button onClick={() => setShowForm((s) => !s)} aria-expanded={showForm} className="shrink-0">
+            <PlusIcon className="h-4 w-4" aria-hidden />
             Ny danslista
           </Button>
         )}
-      </div>
+      </header>
 
       {showForm && (
-        <Card className="p-4">
+        <Card className="p-5">
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">
               <label
@@ -92,10 +102,10 @@ export function DanceListsPage() {
                   setCreateError(null);
                 }}
                 autoFocus
-                className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] px-4 py-2 text-sm text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
+                className="h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-4 text-[15px] text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-focus))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-focus))]"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={creating || !newName.trim()}>
                 Skapa danslista
               </Button>
@@ -109,31 +119,44 @@ export function DanceListsPage() {
       )}
 
       {!authLoading && !isAuthenticated && (
-        <Card className="flex flex-col items-center gap-3 p-8 text-center">
-          <QueueListIcon className="h-10 w-10 text-[rgb(var(--color-text-muted))]" aria-hidden />
-          <p className="max-w-xs text-sm text-[rgb(var(--color-text-muted))]">
-            Logga in för att skapa och se dina danslistor.
-          </p>
-          <Link
-            to="/login"
-            className="mt-1 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            Logga in
-          </Link>
-        </Card>
+        <EmptyState
+          icon={<QueueListIcon className="h-7 w-7" aria-hidden />}
+          title="Logga in för att se dina danslistor"
+          description="Dina danslistor sparas på ditt konto så att du hittar dem på alla dina enheter."
+          action={
+            <Link to="/login" className={PRIMARY_LINK_CLASS}>
+              Logga in
+            </Link>
+          }
+        />
       )}
 
-      {isAuthenticated && !loading && (
-        <section className="space-y-3">
-          <SectionTitle>Mina danslistor</SectionTitle>
-          {error ? (
+      {isAuthenticated && (
+        <section className="space-y-3" aria-labelledby="my-dance-lists-title">
+          <SectionTitle id="my-dance-lists-title">Mina danslistor</SectionTitle>
+          {loading ? (
+            <RowSkeleton rows={3} label="Laddar danslistor" />
+          ) : error ? (
             <LoadError message="Det gick inte att hämta danslistorna." onRetry={load} />
           ) : danceLists.length === 0 ? (
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Du har inga danslistor ännu.
-            </p>
+            <EmptyState
+              icon={<QueueListIcon className="h-7 w-7" aria-hidden />}
+              title="Du har inga danslistor ännu"
+              description="Skapa en danslista för kvällen och lägg till danserna i den ordning ni dansar dem."
+              action={
+                <Button
+                  onClick={() => {
+                    setShowForm(true);
+                    setCreateError(null);
+                  }}
+                >
+                  <PlusIcon className="h-4 w-4" aria-hidden />
+                  Skapa danslista
+                </Button>
+              }
+            />
           ) : (
-            <DanceListCards danceLists={danceLists} />
+            <DanceListRows danceLists={danceLists} />
           )}
         </section>
       )}
@@ -141,24 +164,70 @@ export function DanceListsPage() {
   );
 }
 
-function DanceListCards({ danceLists }: { danceLists: DanceList[] }) {
+function formatUpdated(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return `Uppdaterad ${date.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+}
+
+function VisibilityBadge({ list }: { list: DanceList }) {
+  if (list.shareToken) {
+    return (
+      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[rgb(var(--color-link))]/10 px-2.5 text-[13px] font-medium text-[rgb(var(--color-link))]">
+        Delad med länk
+      </span>
+    );
+  }
   return (
-    <ul className="space-y-2">
-      {danceLists.map((list) => (
-        <li key={list.id}>
-          <Link to={`/dance-lists/${list.id}`} className="block">
-            <Card className="flex items-center gap-3 p-4 transition-colors hover:border-[rgb(var(--color-accent))]/50">
-              <QueueListIcon
-                className="h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))]"
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[rgb(var(--color-text))]">
-                {list.name}
-              </span>
-            </Card>
-          </Link>
-        </li>
-      ))}
+    <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[rgb(var(--color-accent-muted))] px-2.5 text-[13px] font-medium text-[rgb(var(--color-text-muted))]">
+      {list.isPublic ? 'Offentlig' : 'Privat'}
+    </span>
+  );
+}
+
+function DanceListRows({ danceLists }: { danceLists: DanceList[] }) {
+  return (
+    <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
+      {danceLists.map((list) => {
+        const name = list.name ?? 'Namnlös danslista';
+        const href = `/dance-lists/${list.id}`;
+        const secondLine = list.description?.trim() || formatUpdated(list.updatedAt);
+        return (
+          <li
+            key={list.id}
+            className="flex items-center gap-3 border-b border-[rgb(var(--color-border))] px-3 py-2.5 last:border-b-0"
+          >
+            <span
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]"
+              aria-hidden
+            >
+              <QueueListIcon className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <Link
+                  to={href}
+                  className="truncate text-[15px] font-bold text-[rgb(var(--color-text))] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                >
+                  {name}
+                </Link>
+                <VisibilityBadge list={list} />
+              </div>
+              {secondLine && (
+                <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">{secondLine}</p>
+              )}
+            </div>
+            <Link
+              to={href}
+              aria-label={`Öppna ${name}`}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+            >
+              <ChevronRightIcon className="h-5 w-5" aria-hidden />
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }

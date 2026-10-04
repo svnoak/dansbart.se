@@ -1,22 +1,35 @@
+import { StarMarkIcon } from '@/icons/StarMarkIcon';
+import { getStyleColor } from '@/styles/danceStyleColors';
+import { useTheme } from '@/theme/useTheme';
+
 interface ArtworkPlaceholderProps {
   className?: string;
   aspect?: 'square' | 'wide';
+  /** When given, the tile takes the dance style's colour pair. Without it the tile is neutral. */
+  styleName?: string | null;
 }
 
-export function ArtworkPlaceholder({ className = '', aspect = 'square' }: ArtworkPlaceholderProps) {
+/**
+ * The no-artwork tile: the eight-point star mark on a soft fill. Neutral by
+ * default, in the style's colour pair when a style name is passed.
+ */
+export function ArtworkPlaceholder({ className = '', aspect = 'square', styleName }: ArtworkPlaceholderProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const color = styleName ? getStyleColor(styleName) : null;
+  const inlineStyle = color
+    ? { backgroundColor: isDark ? color.bgDark : color.bg, color: isDark ? color.textDark : color.text }
+    : undefined;
+
   return (
     <div
-      className={`flex items-center justify-center bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text-muted))] ${aspect === 'square' ? 'aspect-square' : 'aspect-video'} ${className}`}
+      className={`flex items-center justify-center rounded-[var(--radius)] ${
+        color ? '' : 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]'
+      } ${aspect === 'square' ? 'aspect-square' : 'aspect-video'} ${className}`}
+      style={inlineStyle}
       aria-hidden
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        className="w-1/3 h-1/3"
-      >
-        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-      </svg>
+      <StarMarkIcon className="h-[40%] w-[40%]" />
     </div>
   );
 }

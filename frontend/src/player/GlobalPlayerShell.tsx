@@ -22,6 +22,7 @@ import { SourceSwitcher } from './components/SourceSwitcher';
 import { TrackInfo } from './components/TrackInfo';
 import { PlayerControls } from './components/PlayerControls';
 import { MobilePlayerOverlay } from './components/MobilePlayerOverlay';
+import { TAB_BAR_HEIGHT } from '@/layout/tabBar';
 
 const JUMP_SECONDS = 10;
 const JUMP_BARS = 4;
@@ -267,11 +268,13 @@ export function GlobalPlayerShell() {
   const toggleStructureMode = () => setStructureMode((m) => (m === 'none' ? 'bars' : 'none'));
 
   // Compute player bar height so overlays can position relative to it.
-  // Desktop: progress area (h-12=48px with bars, h-6=24px without) + main row (h-20=80px) + border 1px
-  // Mobile (collapsed): thin strip (h-1=4px) + main row (h-20=80px) + border 1px
+  // Desktop: progress area (h-12=48px with bars, h-6=24px without) + main row (h-22=88px) + border 1px
+  // Mobile (collapsed): thin strip (h-1=4px) + main row (h-22=88px) + border 1px
+  // Below the lg breakpoint the bar sits above the tab bar, so overlays move up by its height too.
   const hasBarsDesktop = structureMode === 'bars' && barTicks.length > 0;
-  const desktopBarHeight = (hasBarsDesktop ? 48 : 24) + 80 + 1;
-  const mobileBarHeight = 4 + 80 + 1;
+  const tabBarOffset = windowWidth < 1024 ? TAB_BAR_HEIGHT : 0;
+  const desktopBarHeight = (hasBarsDesktop ? 48 : 24) + 88 + 1 + tabBarOffset;
+  const mobileBarHeight = 4 + 88 + 1 + tabBarOffset;
   const OVERLAY_GAP = 18;
   const desktopBottomOffset = desktopBarHeight + OVERLAY_GAP;
   const mobileBottomOffset = mobileBarHeight + OVERLAY_GAP;
@@ -374,9 +377,10 @@ export function GlobalPlayerShell() {
 
       {/* Fixed bottom bar: progress on top, then 3-column row */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[120] flex flex-col border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out ${
+        className={`fixed left-0 right-0 z-[120] flex flex-col border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] transition-transform duration-300 ease-in-out ${
           expanded && isMobile ? 'translate-y-full' : 'translate-y-0'
         }`}
+        style={{ bottom: tabBarOffset }}
         aria-label="Global spelare"
       >
         {/* Progress bar on top - desktop only. Fixed height so bars toggle doesn't shift layout. */}
@@ -404,14 +408,14 @@ export function GlobalPlayerShell() {
         {/* Mobile: thin progress strip */}
         <div className="md:hidden w-full h-1 bg-[rgb(var(--color-border))] relative">
           <div
-            className="h-full bg-[rgb(var(--color-accent))] pointer-events-none"
+            className="h-full bg-[rgb(var(--color-now-playing))] pointer-events-none"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
         {/* Main row: left (art + title) | center (controls) | right (source) */}
         <div
-          className={`flex h-20 items-center justify-between px-4 py-3 ${isMobile ? 'cursor-pointer' : ''}`}
+          className={`flex h-22 items-center justify-between px-4 py-3 ${isMobile ? 'cursor-pointer' : ''}`}
           onClick={(e) => {
             if (isMobile && !(e.target as HTMLElement).closest('button') && currentTrack) {
               if (!expanded) {

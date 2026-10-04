@@ -142,7 +142,9 @@ describe('StyleVotePanel', () => {
     await renderPanel();
 
     const currentStyleText = document.body.textContent;
-    expect(currentStyleText).toContain('Nuvarande dansstil: Polska');
+    expect(currentStyleText).toContain('Nuvarande:');
+    expect(currentStyleText).toContain('Polska');
+    expect(currentStyleText).toContain('Steg 1 av 2');
 
     await renderPanel({ currentStyle: null });
 

@@ -1,12 +1,14 @@
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon } from '@/icons';
+import { CheckIcon, CloseIcon } from '@/icons';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
 import { StylePicker } from '@/components/StylePicker';
 import { TempoPicker } from '@/components/TempoPicker';
 import { useStyleVote } from '@/hooks/useStyleVote';
 import { useAuth } from '@/auth/useAuth';
+import { StylePill } from './StylePill';
+import { stylePillState } from './stylePillState';
 
 type Step = 'main' | 'sub' | 'tempo' | 'success';
 
@@ -14,6 +16,8 @@ interface StyleVotePanelProps {
   trackId: string;
   trackTitle: string;
   currentStyle: string | null | undefined;
+  /** The confidence behind the current style, when the caller knows it. Without it the style reads as confirmed. */
+  currentConfidence?: number | null;
   open: boolean;
   onClose: () => void;
   onVoted?: (style: string, confirmed: boolean) => void;
@@ -28,6 +32,7 @@ function StyleVoteDialog({
   trackId,
   trackTitle,
   currentStyle,
+  currentConfidence,
   onClose,
   onVoted,
 }: Omit<StyleVotePanelProps, 'open'>) {
@@ -81,6 +86,14 @@ function StyleVoteDialog({
     ...styleVote.subStylesFor(selectedMain).map((s) => ({ value: s, label: s })),
   ];
 
+  const hasCurrentStyle = typeof currentStyle === 'string' && currentStyle.length > 0;
+  const currentState = hasCurrentStyle
+    ? currentConfidence == null
+      ? 'confirmed'
+      : stylePillState(currentStyle, currentConfidence)
+    : 'unknown';
+  const stepLabel = step === 'tempo' ? 'Steg 2 av 2' : step === 'success' ? null : 'Steg 1 av 2';
+
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -91,43 +104,65 @@ function StyleVoteDialog({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-sm rounded-xl border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-xl">
+      <div className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
         <IconButton
           aria-label="Stäng"
           onClick={onClose}
           className="absolute right-3 top-3"
         >
-          <CloseIcon className="h-4 w-4" aria-hidden />
+          <CloseIcon className="h-5 w-5" aria-hidden />
         </IconButton>
 
-        <h3 id={titleId} className="mb-1 pr-8 text-lg font-bold text-[rgb(var(--color-text))]">
+        <p className="mb-1 pr-12 text-[13px] font-semibold text-[rgb(var(--color-text-muted))]">
+          Vilken dans passar?
+        </p>
+        <h3 id={titleId} className="mb-2 pr-12 text-[20px] font-bold leading-tight text-[rgb(var(--color-text))]">
           {trackTitle}
         </h3>
-        <p className="mb-4 text-sm text-[rgb(var(--color-text-muted))]">
-          {currentStyle ? `Nuvarande dansstil: ${currentStyle}` : 'Dansstil saknas'}
+        <p className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-[rgb(var(--color-text-muted))]">
+          {hasCurrentStyle ? (
+            <span className="inline-flex items-center gap-1.5">
+              Nuvarande:
+              <StylePill style={currentStyle} state={currentState} size="sm" />
+            </span>
+          ) : (
+            <span>Dansstil saknas</span>
+          )}
+          {stepLabel && (
+            <>
+              <span aria-hidden>·</span>
+              <span>{stepLabel}</span>
+            </>
+          )}
         </p>
 
         {step === 'success' && (
-          <div className="text-sm text-[rgb(var(--color-text))]">
-            {styleJustConfirmed ? (
-              <p>Tack! Nu är stilen bekräftad.</p>
-            ) : (
+          <div className="flex flex-col items-start gap-3 text-[15px] text-[rgb(var(--color-text))]">
+            <div className="flex items-center gap-3">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-success))]/15 text-[rgb(var(--color-success))]"
+                aria-hidden
+              >
+                <CheckIcon className="h-6 w-6" aria-hidden />
+              </span>
+              <p className="font-bold">
+                {styleJustConfirmed ? 'Tack! Nu är stilen bekräftad.' : 'Tack! Din röst är sparad.'}
+              </p>
+            </div>
+            {!styleJustConfirmed && !isAuthenticated && (
               <>
-                <p>Tack! Din röst är sparad.</p>
-                {!isAuthenticated && (
-                  <>
-                    <p>Inloggade användare kan bekräfta stilar med enbart en röst</p>
-                    <Button variant="secondary" onClick={login}>
-                      Logga in eller skapa konto
-                    </Button>
-                  </>
-                )}
+                <p className="text-[rgb(var(--color-text-muted))]">
+                  Inloggade användare kan bekräfta stilar med enbart en röst
+                </p>
+                <Button variant="secondary" onClick={login}>
+                  Logga in eller skapa konto
+                </Button>
               </>
             )}
           </div>
         )}
         {failed && (
-          <p role="alert" className="mb-3 text-sm text-red-600">
+          <p role="alert" className="mb-3 text-[14px] text-[rgb(var(--color-error))]">
             Det gick inte att spara din röst. Försök igen.
           </p>
         )}
@@ -154,16 +189,24 @@ function StyleVoteDialog({
 
         {step === 'tempo' && (
           <>
-            <p className="mb-3 text-sm font-bold text-[rgb(var(--color-text))]">Hur snabbt är danstempot?</p>
+            <p className="mb-3 text-[15px] font-bold text-[rgb(var(--color-text))]">Hur snabbt är danstempot?</p>
             <TempoPicker presentation="full" onSelect={handleSubmit} disabled={styleVote.isSubmitting} />
-            <Button
-              variant="ghost"
-              className="mt-3"
-              onClick={() => void handleSubmit()}
-              disabled={styleVote.isSubmitting}
-            >
-              Hoppa över tempot
-            </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => void handleSubmit()}
+                disabled={styleVote.isSubmitting}
+              >
+                Hoppa över tempot
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setStep(styleVote.subStylesFor(selectedMain).length > 0 ? 'sub' : 'main')}
+                disabled={styleVote.isSubmitting}
+              >
+                Tillbaka
+              </Button>
+            </div>
           </>
         )}
 

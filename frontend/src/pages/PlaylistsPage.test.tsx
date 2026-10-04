@@ -130,7 +130,7 @@ describe('PlaylistsPage playlist cards', () => {
     expect(descriptionElements.length).toBe(0);
   });
 
-  it('tags render at 14px or larger', async () => {
+  it('the style name reads at 13px or larger', async () => {
     const playlists: PlaylistListItemDto[] = [
       {
         id: 'pl1',
@@ -154,6 +154,7 @@ describe('PlaylistsPage playlist cards', () => {
 
     tagElements.forEach((tag) => {
       expect(tag.className).not.toContain('text-[10px]');
+      expect(tag.className).not.toContain('text-[12px]');
       expect(tag.className).not.toContain('text-xs');
     });
   });
@@ -225,11 +226,11 @@ describe('PlaylistsPage playlist cards', () => {
 
     expect(document.body.textContent).not.toContain('Ägs av gruppen');
 
-    const nameElement = Array.from(document.body.querySelectorAll('p')).find(
-      (p) => p.textContent?.includes('Grupp spellista'),
+    const row = Array.from(document.body.querySelectorAll('li')).find(
+      (li) => li.textContent?.includes('Grupp spellista'),
     );
-    expect(nameElement).toBeTruthy();
-    expect(nameElement?.textContent).toContain('Testgruppen');
+    expect(row).toBeTruthy();
+    expect(row?.textContent).toContain('Testgruppen');
 
     const nestedAnchors = Array.from(document.body.querySelectorAll('a')).filter((a) =>
       a.querySelector('a'),
@@ -237,7 +238,7 @@ describe('PlaylistsPage playlist cards', () => {
     expect(nestedAnchors.length).toBe(0);
   });
 
-  it('shows Du for a playlist the user owns', async () => {
+  it('does not mark a playlist the user owns as shared', async () => {
     const playlists: PlaylistListItemDto[] = [
       {
         id: 'pl1',
@@ -253,11 +254,11 @@ describe('PlaylistsPage playlist cards', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const nameElement = Array.from(document.body.querySelectorAll('p')).find(
-      (p) => p.textContent?.includes('Min spellista'),
+    const row = Array.from(document.body.querySelectorAll('li')).find(
+      (li) => li.textContent?.includes('Min spellista'),
     );
-    expect(nameElement).toBeTruthy();
-    expect(nameElement?.textContent).toContain('Du');
+    expect(row).toBeTruthy();
+    expect(row?.textContent).not.toContain('Delad av');
   });
 
   it('a failed invitation response shows the error next to the invitation, not as a toast', async () => {

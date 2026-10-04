@@ -115,9 +115,9 @@ describe('AdminFolkwikiPage', () => {
   function findMatchRow(trackTitle: string) {
     const span = Array.from(document.body.querySelectorAll('span')).find((el) => el.textContent === trackTitle);
     expect(span).toBeDefined();
-    const row = span!.closest('.rounded-lg');
+    const row = span!.closest('li');
     expect(row).toBeDefined();
-    return row as HTMLDivElement;
+    return row as HTMLLIElement;
   }
 
   function findButtonWithLabelSpan(text: string, scope: ParentNode) {

@@ -6,7 +6,8 @@ import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { FormField } from '@/admin/components/forms/FormField';
 import { FormActions } from '@/admin/components/forms/FormActions';
-import { Button } from '@/ui';
+import { Button, Pill } from '@/ui';
+import { StylePill } from '@/components/TrackRow/StylePill';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface StyleConfig {
@@ -88,7 +89,7 @@ export function AdminStyleConfigPage() {
         total: result?.total ?? 0,
       });
     } catch {
-      toast('Kunde inte hamta stilkonfiguration', 'error');
+      toast('Kunde inte hämta stilkonfiguration', 'error');
     } finally {
       setLoading(false);
     }
@@ -164,96 +165,92 @@ export function AdminStyleConfigPage() {
       toast(cfg.isActive ? 'Inaktiverad' : 'Aktiverad');
       loadData();
     } catch {
-      toast('Kunde inte andra status', 'error');
+      toast('Kunde inte ändra status', 'error');
     }
   };
+
+  const styleName = (cfg: StyleConfig) =>
+    cfg.subStyle ? `${cfg.mainStyle} / ${cfg.subStyle}` : cfg.mainStyle;
 
   const columns: Column<StyleConfig>[] = [
     {
       key: 'mainStyle',
       header: 'Huvudstil',
-      render: (cfg) => (
-        <span className="font-medium text-[rgb(var(--color-text))]">{cfg.mainStyle}</span>
-      ),
+      render: (cfg) => <StylePill style={cfg.mainStyle} state="confirmed" />,
     },
     {
       key: 'subStyle',
       header: 'Understil',
       render: (cfg) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">{cfg.subStyle ?? '-'}</span>
+        <span className="text-[15px] text-[rgb(var(--color-text))]">
+          {cfg.subStyle ?? <span className="text-[13px] text-[rgb(var(--color-text-muted))]">–</span>}
+        </span>
       ),
     },
     {
       key: 'beatsPerBar',
-      header: 'Taktslag/takt',
+      header: 'Taktslag per takt',
       render: (cfg) => (
-        <span className="font-mono text-sm">{cfg.beatsPerBar}/4</span>
+        <span className="text-[15px] tabular-nums text-[rgb(var(--color-text))]">{cfg.beatsPerBar}/4</span>
       ),
     },
     {
       key: 'isActive',
-      header: 'Aktiv',
+      header: 'Status',
       render: (cfg) => (
-        <button
-          type="button"
+        <Pill
+          active={cfg.isActive}
+          aria-pressed={cfg.isActive}
+          aria-label={cfg.isActive ? `Inaktivera ${styleName(cfg)}` : `Aktivera ${styleName(cfg)}`}
           onClick={() => handleToggleActive(cfg)}
-          className={`relative h-5 w-9 rounded-full transition-colors ${
-            cfg.isActive ? 'bg-[rgb(var(--color-accent))]' : 'bg-[rgb(var(--color-border))]'
-          }`}
-          aria-label={cfg.isActive ? 'Inaktivera' : 'Aktivera'}
         >
-          <span
-            className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-              cfg.isActive ? 'translate-x-4' : ''
-            }`}
-          />
-        </button>
+          {cfg.isActive ? 'Aktiv' : 'Inaktiv'}
+        </Pill>
       ),
     },
     {
       key: 'actions',
       header: '',
       render: (cfg) => (
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => openEdit(cfg)}
-            className="px-2 py-1 text-xs text-[rgb(var(--color-accent))] hover:underline"
-          >
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => openEdit(cfg)}>
             Redigera
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[rgb(var(--color-error))]"
             onClick={() => setDeleteModal(cfg)}
-            className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
           >
             Radera
-          </button>
+          </Button>
         </div>
       ),
-      className: 'w-32',
+      className: 'w-56',
     },
   ];
 
   const items = data?.items ?? [];
 
   const configForm = (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <FormField label="Huvudstil" htmlFor="cfg-main">
         <TextInput
           id="cfg-main"
           value={formMainStyle}
           onChange={(e) => setFormMainStyle(e.target.value)}
-          placeholder="t.ex. Polska"
+          placeholder="Till exempel Polska"
+          className="min-h-11"
           required
         />
       </FormField>
-      <FormField label="Understil" htmlFor="cfg-sub">
+      <FormField label="Understil (valfritt)" htmlFor="cfg-sub">
         <TextInput
           id="cfg-sub"
           value={formSubStyle}
           onChange={(e) => setFormSubStyle(e.target.value)}
-          placeholder="Valfritt, t.ex. Galopp"
+          placeholder="Till exempel Galopp"
+          className="min-h-11"
         />
       </FormField>
       <FormField label="Taktslag per takt" htmlFor="cfg-bpb">
@@ -264,33 +261,36 @@ export function AdminStyleConfigPage() {
           max={12}
           value={formBeatsPerBar}
           onChange={(e) => setFormBeatsPerBar(parseInt(e.target.value, 10) || 3)}
-          className="w-20 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-2 py-1.5 text-sm text-[rgb(var(--color-text))]"
+          className="min-h-11 w-28 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] tabular-nums text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
         />
       </FormField>
       {editModal && (
-        <label className="flex items-center gap-2 text-sm text-[rgb(var(--color-text))]">
+        <label className="flex min-h-11 items-center gap-3 text-[15px] text-[rgb(var(--color-text))]">
           <input
             type="checkbox"
             checked={formIsActive}
             onChange={(e) => setFormIsActive(e.target.checked)}
-            className="rounded"
+            className="h-5 w-5 rounded-[4px] border-[rgb(var(--color-border-strong))] accent-[rgb(var(--color-accent))]"
           />
-          Aktiv
+          Aktiv konfiguration
         </label>
       )}
     </div>
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Stilkonfiguration</h1>
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            Taktslag per takt för varje dansstil. Används för att korrigera taktstreck efter klassificering.
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+            Stilkonfiguration
+          </h1>
+          <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
+            Taktslag per takt för varje dansstil. Efter klassificering används värdet för att
+            räkna om taktstrecken. En understil går före sin huvudstil.
           </p>
         </div>
-        <Button variant="primary" size="sm" onClick={openCreate}>
+        <Button variant="primary" onClick={openCreate}>
           Lägg till stil
         </Button>
       </div>
@@ -304,12 +304,12 @@ export function AdminStyleConfigPage() {
       />
 
       {/* Create modal */}
-      <Modal open={createModal} onClose={() => setCreateModal(false)} title="Lagg till stilkonfiguration">
+      <Modal open={createModal} onClose={() => setCreateModal(false)} title="Lägg till stilkonfiguration">
         {configForm}
         <FormActions>
           <Button variant="ghost" onClick={() => setCreateModal(false)}>Avbryt</Button>
           <Button variant="primary" onClick={handleCreate} disabled={!formMainStyle || !formBeatsPerBar}>
-            Skapa
+            Lägg till stil
           </Button>
         </FormActions>
       </Modal>
@@ -327,20 +327,16 @@ export function AdminStyleConfigPage() {
 
       {/* Delete modal */}
       <Modal open={!!deleteModal} onClose={() => setDeleteModal(null)} title="Radera stilkonfiguration">
-        <p className="text-sm text-[rgb(var(--color-text))]">
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
           Vill du radera konfigurationen för <strong>{deleteModal?.mainStyle}</strong>
-          {deleteModal?.subStyle ? ` / ${deleteModal.subStyle}` : ''}?
+          {deleteModal?.subStyle ? ` / ${deleteModal.subStyle}` : ''}? Det går inte att ångra.
         </p>
-        <div className="mt-4 flex justify-end gap-2">
+        <FormActions>
           <Button variant="ghost" onClick={() => setDeleteModal(null)}>Avbryt</Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleDelete}
-          >
-            Radera
+          <Button variant="danger" onClick={handleDelete}>
+            Radera konfiguration
           </Button>
-        </div>
+        </FormActions>
       </Modal>
     </div>
   );

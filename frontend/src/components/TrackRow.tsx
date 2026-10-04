@@ -5,6 +5,7 @@ import { useFavorites } from '@/favorites/useFavorites';
 import { useLongPress } from '@/hooks/useLongPress';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { formatDurationMs } from '@/utils/formatDuration';
+import { tempoCategoryLabel } from '@/utils/tempoLabel';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 import { FlagTrackModal } from './FlagTrackModal';
@@ -15,6 +16,7 @@ import { UnavailableLabel } from './TrackRow/UnavailableLabel';
 import { requestLocalFile } from '@/library/requestLocalFile';
 import { useMissingLocalFile } from '@/library/useMissingLocalFile';
 import { StyleBadge } from './TrackRow/StyleBadge';
+import { SheetMusicLink } from './TrackRow/SheetMusicLink';
 import { TrackActionsModal } from './TrackRow/TrackActionsModal';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
 import type { ExtraMenuItem } from './TrackRow/trackRowMenuItems';
@@ -22,26 +24,11 @@ import { Button, IconButton, toast } from '@/ui';
 import { HeartIcon, HeartFilledIcon } from '@/icons';
 import { addTrack } from '@/api/generated/playlists/playlists';
 
-const TEMPO_LABELS: Record<string, string> = {
-  Slow: 'Långsamt',
-  SlowMed: 'Lugnt',
-  Medium: 'Lagom',
-  Fast: 'Snabbt',
-  Turbo: 'Väldigt snabbt',
-};
-
-function tempoLabel(track: TrackListDto): string {
-  return (
-    (track.tempoCategory &&
-      (TEMPO_LABELS[track.tempoCategory] ?? track.tempoCategory)) ??
-    ''
-  );
-}
-
 interface TrackRowProps {
   track: TrackListDto;
   contextTracks?: TrackListDto[];
   addToPlaylistId?: string;
+  /** Replaces the heart in the action slot. Manage contexts pass Lägg till, Ta bort, Primär, Passar here. */
   action?: ReactNode;
   showAlbum?: boolean;
   badges?: ReactNode;
@@ -49,6 +36,13 @@ interface TrackRowProps {
   isPrivate?: boolean;
 }
 
+/**
+ * The one track row, used by every list on the site.
+ *
+ * Slots, left to right: play (style colour), title and artist, style pill and
+ * tempo (right on desktop, under the artist on a phone), duration, the action
+ * slot (heart by default) and the menu.
+ */
 export function TrackRow({
   track,
   contextTracks,
@@ -74,6 +68,7 @@ export function TrackRow({
   const { missing: fileMissing, setMissing } = useMissingLocalFile(track);
   const unavailable = track.playable === false;
   const isOwnTrack = track.playable === true && !track.playbackLinks?.length;
+  const isCurrent = currentTrack?.id === track.id;
 
   async function handlePlay() {
     if (isOwnTrack && track.id != null && !isCurrent) {
@@ -97,9 +92,8 @@ export function TrackRow({
     }
   };
 
-  const isCurrent = currentTrack?.id === track.id;
   const styleColor = getStyleColor(track.danceStyle);
-  const tempo = tempoLabel(track);
+  const tempo = tempoCategoryLabel(track.tempoCategory);
   const hasDuration = !!track.durationMs && track.durationMs > 0;
 
   const addToPlaylistAction = addToPlaylistId && (
@@ -117,90 +111,90 @@ export function TrackRow({
   return (
     <>
       <div
-        className={`flex items-center gap-3 px-2 py-2.5 border-b border-[rgb(var(--color-border))]/30 select-none [-webkit-touch-callout:none] ${
-          unavailable ? 'bg-[rgb(var(--color-border))]/20' : ''
+        className={`grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 px-2 py-2.5 border-b border-[rgb(var(--color-border))] select-none [-webkit-touch-callout:none] ${
+          unavailable ? 'bg-[rgb(var(--color-border))]/30' : isCurrent ? 'bg-[rgb(var(--color-now-playing))]/10' : ''
         }`}
         {...longPress}
       >
-        {/* Left: Play button (fixed, spans all lines) */}
-        {unavailable ? (
-          <UnavailableLabel />
-        ) : fileMissing ? (
-          <RelinkButton trackId={track.id!} onRelinked={() => setMissing(false)} />
-        ) : (
-          <PlayButton
-            track={track}
-            isCurrent={isCurrent}
-            isPlaying={isPlaying}
-            styleColor={styleColor}
-            onPlay={() => void handlePlay()}
-          />
-        )}
-
-        {/* Center: Vertical text stack */}
-        <div className="min-w-0 flex-1 flex flex-col">
-          {/* Top line: Metadata - badge + tempo */}
-          <div className="flex items-center gap-1.5">
-            <StyleBadge
-              trackId={track.id ?? ''}
-              trackTitle={track.title ?? 'Okänd låt'}
-              danceStyle={track.danceStyle}
-              confidence={track.confidence ?? 0}
+        {/* Slot 1: play control, spans both rows on a phone */}
+        <div className="row-span-2 md:row-span-1 flex items-center">
+          {unavailable ? (
+            <UnavailableLabel />
+          ) : fileMissing ? (
+            <RelinkButton trackId={track.id!} onRelinked={() => setMissing(false)} />
+          ) : (
+            <PlayButton
+              track={track}
+              isCurrent={isCurrent}
+              isPlaying={isPlaying}
               styleColor={styleColor}
+              onPlay={() => void handlePlay()}
             />
-            {tempo && (
-              <span className="text-[11px] font-bold uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
-                {tempo}
-              </span>
-            )}
-          </div>
+          )}
+        </div>
 
-          {/* Middle line: Track title (bold, full width) */}
-          <p className="mt-0.5 truncate text-sm font-bold text-[rgb(var(--color-text))]">
+        {/* Slot 2: title and artist */}
+        <div className="col-start-2 min-w-0 flex flex-col">
+          <p className="truncate text-[15px] font-bold leading-snug text-[rgb(var(--color-text))]">
             {track.title ?? 'Okänd låt'}
           </p>
-
-          {/* Bottom line: Artist */}
-          <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">
-            {track.artistName ?? 'Okänd artist'}
-            {showAlbum && track.albumTitle ? ` · ${track.albumTitle}` : ''}
+          <p className="flex min-w-0 items-center gap-1.5 text-[13px] text-[rgb(var(--color-text-muted))]">
+            <span className="truncate">
+              {track.artistName ?? 'Okänd artist'}
+              {showAlbum && track.albumTitle ? ` · ${track.albumTitle}` : ''}
+            </span>
+            <SheetMusicLink track={track} className="shrink-0" />
           </p>
           {badges}
         </div>
 
-        {/* Right: Duration + Heart + Menu */}
-        <div className="flex shrink-0 items-center gap-0.5">
-        {hasDuration && (
-          <span className="shrink-0 font-mono text-xs text-[rgb(var(--color-text-muted))]">
-            {formatDurationMs(track.durationMs!)}
+        {/* Slot 3: style pill and tempo. Second line on a phone, own column on desktop. */}
+        <div className="col-start-2 row-start-2 md:col-start-3 md:row-start-1 flex items-center gap-2.5 min-w-0">
+          <StyleBadge
+            trackId={track.id ?? ''}
+            trackTitle={track.title ?? 'Okänd låt'}
+            danceStyle={track.danceStyle}
+            confidence={track.confidence ?? 0}
+            styleColor={styleColor}
+          />
+          <span className="text-[13px] text-[rgb(var(--color-text-muted))] md:w-16 truncate">
+            {tempo}
           </span>
-        )}
-        {rowAction ?? (
-          <IconButton
-            aria-label={favorited ? 'Sluta favoritmarkera' : 'Favoritmarkera'}
-            onClick={() => {
-              if (!isAuthenticated) setLoginModalOpen(true);
-              else if (track.id != null) toggleFavorite(track.id);
-            }}
-          >
-            {favorited ? (
-              <HeartFilledIcon className="h-5 w-5 text-red-500" aria-hidden />
-            ) : (
-              <HeartIcon className="h-5 w-5" aria-hidden />
-            )}
-          </IconButton>
-        )}
-        <TrackRowMenu
-          track={track}
-          open={menuOpen}
-          onToggle={() => setMenuOpen((o) => !o)}
-          onClose={() => setMenuOpen(false)}
-          onAddToQueue={() => addToQueue(track)}
-          onFlag={() => setFlagModalOpen(true)}
-          onAddToPlaylist={isAuthenticated ? () => setAddToPlaylistOpen(true) : undefined}
-          extraItems={extraMenuItems}
-          isPrivate={isPrivate}
-        />
+        </div>
+
+        {/* Slots 4–6: duration, action, menu */}
+        <div className="col-start-3 row-span-2 md:col-start-4 md:row-span-1 flex shrink-0 items-center gap-0.5">
+          {hasDuration && (
+            <span className="hidden sm:inline shrink-0 w-10 text-right text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">
+              {formatDurationMs(track.durationMs!)}
+            </span>
+          )}
+          {rowAction ?? (
+            <IconButton
+              aria-label={favorited ? 'Sluta favoritmarkera' : 'Favoritmarkera'}
+              onClick={() => {
+                if (!isAuthenticated) setLoginModalOpen(true);
+                else if (track.id != null) toggleFavorite(track.id);
+              }}
+            >
+              {favorited ? (
+                <HeartFilledIcon className="h-5 w-5 text-[rgb(var(--color-text))]" aria-hidden />
+              ) : (
+                <HeartIcon className="h-5 w-5 text-[rgb(var(--color-text-muted))]" aria-hidden />
+              )}
+            </IconButton>
+          )}
+          <TrackRowMenu
+            track={track}
+            open={menuOpen}
+            onToggle={() => setMenuOpen((o) => !o)}
+            onClose={() => setMenuOpen(false)}
+            onAddToQueue={() => addToQueue(track)}
+            onFlag={() => setFlagModalOpen(true)}
+            onAddToPlaylist={isAuthenticated ? () => setAddToPlaylistOpen(true) : undefined}
+            extraItems={extraMenuItems}
+            isPrivate={isPrivate}
+          />
         </div>
       </div>
 

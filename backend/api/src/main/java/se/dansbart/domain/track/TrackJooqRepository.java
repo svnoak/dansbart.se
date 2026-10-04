@@ -172,6 +172,16 @@ public class TrackJooqRepository {
                         .deepLink(r.get(PLAYBACK_LINKS.DEEP_LINK))
                         .build());
             });
+        // Sheet music: the first admin-confirmed folkwiki match per track.
+        Map<UUID, String> sheetMusicByTrack = new LinkedHashMap<>();
+        dsl.select(TRACK_FOLKWIKI_MATCHES.TRACK_ID, FOLKWIKI_TUNES.FOLKWIKI_URL)
+            .from(TRACK_FOLKWIKI_MATCHES)
+            .join(FOLKWIKI_TUNES).on(TRACK_FOLKWIKI_MATCHES.FOLKWIKI_TUNE_ID.eq(FOLKWIKI_TUNES.ID))
+            .where(TRACK_FOLKWIKI_MATCHES.TRACK_ID.in(trackIds)
+                .and(TRACK_FOLKWIKI_MATCHES.MATCH_STATUS.eq("confirmed")))
+            .orderBy(TRACK_FOLKWIKI_MATCHES.CONFIRMED_AT.asc())
+            .forEach(r -> sheetMusicByTrack.putIfAbsent(
+                r.get(TRACK_FOLKWIKI_MATCHES.TRACK_ID), r.get(FOLKWIKI_TUNES.FOLKWIKI_URL)));
         Map<UUID, UUID> artistIdByTrack = new LinkedHashMap<>();
         Map<UUID, String> artistNameByTrack = new LinkedHashMap<>();
         dsl.select(TRACK_ARTISTS.TRACK_ID, ARTISTS.ID, ARTISTS.NAME)
@@ -219,6 +229,7 @@ public class TrackJooqRepository {
             dto.setArtistName(artistNameByTrack.get(id));
             dto.setAlbumId(albumIdByTrack.get(id));
             dto.setAlbumTitle(albumTitleByTrack.get(id));
+            dto.setSheetMusicUrl(sheetMusicByTrack.get(id));
         }
         List<TrackListDto> ordered = new ArrayList<>();
         for (UUID id : trackIds) {

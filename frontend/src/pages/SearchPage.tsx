@@ -15,264 +15,307 @@ import type { StyleOverviewDto } from '@/api/models/styleOverviewDto';
 import {
   useSearchParamsState,
   DEFAULT_FILTERS,
-  filtersEqual,
+  type SearchFilters,
+  type SearchType,
 } from '@/hooks/useSearchParamsState';
 import { SearchBar } from '@/components/SearchBar';
 import { FilterBar } from '@/components/FilterBar';
 import { TrackRow, ArtistCard, AlbumCard } from '@/components';
+import { Button, EmptyState, LoadError, RowSkeleton } from '@/ui';
+import { AlbumIcon, MusicNoteIcon, UserIcon } from '@/icons';
+import { activeFilterWords } from '@/utils/searchFilters';
 import { canEditPlaylist } from '@/utils/playlistPermissions';
 import { useAuth } from '@/auth/useAuth';
 
 const PAGE_SIZE = 20;
 
+const NOUNS: Record<SearchType, { one: string; many: string }> = {
+  tracks: { one: 'låt', many: 'låtar' },
+  artists: { one: 'artist', many: 'artister' },
+  albums: { one: 'album', many: 'album' },
+};
+
+interface Loaded {
+  /** Identifies the request that produced this result. */
+  key: string;
+  /** Identifies the list the result belongs to (everything but the offset). */
+  listKey: string;
+  tracks: TrackListDto[];
+  artists: Artist[];
+  albums: Album[];
+  total: number;
+  error: string | null;
+}
+
+const NOTHING_LOADED: Loaded = {
+  key: '',
+  listKey: '',
+  tracks: [],
+  artists: [],
+  albums: [],
+  total: 0,
+  error: null,
+};
+
+interface AddToState {
+  id: string;
+  playlist: PlaylistDto | null;
+  error: boolean;
+}
+
+function merge<T extends { id?: string }>(prev: T[], items: T[]): T[] {
+  const seen = new Set(prev.map((t) => t.id));
+  return [...prev, ...items.filter((t) => !seen.has(t.id))];
+}
+
+function postSearchEvent(f: SearchFilters) {
+  // Track filter shape — no text query stored
+  const activeFilters = [
+    f.style,
+    f.subStyle,
+    f.source,
+    f.vocals,
+    f.confirmed,
+    f.tempoEnabled,
+    f.bouncinessEnabled,
+    f.articulationEnabled,
+  ].filter(Boolean).length;
+  fetch('/api/analytics/interaction', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      eventType: 'search',
+      sessionId: getVoterId(),
+      eventData: {
+        style: f.style || null,
+        hasQuery: Boolean(f.q),
+        hasTempoFilter: f.tempoEnabled ?? false,
+        hasDurationFilter: f.minDuration != null || f.maxDuration != null,
+        hasBouncinessFilter: f.bouncinessEnabled ?? false,
+        hasArticulationFilter: f.articulationEnabled ?? false,
+        filterCount: activeFilters,
+      },
+    }),
+  }).catch(() => {});
+}
+
 export function SearchPage() {
   useAnalyticsFlag('search');
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { filters, setFilters, toTracksParams } = useSearchParamsState();
+  const { filters, setFilters, toTracksParams, hasActiveFilters } = useSearchParamsState();
 
-  const [draftFilters, setDraftFilters] = useState(filters);
-  const hasUnsavedChanges = useMemo(
-    () => !filtersEqual(draftFilters, filters),
-    [draftFilters, filters]
+  // The text query is a draft until Sök or Enter. Everything else acts at once.
+  // The draft follows the URL whenever the applied query changes (Sök, back button).
+  const [draft, setDraft] = useState({ value: filters.q, base: filters.q });
+  if (draft.base !== filters.q) {
+    setDraft({ value: filters.q, base: filters.q });
+  }
+  const draftQuery = draft.base !== filters.q ? filters.q : draft.value;
+  const setDraftQuery = useCallback(
+    (value: string) => setDraft((d) => ({ ...d, value })),
+    [],
   );
-  const hasActiveFiltersDraft = useMemo(
-    () =>
-      draftFilters.style !== '' ||
-      draftFilters.subStyle !== '' ||
-      draftFilters.source !== '' ||
-      draftFilters.vocals !== '' ||
-      draftFilters.confirmed ||
-      draftFilters.tempoEnabled ||
-      draftFilters.minBpm != null ||
-      draftFilters.maxBpm != null ||
-      draftFilters.minDuration != null ||
-      draftFilters.maxDuration != null ||
-      draftFilters.bouncinessEnabled ||
-      draftFilters.articulationEnabled,
-    [draftFilters]
+
+  const applyChange = useCallback(
+    (updates: Partial<SearchFilters>) => {
+      const next = { ...filters, ...updates, q: draftQuery, offset: 0 };
+      setFilters({ ...updates, q: draftQuery, offset: 0 });
+      postSearchEvent(next);
+    },
+    [draftQuery, filters, setFilters],
   );
-  const applyDraft = useCallback(() => {
-    setFilters({ ...draftFilters, offset: 0 });
-    // Track filter shape — no text query stored
-    const activeFilters = [
-      draftFilters.style,
-      draftFilters.subStyle,
-      draftFilters.source,
-      draftFilters.vocals,
-      draftFilters.confirmed,
-      draftFilters.tempoEnabled,
-      draftFilters.bouncinessEnabled,
-      draftFilters.articulationEnabled,
-    ].filter(Boolean).length;
-    fetch('/api/analytics/interaction', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        eventType: 'search',
-        sessionId: getVoterId(),
-        eventData: {
-          style: draftFilters.style || null,
-          hasQuery: Boolean(draftFilters.q),
-          hasTempoFilter: draftFilters.tempoEnabled ?? false,
-          hasDurationFilter: draftFilters.minDuration != null || draftFilters.maxDuration != null,
-          hasBouncinessFilter: draftFilters.bouncinessEnabled ?? false,
-          hasArticulationFilter: draftFilters.articulationEnabled ?? false,
-          filterCount: activeFilters,
-        },
-      }),
-    }).catch(() => {});
-  }, [draftFilters, setFilters]);
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      ...DEFAULT_FILTERS,
+      q: filters.q,
+      limit: filters.limit,
+      searchType: filters.searchType,
+      sortBy: filters.sortBy,
+      sortDirection: filters.sortDirection,
+      offset: 0,
+    });
+  }, [filters.q, filters.limit, filters.searchType, filters.sortBy, filters.sortDirection, setFilters]);
 
   const [styleOverview, setStyleOverview] = useState<StyleOverviewDto[] | null>(null);
-  const [tracks, setTracks] = useState<TrackListDto[]>([]);
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<Loaded>(NOTHING_LOADED);
+  const [retryCount, setRetryCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const isLoadingMoreRef = useRef(false);
 
   const addToId = searchParams.get('addTo');
-  const [addToPlaylist, setAddToPlaylist] = useState<PlaylistDto | null>(null);
-  const [addToError, setAddToError] = useState(false);
+  const [addToState, setAddToState] = useState<AddToState | null>(null);
+  const addToLoaded = addToId != null && addToState?.id === addToId ? addToState : null;
+  const addToPlaylist = addToLoaded?.playlist ?? null;
+  const addToError = addToLoaded?.error ?? false;
   const canAddToPlaylist = canEditPlaylist(addToPlaylist, user?.id);
-
-  // Sync draft from URL when applied filters change (e.g. after Apply or browser back)
-  useEffect(() => {
-    setDraftFilters(filters);
-  }, [filters]);
-
-  // Sync filters from URL on mount / when search params change
-  useEffect(() => {
-    const q = searchParams.get('q') ?? '';
-    if (q !== filters.q) setFilters({ q, offset: 0 });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
 
   // Load the playlist that tracks get added to
   useEffect(() => {
-    if (!addToId) {
-      setAddToPlaylist(null);
-      setAddToError(false);
-      return;
-    }
+    if (!addToId) return;
     const controller = new AbortController();
     getPlaylist(addToId, { signal: controller.signal })
-      .then((pl) => setAddToPlaylist(pl))
+      .then((pl) => setAddToState({ id: addToId, playlist: pl, error: false }))
       .catch(() => {
         if (controller.signal.aborted) return;
-        setAddToError(true);
+        setAddToState({ id: addToId, playlist: null, error: true });
       });
     return () => controller.abort();
   }, [addToId]);
 
-  // Fetch style overview for filter dropdowns
+  // Fetch style overview for the style chips
   useEffect(() => {
     getStyleOverview()
       .then((data) => setStyleOverview(data ?? null))
       .catch(() => setStyleOverview([]));
   }, []);
 
+  // What is on screen is derived from the request keys, so a change of
+  // filters shows the loading state at once without an extra render.
+  const { searchType, q, limit, offset } = filters;
+  const listKey = useMemo(
+    // JSON.stringify drops the undefined offset, so a later page keeps the same list key.
+    () => JSON.stringify([searchType, q, limit, { ...toTracksParams, offset: undefined }, retryCount]),
+    [searchType, q, limit, toTracksParams, retryCount],
+  );
+  const requestKey = `${listKey}|${offset}`;
+  const sameList = loaded.listKey === listKey;
+  const stale = loaded.key !== requestKey;
+  const loadingMore = stale && sameList && offset > 0;
+  const loading = stale && !loadingMore;
+  const tracks = sameList ? loaded.tracks : [];
+  const artists = sameList ? loaded.artists : [];
+  const albums = sameList ? loaded.albums : [];
+  const total = sameList ? loaded.total : 0;
+  const error = sameList && !stale ? loaded.error : null;
+
   // Fetch results based on searchType and filters
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
 
-    const isLoadingMore = filters.offset > 0;
-    if (isLoadingMore) {
-      setLoadingMore(true);
-      isLoadingMoreRef.current = true;
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-    if (filters.searchType !== 'tracks' || filters.offset === 0) setTracks([]);
-    if (filters.searchType !== 'artists' || filters.offset === 0) setArtists([]);
-    if (filters.searchType !== 'albums' || filters.offset === 0) setAlbums([]);
-    if (filters.offset === 0) setTotal(0);
+    const fail = (err: unknown, fallback: string) => {
+      if (signal.aborted) return;
+      setLoaded({
+        ...NOTHING_LOADED,
+        key: requestKey,
+        listKey,
+        error: err instanceof Error ? err.message : fallback,
+      });
+    };
+    const keep = <T extends { id?: string }>(prev: T[], prevListKey: string, items: T[]) =>
+      offset === 0 || prevListKey !== listKey ? items : merge(prev, items);
 
-    const limit = filters.limit;
-    const offset = filters.offset;
-
-    if (filters.searchType === 'tracks') {
+    if (searchType === 'tracks') {
       getTracks(toTracksParams, { signal })
         .then((data) => {
           const items = data?.items ?? [];
-          const totalCount = data?.total ?? items.length;
-          setTracks(offset === 0 ? items : (prev) => {
-            const seen = new Set(prev.map((t) => t.id));
-            return [...prev, ...items.filter((t) => !seen.has(t.id))];
-          });
-          setTotal(totalCount);
+          setLoaded((prev) => ({
+            ...NOTHING_LOADED,
+            key: requestKey,
+            listKey,
+            tracks: keep(prev.tracks, prev.listKey, items),
+            total: data?.total ?? items.length,
+          }));
         })
-        .catch((err) => {
-          if (signal.aborted) return;
-          setError(err instanceof Error ? err.message : 'Kunde inte hämta låtar');
-          setTracks([]);
-          setTotal(0);
-        })
-        .finally(() => {
-          if (signal.aborted) return;
-          setLoading(false);
-          setLoadingMore(false);
-          isLoadingMoreRef.current = false;
-        });
-    } else if (filters.searchType === 'artists') {
-      const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
-      const promise = filters.q
-        ? searchArtists({ q: filters.q, limit, offset }, { signal })
+        .catch((err) => fail(err, 'Kunde inte hämta låtar'));
+    } else if (searchType === 'artists') {
+      const params = { limit, offset, ...(q ? { search: q } : {}) };
+      const promise = q
+        ? searchArtists({ q, limit, offset }, { signal })
         : getArtists(params, { signal });
       promise
         .then((data) => {
           const items = data?.items ?? [];
-          const totalCount = data?.total ?? items.length;
-          setArtists(offset === 0 ? items : (prev) => {
-            const seen = new Set(prev.map((a) => a.id));
-            return [...prev, ...items.filter((a) => !seen.has(a.id))];
-          });
-          setTotal(totalCount);
+          setLoaded((prev) => ({
+            ...NOTHING_LOADED,
+            key: requestKey,
+            listKey,
+            artists: keep(prev.artists, prev.listKey, items),
+            total: data?.total ?? items.length,
+          }));
         })
-        .catch((err) => {
-          if (signal.aborted) return;
-          setError(err instanceof Error ? err.message : 'Kunde inte hämta artister');
-          setArtists([]);
-          setTotal(0);
-        })
-        .finally(() => {
-          if (signal.aborted) return;
-          setLoading(false);
-          setLoadingMore(false);
-          isLoadingMoreRef.current = false;
-        });
+        .catch((err) => fail(err, 'Kunde inte hämta artister'));
     } else {
-      const params = { limit, offset, ...(filters.q ? { search: filters.q } : {}) };
-      const promise = filters.q
-        ? searchAlbums({ q: filters.q, limit, offset }, { signal })
+      const params = { limit, offset, ...(q ? { search: q } : {}) };
+      const promise = q
+        ? searchAlbums({ q, limit, offset }, { signal })
         : getAlbums(params, { signal });
       promise
         .then((data) => {
           const items = data?.items ?? [];
-          const totalCount = data?.total ?? items.length;
-          setAlbums(offset === 0 ? items : (prev) => {
-            const seen = new Set(prev.map((a) => a.id));
-            return [...prev, ...items.filter((a) => !seen.has(a.id))];
-          });
-          setTotal(totalCount);
+          setLoaded((prev) => ({
+            ...NOTHING_LOADED,
+            key: requestKey,
+            listKey,
+            albums: keep(prev.albums, prev.listKey, items),
+            total: data?.total ?? items.length,
+          }));
         })
-        .catch((err) => {
-          if (signal.aborted) return;
-          setError(err instanceof Error ? err.message : 'Kunde inte hämta album');
-          setAlbums([]);
-          setTotal(0);
-        })
-        .finally(() => {
-          if (signal.aborted) return;
-          setLoading(false);
-          setLoadingMore(false);
-          isLoadingMoreRef.current = false;
-        });
+        .catch((err) => fail(err, 'Kunde inte hämta album'));
     }
 
     return () => controller.abort();
-  }, [filters.searchType, filters.q, filters.offset, filters.limit, toTracksParams]);
+  }, [searchType, q, limit, offset, toTracksParams, requestKey, listKey]);
 
   const loadMore = useCallback(() => {
     setFilters({ offset: filters.offset + PAGE_SIZE });
   }, [filters.offset, setFilters]);
 
   const hasMore =
-    (filters.searchType === 'tracks' && tracks.length < total) ||
-    (filters.searchType === 'artists' && artists.length < total) ||
-    (filters.searchType === 'albums' && albums.length < total);
+    (searchType === 'tracks' && tracks.length < total) ||
+    (searchType === 'artists' && artists.length < total) ||
+    (searchType === 'albums' && albums.length < total);
 
   // Infinite scroll: observe sentinel element
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || !hasMore) return;
+    if (!sentinel || !hasMore || loadingMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && !isLoadingMoreRef.current) {
-          loadMore();
-        }
+        if (entries[0]?.isIntersecting) loadMore();
       },
       { threshold: 0.1 }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  }, [hasMore, loadingMore, loadMore]);
+
+  const noun = NOUNS[searchType] ?? NOUNS.tracks;
+  const summary = useMemo(() => {
+    const count = `${total.toLocaleString('sv-SE')} ${total === 1 ? noun.one : noun.many}`;
+    const words = filters.searchType === 'tracks' ? activeFilterWords(filters) : [];
+    if (filters.q) words.unshift(`”${filters.q}”`);
+    return [count, ...words].join(' · ');
+  }, [filters, noun, total]);
+
+  const isEmpty = tracks.length === 0 && artists.length === 0 && albums.length === 0;
+  const showEmpty = !loading && !error && isEmpty;
+  const EmptyIcon =
+    searchType === 'artists' ? UserIcon : searchType === 'albums' ? AlbumIcon : MusicNoteIcon;
+  const filtersNarrow = hasActiveFilters && searchType === 'tracks';
+  const emptyDescription = q
+    ? filtersNarrow
+      ? 'Prova ett annat sökord eller ta bort ett filter.'
+      : 'Prova ett annat sökord eller stava på ett annat sätt.'
+    : filtersNarrow
+      ? 'Prova att ta bort ett filter, så blir urvalet större.'
+      : 'Det finns inget att visa här ännu.';
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Sök
-      </h1>
+      <h1 className="text-[32px] font-bold tracking-tight text-[rgb(var(--color-text))]">Sök</h1>
 
       {addToId && (
-        <div className={`flex items-center justify-between gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm ${addToError || !canAddToPlaylist ? 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text-muted))]' : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))]'}`}>
+        <div
+          className={`flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-[15px] ${
+            addToError || !canAddToPlaylist
+              ? 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text-muted))]'
+              : 'border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]'
+          }`}
+        >
           <p>
             {addToError
               ? 'Spellistan hittades inte.'
@@ -280,80 +323,71 @@ export function SearchPage() {
               ? 'Du kan inte lägga till låtar i den här spellistan.'
               : `Du lägger till låtar i ${addToPlaylist?.name ?? ''}`}
           </p>
-          <Link to={`/playlists/${addToId}`} className="font-medium underline">
+          <Link
+            to={`/playlists/${addToId}`}
+            className="inline-flex min-h-11 items-center font-semibold text-[rgb(var(--color-link))] underline"
+          >
             Klar
           </Link>
         </div>
       )}
 
       <SearchBar
-        query={draftFilters.q}
-        searchType={draftFilters.searchType}
-        onQueryChange={(q) => setDraftFilters((prev) => ({ ...prev, q, offset: 0 }))}
-        onSearchTypeChange={(t) =>
-          setDraftFilters((prev) => ({ ...prev, searchType: t, offset: 0 }))
-        }
-        onSearch={applyDraft}
+        query={draftQuery}
+        searchType={searchType}
+        onQueryChange={setDraftQuery}
+        onSearchTypeChange={(t) => applyChange({ searchType: t })}
+        onSearch={() => applyChange({})}
       />
 
       <FilterBar
-        filters={draftFilters}
-        setFilters={(u) => setDraftFilters((prev) => ({ ...prev, ...u }))}
-        searchType={draftFilters.searchType}
+        filters={filters}
+        setFilters={applyChange}
+        searchType={searchType}
         styleOverview={styleOverview}
-        onClearFilters={() =>
-          setDraftFilters((prev) => ({
-            ...DEFAULT_FILTERS,
-            q: prev.q,
-            limit: prev.limit,
-            searchType: prev.searchType,
-            offset: 0,
-          }))
-        }
-        hasActiveFilters={hasActiveFiltersDraft}
-        hasUnsavedChanges={hasUnsavedChanges}
-        onApply={applyDraft}
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
       />
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-[rgb(var(--color-text-muted))]">
-          Resultat ({total.toLocaleString('sv-SE')})
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="min-w-0 text-[15px] font-semibold text-[rgb(var(--color-text-muted))]">
+          {loading ? `Söker ${noun.many}…` : summary}
         </h2>
-        {filters.searchType === 'tracks' && (
-          <select
-            value={filters.sortBy ? `${filters.sortBy}:${filters.sortDirection || 'asc'}` : ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (!val) {
-                setFilters({ sortBy: '', sortDirection: '', offset: 0 });
-              } else {
-                const [field, dir] = val.split(':');
-                setFilters({ sortBy: field, sortDirection: dir, offset: 0 });
-              }
-            }}
-            className="rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1.5 text-xs text-[rgb(var(--color-text))]"
-          >
-            <option value="">Sortering: Standard</option>
-            <option value="tempoBpm:asc">Tempo (lägst först)</option>
-            <option value="tempoBpm:desc">Tempo (högst först)</option>
-            <option value="durationMs:asc">Längd (kortast först)</option>
-            <option value="durationMs:desc">Längd (längst först)</option>
-          </select>
+        {searchType === 'tracks' && (
+          <div className="flex items-center gap-2">
+            <label htmlFor="search-sort" className="text-[13px] font-medium text-[rgb(var(--color-text-muted))]">
+              Sortera
+            </label>
+            <select
+              id="search-sort"
+              value={filters.sortBy ? `${filters.sortBy}:${filters.sortDirection || 'asc'}` : ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) {
+                  setFilters({ sortBy: '', sortDirection: '', offset: 0 });
+                } else {
+                  const [field, dir] = val.split(':');
+                  setFilters({ sortBy: field, sortDirection: dir, offset: 0 });
+                }
+              }}
+              className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+            >
+              <option value="">Standard</option>
+              <option value="tempoBpm:asc">Tempo (lägst först)</option>
+              <option value="tempoBpm:desc">Tempo (högst först)</option>
+              <option value="durationMs:asc">Längd (kortast först)</option>
+              <option value="durationMs:desc">Längd (längst först)</option>
+            </select>
+          </div>
         )}
       </div>
 
-      {error && (
-        <p className="text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <LoadError message={error} onRetry={() => setRetryCount((n) => n + 1)} />}
 
-      {loading && tracks.length === 0 && artists.length === 0 && albums.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar…</p>
-      )}
+      {loading && <RowSkeleton rows={6} label={`Laddar ${noun.many}`} />}
 
-      {!loading && filters.searchType === 'tracks' && (
-        <ul className="space-y-0">
+      {!loading && searchType === 'tracks' && tracks.length > 0 && (
+        <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
           {tracks.map((track, i) => (
             <li key={track.id ?? track.title ?? `track-${i}`}>
               <TrackRow
@@ -366,7 +400,7 @@ export function SearchPage() {
         </ul>
       )}
 
-      {!loading && filters.searchType === 'artists' && (
+      {!loading && searchType === 'artists' && artists.length > 0 && (
         <ul className="space-y-3">
           {artists.map((artist, i) => (
             <li key={artist.id ?? artist.name ?? `artist-${i}`}>
@@ -376,7 +410,7 @@ export function SearchPage() {
         </ul>
       )}
 
-      {!loading && filters.searchType === 'albums' && (
+      {!loading && searchType === 'albums' && albums.length > 0 && (
         <ul className="space-y-3">
           {albums.map((album, i) => (
             <li key={album.id ?? album.title ?? `album-${i}`}>
@@ -386,21 +420,26 @@ export function SearchPage() {
         </ul>
       )}
 
-      {!loading &&
-        tracks.length === 0 &&
-        artists.length === 0 &&
-        albums.length === 0 &&
-        !error && (
-          <p className="text-[rgb(var(--color-text-muted))]">
-            Inga resultat. Prova att ändra sökord eller filter.
-          </p>
-        )}
+      {showEmpty && (
+        <EmptyState
+          icon={<EmptyIcon className="h-7 w-7" aria-hidden />}
+          title={`Inga ${noun.many} matchar`}
+          description={emptyDescription}
+          action={
+            filtersNarrow ? (
+              <Button variant="secondary" onClick={clearFilters}>
+                Rensa filter
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
 
       {hasMore && (
         <div ref={sentinelRef} className="flex justify-center py-4">
-          {loadingMore && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
-          )}
+          <p className="text-center text-sm text-[rgb(var(--color-text-muted))]">
+            {loadingMore ? `Laddar fler ${noun.many}…` : `Fler ${noun.many} laddas när du skrollar.`}
+          </p>
         </div>
       )}
     </div>

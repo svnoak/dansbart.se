@@ -17,6 +17,7 @@ const searchTracks = vi.fn();
 const addTrackToEntry = vi.fn();
 const removeTrackFromEntry = vi.fn();
 const setPlayMode = vi.fn();
+const reorderEntries = vi.fn();
 const usePlayerMock = { play: vi.fn() };
 
 vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
@@ -26,6 +27,7 @@ vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
   addTrackToEntry: (...args: unknown[]) => addTrackToEntry(...args),
   removeTrackFromEntry: (...args: unknown[]) => removeTrackFromEntry(...args),
   setPlayMode: (...args: unknown[]) => setPlayMode(...args),
+  reorderEntries: (...args: unknown[]) => reorderEntries(...args),
 }));
 
 vi.mock('@/api/generated/dances/dances', () => ({
@@ -38,6 +40,18 @@ vi.mock('@/api/generated/tracks/tracks', () => ({
 
 vi.mock('@/player/usePlayer', () => ({
   usePlayer: () => usePlayerMock,
+}));
+
+vi.mock('@/auth/useAuth', () => ({
+  useAuth: () => ({ isAuthenticated: true, isLoading: false, user: { id: 'user-1' } }),
+}));
+
+vi.mock('@/favorites/useFavorites', () => ({
+  useFavorites: () => ({ isFavorited: () => false, toggleFavorite: vi.fn() }),
+}));
+
+vi.mock('@/theme/useTheme', () => ({
+  useTheme: () => ({ theme: 'light' }),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -164,6 +178,7 @@ describe('DanceListPage', () => {
     addTrackToEntry.mockReset();
     removeTrackFromEntry.mockReset();
     setPlayMode.mockReset();
+    reorderEntries.mockReset();
     usePlayerMock.play.mockReset();
     getDanceList.mockResolvedValue(mockDanceListFull);
     vi.useFakeTimers();
@@ -216,6 +231,55 @@ describe('DanceListPage', () => {
     return labelElement.querySelector('input') as HTMLInputElement | null;
   }
 
+  function getRemoveTrackButtons() {
+    return Array.from(document.body.querySelectorAll('button')).filter((b) => {
+      const label = b.getAttribute('aria-label') ?? '';
+      return label.startsWith('Ta bort ') && label.includes(' från ');
+    });
+  }
+
+  function getPlayModeButton(danceName: string, label: string) {
+    const group = document.body.querySelector(`[role="group"][aria-label="Spelläge för ${danceName}"]`);
+    expect(group).not.toBeNull();
+    const button = Array.from(group!.querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
+    expect(button).toBeDefined();
+    return button as HTMLButtonElement;
+  }
+
+  async function openRemoveDanceItem(danceName: string) {
+    const menuButton = document.body.querySelector(
+      `button[aria-label="Fler alternativ för ${danceName}"]`,
+    ) as HTMLButtonElement | null;
+    expect(menuButton).not.toBeNull();
+    await act(async () => {
+      menuButton!.click();
+    });
+    return clickButton('Ta bort dansen');
+  }
+
+  function getSearchResultRow(title: string) {
+    const results = document.body.querySelector('ul[aria-label="Sökträffar"]');
+    expect(results).not.toBeNull();
+    const row = Array.from(results!.querySelectorAll('li')).find((li) => li.textContent?.includes(title));
+    expect(row).toBeDefined();
+    return row as HTMLLIElement;
+  }
+
+  function addButtonInResult(title: string) {
+    const row = getSearchResultRow(title);
+    const button = Array.from(row.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Lägg till');
+    expect(button).toBeDefined();
+    return button;
+  }
+
+  function confirmButtonFor(resultButton: HTMLButtonElement | undefined) {
+    const row = resultButton?.closest('li');
+    expect(row).toBeDefined();
+    const button = Array.from(row!.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Lägg till');
+    expect(button).toBeDefined();
+    return button;
+  }
+
   it('shows the list and its dances', async () => {
     await renderPage();
 
@@ -265,7 +329,7 @@ describe('DanceListPage', () => {
       resultButton?.click();
     });
 
-    const addFromResultButton = clickButton('Lägg till');
+    const addFromResultButton = confirmButtonFor(resultButton);
     await act(async () => {
       addFromResultButton?.click();
     });
@@ -313,7 +377,7 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const removeButton = clickButton('Ta bort');
+    const removeButton = await openRemoveDanceItem('Familjevals från Ödsmål');
     await act(async () => {
       removeButton?.click();
     });
@@ -394,7 +458,7 @@ describe('DanceListPage', () => {
       firstAddButton?.click();
     });
 
-    const searchInput = getInputByLabel('Sök efter låt');
+    const searchInput = getInputByLabel('Lägg till låt i');
     expect(searchInput).toBeDefined();
 
     await act(async () => {
@@ -402,12 +466,7 @@ describe('DanceListPage', () => {
       vi.advanceTimersByTime(300);
     });
 
-    const trackResultButton = clickButton('Ny låt');
-    await act(async () => {
-      trackResultButton?.click();
-    });
-
-    const addFromResultButton = clickButton('Lägg till');
+    const addFromResultButton = addButtonInResult('Ny låt');
     await act(async () => {
       addFromResultButton?.click();
     });
@@ -420,9 +479,7 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const removeTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
-      b.textContent?.includes('Ta bort låt'),
-    );
+    const removeTrackButtons = getRemoveTrackButtons();
     const firstRemoveButton = removeTrackButtons[0];
     expect(firstRemoveButton).toBeDefined();
 
@@ -498,13 +555,10 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const playModeSelects = Array.from(document.body.querySelectorAll('select'));
-    const firstSelect = playModeSelects[0];
-    expect(firstSelect).toBeDefined();
+    const randomButton = getPlayModeButton('Familjevals från Ödsmål', 'Slumpvis');
 
     await act(async () => {
-      firstSelect.value = 'random';
-      firstSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      randomButton.click();
       vi.advanceTimersByTime(300);
     });
 
@@ -519,10 +573,9 @@ describe('DanceListPage', () => {
     const hasAddTrackButton = Array.from(document.body.querySelectorAll('button')).some((b) =>
       b.textContent?.includes('Lägg till låt'),
     );
-    const hasRemoveTrackButton = Array.from(document.body.querySelectorAll('button')).some((b) =>
-      b.textContent?.includes('Ta bort låt'),
-    );
-    const hasPlayModeSelect = Array.from(document.body.querySelectorAll('select')).length > 0;
+    const hasRemoveTrackButton = getRemoveTrackButtons().length > 0;
+    const hasPlayModeSelect =
+      document.body.querySelector('[role="group"][aria-label^="Spelläge för"]') !== null;
 
     const hasPlayButton = Array.from(document.body.querySelectorAll('button')).some((b) =>
       b.textContent?.includes('Spela'),
@@ -558,7 +611,7 @@ describe('DanceListPage', () => {
       resultButton?.click();
     });
 
-    const addFromResultButton = clickButton('Lägg till');
+    const addFromResultButton = confirmButtonFor(resultButton);
     await act(async () => {
       addFromResultButton?.click();
       vi.advanceTimersByTime(300);
@@ -597,7 +650,7 @@ describe('DanceListPage', () => {
       firstAddButton?.click();
     });
 
-    const searchInput = getInputByLabel('Sök efter låt');
+    const searchInput = getInputByLabel('Lägg till låt i');
     expect(searchInput).toBeDefined();
 
     await act(async () => {
@@ -605,12 +658,7 @@ describe('DanceListPage', () => {
       vi.advanceTimersByTime(300);
     });
 
-    const trackResultButton = clickButton('Ny låt');
-    await act(async () => {
-      trackResultButton?.click();
-    });
-
-    const addFromResultButton = clickButton('Lägg till');
+    const addFromResultButton = addButtonInResult('Ny låt');
     await act(async () => {
       addFromResultButton?.click();
       vi.advanceTimersByTime(300);
@@ -624,7 +672,7 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const removeButton = clickButton('Ta bort');
+    const removeButton = await openRemoveDanceItem('Familjevals från Ödsmål');
     await act(async () => {
       removeButton?.click();
     });
@@ -643,9 +691,7 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const removeTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
-      b.textContent?.includes('Ta bort låt'),
-    );
+    const removeTrackButtons = getRemoveTrackButtons();
     const firstRemoveButton = removeTrackButtons[0];
     expect(firstRemoveButton).toBeDefined();
 
@@ -702,7 +748,7 @@ describe('DanceListPage', () => {
       firstAddButton?.click();
     });
 
-    const searchInput = getInputByLabel('Sök efter låt');
+    const searchInput = getInputByLabel('Lägg till låt i');
     expect(searchInput).toBeDefined();
 
     await act(async () => {
@@ -743,7 +789,7 @@ describe('DanceListPage', () => {
       firstAddButton?.click();
     });
 
-    const searchInput = getInputByLabel('Sök efter låt');
+    const searchInput = getInputByLabel('Lägg till låt i');
     expect(searchInput).toBeDefined();
 
     await act(async () => {
@@ -751,22 +797,13 @@ describe('DanceListPage', () => {
       vi.advanceTimersByTime(300);
     });
 
-    const trackResultButton = Array.from(document.body.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Första låten'),
+    const row = getSearchResultRow('Första låten');
+    expect(row.textContent).toContain('Redan tillagd');
+    const hasAddButton = Array.from(row.querySelectorAll('button')).some(
+      (b) => b.textContent?.trim() === 'Lägg till',
     );
-
-    const trackIsDisabledOrMarked =
-      trackResultButton?.hasAttribute('disabled') || trackResultButton?.textContent?.includes('redan');
-
-    expect(trackIsDisabledOrMarked || !trackResultButton).toBe(true);
-
-    if (trackResultButton && !trackIsDisabledOrMarked) {
-      await act(async () => {
-        trackResultButton?.click();
-      });
-
-      expect(addTrackToEntry).not.toHaveBeenCalled();
-    }
+    expect(hasAddButton).toBe(false);
+    expect(addTrackToEntry).not.toHaveBeenCalled();
   });
 
   it('a dance with no tracks has no play button', async () => {
@@ -806,7 +843,7 @@ describe('DanceListPage', () => {
       resultButton?.click();
     });
 
-    const addFromResultButton = clickButton('Lägg till');
+    const addFromResultButton = confirmButtonFor(resultButton);
     await act(async () => {
       addFromResultButton?.click();
       vi.advanceTimersByTime(300);
@@ -845,24 +882,19 @@ describe('DanceListPage', () => {
       addTrackButtons[0]?.click();
     });
 
-    const searchInput = getInputByLabel('Sök efter låt');
+    const searchInput = getInputByLabel('Lägg till låt i');
     await act(async () => {
       typeInto(searchInput!, 'Ny');
       vi.advanceTimersByTime(300);
     });
 
-    const trackResultButton = clickButton('Ny låt');
-    await act(async () => {
-      trackResultButton?.click();
-    });
-
-    const addFromResultButton = clickButton('Lägg till');
+    const addFromResultButton = addButtonInResult('Ny låt');
     await act(async () => {
       addFromResultButton?.click();
       vi.advanceTimersByTime(300);
     });
 
-    const trackSearchPanel = getInputByLabel('Sök efter låt')!.closest('div')!.parentElement!;
+    const trackSearchPanel = getInputByLabel('Lägg till låt i')!.closest('div')!.parentElement!;
     const alert = trackSearchPanel.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Det gick inte att lägga till låten.');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
@@ -873,7 +905,7 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const removeButton = clickButton('Ta bort');
+    const removeButton = await openRemoveDanceItem('Familjevals från Ödsmål');
     await act(async () => {
       removeButton?.click();
     });
@@ -898,9 +930,7 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const removeTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
-      b.textContent?.includes('Ta bort låt'),
-    );
+    const removeTrackButtons = getRemoveTrackButtons();
     await act(async () => {
       removeTrackButtons[0]?.click();
     });
@@ -920,18 +950,15 @@ describe('DanceListPage', () => {
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
   });
 
-  it('shows the play-mode error inline next to the play-mode select, not as a toast', async () => {
+  it('shows the play-mode error inline next to the play-mode control, not as a toast', async () => {
     setPlayMode.mockRejectedValue(new Error('Server error'));
 
     await renderPage();
 
-    const playModeSelects = Array.from(document.body.querySelectorAll('select'));
-    const firstSelect = playModeSelects[0];
-    expect(firstSelect).toBeDefined();
+    const randomButton = getPlayModeButton('Familjevals från Ödsmål', 'Slumpvis');
 
     await act(async () => {
-      firstSelect.value = 'random';
-      firstSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      randomButton.click();
       vi.advanceTimersByTime(300);
     });
 
@@ -965,9 +992,18 @@ describe('DanceListPage', () => {
       button!.click();
     }
 
+    function clickByLabelIn(el: HTMLElement, label: string) {
+      const button = el.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement | null;
+      expect(button).not.toBeNull();
+      button!.click();
+    }
+
     const entryA = findEntry('Familjevals från Ödsmål');
     await act(async () => {
-      clickIn(entryA, 'Ta bort');
+      clickByLabelIn(entryA, 'Fler alternativ för Familjevals från Ödsmål');
+    });
+    await act(async () => {
+      clickIn(entryA, 'Ta bort dansen');
     });
     await act(async () => {
       clickIn(entryA, 'Ja, ta bort');
@@ -978,7 +1014,10 @@ describe('DanceListPage', () => {
 
     const entryB = findEntry('Egen dans');
     await act(async () => {
-      clickIn(entryB, 'Ta bort');
+      clickByLabelIn(entryB, 'Fler alternativ för Egen dans');
+    });
+    await act(async () => {
+      clickIn(entryB, 'Ta bort dansen');
     });
     await act(async () => {
       clickIn(entryB, 'Ja, ta bort');
@@ -987,5 +1026,77 @@ describe('DanceListPage', () => {
 
     expect(removeEntry).toHaveBeenCalledWith('list-1', 'entry-2');
     expect(entryA.querySelector('[role="alert"]')?.textContent).toContain('Det gick inte att ta bort dansen.');
+  });
+  it('folds the tracks of a dance away and back', async () => {
+    await renderPage();
+
+    const toggle = document.body.querySelector(
+      'button[aria-label="Visa eller dölj låtar för Familjevals från Ödsmål"]',
+    ) as HTMLButtonElement | null;
+    expect(toggle).not.toBeNull();
+    expect(toggle!.getAttribute('aria-expanded')).toBe('true');
+    expect(document.body.textContent).toContain('Första låten');
+
+    await act(async () => {
+      toggle!.click();
+    });
+
+    expect(toggle!.getAttribute('aria-expanded')).toBe('false');
+    expect(document.body.textContent).not.toContain('Första låten');
+
+    await act(async () => {
+      toggle!.click();
+    });
+
+    expect(toggle!.getAttribute('aria-expanded')).toBe('true');
+    expect(document.body.textContent).toContain('Första låten');
+  });
+
+  it('moves a dance down with the keyboard and saves the order', async () => {
+    reorderEntries.mockResolvedValue(undefined);
+
+    await renderPage();
+
+    const grip = document.body.querySelector('button[aria-label="Flytta dans 1"]') as HTMLButtonElement | null;
+    expect(grip).not.toBeNull();
+
+    await act(async () => {
+      grip!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(reorderEntries).toHaveBeenCalledWith('list-1', { entryIds: ['entry-2', 'entry-1'] });
+    const names = Array.from(document.body.querySelectorAll('ol > li'))
+      .map((li) => li.textContent ?? '')
+      .filter((t) => t.length > 0);
+    expect(names[0]).toContain('Egen dans');
+    expect(names[1]).toContain('Familjevals från Ödsmål');
+  });
+
+  it('puts the order back and says so when saving the order fails', async () => {
+    reorderEntries.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    const grip = document.body.querySelector('button[aria-label="Flytta dans 1"]') as HTMLButtonElement | null;
+    await act(async () => {
+      grip!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(toastSpy).toHaveBeenCalledWith('Kunde inte ändra ordning', 'error');
+    const names = Array.from(document.body.querySelectorAll('ol > li'))
+      .map((li) => li.textContent ?? '')
+      .filter((t) => t.length > 0);
+    expect(names[0]).toContain('Familjevals från Ödsmål');
+  });
+
+  it('a person who may only view sees no reorder handle or menu', async () => {
+    getDanceList.mockResolvedValue(mockDanceListReadOnly);
+
+    await renderPage();
+
+    expect(document.body.querySelector('button[aria-label^="Flytta dans"]')).toBeNull();
+    expect(document.body.querySelector('button[aria-label^="Fler alternativ för"]')).toBeNull();
   });
 });

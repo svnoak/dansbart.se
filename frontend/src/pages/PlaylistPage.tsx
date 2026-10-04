@@ -7,8 +7,23 @@ import type { TrackListDto } from '@/api/models/trackListDto';
 import type { StyleNode } from '@/api/models/styleNode';
 import { PlaylistTrackRow } from '@/components/PlaylistTrackRow';
 import { SharePlaylistPanel } from '@/components/SharePlaylistPanel';
-import { BackArrowIcon, ChevronDownIcon, EditIcon, PlayIcon, PlusIcon, SettingsIcon, ShareIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
-import { Button, IconButton, InlineError, Modal, Pill, toast } from '@/ui';
+import { StylePill } from '@/components/TrackRow/StylePill';
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  EditIcon,
+  MoreVerticalIcon,
+  PlayIcon,
+  PlaylistIcon,
+  PlusIcon,
+  SettingsIcon,
+  ShareIcon,
+  SpotifyIcon,
+  StarMarkIcon,
+  YouTubeIcon,
+} from '@/icons';
+import { Button, Card, EmptyState, IconButton, InlineError, Modal, RowSkeleton, toast } from '@/ui';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { useTheme } from '@/theme/useTheme';
 import { useAuth } from '@/auth/useAuth';
@@ -31,10 +46,32 @@ function tempoLabel(value: string | undefined): string {
   return TEMPO_OPTIONS.find((o) => o.value === value)?.label ?? '';
 }
 
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/** "1 h 32 min" or "32 min"; empty when there is nothing to sum. */
+function formatTotalDuration(ms: number): string {
+  const totalMinutes = Math.round(ms / 60000);
+  if (totalMinutes <= 0) return '';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours} h`;
+  return `${hours} h ${minutes} min`;
+}
+
 // ── Sort / Filter ─────────────────────────────────────────────────────────────
 
 type SortKey = 'position' | 'name' | 'duration' | 'tempo';
 type SortDirection = 'asc' | 'desc';
+
+const SORT_OPTIONS: { key: SortKey; label: string; reversible: boolean }[] = [
+  { key: 'position', label: 'Ordning', reversible: false },
+  { key: 'name', label: 'Namn', reversible: true },
+  { key: 'duration', label: 'Längd', reversible: true },
+  { key: 'tempo', label: 'Tempo', reversible: true },
+];
 
 function sortTracks(
   tracks: PlaylistDto['tracks'],
@@ -75,130 +112,192 @@ function filterTracks(
   });
 }
 
-// ── Main style dropdown ───────────────────────────────────────────────────────
+// ── Floating option list shared by the tag dropdowns ─────────────────────────
 
-interface MainStyleDropdownProps {
+interface OptionListProps {
+  options: { value: string | null; label: string }[];
   current: string | undefined;
-  styleNodes: StyleNode[];
   onSelect: (value: string | null) => void;
   onClose: () => void;
 }
 
-function MainStyleDropdown({ current, styleNodes, onSelect, onClose }: MainStyleDropdownProps) {
+function OptionList({ options, current, onSelect, onClose }: OptionListProps) {
   const ref = useRef<HTMLDivElement>(null);
   useOutsideClick(ref, onClose);
 
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+      className="absolute left-0 top-full z-20 mt-1 w-48 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
     >
-      <button
-        type="button"
-        onClick={() => onSelect(null)}
-        className="w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/40"
-      >
-        Ingen stil
-      </button>
-      {styleNodes.map((node) => (
-        <button
-          key={node.name}
-          type="button"
-          onClick={() => onSelect(node.name ?? null)}
-          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-border))]/40 ${
-            current === node.name
-              ? 'font-medium text-[rgb(var(--color-accent))]'
-              : 'text-[rgb(var(--color-text))]'
-          }`}
-        >
-          {node.name ? node.name.charAt(0).toUpperCase() + node.name.slice(1) : ''}
-        </button>
-      ))}
+      {options.map((opt) => {
+        const selected = opt.value !== null && current === opt.value;
+        return (
+          <button
+            key={opt.value ?? '__none'}
+            type="button"
+            onClick={() => onSelect(opt.value)}
+            className={`flex min-h-10 w-full items-center justify-between px-3 text-left text-sm hover:bg-[rgb(var(--color-accent-muted))] ${
+              opt.value === null
+                ? 'text-[rgb(var(--color-text-muted))]'
+                : selected
+                  ? 'font-semibold text-[rgb(var(--color-text))]'
+                  : 'text-[rgb(var(--color-text))]'
+            }`}
+          >
+            {opt.label}
+            {selected && <CheckIcon className="h-4 w-4 text-[rgb(var(--color-selected))]" aria-hidden />}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-// ── Sub-style dropdown ────────────────────────────────────────────────────────
+// ── Tag chip (sub-style, tempo, "+ Dansstil") ────────────────────────────────
 
-interface SubStyleDropdownProps {
-  current: string | undefined;
-  subStyles: string[];
-  onSelect: (value: string | null) => void;
-  onClose: () => void;
+interface TagChipProps {
+  label: string;
+  filled: boolean;
+  onClick?: () => void;
+  ariaLabel?: string;
+  style?: React.CSSProperties;
 }
 
-function SubStyleDropdown({ current, subStyles, onSelect, onClose }: SubStyleDropdownProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  useOutsideClick(ref, onClose);
+function TagChip({ label, filled, onClick, ariaLabel, style }: TagChipProps) {
+  const base = 'inline-flex h-7 items-center gap-1.5 rounded-[var(--radius-full)] px-2.5 text-[13px] font-semibold whitespace-nowrap';
+  const look = filled
+    ? 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]'
+    : 'border border-dashed border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text-muted))]';
+  if (!onClick) {
+    return (
+      <span className={`${base} ${look}`} style={style}>
+        {label}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={`${base} ${look} transition-colors hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]`}
+      style={style}
+    >
+      {filled ? label : `+ ${label}`}
+    </button>
+  );
+}
 
+// ── Header tile ───────────────────────────────────────────────────────────────
+
+interface PlaylistTileProps {
+  danceStyle: string | undefined;
+  sizeClass: string;
+  iconClass: string;
+}
+
+/** The square tile that stands in for playlist artwork, in the main style's colour. */
+function PlaylistTile({ danceStyle, sizeClass, iconClass }: PlaylistTileProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const color = danceStyle ? getStyleColor(danceStyle) : null;
+  const style: React.CSSProperties | undefined = color
+    ? {
+        backgroundColor: isDark ? color.bgDark : color.bg,
+        color: isDark ? color.textDark : color.text,
+      }
+    : undefined;
   return (
     <div
-      ref={ref}
-      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+      className={`flex shrink-0 items-center justify-center rounded-[var(--radius-lg)] ${sizeClass} ${
+        color ? '' : 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text-muted))]'
+      }`}
+      style={style}
+      aria-hidden
     >
-      <button
-        type="button"
-        onClick={() => onSelect(null)}
-        className="w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/40"
-      >
-        Ingen substil
-      </button>
-      {subStyles.map((sub) => (
-        <button
-          key={sub}
-          type="button"
-          onClick={() => onSelect(sub)}
-          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-border))]/40 ${
-            current === sub
-              ? 'font-medium text-[rgb(var(--color-accent))]'
-              : 'text-[rgb(var(--color-text))]'
-          }`}
-        >
-          {sub.charAt(0).toUpperCase() + sub.slice(1)}
-        </button>
-      ))}
+      <StarMarkIcon className={iconClass} aria-hidden />
     </div>
   );
 }
 
-// ── Tempo tag dropdown ────────────────────────────────────────────────────────
+// ── "Fler alternativ" menu ────────────────────────────────────────────────────
 
-interface TempoDropdownProps {
-  current: string | undefined;
-  onSelect: (value: string | null) => void;
+interface MoreMenuProps {
   onClose: () => void;
+  onSettings?: () => void;
+  showFilters: boolean;
+  filterSpotify: boolean;
+  filterYouTube: boolean;
+  onToggleSpotify: () => void;
+  onToggleYouTube: () => void;
 }
 
-function TempoDropdown({ current, onSelect, onClose }: TempoDropdownProps) {
+function MoreMenu({
+  onClose,
+  onSettings,
+  showFilters,
+  filterSpotify,
+  filterYouTube,
+  onToggleSpotify,
+  onToggleYouTube,
+}: MoreMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
   useOutsideClick(ref, onClose);
+
+  const itemClass =
+    'flex min-h-11 w-full items-center gap-3 px-4 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:bg-[rgb(var(--color-accent-muted))]';
 
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg"
+      role="menu"
+      aria-label="Fler alternativ"
+      className="absolute right-0 top-full z-20 mt-1 w-64 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
     >
-      <button
-        type="button"
-        onClick={() => onSelect(null)}
-        className="w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/40"
-      >
-        Inget tempo
-      </button>
-      {TEMPO_OPTIONS.map((opt) => (
+      {onSettings && (
         <button
-          key={opt.value}
           type="button"
-          onClick={() => onSelect(opt.value)}
-          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[rgb(var(--color-border))]/40 ${
-            current === opt.value
-              ? 'text-[rgb(var(--color-accent))] font-medium'
-              : 'text-[rgb(var(--color-text))]'
-          }`}
+          role="menuitem"
+          onClick={() => {
+            onSettings();
+            onClose();
+          }}
+          className={itemClass}
         >
-          {opt.label}
+          <SettingsIcon className="h-4 w-4 text-[rgb(var(--color-text-muted))]" aria-hidden />
+          Ändra inställningar
         </button>
-      ))}
+      )}
+      {onSettings && showFilters && (
+        <div className="my-1 border-t border-[rgb(var(--color-border))]" role="separator" />
+      )}
+      {showFilters && (
+        <>
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={filterSpotify}
+            onClick={onToggleSpotify}
+            className={itemClass}
+          >
+            <SpotifyIcon className="h-4 w-4 text-[rgb(var(--color-text-muted))]" aria-hidden />
+            <span className="flex-1">Visa bara låtar med Spotify</span>
+            {filterSpotify && <CheckIcon className="h-4 w-4 text-[rgb(var(--color-selected))]" aria-hidden />}
+          </button>
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={filterYouTube}
+            onClick={onToggleYouTube}
+            className={itemClass}
+          >
+            <YouTubeIcon className="h-4 w-4 text-[rgb(var(--color-text-muted))]" aria-hidden />
+            <span className="flex-1">Visa bara låtar med YouTube</span>
+            {filterYouTube && <CheckIcon className="h-4 w-4 text-[rgb(var(--color-selected))]" aria-hidden />}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -209,6 +308,12 @@ function buildContextTracks(pl: PlaylistDto): TrackListDto[] {
   const ordered = sortTracks(pl.tracks, 'position');
   return ordered.map((pt) => pt.track!).filter(Boolean);
 }
+
+const secondaryLinkClass =
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] bg-[rgb(var(--color-accent-muted))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-text))] transition-colors hover:bg-[rgb(var(--color-border))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
+
+const primaryLinkClass =
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] transition-colors hover:bg-[rgb(var(--color-accent-hover))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
@@ -242,6 +347,7 @@ export function PlaylistPage() {
   const [filterYouTube, setFilterYouTube] = useState(false);
 
   const [showSharePanel, setShowSharePanel] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // Drag state (position mode only)
   const dragIndex = useRef<number | null>(null);
@@ -409,420 +515,454 @@ export function PlaylistPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  const backLink = (
+    <Link
+      to="/playlists"
+      className="inline-flex min-h-11 items-center gap-1 pr-2 text-sm font-medium text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
+    >
+      <ChevronLeftIcon className="h-4 w-4" aria-hidden />
+      Spellistor
+    </Link>
+  );
+
   if (loading) {
-    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <RowSkeleton rows={5} label="Laddar spellistan" />
+      </div>
+    );
   }
 
   if (!playlist) {
-    return <p className="text-[rgb(var(--color-text-muted))]">Spellistan hittades inte.</p>;
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <EmptyState
+          icon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
+          title="Spellistan hittades inte"
+          description="Den kan ha tagits bort, eller så har du inte tillgång till den."
+          action={
+            <Link to="/playlists" className={primaryLinkClass}>
+              Till spellistor
+            </Link>
+          }
+        />
+      </div>
+    );
   }
 
   const tracks = playlist.tracks ?? [];
   const styleColor = playlist.danceStyle ? getStyleColor(playlist.danceStyle) : null;
+  const subStyleChipStyle: React.CSSProperties | undefined =
+    styleColor && playlist.subStyle
+      ? {
+          backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
+          color: theme === 'dark' ? styleColor.textDark : styleColor.text,
+        }
+      : undefined;
   const tLabel = tempoLabel(playlist.tempoCategory);
+  const totalDuration = formatTotalDuration(
+    tracks.reduce((sum, pt) => sum + (pt.track?.durationMs ?? 0), 0),
+  );
+  const currentNode = styleNodes.find((n) => n.name === playlist.danceStyle);
+  const subStyles = currentNode?.subStyles ?? [];
+  const showMoreButton = canEdit || tracks.length > 0;
+
+  const metaParts: React.ReactNode[] = [];
+  if (playlist.ownerGroup) {
+    metaParts.push(
+      <span key="group">
+        Ägs av gruppen{' '}
+        <Link
+          to={`/groups/${playlist.ownerGroup.id}`}
+          className="font-medium text-[rgb(var(--color-link))] hover:underline"
+        >
+          {playlist.ownerGroup.name}
+        </Link>
+      </span>,
+    );
+  }
+  metaParts.push(<span key="count">{tracks.length} {tracks.length === 1 ? 'låt' : 'låtar'}</span>);
+  if (totalDuration) metaParts.push(<span key="duration">{totalDuration}</span>);
+  metaParts.push(<span key="visibility">{playlist.isPublic ? 'Offentlig' : 'Privat'}</span>);
 
   return (
     <div className="space-y-6">
       {/* Back */}
-      <IconButton aria-label="Tillbaka" onClick={() => navigate('/playlists')}>
-        <BackArrowIcon className="h-5 w-5" aria-hidden />
-      </IconButton>
+      {backLink}
 
       {/* Header */}
-      <div className="space-y-2">
-        {/* Name row */}
-        <div className="flex items-start gap-2">
-          {editingName ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSaveName();
-              }}
-              className="flex-1 space-y-1"
-            >
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  type="text"
-                  value={nameValue}
-                  onChange={(e) => {
-                    setNameValue(e.target.value);
-                    setSaveNameError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
+      <Card className="flex flex-col gap-6 p-7 sm:flex-row">
+        <PlaylistTile danceStyle={playlist.danceStyle} sizeClass="h-28 w-28" iconClass="h-[60px] w-[60px]" />
+
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="space-y-2">
+            {/* Name row */}
+            {editingName ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSaveName();
+                }}
+                className="space-y-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <label htmlFor="playlist-name" className="sr-only">
+                    Spellistans namn
+                  </label>
+                  <input
+                    id="playlist-name"
+                    autoFocus
+                    type="text"
+                    value={nameValue}
+                    onChange={(e) => {
+                      setNameValue(e.target.value);
+                      setSaveNameError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setEditingName(false);
+                        setNameValue(playlist.name ?? '');
+                      }
+                    }}
+                    className="min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 text-xl font-bold text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                  />
+                  <Button type="submit" disabled={!nameValue.trim()}>
+                    Spara
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
                       setEditingName(false);
                       setNameValue(playlist.name ?? '');
-                    }
-                  }}
-                  className="flex-1 rounded-lg border border-[rgb(var(--color-accent))] bg-[rgb(var(--color-bg-elevated))] px-3 py-1 text-2xl font-bold text-[rgb(var(--color-text))] focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={!nameValue.trim()}
-                  className="rounded-lg bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  Spara
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingName(false);
-                    setNameValue(playlist.name ?? '');
-                  }}
-                  className="rounded-lg border border-[rgb(var(--color-border))] px-3 py-1.5 text-sm text-[rgb(var(--color-text-muted))]"
-                >
-                  Avbryt
-                </button>
+                    }}
+                  >
+                    Avbryt
+                  </Button>
+                </div>
+                <InlineError>{saveNameError}</InlineError>
+              </form>
+            ) : (
+              <div className="flex min-w-0 items-start gap-1">
+                <h1 className="min-w-0 break-words text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+                  {playlist.name}
+                </h1>
+                {canEdit && (
+                  <IconButton
+                    aria-label="Ändra namn"
+                    className="shrink-0 text-[rgb(var(--color-text-muted))]"
+                    onClick={() => {
+                      setNameValue(playlist.name ?? '');
+                      setEditingName(true);
+                    }}
+                  >
+                    <EditIcon className="h-4 w-4" aria-hidden />
+                  </IconButton>
+                )}
               </div>
-              <InlineError>{saveNameError}</InlineError>
-            </form>
-          ) : (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <h1 className="min-w-0 truncate text-2xl font-bold text-[rgb(var(--color-text))]">
-                {playlist.name}
-              </h1>
-              {canEdit && (
-                <IconButton
-                  aria-label="Ändra namn"
-                  onClick={() => {
-                    setNameValue(playlist.name ?? '');
-                    setEditingName(true);
-                  }}
-                >
-                  <EditIcon className="h-4 w-4" aria-hidden />
-                </IconButton>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Owner group */}
-        {playlist.ownerGroup && (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            Ägs av gruppen{' '}
-            <Link
-              to={`/groups/${playlist.ownerGroup.id}`}
-              className="text-[rgb(var(--color-accent))] hover:underline"
-            >
-              {playlist.ownerGroup.name}
-            </Link>
-          </p>
-        )}
-
-        {/* Description */}
-        {playlist.description && (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">{playlist.description}</p>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          {tracks.length > 0 && (
-            <Button onClick={handlePlay} className="flex items-center gap-1.5">
-              <PlayIcon className="h-4 w-4" aria-hidden />
-              Spela
-            </Button>
-          )}
-          {canEdit && (
-            <Link
-              to={`/search?addTo=${id}`}
-              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-accent-muted))] px-4 py-2 text-sm font-medium text-[rgb(var(--color-accent))] hover:opacity-90"
-            >
-              <PlusIcon className="h-4 w-4" aria-hidden />
-              Lägg till låtar
-            </Link>
-          )}
-          {(canEdit || playlist.isPublic) && (
-            <Button
-              variant="secondary"
-              onClick={() =>
-                setShowSharePanel((s) => {
-                  if (!s) clearErrors();
-                  return !s;
-                })
-              }
-              className="flex items-center gap-1.5"
-            >
-              <ShareIcon className="h-4 w-4" aria-hidden />
-              Dela spellista
-            </Button>
-          )}
-          {canEdit && (
-            <Button
-              variant="secondary"
-              onClick={() => navigate(`/playlists/${id}/settings`)}
-              className="flex items-center gap-1.5"
-            >
-              <SettingsIcon className="h-4 w-4" aria-hidden />
-              Ändra inställningar
-            </Button>
-          )}
-        </div>
-
-        {(canEdit || playlist.isPublic) && id && (
-          <Modal open={showSharePanel} onClose={() => setShowSharePanel(false)} label="Dela spellista">
-            <SharePlaylistPanel
-              playlistId={id}
-              canEdit={canEdit}
-              shareToken={shareToken}
-              shareUrl={shareUrl}
-              createLink={createLink}
-              copyLink={copyLink}
-              createLinkError={createLinkError}
-              copyLinkError={copyLinkError}
-            />
-          </Modal>
-        )}
-
-        {/* Tags row */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Main dance style */}
-          <div className="relative">
-            {isOwner ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowStyleDropdown((s) => !s);
-                  setShowSubStyleDropdown(false);
-                  setShowTempoDropdown(false);
-                }}
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
-                  styleColor
-                    ? ''
-                    : 'border border-dashed border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))]'
-                }`}
-                style={
-                  styleColor
-                    ? {
-                        backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                        color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                      }
-                    : undefined
-                }
-              >
-                {playlist.danceStyle
-                  ? playlist.danceStyle.charAt(0).toUpperCase() + playlist.danceStyle.slice(1)
-                  : '+ Dansstil'}
-              </button>
-            ) : styleColor && playlist.danceStyle ? (
-              <span
-                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-                style={{
-                  backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                  color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                }}
-              >
-                {playlist.danceStyle.charAt(0).toUpperCase() + playlist.danceStyle.slice(1)}
-              </span>
-            ) : null}
-            {showStyleDropdown && (
-              <MainStyleDropdown
-                current={playlist.danceStyle}
-                styleNodes={styleNodes}
-                onSelect={(v) => handleTagUpdate('danceStyle', v)}
-                onClose={() => setShowStyleDropdown(false)}
-              />
             )}
+
+            {/* Description */}
+            {playlist.description && (
+              <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text))]">{playlist.description}</p>
+            )}
+
+            {/* Meta line */}
+            <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+              {metaParts.map((part, i) => (
+                <span key={i}>
+                  {i > 0 && <span aria-hidden> · </span>}
+                  {part}
+                </span>
+              ))}
+            </p>
           </div>
 
-          {/* Sub-style — only shown when main style is set and has sub-styles */}
-          {(() => {
-            const currentNode = styleNodes.find((n) => n.name === playlist.danceStyle);
-            const subStyles = currentNode?.subStyles ?? [];
-            if (!playlist.danceStyle || subStyles.length === 0) return null;
-            return (
-              <div className="relative">
-                {isOwner ? (
+          {/* Tags row */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Main dance style */}
+            <div className="relative">
+              {isOwner ? (
+                playlist.danceStyle ? (
                   <button
                     type="button"
+                    aria-label={`Ändra dansstil, nu ${capitalize(playlist.danceStyle)}`}
+                    onClick={() => {
+                      setShowStyleDropdown((s) => !s);
+                      setShowSubStyleDropdown(false);
+                      setShowTempoDropdown(false);
+                    }}
+                    className="inline-flex rounded-[var(--radius-full)] transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                  >
+                    <StylePill style={capitalize(playlist.danceStyle)} state="confirmed" />
+                  </button>
+                ) : (
+                  <TagChip
+                    label="Dansstil"
+                    filled={false}
+                    ariaLabel="Ange dansstil"
+                    onClick={() => {
+                      setShowStyleDropdown((s) => !s);
+                      setShowSubStyleDropdown(false);
+                      setShowTempoDropdown(false);
+                    }}
+                  />
+                )
+              ) : playlist.danceStyle ? (
+                <StylePill style={capitalize(playlist.danceStyle)} state="confirmed" />
+              ) : null}
+              {showStyleDropdown && (
+                <OptionList
+                  current={playlist.danceStyle}
+                  options={[
+                    { value: null, label: 'Ingen stil' },
+                    ...styleNodes.map((node) => ({
+                      value: node.name ?? null,
+                      label: node.name ? capitalize(node.name) : '',
+                    })),
+                  ]}
+                  onSelect={(v) => handleTagUpdate('danceStyle', v)}
+                  onClose={() => setShowStyleDropdown(false)}
+                />
+              )}
+            </div>
+
+            {/* Sub-style — only shown when main style is set and has sub-styles */}
+            {playlist.danceStyle && subStyles.length > 0 && (
+              <div className="relative">
+                {isOwner ? (
+                  <TagChip
+                    label={playlist.subStyle ? capitalize(playlist.subStyle) : 'Substil'}
+                    filled={!!playlist.subStyle}
+                    ariaLabel={playlist.subStyle ? `Ändra substil, nu ${capitalize(playlist.subStyle)}` : 'Ange substil'}
+                    style={subStyleChipStyle}
                     onClick={() => {
                       setShowSubStyleDropdown((s) => !s);
                       setShowStyleDropdown(false);
                       setShowTempoDropdown(false);
                     }}
-                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
-                      styleColor
-                        ? 'opacity-80'
-                        : 'border border-dashed border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))]'
-                    } ${playlist.subStyle ? '' : 'border border-dashed'}`}
-                    style={
-                      styleColor && playlist.subStyle
-                        ? {
-                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                          }
-                        : undefined
-                    }
-                  >
-                    {playlist.subStyle
-                      ? playlist.subStyle.charAt(0).toUpperCase() + playlist.subStyle.slice(1)
-                      : '+ Substil'}
-                  </button>
+                  />
                 ) : playlist.subStyle ? (
-                  <span
-                    className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium opacity-80"
-                    style={
-                      styleColor
-                        ? {
-                            backgroundColor: theme === 'dark' ? styleColor.bgDark : styleColor.bg,
-                            color: theme === 'dark' ? styleColor.textDark : styleColor.text,
-                          }
-                        : undefined
-                    }
-                  >
-                    {playlist.subStyle.charAt(0).toUpperCase() + playlist.subStyle.slice(1)}
-                  </span>
+                  <TagChip label={capitalize(playlist.subStyle)} filled style={subStyleChipStyle} />
                 ) : null}
                 {showSubStyleDropdown && (
-                  <SubStyleDropdown
+                  <OptionList
                     current={playlist.subStyle}
-                    subStyles={subStyles}
+                    options={[
+                      { value: null, label: 'Ingen substil' },
+                      ...subStyles.map((sub) => ({ value: sub, label: capitalize(sub) })),
+                    ]}
                     onSelect={(v) => handleTagUpdate('subStyle', v)}
                     onClose={() => setShowSubStyleDropdown(false)}
                   />
                 )}
               </div>
-            );
-          })()}
+            )}
 
-          {/* Tempo tag */}
-          <div className="relative">
-            {isOwner ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTempoDropdown((s) => !s);
-                  setShowStyleDropdown(false);
-                  setShowSubStyleDropdown(false);
-                }}
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80 ${
-                  tLabel
-                    ? 'bg-[rgb(var(--color-border))] text-[rgb(var(--color-text))]'
-                    : 'border border-dashed border-[rgb(var(--color-border))] text-[rgb(var(--color-text-muted))]'
-                }`}
+            {/* Tempo tag */}
+            <div className="relative">
+              {isOwner ? (
+                <TagChip
+                  label={tLabel || 'Tempo'}
+                  filled={!!tLabel}
+                  ariaLabel={tLabel ? `Ändra tempo, nu ${tLabel}` : 'Ange tempo'}
+                  onClick={() => {
+                    setShowTempoDropdown((s) => !s);
+                    setShowStyleDropdown(false);
+                    setShowSubStyleDropdown(false);
+                  }}
+                />
+              ) : tLabel ? (
+                <TagChip label={tLabel} filled />
+              ) : null}
+              {showTempoDropdown && (
+                <OptionList
+                  current={playlist.tempoCategory}
+                  options={[
+                    { value: null, label: 'Inget tempo' },
+                    ...TEMPO_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+                  ]}
+                  onSelect={(v) => handleTagUpdate('tempoCategory', v)}
+                  onClose={() => setShowTempoDropdown(false)}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            {tracks.length > 0 && (
+              <Button onClick={handlePlay}>
+                <PlayIcon className="h-4 w-4" aria-hidden />
+                Spela
+              </Button>
+            )}
+            {canEdit && (
+              <Link to={`/search?addTo=${id}`} className={secondaryLinkClass}>
+                <PlusIcon className="h-4 w-4" aria-hidden />
+                Lägg till låtar
+              </Link>
+            )}
+            {(canEdit || playlist.isPublic) && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setShowSharePanel((s) => {
+                    if (!s) clearErrors();
+                    return !s;
+                  })
+                }
               >
-                {tLabel || '+ Tempo'}
-              </button>
-            ) : tLabel ? (
-              <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border))] px-2.5 py-1 text-xs font-medium text-[rgb(var(--color-text))]">
-                {tLabel}
-              </span>
-            ) : null}
-            {showTempoDropdown && (
-              <TempoDropdown
-                current={playlist.tempoCategory}
-                onSelect={(v) => handleTagUpdate('tempoCategory', v)}
-                onClose={() => setShowTempoDropdown(false)}
-              />
+                <ShareIcon className="h-4 w-4" aria-hidden />
+                Dela
+              </Button>
+            )}
+            {showMoreButton && (
+              <div className="relative">
+                <IconButton
+                  aria-label="Fler alternativ"
+                  aria-haspopup="menu"
+                  aria-expanded={showMoreMenu}
+                  onClick={() => setShowMoreMenu((s) => !s)}
+                  className="border border-[rgb(var(--color-border))]"
+                >
+                  <MoreVerticalIcon className="h-5 w-5" aria-hidden />
+                </IconButton>
+                {showMoreMenu && (
+                  <MoreMenu
+                    onClose={() => setShowMoreMenu(false)}
+                    onSettings={canEdit ? () => navigate(`/playlists/${id}/settings`) : undefined}
+                    showFilters={tracks.length > 0}
+                    filterSpotify={filterSpotify}
+                    filterYouTube={filterYouTube}
+                    onToggleSpotify={() => setFilterSpotify((s) => !s)}
+                    onToggleYouTube={() => setFilterYouTube((s) => !s)}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>
+      </Card>
 
-        {/* Track count */}
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">
-          {tracks.length} {tracks.length === 1 ? 'låt' : 'låtar'}
-        </p>
-      </div>
+      {(canEdit || playlist.isPublic) && id && (
+        <Modal open={showSharePanel} onClose={() => setShowSharePanel(false)} label="Dela spellista">
+          <SharePlaylistPanel
+            playlistId={id}
+            canEdit={canEdit}
+            shareToken={shareToken}
+            shareUrl={shareUrl}
+            createLink={createLink}
+            copyLink={copyLink}
+            createLinkError={createLinkError}
+            copyLinkError={copyLinkError}
+          />
+        </Modal>
+      )}
 
-      {/* Sort + Filter bar */}
+      {/* Sort bar */}
       {tracks.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          {(
-            [
-              { key: 'position', label: 'Ordning', reversible: false },
-              { key: 'name', label: 'Namn', reversible: true },
-              { key: 'duration', label: 'Längd', reversible: true },
-              { key: 'tempo', label: 'Tempo', reversible: true },
-            ] as { key: SortKey; label: string; reversible: boolean }[]
-          ).map(({ key, label, reversible }) => (
-            <Pill
-              key={key}
-              active={sort === key}
-              onClick={() => handleSortClick(key)}
-              className="flex items-center gap-1 min-h-11"
-            >
-              {label}
-              {reversible && sort === key && (
-                <>
-                  <ChevronDownIcon
-                    aria-hidden
-                    className={`h-3.5 w-3.5 transition-transform ${sortDirection === 'desc' ? '' : 'rotate-180'}`}
-                  />
-                  <span className="sr-only">{sortDirection === 'desc' ? 'fallande' : 'stigande'}</span>
-                </>
-              )}
-            </Pill>
-          ))}
-
-          {/* Filter toggles */}
-          <div className="flex items-center gap-1">
-            <Pill
-              active={filterSpotify}
-              variant="green"
-              aria-label="Filtrera Spotify"
-              title="Visa endast låtar med Spotify"
-              onClick={() => setFilterSpotify((s) => !s)}
-              className="flex items-center gap-1 min-h-11"
-            >
-              <SpotifyIcon className="h-3.5 w-3.5" aria-hidden />
-              Spotify
-            </Pill>
-            <Pill
-              active={filterYouTube}
-              variant="red"
-              aria-label="Filtrera YouTube"
-              title="Visa endast låtar med YouTube"
-              onClick={() => setFilterYouTube((s) => !s)}
-              className="flex items-center gap-1 min-h-11"
-            >
-              <YouTubeIcon className="h-3.5 w-3.5" aria-hidden />
-              YouTube
-            </Pill>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div
+            role="group"
+            aria-label="Sortera låtarna"
+            className="inline-flex rounded-[var(--radius-full)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] p-0.5"
+          >
+            {SORT_OPTIONS.map(({ key, label, reversible }) => {
+              const active = sort === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => handleSortClick(key)}
+                  className={`inline-flex min-h-10 items-center gap-1 rounded-[var(--radius-full)] px-3.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] ${
+                    active
+                      ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
+                      : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
+                  }`}
+                >
+                  {label}
+                  {reversible && active && (
+                    <>
+                      <ChevronDownIcon
+                        aria-hidden
+                        className={`h-3.5 w-3.5 transition-transform ${sortDirection === 'desc' ? '' : 'rotate-180'}`}
+                      />
+                      <span className="sr-only">{sortDirection === 'desc' ? 'fallande' : 'stigande'}</span>
+                    </>
+                  )}
+                </button>
+              );
+            })}
           </div>
+          {canEdit && (
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">
+              Dra i handtaget för att ändra ordning. Ta bort en låt via menyn på raden.
+            </p>
+          )}
         </div>
       )}
 
+      {/* Empty playlist */}
       {tracks.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Spellistan är tom.</p>
+        <EmptyState
+          icon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
+          title="Spellistan är tom"
+          description="Lägg till låtar från sökningen så samlas de här."
+          action={
+            canEdit ? (
+              <Link to={`/search?addTo=${id}`} className={primaryLinkClass}>
+                <PlusIcon className="h-4 w-4" aria-hidden />
+                Lägg till låtar
+              </Link>
+            ) : undefined
+          }
+        />
       )}
 
       {displayTracks.length === 0 && tracks.length > 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Inga låtar matchar filtret.</p>
+        <p className="text-[15px] text-[rgb(var(--color-text-muted))]">Inga låtar matchar filtret.</p>
       )}
 
       {/* Track list */}
-      <ul>
-        {displayTracks.map((pt, i) =>
-          pt.track ? (
-            <PlaylistTrackRow
-              key={pt.id ?? pt.track.id}
-              track={pt.track}
-              contextTracks={contextTracks}
-              showGrip={sort === 'position' && canEdit}
-              isDragOver={dragOverIndex === i}
-              error={pt.id ? (removeTrackErrors[pt.id] ?? null) : null}
-              onRemove={canEdit && pt.id ? () => handleRemoveTrack(pt.id!, pt.track!.id!) : undefined}
-              onDragStart={() => handleDragStart(i)}
-              onDragOver={(e) => handleDragOver(e, i)}
-              onDrop={() => handleDrop(i)}
+      {displayTracks.length > 0 && (
+        <ol className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
+          {displayTracks.map((pt, i) =>
+            pt.track ? (
+              <PlaylistTrackRow
+                key={pt.id ?? pt.track.id}
+                track={pt.track}
+                contextTracks={contextTracks}
+                position={i + 1}
+                showGrip={sort === 'position' && canEdit}
+                isDragOver={dragOverIndex === i}
+                error={pt.id ? (removeTrackErrors[pt.id] ?? null) : null}
+                onRemove={canEdit && pt.id ? () => handleRemoveTrack(pt.id!, pt.track!.id!) : undefined}
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDrop={() => handleDrop(i)}
+                onDragEnd={handleDragEnd}
+              />
+            ) : null,
+          )}
+          {/* Trailing drop zone — lets the user drag any item to the very end */}
+          {sort === 'position' && canEdit && (
+            <li
+              onDragOver={(e) => handleDragOver(e, displayTracks.length)}
+              onDrop={() => handleDrop(displayTracks.length)}
               onDragEnd={handleDragEnd}
+              className={`h-2 border-t-2 transition-colors ${
+                dragOverIndex === displayTracks.length
+                  ? 'border-[rgb(var(--color-selected))]'
+                  : 'border-transparent'
+              }`}
             />
-          ) : null,
-        )}
-        {/* Trailing drop zone — lets the user drag any item to the very end */}
-        {sort === 'position' && canEdit && displayTracks.length > 0 && (
-          <li
-            onDragOver={(e) => handleDragOver(e, displayTracks.length)}
-            onDrop={() => handleDrop(displayTracks.length)}
-            onDragEnd={handleDragEnd}
-            className={`h-2 border-t-2 transition-colors ${
-              dragOverIndex === displayTracks.length
-                ? 'border-[rgb(var(--color-accent))]'
-                : 'border-transparent'
-            }`}
-          />
-        )}
-      </ul>
+          )}
+        </ol>
+      )}
     </div>
   );
 }

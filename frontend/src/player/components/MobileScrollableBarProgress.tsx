@@ -10,6 +10,11 @@ interface MobileScrollableBarProgressProps {
   onSeekToTime: (seconds: number) => void;
 }
 
+/**
+ * A strip of numbered bar segments that scrolls to follow the music. The
+ * current bar is amber (the playback colour); the bars already played are
+ * filled with the hairline tint; the ones ahead are empty.
+ */
 export function MobileScrollableBarProgress({
   bars,
   currentBarIndex,
@@ -125,7 +130,7 @@ export function MobileScrollableBarProgress({
         onScroll={handleScroll}
       >
         <div
-          className="relative h-10 flex"
+          className="relative flex h-11 overflow-hidden rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))]"
           style={{ width: `${totalWidth}px` }}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
@@ -141,22 +146,26 @@ export function MobileScrollableBarProgress({
             return (
               <div
                 key={i}
-                className="relative shrink-0 border-r border-[rgb(var(--color-text-muted))]/20"
+                className={`relative shrink-0 border-r border-[rgb(var(--color-border-strong))] last:border-r-0 ${
+                  isPast ? 'bg-[rgb(var(--color-border))]' : ''
+                }`}
                 style={{ width: `${BAR_SEGMENT_WIDTH}px` }}
               >
-                {/* Fill for past bars */}
-                {isPast && (
-                  <div className="absolute inset-0 bg-[rgb(var(--color-accent))]/30" />
-                )}
-                {/* Partial fill for current bar */}
+                {/* Partial fill for the current bar, in the playback colour */}
                 {isCurrent && (
                   <div
-                    className="absolute inset-y-0 left-0 bg-[rgb(var(--color-accent))]/30 border-r-2 border-[rgb(var(--color-accent))] transition-[width] duration-200 ease-linear"
+                    className="absolute inset-y-0 left-0 bg-[rgb(var(--color-now-playing))]/30 border-r-2 border-[rgb(var(--color-now-playing))] transition-[width] duration-200 ease-linear"
                     style={{ width: `${currentBarFraction * 100}%` }}
                   />
                 )}
                 {/* Bar number */}
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-mono text-[rgb(var(--color-text-muted))]/60 pointer-events-none select-none">
+                <span
+                  className={`absolute inset-0 flex items-center justify-center text-[13px] tabular-nums pointer-events-none select-none ${
+                    isCurrent
+                      ? 'font-bold text-[rgb(var(--color-now-playing-text))]'
+                      : 'text-[rgb(var(--color-text-muted))]'
+                  }`}
+                >
                   {i + 1}
                 </span>
               </div>

@@ -7573,6 +7573,10 @@
           "playbackLinks": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
+          },
+          "sheetMusicUrl": {
+            "type": "string",
+            "description": "Sheet music on folkwiki.se, when an admin has confirmed the match. Null otherwise."
           }
         }
       },

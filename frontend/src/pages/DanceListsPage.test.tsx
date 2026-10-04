@@ -90,7 +90,7 @@ describe('DanceListsPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    expect(document.body.textContent).toContain('Du har inga danslistor ännu.');
+    expect(document.body.textContent).toContain('Du har inga danslistor ännu');
   });
 
   it('creates a dance list', async () => {
@@ -152,7 +152,7 @@ describe('DanceListsPage', () => {
     expect(getMyDanceLists).not.toHaveBeenCalled();
   });
 
-  it('renders the new dance list button small', async () => {
+  it('renders the new dance list button as the primary action', async () => {
     getMyDanceLists.mockResolvedValue([]);
     await renderPage();
 
@@ -162,9 +162,45 @@ describe('DanceListsPage', () => {
 
     const newButton = getButtonByText('Ny danslista');
     expect(newButton).toBeDefined();
-    expect(newButton?.className).toContain('px-3');
-    expect(newButton?.className).toContain('py-1.5');
-    expect(newButton?.className).not.toContain('px-4');
+    expect(newButton?.className).toContain('min-h-11');
+    expect(newButton?.className).toContain('bg-[rgb(var(--color-accent))]');
+  });
+
+  it('opens the create form from the empty state', async () => {
+    getMyDanceLists.mockResolvedValue([]);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const emptyButton = getButtonByText('Skapa danslista');
+    expect(emptyButton).toBeDefined();
+    await act(async () => {
+      emptyButton?.click();
+    });
+
+    expect(getInputByLabel('Danslistans namn')).not.toBeNull();
+  });
+
+  it('shows what the list offers on the row', async () => {
+    getMyDanceLists.mockResolvedValue([
+      { id: 'dl1', name: 'Delad lista', shareToken: 'abc', updatedAt: '2026-03-02T10:00:00Z' },
+      { id: 'dl2', name: 'Egen lista', description: 'Torsdagens program', isPublic: false },
+    ]);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('Delad med länk');
+    expect(text).toContain('Uppdaterad');
+    expect(text).toContain('Torsdagens program');
+    expect(text).toContain('Privat');
+    const openLink = document.querySelector('a[aria-label="Öppna Delad lista"]');
+    expect(openLink?.getAttribute('href')).toBe('/dance-lists/dl1');
   });
 
   it('shows the create error inline next to the create button, not as a toast', async () => {

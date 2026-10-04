@@ -1,4 +1,4 @@
-import '@fontsource-variable/atkinson-hyperlegible-next'
+import '@fontsource-variable/schibsted-grotesk'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

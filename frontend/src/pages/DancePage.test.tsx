@@ -147,12 +147,20 @@ describe('DancePage', () => {
     return li!;
   }
 
+  /** The vote buttons carry their name as visible text: "Passar" and "Passar inte". */
+  function getVoteButton(row: HTMLElement, name: 'Passar' | 'Passar inte') {
+    const button = Array.from(row.querySelectorAll('button')).find(
+      (el) => el.textContent?.trim() === name,
+    ) as HTMLButtonElement | undefined;
+    expect(button).toBeDefined();
+    return button!;
+  }
+
   it('shows the save-vote error inline next to the vote control, not as a toast', async () => {
     await renderPage();
 
     const row = getRecommendationRow();
-    const upvoteButton = row.querySelector('button[aria-label="Bra förslag"]') as HTMLButtonElement;
-    expect(upvoteButton).toBeDefined();
+    const upvoteButton = getVoteButton(row, 'Passar');
 
     await act(async () => {
       upvoteButton.click();
@@ -200,8 +208,7 @@ describe('DancePage', () => {
     const row = getRecommendationRow();
     // A down vote does not move the track out of the recommendations list,
     // so voting down twice toggles the vote off without unmounting the row.
-    const downvoteButton = row.querySelector('button[aria-label="Dåligt förslag"]') as HTMLButtonElement;
-    expect(downvoteButton).toBeDefined();
+    const downvoteButton = getVoteButton(row, 'Passar inte');
 
     await act(async () => {
       downvoteButton.click();
@@ -251,7 +258,7 @@ describe('DancePage', () => {
     await renderPage();
 
     const row = getRecommendationRow();
-    const upvoteButton = row.querySelector('button[aria-label="Bra förslag"]') as HTMLButtonElement;
+    const upvoteButton = getVoteButton(row, 'Passar');
 
     await act(async () => {
       upvoteButton.click();
@@ -320,8 +327,8 @@ describe('DancePage', () => {
     )!;
     expect(rowB).toBeDefined();
 
-    const upvoteA = rowA.querySelector('button[aria-label="Bra förslag"]') as HTMLButtonElement;
-    const upvoteB = rowB.querySelector('button[aria-label="Bra förslag"]') as HTMLButtonElement;
+    const upvoteA = getVoteButton(rowA, 'Passar');
+    const upvoteB = getVoteButton(rowB, 'Passar');
 
     await act(async () => {
       upvoteA.click();

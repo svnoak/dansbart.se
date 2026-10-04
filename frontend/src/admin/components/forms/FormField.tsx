@@ -6,12 +6,13 @@ interface FormFieldProps {
   children: ReactNode;
 }
 
+/** A labelled field: a 14 px semibold label above its control. */
 export function FormField({ label, htmlFor, children }: FormFieldProps) {
   return (
     <div>
       <label
         htmlFor={htmlFor}
-        className="block text-sm font-medium text-[rgb(var(--color-text))]"
+        className="block text-sm font-semibold text-[rgb(var(--color-text))]"
       >
         {label}
       </label>

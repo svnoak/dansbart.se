@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { IconButton } from '@/ui';
+import { CloseIcon } from '@/icons';
 
 interface ModalProps {
   open: boolean;
@@ -9,6 +11,10 @@ interface ModalProps {
   children: ReactNode;
 }
 
+/**
+ * A centred dialog with a title row and a close control. Escape and a click
+ * on the backdrop close it.
+ */
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -32,27 +38,24 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
       }}
     >
       <div
-        className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-xl"
+        className="w-full max-w-md rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] shadow-[var(--color-card-shadow)]"
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="flex items-center justify-between border-b border-[rgb(var(--color-border))] px-5 py-3">
-          <h2 className="text-base font-semibold text-[rgb(var(--color-text))]">
+        <div className="flex items-center justify-between gap-3 border-b border-[rgb(var(--color-border))] py-3 pl-6 pr-3">
+          <h2 className="text-xl font-bold leading-tight text-[rgb(var(--color-text))]">
             {title}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius)] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50 hover:text-[rgb(var(--color-text))]"
+          <IconButton
             aria-label="Stäng"
+            onClick={onClose}
+            className="shrink-0 text-[rgb(var(--color-text-muted))]"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-            </svg>
-          </button>
+            <CloseIcon className="h-5 w-5" aria-hidden />
+          </IconButton>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="px-6 py-5">{children}</div>
       </div>
     </div>,
     document.body,
