@@ -1,27 +1,43 @@
+import { UserIcon } from '@/icons/UserIcon';
+
 interface AvatarPlaceholderProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** The name whose first letter the avatar shows. Without it, a person icon. */
+  name?: string | null;
 }
 
-export function AvatarPlaceholder({ className = '', size = 'md' }: AvatarPlaceholderProps) {
+/** First letter of a name, upper-cased, or null when there is no letter to show. */
+function initialOf(name?: string | null): string | null {
+  const trimmed = name?.trim();
+  if (!trimmed) return null;
+  return trimmed.charAt(0).toLocaleUpperCase('sv-SE');
+}
+
+/**
+ * The round avatar for an artist or a person: the initial in ink on a soft
+ * fill. Sizes: sm 32, md 40, lg 56, xl 112 px.
+ */
+export function AvatarPlaceholder({ className = '', size = 'md', name }: AvatarPlaceholderProps) {
   const sizes = {
-    sm: 'w-8 h-8',
-    md: 'w-10 h-10',
-    lg: 'w-14 h-14',
+    sm: 'h-8 w-8 text-sm',
+    md: 'h-10 w-10 text-base',
+    lg: 'h-14 w-14 text-xl',
+    xl: 'h-28 w-28 text-4xl',
   };
+  const iconSizes = {
+    sm: 'h-4 w-4',
+    md: 'h-5 w-5',
+    lg: 'h-7 w-7',
+    xl: 'h-12 w-12',
+  };
+  const initial = initialOf(name);
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-border))]/60 text-[rgb(var(--color-text-muted))] ${sizes[size]} ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent-muted))] font-bold text-[rgb(var(--color-text))] ${sizes[size]} ${className}`}
       aria-hidden
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        className="w-1/2 h-1/2"
-      >
-        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-      </svg>
+      {initial ?? <UserIcon className={iconSizes[size]} />}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ToastMessage } from './toastEmitter';
 import { toastListeners } from './toastEmitter';
+import { CheckIcon } from '@/icons/CheckIcon';
+import { CloseIcon } from '@/icons/CloseIcon';
 
 export function ToastContainer() {
   const [messages, setMessages] = useState<ToastMessage[]>([]);
@@ -21,17 +23,29 @@ export function ToastContainer() {
   if (messages.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 left-1/2 z-[200] flex -translate-x-1/2 flex-col gap-2">
+    <div className="fixed bottom-20 left-1/2 z-[200] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 flex-col gap-2">
       {messages.map((msg) => (
         <div
           key={msg.id}
-          className={`rounded-[var(--radius)] px-4 py-2.5 text-sm font-medium shadow-lg ${
-            msg.variant === 'success'
-              ? 'bg-green-600 text-white'
-              : 'bg-red-600 text-white'
-          }`}
+          role="status"
+          className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-3 text-[15px] font-medium text-[rgb(var(--color-text))] shadow-[var(--color-card-shadow)]"
         >
-          {msg.text}
+          {msg.variant === 'error' ? (
+            <span
+              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-error))] text-[rgb(var(--color-error-foreground))]"
+              aria-hidden
+            >
+              <CloseIcon className="h-3 w-3" />
+            </span>
+          ) : (
+            <span
+              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]"
+              aria-hidden
+            >
+              <CheckIcon className="h-3 w-3" />
+            </span>
+          )}
+          <span className="min-w-0 flex-1">{msg.text}</span>
         </div>
       ))}
     </div>

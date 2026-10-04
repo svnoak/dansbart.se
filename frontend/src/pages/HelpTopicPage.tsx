@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { RowSkeleton } from '@/ui';
 import { StaticPageLayout } from './StaticPageLayout';
 
 interface DiscourseTopicDetail {
@@ -8,6 +9,8 @@ interface DiscourseTopicDetail {
     posts: Array<{ cooked: string }>;
   };
 }
+
+const LINK_CLASS = 'text-sm font-semibold text-[rgb(var(--color-link))] hover:underline';
 
 export function HelpTopicPage() {
   const { slug, id } = useParams<{ slug: string; id: string }>();
@@ -28,10 +31,16 @@ export function HelpTopicPage() {
       .finally(() => setLoading(false));
   }, [slug, id]);
 
+  const backLink = (
+    <Link to="/help" className={`inline-flex min-h-6 items-center ${LINK_CLASS}`}>
+      ← Tillbaka till Hjälp och nyheter
+    </Link>
+  );
+
   if (loading) {
     return (
       <StaticPageLayout showHeaderBack={false} title="">
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">Hämtar innehåll...</p>
+        <RowSkeleton rows={3} label="Laddar sidan" />
       </StaticPageLayout>
     );
   }
@@ -39,20 +48,18 @@ export function HelpTopicPage() {
   if (error || !topic) {
     return (
       <StaticPageLayout showHeaderBack={false} title="Kunde inte hämta sidan">
-        <Link to="/help" className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline">
-          ← Tillbaka till Hjälp & Nyheter
-        </Link>
-        <p className="mt-4 text-sm text-[rgb(var(--color-text-muted))]">
+        {backLink}
+        <p className="mt-4 text-[15px] text-[rgb(var(--color-text-muted))]">
           Innehållet kunde inte laddas.{' '}
           <a
             href={`https://folkhub.se/t/${slug}/${id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-[rgb(var(--color-accent))] hover:underline"
+            className="font-semibold text-[rgb(var(--color-link))] hover:underline"
           >
             Öppna på forumet
           </a>{' '}
-          istället.
+          i stället.
         </p>
       </StaticPageLayout>
     );
@@ -62,9 +69,7 @@ export function HelpTopicPage() {
 
   return (
     <StaticPageLayout showHeaderBack={false} title={topic.title}>
-      <Link to="/help" className="mb-6 inline-block text-sm font-medium text-[rgb(var(--color-accent))] hover:underline">
-        ← Tillbaka till Hjälp & Nyheter
-      </Link>
+      <div className="mb-6">{backLink}</div>
       {firstPost && (
         <div
           className="discourse-content"
@@ -76,9 +81,9 @@ export function HelpTopicPage() {
           href={`https://folkhub.se/t/${slug}/${id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-[rgb(var(--color-accent))] hover:underline"
+          className={LINK_CLASS}
         >
-          Visa diskussion på forumet →
+          Visa diskussionen på forumet →
         </a>
       </div>
     </StaticPageLayout>

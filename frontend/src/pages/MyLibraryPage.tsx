@@ -5,7 +5,8 @@ import { TrackRow } from '@/components/TrackRow';
 import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
 import { deleteLocalCopy, requestPersistentStorage } from '@/library/localCopies';
 import { useLibraryImport, type ImportResult } from '@/library/useLibraryImport';
-import { Badge, Button, InlineError, LoadError, SectionTitle, toast } from '@/ui';
+import { Badge, Button, EmptyState, InlineError, LoadError, RowSkeleton, toast } from '@/ui';
+import { LibraryIcon } from '@/icons';
 
 const SOURCE_LABELS: Record<string, string> = {
   LOCAL: 'Lokalt',
@@ -69,61 +70,81 @@ export function MyLibraryPage() {
     }
   }
 
+  const importButton = (
+    <Button disabled={progress !== null} onClick={() => void handleImportClick()}>
+      Importera låtar
+    </Button>
+  );
+
   return (
-    <div className="mx-auto max-w-3xl p-4">
-      <SectionTitle>Mina låtar</SectionTitle>
-      <p className="mb-4 text-sm text-[rgb(var(--color-text-muted))]">
-        Ljudet stannar på din enhet. Bara titel, artist och ett fingeravtryck skickas.
-      </p>
-
-      <Button disabled={progress !== null} onClick={() => void handleImportClick()}>
-        Importera låtar
-      </Button>
-      <input
-        ref={fileInput}
-        type="file"
-        multiple
-        accept="audio/*"
-        hidden
-        onChange={(e) => {
-          void importAndReload(Array.from(e.target.files ?? [], (file) => ({ file })));
-          e.target.value = '';
-        }}
-      />
-      {progress && (
-        <p role="status" className="mt-3 text-sm">
-          Importerar låt {progress.done + 1} av {progress.total}
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Mina låtar
+        </h1>
+        <p className="max-w-prose text-[15px] text-[rgb(var(--color-text-muted))]">
+          Ljudet stannar på din enhet. Bara titel, artist och ett fingeravtryck skickas.
         </p>
-      )}
-      <InlineError>{error}</InlineError>
+      </div>
 
-      <div className="mt-6">
-        {loadFailed && <LoadError message="Det gick inte att hämta dina låtar." onRetry={load} />}
-        {entries?.length === 0 && (
-          <p>Du har inga låtar än. Importera en låt för att börja.</p>
+      <div className="space-y-3">
+        {importButton}
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          accept="audio/*"
+          hidden
+          onChange={(e) => {
+            void importAndReload(Array.from(e.target.files ?? [], (file) => ({ file })));
+            e.target.value = '';
+          }}
+        />
+        {progress && (
+          <p role="status" className="text-sm text-[rgb(var(--color-text-muted))]">
+            Importerar låt {progress.done + 1} av {progress.total}
+          </p>
         )}
-        <ul>
-          {entries?.map((entry) => (
-            <li key={entry.track!.id}>
-              <TrackRow
-                track={entry.track!}
-                contextTracks={entries.map((e) => e.track!)}
-                showAlbum
-                badges={<div className="mt-1 flex flex-wrap gap-1">
-                  {entry.sources?.map((source) => (
-                    <Badge key={source.sourceId} variant="muted">
-                      {SOURCE_LABELS[source.provider!]}
-                    </Badge>
-                  ))}
-                </div>}
-                extraMenuItems={[
-                  { label: 'Ta bort från Mina låtar', onClick: () => remove(entry.track!.id!) },
-                ]}
-                isPrivate={!entry.linkedToCatalog}
-              />
-            </li>
-          ))}
-        </ul>
+        <InlineError>{error}</InlineError>
+      </div>
+
+      <div>
+        {loadFailed ? (
+          <LoadError message="Det gick inte att hämta dina låtar." onRetry={load} />
+        ) : entries === null ? (
+          <RowSkeleton rows={3} label="Laddar dina låtar" />
+        ) : entries.length === 0 ? (
+          <EmptyState
+            icon={<LibraryIcon className="h-6 w-6" />}
+            title="Inga låtar än"
+            description="Du har inga låtar än. Importera en låt för att börja."
+          />
+        ) : (
+          <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
+            {entries.map((entry) => (
+              <li key={entry.track!.id}>
+                <TrackRow
+                  track={entry.track!}
+                  contextTracks={entries.map((e) => e.track!)}
+                  showAlbum
+                  badges={
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {entry.sources?.map((source) => (
+                        <Badge key={source.sourceId} variant="muted">
+                          {SOURCE_LABELS[source.provider!]}
+                        </Badge>
+                      ))}
+                    </div>
+                  }
+                  extraMenuItems={[
+                    { label: 'Ta bort från Mina låtar', onClick: () => remove(entry.track!.id!) },
+                  ]}
+                  isPrivate={!entry.linkedToCatalog}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

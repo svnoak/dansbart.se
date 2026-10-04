@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 interface BadgeProps {
   children: ReactNode;
+  /** default: soft fill with ink text. muted: hairline outline with muted text. */
   variant?: 'default' | 'muted';
   size?: 'sm' | 'md';
   className?: string;
@@ -15,14 +16,14 @@ export function Badge({
   className = '',
   style,
 }: BadgeProps) {
-  const base = 'inline-flex items-center rounded-[var(--radius)] px-2 py-0.5 font-medium';
+  const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 font-medium leading-5';
   const sizes = {
-    sm: 'text-xs',
-    md: 'text-base',
+    sm: 'text-[13px]',
+    md: 'text-sm',
   };
   const variants = {
-    default: 'bg-[rgb(var(--color-pill-bg))] text-[rgb(var(--color-text))]',
-    muted: 'bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text-muted))]',
+    default: 'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]',
+    muted: 'border border-[rgb(var(--color-border))] bg-transparent text-[rgb(var(--color-text-muted))]',
   };
   return <span className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} style={style}>{children}</span>;
 }

@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getAlbums } from '@/api/generated/albums/albums';
 import type { Album } from '@/api/models/album';
-import { AlbumCard } from '@/components';
-import { IconButton } from '@/ui';
-import { BackArrowIcon } from '@/icons';
+import { AlbumCard } from '@/components/AlbumCard';
+import { EmptyState, IconButton, RowSkeleton } from '@/ui';
+import { BackArrowIcon, AlbumIcon } from '@/icons';
 
 const PAGE_SIZE = 20;
 
@@ -14,7 +14,7 @@ export function AlbumsPage() {
   const q = searchParams.get('q') ?? '';
   const offset = Number(searchParams.get('offset') ?? '0');
 
-  const [albums, setAlbums] = useState<Album[]>([]);
+  const [items, setItems] = useState<Album[]>([]);
   const [total, setTotal] = useState(0);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -56,14 +56,14 @@ export function AlbumsPage() {
 
     getAlbums(params, { signal: controller.signal })
       .then((data) => {
-        const items = data?.items ?? [];
-        const totalCount = data?.total ?? items.length;
-        setAlbums(
+        const page = data?.items ?? [];
+        const totalCount = data?.total ?? page.length;
+        setItems(
           offset === 0
-            ? items
+            ? page
             : (prev) => {
-                const seen = new Set(prev.map((a) => a.id));
-                return [...prev, ...items.filter((a) => !seen.has(a.id))];
+                const seen = new Set(prev.map((item) => item.id));
+                return [...prev, ...page.filter((item) => !seen.has(item.id))];
               },
         );
         setTotal(totalCount);
@@ -71,7 +71,7 @@ export function AlbumsPage() {
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setAlbums([]);
+        setItems([]);
         setTotal(0);
         setLastFetched(fetchKey);
       })
@@ -82,7 +82,7 @@ export function AlbumsPage() {
     return () => controller.abort();
   }, [q, offset, fetchKey]);
 
-  const hasMore = albums.length < total;
+  const hasMore = items.length < total;
 
   const loadMore = useCallback(() => {
     setSearchParams((prev) => {
@@ -111,47 +111,55 @@ export function AlbumsPage() {
 
   return (
     <div className="space-y-6">
-      <IconButton aria-label="Tillbaka" onClick={() => navigate('/')}>
+      <IconButton aria-label="Gå till startsidan" onClick={() => navigate('/')}>
         <BackArrowIcon className="h-5 w-5" aria-hidden />
       </IconButton>
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
-        Album
-      </h1>
 
-      <input
-        type="text"
-        defaultValue={q}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Sök album..."
-        className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-      />
-
-      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-        {total.toLocaleString('sv-SE')} album
-      </p>
-
-      {loading && albums.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
-      )}
-
-      {!loading && albums.length === 0 && (
-        <p className="text-[rgb(var(--color-text-muted))]">
-          Inga album hittades.
+      <div className="space-y-1">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Album
+        </h1>
+        <p className="text-sm text-[rgb(var(--color-text-muted))]">
+          {total.toLocaleString('sv-SE')} album
         </p>
-      )}
+      </div>
 
-      <ul className="space-y-3">
-        {albums.map((album, i) => (
-          <li key={album.id ?? album.title ?? `album-${i}`}>
-            <AlbumCard album={album} />
-          </li>
-        ))}
-      </ul>
+      <div>
+        <label htmlFor="albums-search" className="sr-only">
+          Sök album
+        </label>
+        <input
+          id="albums-search"
+          type="search"
+          defaultValue={q}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Sök album"
+          className="h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-4 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:border-[rgb(var(--color-focus))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] focus-visible:ring-offset-2"
+        />
+      </div>
+
+      {loading && items.length === 0 ? (
+        <RowSkeleton rows={5} label="Laddar album" />
+      ) : !loading && items.length === 0 ? (
+        <EmptyState
+          icon={<AlbumIcon className="h-6 w-6" />}
+          title="Inga album hittades"
+          description={q ? 'Prova ett annat sökord.' : 'Det finns inga album i katalogen än.'}
+        />
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {items.map((item, i) => (
+            <li key={item.id ?? `item-${i}`}>
+              <AlbumCard album={item} />
+            </li>
+          ))}
+        </ul>
+      )}
 
       {hasMore && (
-        <div ref={sentinelRef} className="flex justify-center py-4">
+        <div ref={sentinelRef} className="flex justify-center py-4" aria-live="polite">
           {loadingMore && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
           )}
         </div>
       )}
