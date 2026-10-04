@@ -11,7 +11,8 @@ import type { Column } from '@/admin/components/DataTable';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button, InlineError, LoadError } from '@/ui';
+import { FormField } from '@/admin/components/forms/FormField';
+import { Button, InlineError, LoadError, Pill } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface PendingArtistRow {
@@ -29,6 +30,8 @@ interface PendingAlbumRow {
 }
 
 type Tab = 'artists' | 'albums';
+
+const fieldClass = 'min-h-11 border-[rgb(var(--color-border-strong))] text-[15px]';
 
 export function AdminPendingPage() {
   const [params, setParams] = useSearchParams();
@@ -127,36 +130,37 @@ export function AdminPendingPage() {
     }
   };
 
+  const pendingCount = (value?: number) => (
+    <span className="text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">
+      {value ?? '-'}
+    </span>
+  );
+
   const artistColumns: Column<PendingArtistRow>[] = [
     {
       key: 'name',
       header: 'Namn',
       render: (a) => (
-        <span className="font-medium text-[rgb(var(--color-text))]">{a.name}</span>
+        <span className="text-[15px] font-semibold text-[rgb(var(--color-text))]">{a.name}</span>
       ),
     },
     {
       key: 'pending',
       header: 'Väntande spår',
-      render: (a) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">
-          {a.pendingTrackCount ?? '-'}
-        </span>
-      ),
+      render: (a) => pendingCount(a.pendingTrackCount),
     },
     {
       key: 'actions',
       header: '',
       render: (a) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button variant="primary" size="sm" onClick={() => handleApprove(a)}>
               Godkänn & importera
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="text-red-600 dark:text-red-400"
               onClick={() => { setRejectModal(a); setRejectError(null); }}
             >
               Avvisa
@@ -165,7 +169,7 @@ export function AdminPendingPage() {
           {rowErrors[a.id] && <InlineError>{rowErrors[a.id]}</InlineError>}
         </div>
       ),
-      className: 'w-48',
+      className: 'w-72',
     },
   ];
 
@@ -174,56 +178,47 @@ export function AdminPendingPage() {
       key: 'name',
       header: 'Album',
       render: (a) => (
-        <span className="font-medium text-[rgb(var(--color-text))]">{a.name}</span>
-      ),
-    },
-    {
-      key: 'artist',
-      header: 'Artist',
-      render: (a) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">{a.artistName ?? '-'}</span>
+        <div>
+          <p className="text-[15px] font-semibold text-[rgb(var(--color-text))]">{a.name}</p>
+          <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{a.artistName ?? '-'}</p>
+        </div>
       ),
     },
     {
       key: 'pending',
       header: 'Väntande spår',
-      render: (a) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">
-          {a.pendingTrackCount ?? '-'}
-        </span>
-      ),
+      render: (a) => pendingCount(a.pendingTrackCount),
     },
   ];
 
   const total = tab === 'artists' ? artistsTotal : albumsTotal;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Väntande</h1>
+    <div className="space-y-5">
+      <header>
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Väntande
+        </h1>
+        <p className="mt-1 text-[15px] text-[rgb(var(--color-text-muted))]">
+          Artister och album som väntar på godkännande innan deras spår analyseras.
+        </p>
+      </header>
 
-      <div className="flex gap-1 border-b border-[rgb(var(--color-border))]">
-        <button
-          type="button"
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Visa väntande">
+        <Pill
+          active={tab === 'artists'}
+          aria-pressed={tab === 'artists'}
           onClick={() => updateParam('tab', 'artists')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'artists'
-              ? 'border-[rgb(var(--color-accent))] text-[rgb(var(--color-accent))]'
-              : 'border-transparent text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-          }`}
         >
           Artister
-        </button>
-        <button
-          type="button"
+        </Pill>
+        <Pill
+          active={tab === 'albums'}
+          aria-pressed={tab === 'albums'}
           onClick={() => updateParam('tab', 'albums')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'albums'
-              ? 'border-[rgb(var(--color-accent))] text-[rgb(var(--color-accent))]'
-              : 'border-transparent text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]'
-          }`}
         >
           Album
-        </button>
+        </Pill>
       </div>
 
       {tab === 'artists' ? (
@@ -268,28 +263,29 @@ export function AdminPendingPage() {
         onClose={() => { setRejectModal(null); setRejectReason(''); }}
         title="Avvisa artist"
       >
-        <p className="text-sm text-[rgb(var(--color-text))]">
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
           Avvisa <strong>{rejectModal?.name}</strong>?
         </p>
-        <div className="mt-3">
-          <TextInput
-            placeholder="Orsak (valfritt)"
-            value={rejectReason}
-            onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
-          />
+        <div className="mt-4">
+          <FormField label="Orsak (valfritt)" htmlFor="pending-reject-reason">
+            <TextInput
+              id="pending-reject-reason"
+              value={rejectReason}
+              onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
+              className={fieldClass}
+            />
+          </FormField>
         </div>
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-5 space-y-3">
           {rejectError && <InlineError>{rejectError}</InlineError>}
-          <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
-            Avbryt
-          </Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleReject}
-          >
-            Avvisa
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
+              Avbryt
+            </Button>
+            <Button variant="danger" onClick={handleReject}>
+              Avvisa
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

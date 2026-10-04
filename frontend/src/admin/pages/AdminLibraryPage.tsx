@@ -20,20 +20,40 @@ import { StatusBadge } from '@/admin/components/StatusBadge';
 import { ConfidenceBadge } from '@/admin/components/ConfidenceBadge';
 import { ActionMenu } from '@/admin/components/ActionMenu';
 import type { ActionItem } from '@/admin/components/ActionMenu';
-import { FilterBar } from '@/admin/components/FilterBar';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { Select } from '@/admin/components/forms/Select';
-import { Button, InlineError, LoadError } from '@/ui';
+import { FormField } from '@/admin/components/forms/FormField';
+import { Badge, Button, Card, IconButton, InlineError, LoadError, Pill } from '@/ui';
+import { StylePill } from '@/components/TrackRow/StylePill';
+import { stylePillState } from '@/components/TrackRow/stylePillState';
 import { toast } from '@/admin/components/toastEmitter';
 import { formatDurationMs } from '@/utils/formatDuration';
 import { usePlayer } from '@/player/usePlayer';
-import { PlayIcon, PauseIcon } from '@/icons';
+import { PlayIcon, PauseIcon, FlagIcon } from '@/icons';
 
 type StatusCounts = Record<string, number>;
 
 const STATUS_ORDER = ['PENDING', 'PROCESSING', 'REANALYZING', 'DONE', 'FAILED'] as const;
+
+const STATUS_LABEL: Record<(typeof STATUS_ORDER)[number], string> = {
+  PENDING: 'Väntar',
+  PROCESSING: 'Bearbetas',
+  REANALYZING: 'Omanalyseras',
+  DONE: 'Klar',
+  FAILED: 'Misslyckad',
+};
+
+const TEMPO_LABEL: Record<string, string> = {
+  Slow: 'Långsamt',
+  SlowMed: 'Lugnt',
+  Medium: 'Lagom',
+  Fast: 'Snabbt',
+  Turbo: 'Väldigt snabbt',
+};
+
+const fieldClass = 'min-h-11 border-[rgb(var(--color-border-strong))] text-[15px]';
 
 async function fetchStatusCounts(): Promise<StatusCounts> {
   const res = await apiFetch('/api/admin/tracks/status-counts');
@@ -361,21 +381,20 @@ export function AdminLibraryPage() {
         const isCurrent = player.currentTrack?.id === t.id;
         const isPlaying = isCurrent && player.isPlaying;
         return (
-          <button
-            type="button"
+          <IconButton
             onClick={(e) => { e.stopPropagation(); handlePlay(t); }}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-[rgb(var(--color-border))]/50 text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
-            aria-label={isPlaying ? 'Pausa' : 'Spela'}
+            aria-label={isPlaying ? `Pausa ${t.title ?? 'spåret'}` : `Spela ${t.title ?? 'spåret'}`}
+            className={isCurrent ? 'text-[rgb(var(--color-now-playing-text))]' : 'text-[rgb(var(--color-text-muted))]'}
           >
             {isPlaying ? (
-              <PauseIcon className="h-4 w-4" />
+              <PauseIcon className="h-5 w-5" aria-hidden />
             ) : (
-              <PlayIcon className="h-4 w-4 ml-0.5" />
+              <PlayIcon className="ml-0.5 h-5 w-5" aria-hidden />
             )}
-          </button>
+          </IconButton>
         );
       },
-      className: 'w-10',
+      className: 'w-14',
     },
     {
       key: 'title',
@@ -383,10 +402,10 @@ export function AdminLibraryPage() {
       sortKey: 'title',
       render: (t) => (
         <div className="min-w-45">
-          <p className="font-medium text-[rgb(var(--color-text))] truncate max-w-65">
+          <p className="max-w-65 truncate text-[15px] font-semibold text-[rgb(var(--color-text))]">
             {t.title}
           </p>
-          <p className="text-xs text-[rgb(var(--color-text-muted))] truncate max-w-65">
+          <p className="max-w-65 truncate text-[13px] text-[rgb(var(--color-text-muted))]">
             {t.artists?.map((a) => a.name).join(', ') || '-'}
           </p>
         </div>
@@ -396,7 +415,7 @@ export function AdminLibraryPage() {
       key: 'album',
       header: 'Album',
       render: (t) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))] truncate max-w-40 block">
+        <span className="block max-w-40 truncate text-[13px] text-[rgb(var(--color-text-muted))]">
           {t.album?.title || '-'}
         </span>
       ),
@@ -406,17 +425,15 @@ export function AdminLibraryPage() {
       header: 'Status',
       sortKey: 'status',
       render: (t) => (
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <StatusBadge status={t.processingStatus} />
           {t.isFlagged && (
-            <span
-              className="text-orange-500"
-              title={t.flagReason ?? 'Flaggad'}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                <path d="M3.5 2.75a.75.75 0 00-1.5 0v14.5a.75.75 0 001.5 0v-4.392l1.657-.348a6.449 6.449 0 014.271.572 7.948 7.948 0 005.965.524l2.078-.64A.75.75 0 0018 11.75V3.24a.75.75 0 00-.994-.708 6.948 6.948 0 01-5.152-.174 7.949 7.949 0 00-5.57-.71L3.5 2.26V2.75z" />
-              </svg>
-            </span>
+            <Badge variant="muted" className="gap-1">
+              <span title={t.flagReason ?? 'Flaggad'} className="inline-flex items-center gap-1">
+                <FlagIcon className="h-3.5 w-3.5 text-[rgb(var(--color-error))]" aria-hidden />
+                Flaggad
+              </span>
+            </Badge>
           )}
         </div>
       ),
@@ -428,20 +445,16 @@ export function AdminLibraryPage() {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); openStyleEdit(t); }}
-          className="text-left group cursor-pointer"
-          title="Klicka för att redigera"
+          className="group flex min-h-11 flex-col items-start justify-center gap-0.5 rounded-[var(--radius)] px-1 text-left hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+          aria-label={`Redigera dansstil för ${t.title ?? 'spåret'}`}
+          title="Redigera dansstil"
         >
-          <span className="text-xs text-[rgb(var(--color-text))] group-hover:underline">
-            {t.danceStyle ?? '-'}
-          </span>
-          {t.subStyle && (
-            <span className="text-xs text-[rgb(var(--color-text-muted))]">
-              {' '}/ {t.subStyle}
-            </span>
-          )}
-          {t.tempoCategory && (
-            <span className="text-xs text-[rgb(var(--color-text-muted))] block">
-              {t.tempoCategory}
+          <StylePill style={t.danceStyle} state={stylePillState(t.danceStyle, t.confidence)} />
+          {(t.subStyle || t.tempoCategory) && (
+            <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
+              {[t.subStyle, t.tempoCategory ? TEMPO_LABEL[t.tempoCategory] ?? t.tempoCategory : null]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
           )}
         </button>
@@ -449,7 +462,7 @@ export function AdminLibraryPage() {
     },
     {
       key: 'confidence',
-      header: 'Konf.',
+      header: 'Konfidens',
       sortKey: 'confidence',
       render: (t) => <ConfidenceBadge value={t.confidence} />,
     },
@@ -458,7 +471,7 @@ export function AdminLibraryPage() {
       header: 'BPM',
       sortKey: 'tempoBpm',
       render: (t) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">
+        <span className="text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">
           {t.tempoBpm ? Math.round(t.tempoBpm) : '-'}
         </span>
       ),
@@ -468,7 +481,7 @@ export function AdminLibraryPage() {
       header: 'Längd',
       sortKey: 'durationMs',
       render: (t) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">
+        <span className="text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">
           {t.durationMs ? formatDurationMs(t.durationMs) : '-'}
         </span>
       ),
@@ -487,120 +500,123 @@ export function AdminLibraryPage() {
   const hasSelection = selectedIds.size > 0;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Bibliotek</h1>
+    <div className="space-y-5">
+      <header>
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Bibliotek
+        </h1>
+        <p className="mt-1 text-[15px] text-[rgb(var(--color-text-muted))]">
+          Alla spår i biblioteket. Filtrera på status, sök och markera flera spår för att analysera om eller radera dem.
+        </p>
+      </header>
 
-      {/* Status counts bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => updateParam('status', '')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            !status
-              ? 'bg-[rgb(var(--color-text))]/10 text-[rgb(var(--color-text))] ring-1 ring-[rgb(var(--color-text))]/20'
-              : 'bg-[rgb(var(--color-bg))] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-border))]/50'
-          }`}
-        >
-          Alla
-          <span className="tabular-nums">{totalTracks}</span>
-        </button>
+      {/* Status counts */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrera på status">
+        <Pill active={!status} aria-pressed={!status} onClick={() => updateParam('status', '')}>
+          Alla <span className="tabular-nums">{totalTracks.toLocaleString('sv-SE')}</span>
+        </Pill>
         {STATUS_ORDER.map((s) => {
           const count = statusCounts[s] ?? 0;
           const isActive = status === s;
           return (
-            <button
+            <Pill
               key={s}
+              active={isActive}
+              aria-pressed={isActive}
               onClick={() => updateParam('status', isActive ? '' : s)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                isActive
-                  ? 'ring-1 ring-current'
-                  : 'opacity-80 hover:opacity-100'
-              } ${statusStyle(s)}`}
             >
-              {s}
-              <span className="tabular-nums">{count}</span>
-            </button>
+              {STATUS_LABEL[s]} <span className="tabular-nums">{count.toLocaleString('sv-SE')}</span>
+            </Pill>
           );
         })}
       </div>
 
-      <FilterBar>
-        <div className="flex-1 min-w-50">
+      <Card className="flex flex-wrap items-end gap-3 px-4 py-3">
+        <div className="min-w-50 flex-1">
+          <label htmlFor="library-search" className="sr-only">
+            Sök titel eller artist
+          </label>
           <TextInput
+            id="library-search"
             type="search"
-            placeholder="Sök titel, artist..."
+            placeholder="Sök titel, artist…"
             value={search}
             onChange={(e) => updateParam('search', e.target.value)}
+            className={fieldClass}
           />
         </div>
-        <Select
-          value={status}
-          onChange={(e) => updateParam('status', e.target.value)}
-          className="w-auto min-w-35"
-        >
-          <option value="">Alla statusar</option>
-          <option value="PENDING">PENDING</option>
-          <option value="PROCESSING">PROCESSING</option>
-          <option value="REANALYZING">REANALYZING</option>
-          <option value="DONE">DONE</option>
-          <option value="FAILED">FAILED</option>
-        </Select>
-        <Select
-          value={flagged ?? ''}
-          onChange={(e) => updateParam('flagged', e.target.value)}
-          className="w-auto min-w-30"
-        >
-          <option value="">Alla</option>
-          <option value="true">Flaggade</option>
-          <option value="false">Oflaggade</option>
-        </Select>
-      </FilterBar>
+        <div className="min-w-40">
+          <label htmlFor="library-status" className="mb-1.5 block text-[13px] font-medium text-[rgb(var(--color-text))]">
+            Status
+          </label>
+          <Select
+            id="library-status"
+            value={status}
+            onChange={(e) => updateParam('status', e.target.value)}
+            className={fieldClass}
+          >
+            <option value="">Alla statusar</option>
+            {STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </Select>
+        </div>
+        <div className="min-w-36">
+          <label htmlFor="library-flagged" className="mb-1.5 block text-[13px] font-medium text-[rgb(var(--color-text))]">
+            Flaggning
+          </label>
+          <Select
+            id="library-flagged"
+            value={flagged ?? ''}
+            onChange={(e) => updateParam('flagged', e.target.value)}
+            className={fieldClass}
+          >
+            <option value="">Alla</option>
+            <option value="true">Flaggade</option>
+            <option value="false">Oflaggade</option>
+          </Select>
+        </div>
+      </Card>
 
       {/* Bulk action bar */}
       {hasSelection && !bulkOp && (
-        <div className="sticky top-0 z-10 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2.5 shadow-sm">
-          <span className="text-sm font-medium text-[rgb(var(--color-text))]">
-            {selectedIds.size} markerade
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2.5">
+          <span className="text-[15px] font-semibold text-[rgb(var(--color-text))]">
+            {selectedIds.size} valda
           </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleBulkReanalyze}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleBulkReanalyze}>
               Omanalysera
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleBulkReclassify}>
+            <Button variant="outline" size="sm" onClick={handleBulkReclassify}>
               Omklassificera
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-600 hover:text-red-700"
-              onClick={() => setBulkRejectModal(true)}
-            >
+            <Button variant="danger" size="sm" onClick={() => setBulkRejectModal(true)}>
               Radera & blockera
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-600 hover:text-red-700"
-              onClick={() => setBulkDeleteModal(true)}
-            >
+            <Button variant="danger" size="sm" onClick={() => setBulkDeleteModal(true)}>
               Radera
             </Button>
           </div>
           {bulkError && <InlineError>{bulkError}</InlineError>}
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))]"
-          >
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedIds(new Set())}>
             Avmarkera alla
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Bulk operation progress */}
       {bulkOp && (
-        <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2.5">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[rgb(var(--color-text-muted))] border-t-transparent" />
-          <span className="text-sm text-[rgb(var(--color-text))]">
-            {bulkOp.label}: {bulkOp.done}/{bulkOp.total} klara...
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2.5"
+        >
+          <span
+            className="h-4 w-4 animate-spin rounded-full border-2 border-[rgb(var(--color-text-muted))] border-t-transparent"
+            aria-hidden
+          />
+          <span className="text-[15px] text-[rgb(var(--color-text))]">
+            {bulkOp.label}: {bulkOp.done} av {bulkOp.total} klara…
           </span>
         </div>
       )}
@@ -640,22 +656,20 @@ export function AdminLibraryPage() {
         onClose={() => { setDeleteModal(null); setDeleteError(null); }}
         title="Radera spår"
       >
-        <p className="text-sm text-[rgb(var(--color-text))]">
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
           Vill du verkligen radera{' '}
-          <strong>{deleteModal?.title}</strong>? Denna åtgärd kan inte ångras.
+          <strong>{deleteModal?.title}</strong>? Det går inte att ångra.
         </p>
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-5 space-y-3">
           {deleteError && <InlineError>{deleteError}</InlineError>}
-          <Button variant="ghost" onClick={() => { setDeleteModal(null); setDeleteError(null); }}>
-            Avbryt
-          </Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleDelete}
-          >
-            Radera
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setDeleteModal(null); setDeleteError(null); }}>
+              Avbryt
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Radera
+            </Button>
+          </div>
         </div>
       </Modal>
 
@@ -665,28 +679,29 @@ export function AdminLibraryPage() {
         onClose={() => { setRejectModal(null); setRejectReason(''); setRejectError(null); }}
         title="Radera & blockera spår"
       >
-        <p className="text-sm text-[rgb(var(--color-text))]">
-          Radera <strong>{rejectModal?.title}</strong> och lägg till på blocklistan?
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
+          Radera <strong>{rejectModal?.title}</strong> och lägg till det på blocklistan?
         </p>
-        <div className="mt-3">
-          <TextInput
-            placeholder="Orsak (valfritt)"
-            value={rejectReason}
-            onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
-          />
+        <div className="mt-4">
+          <FormField label="Orsak (valfritt)" htmlFor="reject-reason">
+            <TextInput
+              id="reject-reason"
+              value={rejectReason}
+              onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
+              className={fieldClass}
+            />
+          </FormField>
         </div>
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-5 space-y-3">
           {rejectError && <InlineError>{rejectError}</InlineError>}
-          <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); setRejectError(null); }}>
-            Avbryt
-          </Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleReject}
-          >
-            Radera & blockera
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setRejectModal(null); setRejectReason(''); setRejectError(null); }}>
+              Avbryt
+            </Button>
+            <Button variant="danger" onClick={handleReject}>
+              Radera & blockera
+            </Button>
+          </div>
         </div>
       </Modal>
 
@@ -696,25 +711,24 @@ export function AdminLibraryPage() {
         onClose={() => { setBulkRejectModal(false); setBulkRejectReason(''); }}
         title="Radera & blockera spår"
       >
-        <p className="text-sm text-[rgb(var(--color-text))]">
-          Radera {selectedIds.size} markerade spår och lägg till på blocklistan?
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
+          Radera {selectedIds.size} valda spår och lägg till dem på blocklistan?
         </p>
-        <div className="mt-3">
-          <TextInput
-            placeholder="Orsak (valfritt)"
-            value={bulkRejectReason}
-            onChange={(e) => setBulkRejectReason(e.target.value)}
-          />
+        <div className="mt-4">
+          <FormField label="Orsak (valfritt)" htmlFor="bulk-reject-reason">
+            <TextInput
+              id="bulk-reject-reason"
+              value={bulkRejectReason}
+              onChange={(e) => setBulkRejectReason(e.target.value)}
+              className={fieldClass}
+            />
+          </FormField>
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => { setBulkRejectModal(false); setBulkRejectReason(''); }}>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => { setBulkRejectModal(false); setBulkRejectReason(''); }}>
             Avbryt
           </Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleBulkReject}
-          >
+          <Button variant="danger" onClick={handleBulkReject}>
             Radera & blockera ({selectedIds.size})
           </Button>
         </div>
@@ -726,18 +740,14 @@ export function AdminLibraryPage() {
         onClose={() => setBulkDeleteModal(false)}
         title="Radera spår"
       >
-        <p className="text-sm text-[rgb(var(--color-text))]">
-          Vill du verkligen radera {selectedIds.size} markerade spår? Denna åtgärd kan inte ångras.
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
+          Vill du verkligen radera {selectedIds.size} valda spår? Det går inte att ångra.
         </p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setBulkDeleteModal(false)}>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setBulkDeleteModal(false)}>
             Avbryt
           </Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleBulkDelete}
-          >
+          <Button variant="danger" onClick={handleBulkDelete}>
             Radera {selectedIds.size} spår
           </Button>
         </div>
@@ -749,55 +759,52 @@ export function AdminLibraryPage() {
         onClose={() => { setStyleEditTrack(null); setStyleEditError(null); }}
         title="Redigera dansstil"
       >
-        <p className="text-sm text-[rgb(var(--color-text))] mb-4">
-          <strong>{styleEditTrack?.title}</strong>
+        <div className="mb-4">
+          <p className="text-[15px] font-semibold text-[rgb(var(--color-text))]">{styleEditTrack?.title}</p>
           {styleEditTrack?.artists?.[0]?.name && (
-            <span className="text-[rgb(var(--color-text-muted))]">
-              {' '}- {styleEditTrack.artists[0].name}
-            </span>
+            <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+              {styleEditTrack.artists[0].name}
+            </p>
           )}
-        </p>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1">
-              Huvudstil
-            </label>
+        </div>
+        <div className="space-y-4">
+          <FormField label="Huvudstil" htmlFor="style-edit-main">
             <Select
+              id="style-edit-main"
               value={styleEditMain}
               onChange={(e) => {
                 setStyleEditMain(e.target.value);
                 setStyleEditSub('');
               }}
+              className={fieldClass}
             >
-              <option value="">Välj stil...</option>
+              <option value="">Välj stil…</option>
               {Object.keys(styleTree).sort().map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </Select>
-          </div>
+          </FormField>
           {styleEditMain && (styleTree[styleEditMain]?.length ?? 0) > 0 && (
-            <div>
-              <label className="block text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1">
-                Understil
-              </label>
+            <FormField label="Understil" htmlFor="style-edit-sub">
               <Select
+                id="style-edit-sub"
                 value={styleEditSub}
                 onChange={(e) => setStyleEditSub(e.target.value)}
+                className={fieldClass}
               >
-                <option value="">Ingen / Allmän {styleEditMain}</option>
+                <option value="">Ingen / allmän {styleEditMain}</option>
                 {styleTree[styleEditMain]?.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </Select>
-            </div>
+            </FormField>
           )}
-          <div>
-            <label className="block text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1">
-              Tempo
-            </label>
+          <FormField label="Tempo" htmlFor="style-edit-tempo">
             <Select
+              id="style-edit-tempo"
               value={styleEditTempo}
               onChange={(e) => setStyleEditTempo(e.target.value)}
+              className={fieldClass}
             >
               <option value="">Inget valt</option>
               <option value="Slow">Långsamt</option>
@@ -806,39 +813,24 @@ export function AdminLibraryPage() {
               <option value="Fast">Snabbt</option>
               <option value="Turbo">Väldigt snabbt</option>
             </Select>
-          </div>
+          </FormField>
         </div>
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-5 space-y-3">
           {styleEditError && <InlineError>{styleEditError}</InlineError>}
-          <Button variant="ghost" onClick={() => { setStyleEditTrack(null); setStyleEditError(null); }}>
-            Avbryt
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleStyleEditSave}
-            disabled={!styleEditMain}
-          >
-            Spara
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setStyleEditTrack(null); setStyleEditError(null); }}>
+              Avbryt
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleStyleEditSave}
+              disabled={!styleEditMain}
+            >
+              Spara
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
   );
-}
-
-function statusStyle(s: string): string {
-  switch (s) {
-    case 'PENDING':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300';
-    case 'PROCESSING':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
-    case 'REANALYZING':
-      return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300';
-    case 'DONE':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
-    case 'FAILED':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300';
-  }
 }

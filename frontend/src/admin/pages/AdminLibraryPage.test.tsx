@@ -176,7 +176,9 @@ describe('AdminLibraryPage', () => {
     await renderPage();
 
     const row = findRow('Vals på Bakfoten');
-    await click(clickButton('Vals', row));
+    const styleButton = row.querySelector<HTMLButtonElement>('button[aria-label^="Redigera dansstil"]');
+    expect(styleButton).toBeTruthy();
+    await click(styleButton!);
 
     const dialog = document.body.querySelector('[role="dialog"]')!;
     expect(dialog).toBeTruthy();
@@ -241,7 +243,7 @@ describe('AdminLibraryPage', () => {
     await click(clickButton('Omanalysera'));
 
     const button = clickButton('Omanalysera');
-    const bar = closestWithText(button, 'markerade');
+    const bar = closestWithText(button, 'valda');
     const alert = bar.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Omanalysera: 1 av 1 misslyckades');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
@@ -311,7 +313,7 @@ describe('AdminLibraryPage', () => {
 
     await click(clickButton('Omanalysera'));
 
-    let bar = closestWithText(clickButton('Omanalysera'), 'markerade');
+    let bar = closestWithText(clickButton('Omanalysera'), 'valda');
     expect(bar.querySelector('[role="alert"]')).toBeTruthy();
 
     const checkbox2 = findRow('Polska i Skogen').querySelector('input[type="checkbox"]') as HTMLInputElement;
@@ -320,7 +322,7 @@ describe('AdminLibraryPage', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    bar = closestWithText(clickButton('Omanalysera'), 'markerade');
+    bar = closestWithText(clickButton('Omanalysera'), 'valda');
     expect(bar.querySelector('[role="alert"]')).toBeFalsy();
   });
 });

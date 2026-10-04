@@ -6,11 +6,11 @@ import {
 } from '@/api/generated/admin-albums/admin-albums';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
-import { FilterBar } from '@/admin/components/FilterBar';
 import { Pagination } from '@/admin/components/Pagination';
 import { Modal } from '@/admin/components/Modal';
 import { TextInput } from '@/admin/components/forms/TextInput';
-import { Button, InlineError, LoadError } from '@/ui';
+import { FormField } from '@/admin/components/forms/FormField';
+import { Button, Card, InlineError, LoadError } from '@/ui';
 import { toast } from '@/admin/components/toastEmitter';
 
 interface AlbumRow {
@@ -25,6 +25,8 @@ interface AlbumPageData {
   items: AlbumRow[];
   total: number;
 }
+
+const fieldClass = 'min-h-11 border-[rgb(var(--color-border-strong))] text-[15px]';
 
 export function AdminAlbumsPage() {
   const [params, setParams] = useSearchParams();
@@ -98,60 +100,70 @@ export function AdminAlbumsPage() {
       key: 'name',
       header: 'Album',
       render: (a) => (
-        <span className="font-medium text-[rgb(var(--color-text))]">{a.name}</span>
-      ),
-    },
-    {
-      key: 'artist',
-      header: 'Artist',
-      render: (a) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">{a.artistName ?? '-'}</span>
+        <div>
+          <p className="text-[15px] font-semibold text-[rgb(var(--color-text))]">{a.name}</p>
+          <p className="text-[13px] text-[rgb(var(--color-text-muted))]">{a.artistName ?? '-'}</p>
+        </div>
       ),
     },
     {
       key: 'trackCount',
       header: 'Spår',
       render: (a) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">{a.trackCount ?? '-'}</span>
+        <span className="text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">{a.trackCount ?? '-'}</span>
       ),
     },
     {
       key: 'release',
       header: 'Utgivning',
       render: (a) => (
-        <span className="text-xs text-[rgb(var(--color-text-muted))]">{a.releaseDate ?? '-'}</span>
+        <span className="text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">{a.releaseDate ?? '-'}</span>
       ),
     },
     {
       key: 'actions',
       header: '',
       render: (a) => (
-        <button
-          type="button"
-          onClick={() => { setRejectModal(a); setRejectError(null); }}
-          className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:underline"
-        >
-          Radera & blockera
-        </button>
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setRejectModal(a); setRejectError(null); }}
+          >
+            Radera & blockera
+          </Button>
+        </div>
       ),
-      className: 'w-20',
+      className: 'w-44',
     },
   ];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">Album</h1>
+    <div className="space-y-5">
+      <header>
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Album
+        </h1>
+        <p className="mt-1 text-[15px] text-[rgb(var(--color-text-muted))]">
+          Alla album i biblioteket. Radera och blockera ett album för att ta bort dess väntande spår.
+        </p>
+      </header>
 
-      <FilterBar>
-        <div className="flex-1 min-w-50">
+      <Card className="flex flex-wrap items-end gap-3 px-4 py-3">
+        <div className="min-w-50 flex-1">
+          <label htmlFor="albums-search" className="sr-only">
+            Sök album
+          </label>
           <TextInput
+            id="albums-search"
             type="search"
-            placeholder="Sök album..."
+            placeholder="Sök album…"
             value={search}
             onChange={(e) => updateParam('search', e.target.value)}
+            className={fieldClass}
           />
         </div>
-      </FilterBar>
+      </Card>
 
       {loadError && <LoadError message={loadError} onRetry={fetchData} />}
 
@@ -179,28 +191,29 @@ export function AdminAlbumsPage() {
         onClose={() => { setRejectModal(null); setRejectReason(''); }}
         title="Radera & blockera album"
       >
-        <p className="text-sm text-[rgb(var(--color-text))]">
+        <p className="text-[15px] text-[rgb(var(--color-text))]">
           Radera <strong>{rejectModal?.name}</strong> och blockera albumet? Väntande spår raderas.
         </p>
-        <div className="mt-3">
-          <TextInput
-            placeholder="Orsak (valfritt)"
-            value={rejectReason}
-            onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
-          />
+        <div className="mt-4">
+          <FormField label="Orsak (valfritt)" htmlFor="album-reject-reason">
+            <TextInput
+              id="album-reject-reason"
+              value={rejectReason}
+              onChange={(e) => { setRejectReason(e.target.value); setRejectError(null); }}
+              className={fieldClass}
+            />
+          </FormField>
         </div>
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-5 space-y-3">
           {rejectError && <InlineError>{rejectError}</InlineError>}
-          <Button variant="ghost" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
-            Avbryt
-          </Button>
-          <Button
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleReject}
-          >
-            Radera & blockera
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
+              Avbryt
+            </Button>
+            <Button variant="danger" onClick={handleReject}>
+              Radera & blockera
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
