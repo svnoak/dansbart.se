@@ -5,6 +5,7 @@ import { useTheme } from '@/theme/useTheme';
 import { StarMarkIcon } from '@/icons';
 import { StylePill } from '@/components/TrackRow/StylePill';
 import { stylePillState } from '@/components/TrackRow/stylePillState';
+import { SheetMusicLink } from '@/components/TrackRow/SheetMusicLink';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import type { PlaybackSource } from '@/player/embedUrl';
 
@@ -68,6 +69,7 @@ export function TrackInfo({
           <div className="hidden md:flex items-center gap-2 min-w-0">
             <StylePill style={currentTrack.danceStyle} state={state} />
             {tempo && <span className="text-[13px] text-[rgb(var(--color-text-muted))]">{tempo}</span>}
+            <SheetMusicLink track={currentTrack} variant="chip" />
             {activeSource === 'youtube' && (
               <span className="text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]">{time}</span>
             )}

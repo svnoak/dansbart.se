@@ -16,6 +16,7 @@ import { UnavailableLabel } from './TrackRow/UnavailableLabel';
 import { requestLocalFile } from '@/library/requestLocalFile';
 import { useMissingLocalFile } from '@/library/useMissingLocalFile';
 import { StyleBadge } from './TrackRow/StyleBadge';
+import { SheetMusicLink } from './TrackRow/SheetMusicLink';
 import { TrackActionsModal } from './TrackRow/TrackActionsModal';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
 import type { ExtraMenuItem } from './TrackRow/trackRowMenuItems';
@@ -137,9 +138,12 @@ export function TrackRow({
           <p className="truncate text-[15px] font-bold leading-snug text-[rgb(var(--color-text))]">
             {track.title ?? 'Okänd låt'}
           </p>
-          <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">
-            {track.artistName ?? 'Okänd artist'}
-            {showAlbum && track.albumTitle ? ` · ${track.albumTitle}` : ''}
+          <p className="flex min-w-0 items-center gap-1.5 text-[13px] text-[rgb(var(--color-text-muted))]">
+            <span className="truncate">
+              {track.artistName ?? 'Okänd artist'}
+              {showAlbum && track.albumTitle ? ` · ${track.albumTitle}` : ''}
+            </span>
+            <SheetMusicLink track={track} className="shrink-0" />
           </p>
           {badges}
         </div>
