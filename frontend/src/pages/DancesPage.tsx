@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { httpClient } from '@/api/http-client';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getPrimaryTrack, getDanceTracks } from '@/api/generated/dances/dances';
+import { EmptyState, InlineError, LoadError, RowSkeleton } from '@/ui';
+import { ChevronRightIcon, PlayIcon, StarMarkIcon } from '@/icons';
+import { StylePill } from '@/components/TrackRow/StylePill';
+import { getStyleColor } from '@/styles/danceStyleColors';
+import { useTheme } from '@/theme/useTheme';
+import { usePlayer } from '@/player/usePlayer';
 
 type DanceDto = {
   id?: string;
@@ -26,14 +32,57 @@ function getDances(
   });
   return httpClient(`/api/dances?${q}`, opts);
 }
-import { InlineError, LoadError } from '@/ui';
-import { PlayIcon } from '@/icons';
-import { usePlayer } from '@/player/usePlayer';
 
 const PAGE_SIZE = 20;
 
+function trackCountLabel(count: number | undefined): string {
+  const n = count ?? 0;
+  return n === 1 ? '1 låt' : `${n.toLocaleString('sv-SE')} låtar`;
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M14 5h5v5" />
+      <path d="M19 5l-9 9" />
+      <path d="M17 14v4a1 1 0 01-1 1H6a1 1 0 01-1-1V8a1 1 0 011-1h4" />
+    </svg>
+  );
+}
+
 export function DancesPage() {
   const { play } = usePlayer();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
   const style = searchParams.get('style') ?? '';
@@ -194,39 +243,80 @@ export function DancesPage() {
     }
   }
 
+  function chipStyle(styleName: string, active: boolean): CSSProperties | undefined {
+    if (!active) return undefined;
+    const color = getStyleColor(styleName);
+    return {
+      backgroundColor: isDark ? color.bgDark : color.bg,
+      color: isDark ? color.textDark : color.text,
+    };
+  }
+
+  const chipBase =
+    'inline-flex min-h-9 items-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
+  const chipInactive =
+    'border border-[rgb(var(--color-border))] bg-transparent text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]';
+  const chipInk =
+    'border border-transparent bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]';
+  const chipStyled = 'border border-transparent';
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">Danser</h1>
-
-      <input
-        type="text"
-        defaultValue={q}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Sök dans..."
-        className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 py-2 text-sm text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-accent))] focus:outline-none"
-      />
-
-      <div className="min-w-40">
-        <label htmlFor="dance-style-filter" className="text-xs font-medium text-[rgb(var(--color-text-muted))] mb-1 block">
-          Dansstil
-        </label>
-        <select
-          id="dance-style-filter"
-          value={style}
-          onChange={(e) => setStyle(e.target.value)}
-          className="min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-sm text-[rgb(var(--color-text))] focus:outline-none focus-visible:border-[rgb(var(--color-accent))]"
-          aria-label="Filtrera på dansstil"
-        >
-          <option value="">Alla dansstilar</option>
-          {styles.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+      <div className="space-y-2">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+          Danser
+        </h1>
+        <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
+          Namngivna danser med dansbeskrivning. Varje dans hör till en dansstil och har de låtar
+          som dansare kopplat till den.
+        </p>
       </div>
 
-      <p className="text-sm text-[rgb(var(--color-text-muted))]">
-        {total.toLocaleString('sv-SE')} danser
-      </p>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-muted))]">
+          <SearchIcon className="h-5 w-5" />
+        </span>
+        <input
+          type="search"
+          defaultValue={q}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Sök dans…"
+          aria-label="Sök dans"
+          className="h-12 w-full rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] pl-12 pr-5 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+        />
+      </div>
+
+      <div role="group" aria-label="Filtrera på dansstil" className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          aria-pressed={style === ''}
+          onClick={() => setStyle('')}
+          className={`${chipBase} ${style === '' ? chipInk : chipInactive}`}
+        >
+          Alla
+        </button>
+        {styles.map((s) => {
+          const active = style === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setStyle(s)}
+              className={`${chipBase} ${active ? chipStyled : chipInactive}`}
+              style={chipStyle(s, active)}
+            >
+              {s}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[15px] font-semibold text-[rgb(var(--color-text-muted))]">
+          {total.toLocaleString('sv-SE')} danser
+        </h2>
+      </div>
 
       {error ? (
         <LoadError
@@ -235,58 +325,126 @@ export function DancesPage() {
         />
       ) : (
         <>
-          {loading && dances.length === 0 && (
-            <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>
-          )}
+          {loading && dances.length === 0 && <RowSkeleton rows={5} label="Laddar danser" />}
 
           {!loading && dances.length === 0 && (
-            <p className="text-[rgb(var(--color-text-muted))]">Inga danser hittades.</p>
+            <EmptyState
+              icon={<StarMarkIcon className="h-7 w-7" aria-hidden />}
+              title="Inga danser hittades"
+              description="Prova ett annat sökord eller en annan dansstil."
+            />
           )}
 
-          <ul className="space-y-1">
-            {dances.map((dance) => (
-              <li key={dance.id} className="flex items-stretch gap-2">
-                <button
-                  type="button"
-                  aria-label={`Spela ${dance.name}`}
-                  disabled={playingId === dance.id}
-                  onClick={() => dance.id && handlePlayDance(dance.id)}
-                  className="flex shrink-0 items-center justify-center rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-3 hover:border-[rgb(var(--color-accent))]/50 hover:bg-[rgb(var(--color-accent-muted))]/20 transition-colors disabled:opacity-50"
-                >
-                  <PlayIcon className="h-4 w-4 text-[rgb(var(--color-accent))]" aria-hidden />
-                </button>
-                <div className="flex flex-1 items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 hover:bg-[rgb(var(--color-border))]/30 transition-colors">
-                  <Link
-                    to={`/dance/${dance.id}`}
-                    className="flex-1 text-sm font-medium text-[rgb(var(--color-text))] hover:text-[rgb(var(--color-accent))]"
+          {dances.length > 0 && (
+            <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
+              {dances.map((dance) => {
+                const color = getStyleColor(dance.danceType);
+                const hasTracks = (dance.confirmedTrackCount ?? 0) > 0;
+                const playStyle: CSSProperties = {
+                  backgroundColor: isDark ? color.bgDark : color.bg,
+                  color: isDark ? color.textDark : color.text,
+                };
+                const metaParts = [dance.danceType, dance.music].filter(
+                  (p): p is string => typeof p === 'string' && p.length > 0,
+                );
+                return (
+                  <li
+                    key={dance.id}
+                    className="border-b border-[rgb(var(--color-border))] last:border-b-0"
                   >
-                    {dance.name}
-                  </Link>
-                  <span className="shrink-0 text-xs text-[rgb(var(--color-text-muted))]">
-                    {dance.confirmedTrackCount === 1
-                      ? '1 låt'
-                      : `${dance.confirmedTrackCount ?? 0} låtar`}
-                  </span>
-                  {dance.danceDescriptionUrl && (
-                    <a
-                      href={dance.danceDescriptionUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 text-xs text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))] underline underline-offset-2"
-                    >
-                      ACLA
-                    </a>
-                  )}
-                </div>
-                <InlineError>{playErrors[dance.id ?? '']}</InlineError>
-              </li>
-            ))}
-          </ul>
+                    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 px-2 py-2.5">
+                      {/* Slot 1: play control in the style colour */}
+                      <div className="row-span-2 md:row-span-1 flex items-center">
+                        {hasTracks ? (
+                          <button
+                            type="button"
+                            aria-label={`Spela ${dance.name}`}
+                            disabled={playingId === dance.id}
+                            onClick={() => dance.id && handlePlayDance(dance.id)}
+                            style={playStyle}
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-50"
+                          >
+                            <PlayIcon className="ml-0.5 h-5 w-5" aria-hidden />
+                          </button>
+                        ) : (
+                          <span
+                            aria-hidden
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-dashed border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text-muted))]"
+                          >
+                            <PlayIcon className="ml-0.5 h-5 w-5" aria-hidden />
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Slot 2: name and meta line */}
+                      <div className="col-start-2 min-w-0 flex flex-col">
+                        <Link
+                          to={`/dance/${dance.id}`}
+                          className="truncate text-[15px] font-bold leading-snug text-[rgb(var(--color-text))] hover:underline"
+                        >
+                          {dance.name}
+                        </Link>
+                        <p className="flex min-w-0 flex-wrap items-center gap-x-1 text-[13px] text-[rgb(var(--color-text-muted))]">
+                          {metaParts.map((part, i) => (
+                            <span key={part} className="truncate">
+                              {i > 0 && <span aria-hidden> · </span>}
+                              {part}
+                            </span>
+                          ))}
+                          {dance.danceDescriptionUrl && (
+                            <>
+                              {metaParts.length > 0 && <span aria-hidden> · </span>}
+                              <a
+                                href={dance.danceDescriptionUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="Dansbeskrivning, öppnas i ny flik"
+                                className="inline-flex min-h-6 items-center gap-1 text-[rgb(var(--color-link))] hover:underline"
+                              >
+                                Dansbeskrivning
+                                <ExternalLinkIcon className="h-3.5 w-3.5" />
+                              </a>
+                            </>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Slot 3: style pill and track count */}
+                      <div className="col-start-2 row-start-2 md:col-start-3 md:row-start-1 flex items-center gap-2.5 min-w-0">
+                        {dance.danceType && (
+                          <StylePill style={dance.danceType} state="confirmed" />
+                        )}
+                        <span className="text-[13px] text-[rgb(var(--color-text-muted))] md:w-24 truncate">
+                          {hasTracks ? trackCountLabel(dance.confirmedTrackCount) : 'Inga låtar ännu'}
+                        </span>
+                      </div>
+
+                      {/* Slot 4: open */}
+                      <div className="col-start-3 row-span-2 md:col-start-4 md:row-span-1 flex shrink-0 items-center">
+                        <Link
+                          to={`/dance/${dance.id}`}
+                          aria-label={`Öppna ${dance.name}`}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                        >
+                          <ChevronRightIcon className="h-5 w-5" aria-hidden />
+                        </Link>
+                      </div>
+                    </div>
+                    {playErrors[dance.id ?? ''] && (
+                      <div className="px-4 pb-3">
+                        <InlineError>{playErrors[dance.id ?? '']}</InlineError>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
           {hasMore && (
             <div ref={sentinelRef} className="flex justify-center py-4">
               {loadingMore && (
-                <p className="text-[rgb(var(--color-text-muted))]">Laddar fler...</p>
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">Laddar fler…</p>
               )}
             </div>
           )}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { httpClient } from '@/api/http-client';
 import {
@@ -10,10 +10,27 @@ import {
 import { getVoterId } from '@/utils/voter';
 import { useAuth } from '@/auth/useAuth';
 import { usePlayer } from '@/player/usePlayer';
-import { IconButton, InlineError, SectionTitle, Button } from '@/ui';
-import { BackArrowIcon, StarIcon, StarFilledIcon } from '@/icons';
+import { useTheme } from '@/theme/useTheme';
+import {
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  InlineError,
+  RowSkeleton,
+  SectionTitle,
+} from '@/ui';
+import {
+  ChevronLeftIcon,
+  MusicNoteIcon,
+  PlayIcon,
+  PlusIcon,
+  StarIcon,
+  StarFilledIcon,
+  StarMarkIcon,
+} from '@/icons';
 import { TrackRow } from '@/components/TrackRow';
-import { PlayButton } from '@/components/TrackRow/PlayButton';
+import { StylePill } from '@/components/TrackRow/StylePill';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { SuggestTrackModal } from './dance/SuggestTrackModal';
 
@@ -62,11 +79,119 @@ function deleteVote(danceId: string, trackId: string): Promise<unknown> {
 
 const REC_PAGE_SIZE = 5;
 
+const LIST_CLASS =
+  'overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]';
+
+function trackCountLabel(n: number): string {
+  return n === 1 ? '1 låt' : `${n.toLocaleString('sv-SE')} låtar`;
+}
+
+function ExternalLinkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M14 5h5v5" />
+      <path d="M19 5l-9 9" />
+      <path d="M17 14v4a1 1 0 01-1 1H6a1 1 0 01-1-1V8a1 1 0 011-1h4" />
+    </svg>
+  );
+}
+
+function ThumbsUpIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M7 11v10H4a1 1 0 01-1-1v-8a1 1 0 011-1h3z" />
+      <path d="M7 11l4.5-8a2.5 2.5 0 012.5 2.5V9h5a2 2 0 012 2.3l-1.2 7A2 2 0 0117.8 20H7" />
+    </svg>
+  );
+}
+
+function ThumbsDownIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M17 13V3h3a1 1 0 011 1v8a1 1 0 01-1 1h-3z" />
+      <path d="M17 13l-4.5 8a2.5 2.5 0 01-2.5-2.5V15H5a2 2 0 01-2-2.3l1.2-7A2 2 0 016.2 4H17" />
+    </svg>
+  );
+}
+
+interface VoteButtonsProps {
+  vote: 'up' | 'down' | undefined;
+  voting: boolean;
+  onVote: (vote: 'up' | 'down') => void;
+}
+
+/** The two vote buttons of a recommendation row: "Passar" and "Passar inte". */
+function VoteButtons({ vote, voting, onVote }: VoteButtonsProps) {
+  const base =
+    'inline-flex h-10 items-center gap-1.5 rounded-[var(--radius)] border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-50';
+  const idle =
+    'border-[rgb(var(--color-border-strong))] bg-transparent text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]';
+  const pressed =
+    'border-[rgb(var(--color-selected))] bg-[rgb(var(--color-selected))]/10 text-[rgb(var(--color-selected))]';
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label="Rösta på förslaget">
+      <button
+        type="button"
+        aria-pressed={vote === 'up'}
+        aria-busy={voting}
+        disabled={voting}
+        onClick={() => onVote('up')}
+        className={`${base} ${vote === 'up' ? pressed : idle}`}
+      >
+        <ThumbsUpIcon className="h-4 w-4" />
+        Passar
+      </button>
+      <button
+        type="button"
+        aria-pressed={vote === 'down'}
+        aria-busy={voting}
+        disabled={voting}
+        onClick={() => onVote('down')}
+        className={`${base} ${vote === 'down' ? pressed : idle}`}
+      >
+        <ThumbsDownIcon className="h-4 w-4" />
+        <span className="whitespace-nowrap">Passar inte</span>
+      </button>
+    </div>
+  );
+}
+
 export function DancePage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { play, currentTrack, isPlaying } = usePlayer();
+  const { play } = usePlayer();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   const [dance, setDance] = useState<DanceDto | null>(null);
   const [confirmedTracks, setConfirmedTracks] = useState<TrackListDto[]>([]);
@@ -234,14 +359,32 @@ export function DancePage() {
     setSuggestedIds((prev) => new Set([...prev, trackId]));
   };
 
+  const backLink = (
+    <Link
+      to="/dances"
+      className="inline-flex min-h-11 items-center gap-1 pr-2 text-[15px] font-medium text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] rounded-[var(--radius)]"
+    >
+      <ChevronLeftIcon className="h-5 w-5" aria-hidden />
+      Danser
+    </Link>
+  );
+
   if (loading) {
-    return <p className="text-[rgb(var(--color-text-muted))]">Laddar...</p>;
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <RowSkeleton rows={4} label="Laddar dans" />
+      </div>
+    );
   }
   if (error || !dance) {
     return (
-      <p className="text-red-600" role="alert">
-        {error ?? 'Dansen hittades inte.'}
-      </p>
+      <div className="space-y-6">
+        {backLink}
+        <p className="text-[15px] text-[rgb(var(--color-error))]" role="alert">
+          {error ?? 'Dansen hittades inte.'}
+        </p>
+      </div>
     );
   }
 
@@ -251,116 +394,208 @@ export function DancePage() {
     return 0;
   });
   const hasMoreRecs = recommendations.length < recTotal;
+  const playableTrack =
+    allTracks.find((t) => t.id === primaryTrackId) ?? allTracks[0] ?? null;
+
+  const color = getStyleColor(dance.danceType);
+  const tileStyle: CSSProperties = {
+    backgroundColor: isDark ? color.bgDark : color.bg,
+    color: isDark ? color.textDark : color.text,
+  };
+
+  const metaParts: { key: string; node: ReactNode }[] = [];
+  if (dance.danceType) {
+    metaParts.push({
+      key: 'style',
+      node: <StylePill style={dance.danceType} state="confirmed" />,
+    });
+  }
+  if (dance.music) {
+    metaParts.push({ key: 'music', node: <span>Musik: {dance.music}</span> });
+  }
+  metaParts.push({ key: 'count', node: <span>{trackCountLabel(allTracks.length)}</span> });
+  if (dance.danceDescriptionUrl) {
+    metaParts.push({
+      key: 'acla',
+      node: (
+        <a
+          href={dance.danceDescriptionUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Dansbeskrivning hos ACLA, öppnas i ny flik"
+          className="inline-flex min-h-6 items-center gap-1 text-[rgb(var(--color-link))] hover:underline"
+        >
+          Dansbeskrivning hos ACLA
+          <ExternalLinkIcon className="h-4 w-4" />
+        </a>
+      ),
+    });
+  }
 
   return (
-    <div className="space-y-6">
-      <IconButton aria-label="Tillbaka" onClick={() => navigate(-1)}>
-        <BackArrowIcon className="h-5 w-5" aria-hidden />
-      </IconButton>
+    <div className="space-y-8">
+      {backLink}
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">{dance.name}</h1>
-            {dance.danceDescriptionUrl && (
-              <a
-                href={dance.danceDescriptionUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Dansbeskrivning (ACLA)"
-                className="text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-accent))]"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                  <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clipRule="evenodd" />
-                  <path fillRule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clipRule="evenodd" />
-                </svg>
-              </a>
-            )}
-          </div>
-          {dance.danceType && (
-            <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">{dance.danceType}</p>
-          )}
-          {dance.music && (
-            <p className="mt-0.5 text-xs text-[rgb(var(--color-text-muted))]">Musik: {dance.music}</p>
-          )}
+      <Card className="flex flex-col gap-6 p-7 sm:flex-row sm:items-start">
+        <div
+          className="flex h-28 w-28 shrink-0 items-center justify-center rounded-[var(--radius-lg)]"
+          style={tileStyle}
+          aria-hidden
+        >
+          <StarMarkIcon className="h-[60px] w-[60px]" aria-hidden />
         </div>
 
-        {isAuthenticated && (
-          <Button variant="secondary" size="sm" onClick={() => setShowSuggest(true)}>
-            Föreslå låt
-          </Button>
-        )}
-      </div>
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="space-y-2">
+            <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+              {dance.name}
+            </h1>
+            <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] text-[rgb(var(--color-text-muted))]">
+              {metaParts.map((part, i) => (
+                <span key={part.key} className="inline-flex items-center gap-x-1.5">
+                  {i > 0 && <span aria-hidden> · </span>}
+                  {part.node}
+                </span>
+              ))}
+            </p>
+          </div>
 
-      <section aria-labelledby="tracks-heading">
-        <SectionTitle id="tracks-heading">Låtar ({allTracks.length})</SectionTitle>
-        {allTracks.length === 0 ? (
-          <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">
-            Inga låtar länkade till denna dans ännu.
-            {isAuthenticated && ' Föreslå en låt ovan!'}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="primary"
+              disabled={!playableTrack}
+              onClick={() => playableTrack && play(playableTrack, allTracks)}
+            >
+              <PlayIcon className="h-4 w-4" aria-hidden />
+              Spela
+            </Button>
+            {isAuthenticated && (
+              <Button variant="secondary" onClick={() => setShowSuggest(true)}>
+                <PlusIcon className="h-4 w-4" aria-hidden />
+                Föreslå låt
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <section aria-labelledby="tracks-heading" className="space-y-3">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <SectionTitle id="tracks-heading">Låtar</SectionTitle>
+            <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+              {trackCountLabel(allTracks.length)} · den primära spelas först
+            </p>
+          </div>
+          <p className="text-sm text-[rgb(var(--color-text-muted))]">
+            Låtar som dansare kopplat till dansen. Den primära låten är den som spelas från
+            Danser-listan.
           </p>
+        </div>
+        {allTracks.length === 0 ? (
+          <EmptyState
+            icon={<MusicNoteIcon className="h-7 w-7" aria-hidden />}
+            title="Inga låtar ännu"
+            description={
+              isAuthenticated
+                ? 'Ingen har kopplat en låt till dansen ännu. Föreslå en låt, eller rösta Passar på ett förslag nedan.'
+                : 'Ingen har kopplat en låt till dansen ännu. Rösta Passar på ett förslag nedan.'
+            }
+            action={
+              isAuthenticated ? (
+                <Button variant="secondary" onClick={() => setShowSuggest(true)}>
+                  <PlusIcon className="h-4 w-4" aria-hidden />
+                  Föreslå låt
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
-          <ul className="mt-2 divide-y divide-[rgb(var(--color-border))]">
-            {allTracks.map((track) => (
-              <li key={track.id} className="flex items-center">
-                <div className="flex-1 min-w-0">
-                  <TrackRow track={track} contextTracks={allTracks} />
-                </div>
-                {isAuthenticated && (
+          <ul className={LIST_CLASS}>
+            {allTracks.map((track) => {
+              const isPrimary = primaryTrackId === track.id;
+              const action = isAuthenticated ? (
+                isPrimary ? (
                   <button
                     type="button"
-                    aria-label={primaryTrackId === track.id ? 'Ta bort som primär låt' : 'Sätt som primär låt'}
+                    aria-label="Ta bort som primär låt"
+                    aria-pressed="true"
                     onClick={() => track.id && handleSetPrimary(track.id)}
-                    className="shrink-0 px-2 py-2.5 transition-colors hover:text-yellow-400"
+                    className="-my-2 inline-flex min-h-11 items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
                   >
-                    {primaryTrackId === track.id ? (
-                      <StarFilledIcon className="h-4 w-4 text-yellow-400" aria-hidden />
-                    ) : (
-                      <StarIcon className="h-4 w-4 text-[rgb(var(--color-text-muted))]" aria-hidden />
-                    )}
+                    <span className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-[rgb(var(--color-selected))]/10 px-2.5 text-[13px] font-semibold text-[rgb(var(--color-selected))]">
+                      <StarFilledIcon className="h-3.5 w-3.5" aria-hidden />
+                      Primär låt
+                    </span>
                   </button>
-                )}
-              </li>
-            ))}
+                ) : (
+                  <IconButton
+                    aria-label="Sätt som primär låt"
+                    onClick={() => track.id && handleSetPrimary(track.id)}
+                  >
+                    <StarIcon className="h-5 w-5 text-[rgb(var(--color-text-muted))]" aria-hidden />
+                  </IconButton>
+                )
+              ) : undefined;
+              return (
+                <li key={track.id}>
+                  <TrackRow track={track} contextTracks={allTracks} action={action} />
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
       {dance.danceType && (
-        <section aria-labelledby="recommendations-heading">
-          <SectionTitle id="recommendations-heading">Förslag på musik</SectionTitle>
+        <section aria-labelledby="recommendations-heading" className="space-y-3">
+          <div className="space-y-1">
+            <SectionTitle id="recommendations-heading">Förslag på musik</SectionTitle>
+            <p className="text-sm text-[rgb(var(--color-text-muted))]">
+              Låtar i {dance.danceType} i passande tempo som ingen kopplat till dansen ännu. Rösta
+              Passar så flyttas låten upp till listan ovan.
+            </p>
+          </div>
 
           {recommendations.length === 0 && !recLoading ? (
-            <p className="mt-2 text-sm text-[rgb(var(--color-text-muted))]">Inga förslag hittades.</p>
+            <EmptyState
+              icon={<MusicNoteIcon className="h-7 w-7" aria-hidden />}
+              title="Inga förslag hittades"
+              description={`Det finns inga fler låtar i ${dance.danceType} i passande tempo att föreslå just nu.`}
+            />
           ) : (
             <>
-              <ul className="mt-2 divide-y divide-[rgb(var(--color-border))]">
-                {recommendations.map((track) => (
-                  <RecommendationRow
-                    key={track.id}
-                    track={track}
-                    vote={votes[track.id ?? '']}
-                    voteError={voteErrors[track.id ?? '']}
-                    voting={votingTrackIds.has(track.id ?? '')}
-                    currentTrackId={currentTrack?.id}
-                    isPlaying={isPlaying}
-                    contextTracks={recommendations}
-                    onPlay={play}
-                    onVote={handleVote}
-                  />
-                ))}
+              <ul className={LIST_CLASS}>
+                {recommendations.map((track) => {
+                  const trackId = track.id ?? '';
+                  return (
+                    <li key={track.id}>
+                      <TrackRow
+                        track={track}
+                        contextTracks={recommendations}
+                        action={
+                          <VoteButtons
+                            vote={votes[trackId]}
+                            voting={votingTrackIds.has(trackId)}
+                            onVote={(v) => handleVote(track, v)}
+                          />
+                        }
+                      />
+                      {voteErrors[trackId] && (
+                        <div className="border-b border-[rgb(var(--color-border))] px-4 py-2">
+                          <InlineError>{voteErrors[trackId]}</InlineError>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
 
               {hasMoreRecs && (
-                <div className="mt-3 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={loadMoreRecs}
-                    disabled={recLoading}
-                    className="text-sm text-[rgb(var(--color-accent))] hover:underline disabled:opacity-50"
-                  >
-                    {recLoading ? 'Laddar...' : 'Visa fler'}
-                  </button>
+                <div className="flex justify-center">
+                  <Button variant="outline" onClick={loadMoreRecs} disabled={recLoading}>
+                    {recLoading ? 'Laddar…' : 'Visa fler förslag'}
+                  </Button>
                 </div>
               )}
             </>
@@ -380,79 +615,5 @@ export function DancePage() {
         />
       )}
     </div>
-  );
-}
-
-interface RecommendationRowProps {
-  track: TrackListDto;
-  vote: 'up' | 'down' | undefined;
-  voteError: string | undefined;
-  voting: boolean;
-  currentTrackId: string | undefined;
-  isPlaying: boolean;
-  contextTracks: TrackListDto[];
-  onPlay: (track: TrackListDto, context?: TrackListDto[]) => void;
-  onVote: (track: TrackListDto, vote: 'up' | 'down') => void;
-}
-
-function RecommendationRow({
-  track,
-  vote,
-  voteError,
-  voting,
-  currentTrackId,
-  isPlaying,
-  contextTracks,
-  onPlay,
-  onVote,
-}: RecommendationRowProps) {
-  const styleColor = getStyleColor(track.danceStyle);
-  const isCurrent = currentTrackId === track.id;
-
-  return (
-    <li className="flex items-center gap-2 px-2 py-2.5">
-      <PlayButton
-        track={track}
-        isCurrent={isCurrent}
-        isPlaying={isPlaying}
-        styleColor={styleColor}
-        onPlay={() => onPlay(track, contextTracks)}
-      />
-      <div className="min-w-0 flex-1 flex flex-col">
-        <p className="truncate text-sm font-bold text-[rgb(var(--color-text))]">
-          {track.title ?? 'Okänd låt'}
-        </p>
-        <p className="truncate text-xs text-[rgb(var(--color-text-muted))]">
-          {track.artistName ?? 'Okänd artist'}
-        </p>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          type="button"
-          aria-label="Bra förslag"
-          aria-busy={voting}
-          disabled={voting}
-          onClick={() => onVote(track, 'up')}
-          className={`rounded p-1 transition-colors hover:bg-[rgb(var(--color-border))]/40 disabled:opacity-50 ${vote === 'up' ? 'text-green-500' : 'text-[rgb(var(--color-text-muted))]'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
-            <path d="M1 8.25a1.25 1.25 0 112.5 0v7.5a1.25 1.25 0 11-2.5 0v-7.5zM11 3V1.7c0-.268.14-.526.395-.607A2 2 0 0114 3c0 .995-.182 1.948-.514 2.826-.204.54.166 1.174.744 1.174h2.52c1.243 0 2.261 1.01 2.146 2.247a23.864 23.864 0 01-1.341 5.974C17.153 16.323 16.07 17 14.9 17h-3.192a3 3 0 01-1.341-.317l-2.734-1.366A3 3 0 006.292 15H5V8h.963c.685 0 1.258-.483 1.612-1.068a4.011 4.011 0 012.166-1.73c.432-.143.853-.386 1.011-.814.16-.432.248-.9.248-1.388z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          aria-label="Dåligt förslag"
-          aria-busy={voting}
-          disabled={voting}
-          onClick={() => onVote(track, 'down')}
-          className={`rounded p-1 transition-colors hover:bg-[rgb(var(--color-border))]/40 disabled:opacity-50 ${vote === 'down' ? 'text-red-500' : 'text-[rgb(var(--color-text-muted))]'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
-            <path d="M18.905 12.75a1.25 1.25 0 11-2.5 0v-7.5a1.25 1.25 0 012.5 0v7.5zM8.905 17v1.3c0 .268-.14.526-.395.607A2 2 0 015.905 17c0-.995.182-1.948.514-2.826.204-.54-.166-1.174-.744-1.174h-2.52c-1.243 0-2.261-1.01-2.146-2.247.193-2.016.76-3.957 1.341-5.974C2.752 3.678 3.835 3 5.005 3h3.192a3 3 0 011.341.317l2.734 1.366A3 3 0 0013.613 5h1.292v7h-.963c-.685 0-1.258.483-1.612 1.068a4.011 4.011 0 01-2.166 1.73c-.432.143-.853.386-1.011.814-.16.432-.248.9-.248 1.388z" />
-          </svg>
-        </button>
-      </div>
-      <InlineError>{voteError}</InlineError>
-    </li>
   );
 }
