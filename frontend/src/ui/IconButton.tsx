@@ -15,7 +15,7 @@ export function IconButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      className={`inline-flex items-center justify-center min-w-11 min-h-11 rounded-[var(--radius)] text-[rgb(var(--color-text))] hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))] disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center justify-center min-w-11 min-h-11 rounded-full text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-50 ${className}`}
       {...props}
     >
       {children}

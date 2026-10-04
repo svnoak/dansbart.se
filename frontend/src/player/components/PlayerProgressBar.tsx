@@ -142,7 +142,7 @@ export function PlayerProgressBar({
         <div className="absolute top-0 left-0 right-0 h-4 pointer-events-none select-none">
           {/* Bar 1 is always at the very start */}
           <span
-            className="absolute text-[10px] font-mono text-[rgb(var(--color-text-muted))]/60"
+            className="absolute text-[11px] tabular-nums text-[rgb(var(--color-text-muted))]"
             style={{ left: '0%' }}
           >
             1
@@ -152,7 +152,7 @@ export function PlayerProgressBar({
             return shouldShowLabel(barNum) ? (
               <span
                 key={i}
-                className="absolute text-[10px] font-mono text-[rgb(var(--color-text-muted))]/60 -translate-x-1/2"
+                className="absolute text-[11px] tabular-nums text-[rgb(var(--color-text-muted))] -translate-x-1/2"
                 style={{ left: `${tick.left}%` }}
               >
                 {barNum}
@@ -170,7 +170,7 @@ export function PlayerProgressBar({
         >
           {/* Filled progress */}
           <div
-            className={`absolute inset-y-0 left-0 rounded-l-full bg-[rgb(var(--color-accent))]/40 pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
+            className={`absolute inset-y-0 left-0 rounded-l-full bg-[rgb(var(--color-now-playing))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
             style={{ width: `${progressPercent}%` }}
           />
 
@@ -178,21 +178,21 @@ export function PlayerProgressBar({
           {barTicks.map((tick, i) => (
             <div
               key={i}
-              className="absolute top-0 bottom-0 w-px bg-[rgb(var(--color-text-muted))]/30 pointer-events-none"
+              className="absolute top-0 bottom-0 w-px bg-[rgb(var(--color-border-strong))] pointer-events-none"
               style={{ left: `${tick.left}%` }}
             />
           ))}
 
           {/* Playhead line */}
           <div
-            className={`absolute top-0 bottom-0 w-0.5 -translate-x-1/2 z-10 pointer-events-none bg-[rgb(var(--color-accent))] shadow${!isDragging ? ' transition-[left] duration-200 ease-linear' : ''}`}
+            className={`absolute top-0 bottom-0 w-0.5 -translate-x-1/2 z-10 pointer-events-none bg-[rgb(var(--color-now-playing))] shadow${!isDragging ? ' transition-[left] duration-200 ease-linear' : ''}`}
             style={{ left: `${progressPercent}%` }}
           />
 
           {/* Hover tooltip */}
           {hoveredBar !== null && (
             <div
-              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
+              className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded-[var(--radius)] px-2 py-1 text-[13px] tabular-nums text-[rgb(var(--color-text))] shadow whitespace-nowrap"
               style={{ left: `${hoverX}px` }}
             >
               Takt {hoveredBar + 2}
@@ -211,13 +211,13 @@ export function PlayerProgressBar({
         className={`relative w-full h-2 rounded-full bg-[rgb(var(--color-border))] ${seekable ? 'cursor-pointer' : ''}`}
       >
         <div
-          className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
+          className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-now-playing))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
           style={{ width: `${progressPercent}%` }}
         />
         {barTicks.map((tick, i) => (
           <div
             key={i}
-            className="absolute top-0 bottom-0 w-px bg-[rgb(var(--color-text-muted))]/30 pointer-events-none"
+            className="absolute top-0 bottom-0 w-px bg-[rgb(var(--color-border-strong))] pointer-events-none"
             style={{ left: `${tick.left}%` }}
           />
         ))}
@@ -233,7 +233,7 @@ export function PlayerProgressBar({
         className={`relative w-full h-2 rounded-full bg-[rgb(var(--color-border))] ${seekable ? 'cursor-pointer' : ''}`}
       >
         <div
-          className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
+          className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-now-playing))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -260,18 +260,18 @@ export function PlayerProgressBar({
       onMouseLeave={handleTimeMouseLeave}
     >
       <div
-        className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-accent))]/40 pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
+        className={`absolute inset-y-0 left-0 rounded-full bg-[rgb(var(--color-now-playing))] pointer-events-none${!isDragging ? ' transition-[width] duration-200 ease-linear' : ''}`}
         style={{ width: `${progressPercent}%` }}
       />
       <div
         className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 pointer-events-none${!isDragging ? ' transition-[left] duration-200 ease-linear' : ''}`}
         style={{ left: `${progressPercent}%` }}
       >
-        <div className="h-3 w-3 bg-[rgb(var(--color-accent))] rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="h-3 w-3 bg-[rgb(var(--color-now-playing))] rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
       {hoverTime !== null && (
         <div
-          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded px-1.5 py-0.5 text-[10px] font-mono text-[rgb(var(--color-text))] shadow whitespace-nowrap"
+          className="absolute -top-7 -translate-x-1/2 z-20 pointer-events-none bg-[rgb(var(--color-bg-elevated))] border border-[rgb(var(--color-border))] rounded-[var(--radius)] px-2 py-1 text-[13px] tabular-nums text-[rgb(var(--color-text))] shadow whitespace-nowrap"
           style={{ left: `${hoverX}px` }}
         >
           {formatDurationMs(hoverTime)}

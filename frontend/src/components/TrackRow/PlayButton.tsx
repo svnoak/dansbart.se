@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { PlayIcon, PauseIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
+import type { CSSProperties } from 'react';
+import { PlayIcon, PauseIcon } from '@/icons';
+import { useTheme } from '@/theme/useTheme';
 import type { DanceStyleColor } from '@/styles/danceStyleColors';
 import type { TrackListDto } from '@/api/models/trackListDto';
 
@@ -11,21 +12,11 @@ interface PlayButtonProps {
   onPlay: () => void;
 }
 
-type Platform = 'SPOTIFY' | 'YOUTUBE';
-
-const PLATFORM_ICON = {
-  SPOTIFY: { Icon: SpotifyIcon, label: 'Spotify' },
-  YOUTUBE: { Icon: YouTubeIcon, label: 'YouTube' },
-} as const;
-
-function getSourcePlatforms(track: TrackListDto): Platform[] {
-  if (!track.playbackLinks?.length) return [];
-  const platforms: Platform[] = [];
-  if (track.playbackLinks.some((l) => l.platform?.toUpperCase() === 'SPOTIFY')) platforms.push('SPOTIFY');
-  if (track.playbackLinks.some((l) => l.platform?.toUpperCase() === 'YOUTUBE')) platforms.push('YOUTUBE');
-  return platforms;
-}
-
+/**
+ * The row's leading control. It carries the style colour so a list scans by
+ * colour, a dashed outline when the style is only a guess, and an amber ring
+ * when this is the track that is playing.
+ */
 export function PlayButton({
   track,
   isCurrent,
@@ -33,45 +24,34 @@ export function PlayButton({
   styleColor,
   onPlay,
 }: PlayButtonProps) {
-  const [hovered, setHovered] = useState(false);
-  const platforms = getSourcePlatforms(track);
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const playing = isCurrent && isPlaying;
+  const hasStyle = typeof track.danceStyle === 'string' && track.danceStyle.length > 0;
+  const isGuess = hasStyle && (track.confidence ?? 0) < 1;
+
+  const fg = isDark ? styleColor.textDark : styleColor.text;
+  const bg = isDark ? styleColor.bgDark : styleColor.bg;
+
+  const style: CSSProperties = isGuess || !hasStyle
+    ? { color: hasStyle ? fg : 'rgb(var(--color-text-muted))', border: `1.5px dashed ${hasStyle ? fg : 'rgb(var(--color-border-strong))'}`, backgroundColor: 'transparent' }
+    : { backgroundColor: bg, color: fg };
 
   return (
-    <div className="flex shrink-0 flex-col items-center gap-0.5">
-      <button
-        type="button"
-        onClick={onPlay}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className="flex h-12 w-12 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))]"
-        style={{
-          backgroundColor: playing ? styleColor.bg : 'rgb(var(--color-bg-elevated))',
-          color: playing ? styleColor.text : 'rgb(var(--color-text))',
-          border: hovered || playing ? `1.5px solid ${styleColor.text}` : '1.5px solid rgb(var(--color-border))',
-        }}
-        aria-label={playing ? 'Pausa' : 'Spela'}
-      >
-        {playing ? (
-          <PauseIcon className="h-5 w-5" aria-hidden />
-        ) : (
-          <PlayIcon className="h-5 w-5 ml-0.5" aria-hidden />
-        )}
-      </button>
-      {platforms.length > 0 && (
-        <div className="flex items-center gap-1">
-          {platforms.map((platform) => {
-            const { Icon } = PLATFORM_ICON[platform];
-            return (
-              <Icon
-                key={platform}
-                className="h-3 w-3 text-[rgb(var(--color-text-muted))]"
-                aria-hidden
-              />
-            );
-          })}
-        </div>
+    <button
+      type="button"
+      onClick={onPlay}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] ${
+        isCurrent ? 'ring-[3px] ring-[rgb(var(--color-now-playing))]' : ''
+      }`}
+      style={style}
+      aria-label={playing ? 'Pausa' : 'Spela'}
+    >
+      {playing ? (
+        <PauseIcon className="h-5 w-5" aria-hidden />
+      ) : (
+        <PlayIcon className="h-5 w-5 ml-0.5" aria-hidden />
       )}
-    </div>
+    </button>
   );
 }

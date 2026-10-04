@@ -66,7 +66,7 @@ export function QueuePanel({
                 e.stopPropagation();
                 onClearQueue();
               }}
-              className="text-xs text-[rgb(var(--color-accent))] hover:underline"
+              className="min-h-9 text-[13px] font-semibold text-[rgb(var(--color-link))] hover:underline"
             >
               Rensa kö
             </button>
@@ -138,7 +138,7 @@ function QueueItem({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={`flex items-center gap-2 rounded-[var(--radius)] py-2 px-2 hover:bg-[rgb(var(--color-border))]/30 ${
-        isDragOver ? 'border-t-2 border-[rgb(var(--color-accent))]' : 'border-t-2 border-transparent'
+        isDragOver ? 'border-t-2 border-[rgb(var(--color-link))]' : 'border-t-2 border-transparent'
       }`}
     >
       <span
@@ -153,7 +153,7 @@ function QueueItem({
         onClick={onPlay}
         className="min-w-0 flex-1 text-left"
       >
-        <span className={`block text-sm truncate ${isCurrent ? 'font-medium text-[rgb(var(--color-accent))]' : 'text-[rgb(var(--color-text))]'}`}>
+        <span className={`block text-sm truncate ${isCurrent ? 'font-semibold text-[rgb(var(--color-now-playing-text))]' : 'text-[rgb(var(--color-text))]'}`}>
           {track.title ?? 'Okänd låt'}
         </span>
         <span className="block text-xs truncate text-[rgb(var(--color-text-muted))]">

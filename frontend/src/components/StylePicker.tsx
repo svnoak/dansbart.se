@@ -39,8 +39,8 @@ export function StylePicker({
           if (e.target.value) onSelect(e.target.value);
         }}
         className={
-          'w-full border px-4 py-3 md:py-2 rounded text-sm md:text-xs font-medium ' +
-          (compactClassName ?? 'bg-white border-gray-300 text-gray-900')
+          'w-full min-h-11 border px-4 py-3 rounded-[var(--radius)] text-sm font-medium ' +
+          (compactClassName ?? 'bg-[rgb(var(--color-bg-elevated))] border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text))]')
         }
       >
         <option value="" disabled>
@@ -56,16 +56,16 @@ export function StylePicker({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onSelect(o.value)}
           disabled={disabled}
-          className={`py-6 px-2 rounded-xl font-bold text-sm shadow-sm transition-all border bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:border-[rgb(var(--color-accent))]/50 hover:text-[rgb(var(--color-accent))] hover:shadow-md active:scale-95 break-words leading-tight disabled:opacity-50 ${
+          className={`min-h-14 px-2 rounded-[var(--radius-lg)] font-semibold text-[15px] transition-colors border bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] active:scale-[0.98] break-words leading-tight disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] ${
             o.bold
-              ? 'border-[rgb(var(--color-accent))] text-[rgb(var(--color-accent))]'
+              ? 'border-2 border-[rgb(var(--color-link))] text-[rgb(var(--color-link))]'
               : 'border-[rgb(var(--color-border))]'
           }`}
         >

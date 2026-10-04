@@ -388,23 +388,6 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   };
 
   // --- Color classes by mode ---
-  const colorClasses =
-    mode === 'addition'
-      ? {
-          bg: 'bg-teal-600',
-          bgDark: 'bg-teal-700',
-          btn: 'bg-teal-800 hover:bg-teal-900',
-          text: 'text-teal-700',
-          textLight: 'text-teal-200',
-        }
-      : {
-          bg: 'bg-indigo-600',
-          bgDark: 'bg-indigo-700',
-          btn: 'bg-indigo-800 hover:bg-indigo-900',
-          text: 'text-indigo-700',
-          textLight: 'text-indigo-300',
-        };
-
   // --- Compact style/tempo picker (native <select>, reusable) ---
   const renderStylePicker = (
     placeholder: string,
@@ -412,7 +395,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
     compactClassName: string,
     ariaLabel: string,
   ) => (
-    <div className="mb-3 md:mb-2">
+    <div className="mb-3">
       <StylePicker
         presentation="compact"
         placeholder={placeholder}
@@ -432,38 +415,38 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
   return (
     <div className={inline ? 'w-full' : 'fixed right-0 z-[130] px-4 pointer-events-none'} style={inline ? undefined : { bottom: `${bottomOffset ?? 96}px` }}>
       <div className={inline ? 'w-full' : 'max-w-2xl min-w-[320px] md:min-w-[360px] ml-auto pointer-events-auto'}>
-        <div className="w-full relative z-0 mb-2 shadow-xl rounded-xl font-sans animate-in fade-in duration-200">
+        <div className="w-full relative z-0 mb-2 shadow-[var(--color-card-shadow)] rounded-[var(--radius-lg)] animate-in fade-in duration-200">
           {/* VERIFY: style + tempo */}
           {step === 'verify' && (
-            <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
-              <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Stämmer detta?</p>
-                <p className="font-bold text-base md:text-sm">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))] flex justify-between items-center gap-4">
+              <div className="text-sm leading-snug">
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">Stämmer detta?</p>
+                <p className="font-bold text-[15px]">
                   {track?.danceStyle}
                   {track?.subStyle && track.subStyle !== track.danceStyle && (
-                    <span className="font-normal opacity-90"> ({track.subStyle})</span>
+                    <span className="font-normal text-[rgb(var(--color-text-muted))]"> ({track.subStyle})</span>
                   )}
                   {' '}&bull; {tempoLabel}
                 </p>
                 {showFirstTimeHint && (
-                  <p className="text-[10px] md:text-[9px] opacity-70 mt-1">
+                  <p className="text-[13px] text-[rgb(var(--color-text-muted))] mt-1">
                     Din bekräftelse hjälper andra hitta låten.
                   </p>
                 )}
               </div>
-              <div className="flex gap-3 md:gap-2">
+              <div className="flex gap-2">
                 <button
                   onClick={startCorrection}
-                  className="bg-indigo-800 hover:bg-indigo-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
                 >
-                  Nej
+                  Nej, ändra
                 </button>
                 <button
                   onClick={confirmVerify}
                   disabled={isSubmitting}
-                  className="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors disabled:opacity-50"
                 >
-                  Ja
+                  Ja, stämmer
                 </button>
               </div>
             </div>
@@ -471,35 +454,35 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* VERIFY: style only (no tempo) */}
           {step === 'verify-style-only' && (
-            <div className="bg-indigo-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
-              <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Är detta en</p>
-                <p className="font-bold text-base md:text-sm">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))] flex justify-between items-center gap-4">
+              <div className="text-sm leading-snug">
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">Är detta en</p>
+                <p className="font-bold text-[15px]">
                   {track?.danceStyle}
                   {track?.subStyle && track.subStyle !== track.danceStyle && (
-                    <span className="font-normal opacity-90"> ({track.subStyle})</span>
+                    <span className="font-normal text-[rgb(var(--color-text-muted))]"> ({track.subStyle})</span>
                   )}
                   ?
                 </p>
                 {showFirstTimeHint && (
-                  <p className="text-[10px] md:text-[9px] opacity-70 mt-1">
+                  <p className="text-[13px] text-[rgb(var(--color-text-muted))] mt-1">
                     Din bekräftelse hjälper andra hitta låten.
                   </p>
                 )}
               </div>
-              <div className="flex gap-3 md:gap-2">
+              <div className="flex gap-2">
                 <button
                   onClick={rejectStyleOnly}
-                  className="bg-indigo-800 hover:bg-indigo-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
                 >
-                  Nej
+                  Nej, ändra
                 </button>
                 <button
                   onClick={confirmStyleOnly}
                   disabled={isSubmitting}
-                  className="bg-white text-indigo-700 hover:bg-indigo-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors disabled:opacity-50"
                 >
-                  Ja
+                  Ja, stämmer
                 </button>
               </div>
             </div>
@@ -507,33 +490,33 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* CONFIRM SECONDARY */}
           {step === 'confirm-secondary' && pendingSecondary && (
-            <div className="bg-amber-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
-              <div className="text-sm md:text-xs leading-tight">
-                <p className="opacity-80">Kan man även dansa</p>
-                <p className="font-bold text-base md:text-sm">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))] flex justify-between items-center gap-4">
+              <div className="text-sm leading-snug">
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))]">Kan man även dansa</p>
+                <p className="font-bold text-[15px]">
                   {pendingSecondary.danceStyle}
                   {pendingSecondary.subStyle &&
                     pendingSecondary.subStyle !== pendingSecondary.danceStyle && (
-                      <span className="font-normal opacity-90">
+                      <span className="font-normal text-[rgb(var(--color-text-muted))]">
                         {' '}({pendingSecondary.subStyle})
                       </span>
                     )}
                   ?
                 </p>
               </div>
-              <div className="flex gap-3 md:gap-2">
+              <div className="flex gap-2">
                 <button
                   onClick={rejectSecondary}
-                  className="bg-amber-800 hover:bg-amber-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
                 >
                   Nej
                 </button>
                 <button
                   onClick={confirmSecondaryHandler}
                   disabled={isSubmitting}
-                  className="bg-white text-amber-700 hover:bg-amber-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors disabled:opacity-50"
                 >
-                  Ja!
+                  Ja
                 </button>
               </div>
             </div>
@@ -541,19 +524,19 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* ASK MAIN: no style at all */}
           {step === 'ask-main' && (
-            <div className="bg-purple-600 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
-              <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))]">
+              <p className="text-sm font-semibold mb-3">
                 Vad kan man dansa?
               </p>
               {showFirstTimeHint && (
-                <p className="text-[10px] md:text-[9px] opacity-70 -mt-2 mb-3 md:mb-2">
+                <p className="text-[13px] text-[rgb(var(--color-text-muted))] -mt-2 mb-3">
                   Din bekräftelse hjälper andra hitta låten.
                 </p>
               )}
               {renderStylePicker(
                 correction.main || 'Välj kategori...',
                 styleVote.mainCategories.map((c) => ({ label: c, value: c })),
-                'bg-purple-700 border-purple-500 text-white',
+                'bg-[rgb(var(--color-bg-elevated))] border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text))]',
                 'Välj dansstil',
               )}
               <div className="flex justify-end gap-2">
@@ -563,7 +546,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                     if (track?.id) markSeen(track.id);
                     setStep('hidden');
                   }}
-                  className="bg-purple-800 hover:bg-purple-900 text-sm md:text-[10px] font-bold px-4 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
                 >
                   Vet ej
                 </button>
@@ -573,9 +556,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* ASK SUB */}
           {step === 'ask-sub' && (
-            <div className="bg-purple-600 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))]">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-semibold">
                   Vilken typ av {correction.main}?
                 </p>
                 <button
@@ -583,7 +566,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                     setStep('ask-main');
                     setCorrection((c) => ({ ...c, main: '' }));
                   }}
-                  className="text-xs md:text-[10px] text-purple-300 hover:text-white"
+                  className="min-h-11 px-2 text-sm font-semibold text-[rgb(var(--color-link))] hover:underline"
                 >
                   &larr; Ändra
                 </button>
@@ -598,7 +581,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   },
                   ...currentSubStyles.map((s) => ({ label: s, value: s })),
                 ],
-                'bg-purple-700 border-purple-500 text-white',
+                'bg-[rgb(var(--color-bg-elevated))] border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text))]',
                 `Välj variant av ${correction.main}`,
               )}
             </div>
@@ -606,9 +589,9 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* ASK TEMPO */}
           {step === 'ask-tempo' && (
-            <div className="bg-purple-700 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
-              <div className="flex justify-between items-center mb-3 md:mb-2">
-                <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))]">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-semibold">
                   Hur snabb är {correction.style}n?
                 </p>
                 <button
@@ -620,7 +603,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                       setStep(currentSubStyles.length ? 'ask-sub' : 'ask-main');
                     }
                   }}
-                  className="text-xs md:text-[10px] text-purple-300 hover:text-white"
+                  className="min-h-11 px-2 text-sm font-semibold text-[rgb(var(--color-link))] hover:underline"
                 >
                   &larr; Tillbaka
                 </button>
@@ -628,7 +611,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <TempoPicker
                 presentation="compact"
                 onSelect={(key) => submitTempoSelection(key)}
-                compactClassName="bg-purple-800 border-white/20 text-white"
+                compactClassName="bg-[rgb(var(--color-bg-elevated))] border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text))]"
               />
             </div>
           )}
@@ -636,21 +619,21 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {/* FIX MAIN */}
           {step === 'fix-main' && (
             <div
-              className={`${colorClasses.bg} p-4 md:p-3 pb-5 md:pb-4 text-white relative rounded-xl`}
+              className={`rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))] relative`}
             >
               <button
                 onClick={() => setStep('menu')}
-                className={`absolute top-2 md:top-1 right-3 md:right-2 text-sm md:text-xs ${colorClasses.textLight}`}
+                className="absolute top-1 right-2 min-h-11 px-2 text-sm font-semibold text-[rgb(var(--color-link))] hover:underline"
               >
                 &larr; Tillbaka
               </button>
-              <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
+              <p className="text-sm font-semibold mb-3">
                 {mode === 'addition' ? 'Lägg till stil' : 'Korrekt dansstil'}
               </p>
               {renderStylePicker(
                 correction.main || 'Välj kategori...',
                 styleVote.mainCategories.map((c) => ({ label: c, value: c })),
-                `w-full ${colorClasses.btn} border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs`,
+                'bg-[rgb(var(--color-bg-elevated))] border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text))]',
                 'Välj dansstil',
               )}
             </div>
@@ -659,15 +642,15 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {/* FIX SUB */}
           {step === 'fix-sub' && (
             <div
-              className={`${colorClasses.bg} p-4 md:p-3 pb-5 md:pb-4 text-white relative rounded-xl`}
+              className={`rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))] relative`}
             >
               <button
                 onClick={() => setStep('fix-main')}
-                className={`absolute top-2 md:top-1 right-3 md:right-2 text-sm md:text-xs ${colorClasses.textLight}`}
+                className="absolute top-1 right-2 min-h-11 px-2 text-sm font-semibold text-[rgb(var(--color-link))] hover:underline"
               >
                 &larr; Tillbaka
               </button>
-              <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold mb-3 md:mb-2">
+              <p className="text-sm font-semibold mb-3">
                 Vilken typ av {correction.main}?
               </p>
               {renderStylePicker(
@@ -680,7 +663,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                   },
                   ...currentSubStyles.map((s) => ({ label: s, value: s })),
                 ],
-                `w-full ${colorClasses.btn} border border-white/20 text-white px-4 py-3 md:py-2 rounded text-sm md:text-xs`,
+                'bg-[rgb(var(--color-bg-elevated))] border-[rgb(var(--color-border-strong))] text-[rgb(var(--color-text))]',
                 `Välj variant av ${correction.main}`,
               )}
             </div>
@@ -689,32 +672,32 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
           {/* FIX TEMPO */}
           {step === 'fix-tempo' && (
             <div
-              className={`${colorClasses.bgDark} p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl`}
+              className={`rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))]`}
             >
-              <div className="flex justify-between items-center mb-3 md:mb-2">
-                <p className="text-xs md:text-[10px] opacity-80 uppercase font-bold">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-semibold">
                   Är {correction.style || 'dansen'} {tempoLabel}?
                 </p>
                 <button
                   onClick={() =>
                     setStep(currentSubStyles.length ? 'fix-sub' : 'fix-main')
                   }
-                  className={`text-xs md:text-[10px] hover:text-white ${colorClasses.textLight}`}
+                  className="min-h-11 px-2 text-sm font-semibold text-[rgb(var(--color-link))] hover:underline"
                 >
                   &larr; Tillbaka
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-3 md:gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => submitFix('half')}
-                  className={`${colorClasses.btn} border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors`}
+                  className={`min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors py-2 px-2 leading-tight`}
                 >
                   Den är <br />
                   långsammare
                 </button>
                 <button
                   onClick={() => submitFix('ok')}
-                  className={`bg-white hover:bg-gray-50 font-bold text-sm md:text-[10px] py-3 md:py-2 rounded ${colorClasses.text}`}
+                  className={`min-h-11 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors disabled:opacity-50 py-2 px-2 leading-tight`}
                 >
                   Ja, det är
                   <br />
@@ -722,7 +705,7 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
                 </button>
                 <button
                   onClick={() => submitFix('double')}
-                  className={`${colorClasses.btn} border border-white/20 text-sm md:text-[10px] py-3 md:py-2 rounded leading-tight transition-colors`}
+                  className={`min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors py-2 px-2 leading-tight`}
                 >
                   Den är
                   <br />
@@ -734,12 +717,12 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* MENU */}
           {step === 'menu' && (
-            <div className="bg-gray-800 p-4 md:p-3 pb-5 md:pb-4 text-white rounded-xl">
-              <div className="flex justify-between items-center mb-3 md:mb-2">
-                <p className="text-sm md:text-xs font-bold text-gray-400 uppercase">Redigera</p>
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))]">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-semibold">Ändra</p>
                 <button
                   onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'close', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false }); if (track?.id) markSeen(track.id); setStep('hidden'); }}
-                  className="text-gray-400 hover:text-white text-sm md:text-xs"
+                  className="min-h-11 px-2 text-sm font-semibold text-[rgb(var(--color-link))] hover:underline"
                 >
                   Stäng
                 </button>
@@ -747,20 +730,20 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
               <div className="grid grid-cols-2 gap-3 md:gap-2">
                 <button
                   onClick={startCorrection}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm md:text-xs font-bold py-3 md:py-2 rounded flex flex-col items-center"
+                  className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors py-2 flex flex-col items-center"
                 >
-                  <span>Rätta Huvudstil</span>
-                  <span className="text-xs md:text-[9px] opacity-75 font-normal">
-                    Detta är fel
+                  <span>Rätta dansstilen</span>
+                  <span className="text-[13px] font-normal text-[rgb(var(--color-text-muted))]">
+                    Den här stämmer inte
                   </span>
                 </button>
                 <button
                   onClick={startAddition}
-                  className="bg-teal-600 hover:bg-teal-700 text-white text-sm md:text-xs font-bold py-3 md:py-2 rounded flex flex-col items-center"
+                  className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors py-2 flex flex-col items-center"
                 >
-                  <span>Lägg till Alt.</span>
-                  <span className="text-xs md:text-[9px] opacity-75 font-normal">
-                    Detta är också...
+                  <span>Lägg till en stil</span>
+                  <span className="text-[13px] font-normal text-[rgb(var(--color-text-muted))]">
+                    Den går också att dansa
                   </span>
                 </button>
               </div>
@@ -769,10 +752,10 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* SUCCESS */}
           {step === 'success' && (
-            <div className="bg-green-600 p-5 md:p-4 text-white flex justify-center items-center rounded-xl">
-              <div className="text-base md:text-sm font-bold flex items-center gap-2">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))] flex items-center gap-3">
+              <div className="text-[15px] font-bold flex items-center gap-2">
                 <svg
-                  className="w-6 h-6 md:w-5 md:h-5"
+                  className="w-6 h-6 text-[rgb(var(--color-success))]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -791,24 +774,24 @@ export function SmartNudge({ track, isPlaying, bottomOffset, inline, mobilePlaye
 
           {/* BONUS */}
           {step === 'bonus' && (
-            <div className="bg-teal-600 p-4 md:p-3 pb-5 md:pb-4 text-white flex justify-between items-center gap-6 md:gap-4 rounded-xl">
-              <div className="text-sm md:text-xs leading-tight">
-                <p className="font-bold opacity-90">
+            <div className="rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-4 text-[rgb(var(--color-text))] flex justify-between items-center gap-4">
+              <div className="text-sm leading-snug">
+                <p className="font-bold">
                   Tack! Går det att
                   <br />
                   dansa något annat?
                 </p>
               </div>
-              <div className="flex gap-3 md:gap-2">
+              <div className="flex gap-2">
                 <button
                   onClick={() => { trackAnalytics('nudge_dismissed', track?.id, { reason: 'nej', step: stepRef.current, mobilePlayerOpen: mobilePlayerOpen ?? false }); setStep('hidden'); }}
-                  className="bg-teal-800 hover:bg-teal-900 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-transparent px-4 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
                 >
                   Nej
                 </button>
                 <button
                   onClick={startAddition}
-                  className="bg-white text-teal-700 hover:bg-teal-50 text-sm md:text-[10px] font-bold px-5 py-2.5 md:px-3 md:py-1.5 rounded transition-colors"
+                  className="min-h-11 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors disabled:opacity-50"
                 >
                   + Lägg till
                 </button>

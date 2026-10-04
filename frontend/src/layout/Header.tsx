@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IconButton } from '@/ui';
+import { MoonIcon, StarMarkIcon, SunIcon } from '@/icons';
 import { useAuth } from '@/auth/useAuth';
+import { useTheme } from '@/theme/useTheme';
 
 const DISCOURSE_URL = import.meta.env.VITE_DISCOURSE_URL ?? 'https://folkhub.se';
 
@@ -29,16 +31,16 @@ function UserMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Användarmeny"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-[15px] font-bold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors"
       >
         {initial}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-48 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-56 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)] z-50">
           {!!user?.confirmedTrackCount && (
             <>
-              <p className="px-4 py-2 text-xs text-[rgb(var(--color-text-muted))]">
+              <p className="px-4 py-2 text-[13px] text-[rgb(var(--color-text-muted))]">
                 Du har hjälpt bekräfta {user.confirmedTrackCount}{' '}
                 {user.confirmedTrackCount === 1 ? 'låt' : 'låtar'}
               </p>
@@ -49,7 +51,7 @@ function UserMenu() {
             <Link
               to="/admin/library"
               onClick={() => setOpen(false)}
-              className="flex w-full items-center px-4 py-2 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50 transition-colors"
+              className="flex w-full items-center min-h-11 px-4 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
             >
               Admin
             </Link>
@@ -59,7 +61,7 @@ function UserMenu() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
-            className="flex w-full items-center px-4 py-2 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50 transition-colors"
+            className="flex w-full items-center min-h-11 px-4 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
           >
             Gå till forum
           </a>
@@ -67,7 +69,7 @@ function UserMenu() {
           <button
             type="button"
             onClick={() => { setOpen(false); logout(); }}
-            className="flex w-full items-center px-4 py-2 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]/50 transition-colors"
+            className="flex w-full items-center min-h-11 px-4 text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] transition-colors"
           >
             Logga ut
           </button>
@@ -77,48 +79,37 @@ function UserMenu() {
   );
 }
 
-export function Header({
-  onOpenSidebar,
-  showMenuButton,
-}: {
-  onOpenSidebar?: () => void;
-  showMenuButton?: boolean;
-}) {
+/**
+ * The site header: the mark, the theme toggle and the account control.
+ * Navigation lives in the sidebar on desktop and the tab bar on a phone.
+ */
+export function Header() {
   const { isAuthenticated, isLoading, login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="sticky top-0 z-20 border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
-      <div className="flex items-center gap-3 px-4 py-3">
-        {showMenuButton && onOpenSidebar && (
-          <IconButton
-            aria-label="Öppna meny"
-            onClick={onOpenSidebar}
-            className="lg:hidden"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-              <path fillRule="evenodd" d="M3 6.75A.75.75 0 013.75 6h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 6.75zM3 12a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75A.75.75 0 013 12zm0 5.25a.75.75 0 01.75-.75h16.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
-            </svg>
-          </IconButton>
-        )}
+      <div className="flex h-16 items-center gap-3 px-4">
         <Link
           to="/"
-          className="flex shrink-0 items-center gap-2 text-[rgb(var(--color-text))] hover:opacity-90"
+          className="flex shrink-0 items-center gap-2.5 text-[rgb(var(--color-text))] hover:opacity-90"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[rgb(var(--color-text))] text-[rgb(var(--color-bg-elevated))] font-bold text-lg">
-            D
-          </span>
-          <span className="text-lg font-semibold">dansbart.se</span>
+          <StarMarkIcon className="h-8 w-8 text-[rgb(var(--color-link))]" aria-hidden />
+          <span className="text-lg font-bold">dansbart.se</span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-3">
-          {isAuthenticated && (
-            <Link
-              to="/mina-latar"
-              className="text-sm font-medium text-[rgb(var(--color-text))] hover:underline"
-            >
-              Mina låtar
-            </Link>
-          )}
+        <div className="ml-auto flex items-center gap-2">
+          <IconButton
+            aria-label={theme === 'dark' ? 'Byt till ljust tema' : 'Byt till mörkt tema'}
+            onClick={toggleTheme}
+            className="text-[rgb(var(--color-text-muted))]"
+          >
+            {theme === 'dark' ? (
+              <SunIcon className="h-5 w-5" aria-hidden />
+            ) : (
+              <MoonIcon className="h-5 w-5" aria-hidden />
+            )}
+          </IconButton>
           {!isLoading && (
             isAuthenticated
               ? <UserMenu />
@@ -126,7 +117,7 @@ export function Header({
                 <button
                   type="button"
                   onClick={login}
-                  className="rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                  className="min-h-11 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))] transition-colors"
                 >
                   Logga in
                 </button>

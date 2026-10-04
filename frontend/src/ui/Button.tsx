@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   children: ReactNode;
 }
@@ -15,14 +15,16 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center min-h-11 font-medium rounded-[var(--radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-accent))] disabled:opacity-50 disabled:pointer-events-none';
+    'inline-flex items-center justify-center gap-2 min-h-11 font-semibold rounded-[var(--radius)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-50 disabled:pointer-events-none';
   const variants = {
     primary:
       'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))] hover:bg-[rgb(var(--color-accent-hover))]',
     secondary:
-      'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-accent))] hover:opacity-90 border border-[rgb(var(--color-border))]',
+      'bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-border))]',
+    outline:
+      'bg-transparent text-[rgb(var(--color-text))] border border-[rgb(var(--color-border))] hover:bg-[rgb(var(--color-accent-muted))]',
     ghost:
-      'bg-transparent text-[rgb(var(--color-text))] hover:bg-black/5 border border-transparent',
+      'bg-transparent text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] border border-transparent',
     danger:
       'bg-[rgb(var(--color-error))] text-[rgb(var(--color-error-foreground))] hover:bg-[rgb(var(--color-error-hover))]',
   };
