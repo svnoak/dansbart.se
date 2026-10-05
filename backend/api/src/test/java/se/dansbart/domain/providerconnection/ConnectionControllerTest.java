@@ -40,6 +40,9 @@ class ConnectionControllerTest {
     private GoogleConnectionService googleConnectionService;
 
     @MockBean
+    private HiDriveConnectionService hiDriveConnectionService;
+
+    @MockBean
     private VoterContext voterContext;
 
     private final UUID userId = UUID.randomUUID();
@@ -68,7 +71,7 @@ class ConnectionControllerTest {
 
     @Test
     void startAnswersUnavailableWhenGoogleIsNotConfigured() throws Exception {
-        when(googleConnectionService.start(any(), any())).thenThrow(new GoogleNotConfiguredException());
+        when(googleConnectionService.start(any(), any())).thenThrow(new ProviderNotConfiguredException("GDRIVE"));
 
         mockMvc.perform(get("/api/connections/google/start").with(authentication(signedIn())))
             .andExpect(status().isServiceUnavailable());
@@ -124,5 +127,66 @@ class ConnectionControllerTest {
 
         verify(googleConnectionService).callback(isNull(), any(), any(), any(), any());
         verify(googleConnectionService, never()).start(any(), any());
+    }
+
+    @Test
+    void hiDriveStartRedirectsToHiDrive() throws Exception {
+        URI hiDriveUri = URI.create("https://my.hidrive.com/client/authorize?state=abc");
+        when(hiDriveConnectionService.start(any(), any())).thenReturn(hiDriveUri);
+
+        mockMvc.perform(get("/api/connections/hidrive/start").with(authentication(signedIn())))
+            .andExpect(status().isFound())
+            .andExpect(header().string("Location", hiDriveUri.toString()));
+
+        verifyNoInteractions(googleConnectionService);
+    }
+
+    @Test
+    void hiDriveStartNeedsASignedInPerson() throws Exception {
+        mockMvc.perform(get("/api/connections/hidrive/start"))
+            .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(hiDriveConnectionService);
+    }
+
+    @Test
+    void hiDriveStartAnswersUnavailableWhenHiDriveIsNotConfigured() throws Exception {
+        when(hiDriveConnectionService.start(any(), any())).thenThrow(new ProviderNotConfiguredException("HIDRIVE"));
+
+        mockMvc.perform(get("/api/connections/hidrive/start").with(authentication(signedIn())))
+            .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void hiDriveCallbackRedirectsByOutcome() throws Exception {
+        when(hiDriveConnectionService.callback(any(), any(), any(), any(), any()))
+            .thenReturn(CallbackOutcome.CONNECTED, CallbackOutcome.DECLINED,
+                CallbackOutcome.FAILED, CallbackOutcome.REJECTED);
+
+        String[] expected = {
+            SUCCESS_URL, SUCCESS_URL + "?anslutning=avbruten",
+            SUCCESS_URL + "?anslutning=misslyckades", SUCCESS_URL + "?anslutning=misslyckades"};
+        for (String location : expected) {
+            mockMvc.perform(get("/api/connections/hidrive/callback")
+                    .param("state", "s").param("code", "c")
+                    .with(authentication(signedIn())))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", location));
+        }
+        verifyNoInteractions(googleConnectionService);
+    }
+
+    @Test
+    void hiDriveCallbackWorksWithoutASignedInPerson() throws Exception {
+        when(hiDriveConnectionService.callback(any(), any(), any(), any(), any()))
+            .thenReturn(CallbackOutcome.REJECTED);
+
+        mockMvc.perform(get("/api/connections/hidrive/callback")
+                .param("state", "s").param("code", "c"))
+            .andExpect(status().isFound())
+            .andExpect(header().string("Location", SUCCESS_URL + "?anslutning=misslyckades"));
+
+        verify(hiDriveConnectionService).callback(isNull(), any(), any(), any(), any());
+        verify(hiDriveConnectionService, never()).start(any(), any());
     }
 }

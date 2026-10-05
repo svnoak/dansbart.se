@@ -62,7 +62,7 @@ class GoogleConnectionServiceTest {
         }
         cipher = new TokenCipher(Base64.getEncoder().encodeToString(keyBytes));
         service = new GoogleConnectionService(
-            connector, repository, cipher, Clock.fixed(NOW, ZoneOffset.UTC));
+            connector, new ConnectionTokenStore(repository, cipher, Clock.fixed(NOW, ZoneOffset.UTC)));
         session = new MockHttpSession();
         userId = UUID.randomUUID();
     }
@@ -124,7 +124,7 @@ class GoogleConnectionServiceTest {
         when(connector.isConfigured()).thenReturn(false);
 
         assertThatThrownBy(() -> service.start(userId, session))
-            .isInstanceOf(GoogleNotConfiguredException.class);
+            .isInstanceOf(ProviderNotConfiguredException.class);
 
         verify(connector, never()).authorizationUri(anyString(), anyString());
         assertThat(storedValues(session)).isEmpty();
@@ -294,7 +294,7 @@ class GoogleConnectionServiceTest {
     @Test
     void callbackReportsAFailedStoreWithoutAnEncryptionKey() {
         service = new GoogleConnectionService(
-            connector, repository, new TokenCipher(""), Clock.fixed(NOW, ZoneOffset.UTC));
+            connector, new ConnectionTokenStore(repository, new TokenCipher(""), Clock.fixed(NOW, ZoneOffset.UTC)));
         startAs(userId, session);
         when(connector.exchangeCode(eq(CODE), eq(verifier)))
             .thenReturn(new TokenGrant("access", 3600, REFRESH_TOKEN));

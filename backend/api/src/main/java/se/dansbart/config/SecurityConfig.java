@@ -52,6 +52,7 @@ public class SecurityConfig {
                 // SSO endpoints — must be accessible before authentication
                 .requestMatchers("/sso/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/connections/google/callback").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/connections/hidrive/callback").permitAll()
                 // Public endpoints
                 .requestMatchers(HttpMethod.GET, "/api/tracks/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/artists/**").permitAll()
