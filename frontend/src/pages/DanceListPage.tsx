@@ -754,7 +754,7 @@ export default function DanceListPage() {
                 >
                   <Card className="overflow-hidden">
                     {/* Entry header */}
-                    <div className="flex flex-wrap items-center gap-2 border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg))] p-3">
+                    <div className="flex flex-wrap items-center gap-2 border-b border-[rgb(var(--color-border))] p-3">
                       {canManage && (
                         <button
                           type="button"
