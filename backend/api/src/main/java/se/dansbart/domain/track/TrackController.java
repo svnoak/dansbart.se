@@ -82,11 +82,14 @@ public class TrackController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Search tracks by title")
+    @Operation(summary = "Search tracks by title. A logged-in person also gets their own library tracks, "
+        + "listed first; mine=true returns only those")
     public ResponseEntity<PageResponse<TrackListDto>> searchTracks(
             @RequestParam String q,
-            Pageable pageable) {
-        return ResponseEntity.ok(PageResponse.from(trackService.searchByTitleAsListDtos(q, pageable)));
+            @RequestParam(defaultValue = "false") boolean mine,
+            Pageable pageable,
+            @AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(PageResponse.from(trackService.searchByTitleAsListDtos(q, userId, mine, pageable)));
     }
 
     @GetMapping("/classify-queue")

@@ -207,6 +207,7 @@ export * from './rejectPendingArtist200';
 export * from './rejectRequest';
 export * from './rejectTrack200';
 export * from './removeFromBlocklist200';
+export * from './renameEntryRequest';
 export * from './reorderEntriesRequest';
 export * from './reorderTracksRequest';
 export * from './reportVersion200';

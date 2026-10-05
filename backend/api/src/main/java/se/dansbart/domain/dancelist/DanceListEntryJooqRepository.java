@@ -70,6 +70,10 @@ public class DanceListEntryJooqRepository {
         dsl.update(DANCE_LIST_ENTRIES).set(DANCE_LIST_ENTRIES.PLAY_MODE, playMode).where(DANCE_LIST_ENTRIES.ID.eq(entryId)).execute();
     }
 
+    public void updateFreeTextName(UUID entryId, String freeTextName) {
+        dsl.update(DANCE_LIST_ENTRIES).set(DANCE_LIST_ENTRIES.FREE_TEXT_NAME, freeTextName).where(DANCE_LIST_ENTRIES.ID.eq(entryId)).execute();
+    }
+
     public void delete(UUID entryId) {
         dsl.deleteFrom(DANCE_LIST_ENTRIES).where(DANCE_LIST_ENTRIES.ID.eq(entryId)).execute();
     }

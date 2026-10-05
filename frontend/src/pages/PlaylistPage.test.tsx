@@ -125,7 +125,8 @@ describe('PlaylistPage', () => {
     await act(async () => {
       menuButton?.click();
     });
-    const removeItem = Array.from(row.querySelectorAll('[role="menuitem"]')).find(
+    // The menu opens at the end of the document, not inside the row.
+    const removeItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
       (item) => item.textContent?.trim() === 'Ta bort från spellistan',
     ) as HTMLButtonElement | undefined;
     expect(removeItem).toBeDefined();

@@ -755,6 +755,36 @@
         }
       }
     },
+    "/api/dance-lists/{id}/entries/{entryId}/name": {
+      "put": {
+        "tags": ["Dance Lists"],
+        "summary": "Rename an entry. A dance from the site stays linked; the name is shown in its place",
+        "operationId": "renameEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RenameEntryRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/dance-lists/{id}/entries/{entryId}": {
       "put": {
         "tags": ["Dance Lists"],
@@ -4364,7 +4394,7 @@
     "/api/tracks/search": {
       "get": {
         "tags": ["Tracks"],
-        "summary": "Search tracks by title",
+        "summary": "Search tracks by title. A logged-in person also gets their own library tracks, listed first; mine=true returns only those",
         "operationId": "searchTracks",
         "parameters": [
           {
@@ -4372,6 +4402,12 @@
             "in": "query",
             "required": true,
             "schema": { "type": "string" }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false }
           },
           {
             "name": "pageable",
@@ -7205,6 +7241,10 @@
       "SetPlayModeRequest": {
         "type": "object",
         "properties": { "playMode": { "type": "string" } }
+      },
+      "RenameEntryRequest": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } }
       },
       "ReorderEntriesRequest": {
         "type": "object",

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth';
 import { useTheme } from '@/theme/useTheme';
-import { Badge, IconButton } from '@/ui';
-import { MoonIcon, StarMarkIcon, SunIcon } from '@/icons';
+import { Badge, IconButton, LogoMark } from '@/ui';
+import { MoonIcon, SunIcon } from '@/icons';
 
 /**
  * The backstage header: the same shape as the public header (h-16, white
@@ -43,7 +43,7 @@ export function AdminHeader({
           to="/admin/library"
           className="flex min-w-0 shrink-0 items-center gap-2.5 text-[rgb(var(--color-text))] hover:opacity-90"
         >
-          <StarMarkIcon className="h-8 w-8 shrink-0 text-[rgb(var(--color-link))]" aria-hidden />
+          <LogoMark />
           <span className="text-lg font-bold">dansbart.se</span>
           <Badge className="hidden sm:inline-flex">Backstage</Badge>
         </Link>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, IconButton, toast } from '@/ui';
+import { AnchoredMenu, Card, IconButton, menuItemClassName, toast } from '@/ui';
 import { usePlayer } from '@/player/usePlayer';
 import { useAuth } from '@/auth/useAuth';
 import { useFavorites } from '@/favorites/useFavorites';
@@ -45,6 +45,7 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const longPress = useLongPress(() => setOptionsOpen(true));
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const isCurrent = currentTrack?.id === track.id;
   const favorited = track.id != null && isFavorited(track.id);
 
@@ -140,96 +141,87 @@ export function TrackCard({ track, contextTracks, onApplyStyleFilter }: TrackCar
             <HeartIcon className="h-5 w-5 text-[rgb(var(--color-text-muted))]" aria-hidden />
           )}
         </IconButton>
-        <div className="relative">
+        <div>
           <IconButton
+            ref={menuButtonRef}
             aria-label="Mer"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
           >
             <MoreVerticalIcon className="w-5 h-5" aria-hidden />
           </IconButton>
-          {menuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                aria-hidden
-                onClick={() => setMenuOpen(false)}
-              />
-              <ul
-                className="absolute right-0 top-full z-20 mt-1 w-52 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 shadow-[var(--color-card-shadow)]"
-                role="menu"
+          <AnchoredMenu open={menuOpen} anchorRef={menuButtonRef} onClose={() => setMenuOpen(false)} width={208}>
+            <li role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClassName}
+                onClick={() => {
+                  addToQueue(track);
+                  setMenuOpen(false);
+                }}
               >
-                <li role="none">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full min-h-11 items-center px-4 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]"
-                    onClick={() => {
-                      addToQueue(track);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    Lägg i kö
-                  </button>
-                </li>
-                <li role="none">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full min-h-11 items-center px-4 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]"
-                    onClick={async () => {
-                      const url = `${window.location.origin}?track=${track.id ?? ''}`;
-                      try {
-                        await navigator.clipboard.writeText(url);
-                        toast('Länk kopierad');
-                      } catch {
-                        toast('Kunde inte kopiera länk', 'error');
-                      }
-                      setMenuOpen(false);
-                    }}
-                  >
-                    Dela
-                  </button>
-                </li>
-                {track.artistId && (
-                  <li role="none">
-                    <Link
-                      to={`/artist/${track.artistId}`}
-                      role="menuitem"
-                      className="flex w-full min-h-11 items-center px-4 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Gå till artist
-                    </Link>
-                  </li>
-                )}
-                {track.albumId && (
-                  <li role="none">
-                    <Link
-                      to={`/album/${track.albumId}`}
-                      role="menuitem"
-                      className="flex w-full min-h-11 items-center px-4 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Gå till album
-                    </Link>
-                  </li>
-                )}
-                <li role="none">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full min-h-11 items-center px-4 text-left text-sm text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]"
-                    onClick={() => {
-                      setFlagModalOpen(true);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    Rapportera problem
-                  </button>
-                </li>
-              </ul>
-            </>
-          )}
+                Lägg i kö
+              </button>
+            </li>
+            <li role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClassName}
+                onClick={async () => {
+                  const url = `${window.location.origin}?track=${track.id ?? ''}`;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    toast('Länk kopierad');
+                  } catch {
+                    toast('Kunde inte kopiera länk', 'error');
+                  }
+                  setMenuOpen(false);
+                }}
+              >
+                Dela
+              </button>
+            </li>
+            {track.artistId && (
+              <li role="none">
+                <Link
+                  to={`/artist/${track.artistId}`}
+                  role="menuitem"
+                  className={menuItemClassName}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Gå till artist
+                </Link>
+              </li>
+            )}
+            {track.albumId && (
+              <li role="none">
+                <Link
+                  to={`/album/${track.albumId}`}
+                  role="menuitem"
+                  className={menuItemClassName}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Gå till album
+                </Link>
+              </li>
+            )}
+            <li role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClassName}
+                onClick={() => {
+                  setFlagModalOpen(true);
+                  setMenuOpen(false);
+                }}
+              >
+                Rapportera problem
+              </button>
+            </li>
+          </AnchoredMenu>
         </div>
       </div>
       <FlagTrackModal

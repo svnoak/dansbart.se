@@ -1,9 +1,11 @@
 package se.dansbart.e2e.public_;
 
+import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.track.Track;
@@ -23,6 +25,9 @@ class TrackControllerE2ETest extends AbstractE2ETest {
     private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private Artist artist;
+
+    @Autowired
+    private DSLContext dsl;
 
     @BeforeEach
     void setUp() {
@@ -136,6 +141,40 @@ class TrackControllerE2ETest extends AbstractE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(2)))
                 .andExpect(jsonPath("$.items[*].title", everyItem(containsString("Polska"))));
+        }
+
+        @Test
+        @DisplayName("lists the person's own library tracks first, and hides them from others")
+        void searchTracks_ownTracksFirst() throws Exception {
+            UUID holderId = testData.user().withId(UUID.randomUUID()).withUsername("own_searcher").build().getId();
+            Track catalog = testData.track().withTitle("Polska från skivan").withArtist(artist).complete().build();
+            Track own = testData.track().withTitle("Polska från min fil").withArtist(artist).complete().build();
+            dsl.execute("update tracks set is_private = true where id = ?", own.getId());
+            dsl.execute("insert into user_track_sources (id, user_id, track_id, provider, title) values (?, ?, ?, 'LOCAL', ?)",
+                UUID.randomUUID(), holderId, own.getId(), "Polska från min fil");
+
+            mockMvc.perform(get("/api/tracks/search")
+                    .param("q", "Polska")
+                    .with(jwt.userToken(holderId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[0].id").value(own.getId().toString()))
+                .andExpect(jsonPath("$.items[0].playable").value(true))
+                .andExpect(jsonPath("$.items[1].id").value(catalog.getId().toString()));
+
+            mockMvc.perform(get("/api/tracks/search")
+                    .param("q", "Polska")
+                    .param("mine", "true")
+                    .with(jwt.userToken(holderId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].id").value(own.getId().toString()));
+
+            mockMvc.perform(get("/api/tracks/search")
+                    .param("q", "Polska"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].id").value(catalog.getId().toString()));
         }
 
         @Test

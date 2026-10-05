@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { IconButton } from '@/ui';
-import { MoonIcon, StarMarkIcon, SunIcon } from '@/icons';
+import { IconButton, LogoMark } from '@/ui';
+import { MoonIcon, SunIcon } from '@/icons';
 import { useAuth } from '@/auth/useAuth';
 import { useTheme } from '@/theme/useTheme';
 
@@ -94,7 +94,7 @@ export function Header() {
           to="/"
           className="flex shrink-0 items-center gap-2.5 text-[rgb(var(--color-text))] hover:opacity-90"
         >
-          <StarMarkIcon className="h-8 w-8 text-[rgb(var(--color-link))]" aria-hidden />
+          <LogoMark />
           <span className="text-lg font-bold">dansbart.se</span>
         </Link>
 

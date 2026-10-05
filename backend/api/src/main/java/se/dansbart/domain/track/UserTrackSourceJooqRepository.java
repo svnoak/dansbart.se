@@ -38,6 +38,15 @@ public class UserTrackSourceJooqRepository {
             .fetchSet(TRACKS.ID);
     }
 
+    /** The tracks among the given ids for which the user holds a source. A null user holds none. */
+    public Set<UUID> findTrackIdsHeldBy(List<UUID> trackIds, UUID userId) {
+        if (userId == null || trackIds.isEmpty()) return Set.of();
+        return dsl.selectDistinct(USER_TRACK_SOURCES.TRACK_ID).from(USER_TRACK_SOURCES)
+            .where(USER_TRACK_SOURCES.TRACK_ID.in(trackIds))
+            .and(USER_TRACK_SOURCES.USER_ID.eq(userId))
+            .fetchSet(USER_TRACK_SOURCES.TRACK_ID);
+    }
+
     /** The sources of the private tracks among the given ids, earliest first. */
     public List<PrivateTrackSource> findSourcesOfPrivateTracks(List<UUID> trackIds) {
         return dsl.select(USER_TRACK_SOURCES.TRACK_ID, USER_TRACK_SOURCES.USER_ID,

@@ -446,6 +446,76 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
     }
 
     @Nested
+    @DisplayName("PUT /api/dance-lists/{id}/entries/{entryId}/name")
+    class RenameEntry {
+
+        @Test
+        @DisplayName("renames a typed dance and shows the new name in the list")
+        void renameEntry_freeText_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithFreeText(danceListId, "Polksa", owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/name", danceListId, entryId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "  Polska  "))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries[0].freeTextName").value("Polska"))
+                .andExpect(jsonPath("$.entries[0].danceId").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("renames a dance from the site and keeps it linked")
+        void renameEntry_linkedDance_keepsLink() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/name", danceListId, entryId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Test Dance (slow)"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries[0].danceId").value(DANCE_ID.toString()))
+                .andExpect(jsonPath("$.entries[0].danceName").value("Test Dance"))
+                .andExpect(jsonPath("$.entries[0].freeTextName").value("Test Dance (slow)"));
+        }
+
+        @Test
+        @DisplayName("rejects a blank name with 400")
+        void renameEntry_blank_shouldReturn400() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithFreeText(danceListId, "Polska", owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/name", danceListId, entryId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "   "))))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("a person without access gets 404")
+        void renameEntry_byOtherUser_shouldReturn404() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithFreeText(danceListId, "Polska", owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/name", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("name", "Hambo"))))
+                .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
     @DisplayName("POST /api/dance-lists/{id}/entries/{entryId}/tracks")
     class AddTrackToEntry {
 
