@@ -2,8 +2,6 @@ package se.dansbart.domain.providerconnection;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.exception.IntegrityConstraintViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -11,9 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.time.Clock;
 import java.util.Base64;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -26,24 +22,16 @@ public class GoogleConnectionService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final GoogleDriveConnector connector;
-    private final ProviderConnectionJooqRepository repository;
-    private final TokenCipher cipher;
-    private final Clock clock;
+    private final ConnectionTokenStore store;
 
-    public GoogleConnectionService(
-            GoogleDriveConnector connector,
-            ProviderConnectionJooqRepository repository,
-            TokenCipher cipher,
-            Clock clock) {
+    public GoogleConnectionService(GoogleDriveConnector connector, ConnectionTokenStore store) {
         this.connector = connector;
-        this.repository = repository;
-        this.cipher = cipher;
-        this.clock = clock;
+        this.store = store;
     }
 
     public URI start(UUID userId, HttpSession session) {
         if (!connector.isConfigured()) {
-            throw new GoogleNotConfiguredException();
+            throw new ProviderNotConfiguredException(connector.provider());
         }
         String state = randomToken();
         String verifier = randomToken();
@@ -87,37 +75,12 @@ public class GoogleConnectionService {
         }
 
         try {
-            store(userId, refreshToken);
+            store.store(userId, ProviderConnection.PROVIDER_GDRIVE, refreshToken);
         } catch (RuntimeException e) {
             log.warn("Storing the Google connection failed for user {}: {}", userId, e.getClass().getSimpleName());
             return CallbackOutcome.FAILED;
         }
         return CallbackOutcome.CONNECTED;
-    }
-
-    private void store(UUID userId, String refreshToken) {
-        Optional<ProviderConnection> existing =
-            repository.findByUserAndProvider(userId, ProviderConnection.PROVIDER_GDRIVE);
-        if (existing.isPresent()) {
-            replaceToken(existing.get().id(), refreshToken);
-            return;
-        }
-        UUID id = UUID.randomUUID();
-        try {
-            repository.insert(new ProviderConnection(
-                id, userId, ProviderConnection.PROVIDER_GDRIVE, ProviderConnection.STATUS_ACTIVE,
-                cipher.encrypt(id, refreshToken), null, clock.instant()));
-        } catch (IntegrityConstraintViolationException | DuplicateKeyException e) {
-            ProviderConnection winner = repository
-                .findByUserAndProvider(userId, ProviderConnection.PROVIDER_GDRIVE)
-                .orElseThrow(() -> e);
-            replaceToken(winner.id(), refreshToken);
-        }
-    }
-
-    // The cipher binds the token to the row id, so the token is encrypted with the id of the row that stays.
-    private void replaceToken(UUID id, String refreshToken) {
-        repository.replaceToken(id, cipher.encrypt(id, refreshToken), null, clock.instant());
     }
 
     private static boolean sameText(String a, String b) {

@@ -37,6 +37,57 @@ that has already run on beta or production makes the application fail to start.
 CI rejects any PR that modifies, deletes or renames an existing migration — add
 a new one instead.
 
+## Cloud storage connectors
+
+People connect Google Drive or STRATO HiDrive under Mina låtar, and the API
+stores an encrypted refresh token per person and provider. The code lives in
+`backend/api/src/main/java/se/dansbart/domain/providerconnection/`.
+
+### Testing the HiDrive connector without a HiDrive account
+
+Nobody on the project has a HiDrive account yet, so the `local` profile points
+the HiDrive connector at a stub that the API itself serves under
+`/stub/hidrive`. The stub fakes the consent page, the token endpoint, the folder
+listing and the file download, and it needs no setup: `application-local.yml`
+holds a dev client id, client secret and token encryption key.
+
+To click through the whole flow, start the API with `SPRING_PROFILES_ACTIVE=local`
+and the frontend with `npm run dev`, sign in through `/sso/initiate`, and open
+`http://localhost:5173/api/connections/hidrive/start`. The consent page offers
+Tillåt and Neka. After Tillåt the browser lands on `/mina-latar` and the
+`provider_connections` table holds a `HIDRIVE` row.
+
+The stub is stateless. It accepts any code or token that carries its own prefix
+(`stub-code-`, `stub-access-`, `stub-refresh-`), so a restart of the API keeps a
+stored connection valid. A refresh token without the prefix answers
+`invalid_grant`, which the nightly refresh job turns into `NEEDS_RECONNECT`.
+The folder listing under `/stub/hidrive/2.1/dir` and the download under
+`/stub/hidrive/2.1/file` serve short generated WAV tones with Range support, so
+the coming file picker and playback can be built against them.
+
+To test against the real HiDrive instead, register an app on
+developer.hidrive.com and set `HIDRIVE_CLIENT_ID`, `HIDRIVE_CLIENT_SECRET` and
+`HIDRIVE_REDIRECT_URI`. Leave `HIDRIVE_AUTHORIZATION_URL` and `HIDRIVE_TOKEN_URL`
+empty to use the production endpoints.
+
+### Not yet verified against HiDrive
+
+The stub mirrors the HiDrive documentation as far as it could be read without an
+account. Whoever first runs the connector against a real HiDrive account should
+check these points and fix the connector or the stub where they differ:
+
+1. The token response carries `refresh_token` on the code exchange. Does a
+   refresh also return a new `refresh_token`, and does the old one stay valid?
+2. A revoked refresh token answers HTTP 400 or 401 with `"error":"invalid_grant"`.
+   The connector treats anything else as a temporary failure and retries the next
+   night.
+3. `GET /2.1/file?path=...` honours a `Range` header, and an expired access token
+   answers 401 or 403. `fetchAudioBlob` in the frontend depends on both.
+4. `api.hidrive.strato.com` sends CORS headers for a browser `fetch` with a bearer
+   token. If it does not, playback needs a proxy in the API.
+5. The consent page accepts the `user,ro` scope and ignores no parameter the
+   connector sends.
+
 ## Commit format
 
 ```

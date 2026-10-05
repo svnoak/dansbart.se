@@ -5,3 +5,16 @@ logging:
   level:
     se.dansbart: DEBUG
     org.springframework.security: DEBUG
+
+dansbart:
+  tokens:
+    # A fixed dev key, so that connecting a provider works without any setup. Never use it elsewhere.
+    encryption-key: ${TOKEN_ENCRYPTION_KEY:bG9rYWwtZGFuc2JhcnQtdXR2ZWNrbGluZ3NueWNrZWw=}
+  hidrive:
+    # Points the HiDrive connector at the stub in HiDriveStubController, served by this API.
+    # The browser reaches the API through the Vite proxy, so the callback goes through port 5173.
+    client-id: ${HIDRIVE_CLIENT_ID:lokal-dansbart}
+    client-secret: ${HIDRIVE_CLIENT_SECRET:lokal-hemlighet}
+    redirect-uri: ${HIDRIVE_REDIRECT_URI:http://localhost:5173/api/connections/hidrive/callback}
+    authorization-url: ${HIDRIVE_AUTHORIZATION_URL:http://localhost:8000/stub/hidrive/client/authorize}
+    token-url: ${HIDRIVE_TOKEN_URL:http://localhost:8000/stub/hidrive/oauth2/token}
