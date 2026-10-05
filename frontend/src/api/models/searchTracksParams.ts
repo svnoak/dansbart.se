@@ -8,5 +8,6 @@ import type { Pageable } from './pageable';
 
 export type SearchTracksParams = {
 q: string;
+mine?: boolean;
 pageable: Pageable;
 };

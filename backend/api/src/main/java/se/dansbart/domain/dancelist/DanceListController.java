@@ -104,6 +104,17 @@ public class DanceListController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/{id}/entries/{entryId}/name")
+    @Operation(summary = "Rename an entry. A dance from the site stays linked; the name is shown in its place")
+    public ResponseEntity<Void> renameEntry(
+            @PathVariable UUID id,
+            @PathVariable UUID entryId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody RenameEntryRequest request) {
+        danceListService.renameEntry(id, userId, entryId, request.name());
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/{id}/entries/{entryId}/tracks")
     @Operation(summary = "Link a track to an entry")
     public ResponseEntity<DanceListEntryTrack> addTrackToEntry(
@@ -240,6 +251,7 @@ public class DanceListController {
     public record AddEntryRequest(UUID danceId, String freeTextName) {}
     public record ReorderEntriesRequest(List<UUID> entryIds) {}
     public record SetPlayModeRequest(String playMode) {}
+    public record RenameEntryRequest(String name) {}
     public record AddTrackRequest(UUID trackId) {}
     public record ReorderTracksRequest(List<UUID> trackIds) {}
     public record InviteCollaboratorRequest(UUID userId, String permission) {}

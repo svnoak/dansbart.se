@@ -1,3 +1,4 @@
+export { AnchoredMenu, menuItemClassName, menuDangerItemClassName } from './AnchoredMenu';
 export { ArtworkPlaceholder } from './ArtworkPlaceholder';
 export { Badge } from './Badge';
 export { Button } from './Button';

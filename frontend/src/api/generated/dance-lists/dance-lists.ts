@@ -16,6 +16,7 @@ import type {
   GenerateShareToken1200,
   InviteCollaborator1200,
   InviteCollaboratorRequest,
+  RenameEntryRequest,
   ReorderEntriesRequest,
   ReorderTracksRequest,
   RespondToInvitation1200,
@@ -148,6 +149,33 @@ export const setPlayMode = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       setPlayModeRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Rename an entry. A dance from the site stays linked; the name is shown in its place
+ */
+export const getRenameEntryUrl = (id: string,
+    entryId: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/entries/${entryId}/name`
+}
+
+export const renameEntry = async (id: string,
+    entryId: string,
+    renameEntryRequest: RenameEntryRequest, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getRenameEntryUrl(id,entryId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      renameEntryRequest,)
   }
 );}
   

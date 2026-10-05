@@ -10,6 +10,7 @@ import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
+import se.dansbart.domain.track.UserTrackSourceJooqRepository;
 import se.dansbart.domain.user.UserJooqRepository;
 import se.dansbart.dto.DanceListDto;
 import se.dansbart.dto.DanceListEntryDto;
@@ -37,12 +38,14 @@ public class DanceListService {
 
     private static final Set<String> PLAY_MODES = Set.of("in_order", "random");
     private static final Set<String> PERMISSIONS = Set.of("view", "edit");
+    private static final int MAX_ENTRY_NAME_LENGTH = 200;
 
     private final DanceListJooqRepository danceListJooqRepository;
     private final DanceListEntryJooqRepository entryJooqRepository;
     private final DanceListEntryTrackJooqRepository entryTrackJooqRepository;
     private final DanceListCollaboratorJooqRepository collaboratorRepository;
     private final TrackJooqRepository trackJooqRepository;
+    private final UserTrackSourceJooqRepository sourceRepository;
     private final UserJooqRepository userJooqRepository;
     private final GroupJooqRepository groupJooqRepository;
     private final GroupMemberJooqRepository groupMemberJooqRepository;
@@ -178,6 +181,25 @@ public class DanceListService {
         requireEditAccess(danceList, userId);
         requireOwnEntry(danceListId, entryId);
         entryJooqRepository.updatePlayMode(entryId, playMode);
+    }
+
+    /**
+     * Gives an entry a name of the person's own choosing. A dance from the site stays
+     * linked to that dance; the name is shown in its place.
+     */
+    @Transactional
+    public void renameEntry(UUID danceListId, UUID userId, UUID entryId, String name) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("Give the dance a name.");
+        }
+        if (trimmed.length() > MAX_ENTRY_NAME_LENGTH) {
+            throw new BadRequestException("The name can be at most " + MAX_ENTRY_NAME_LENGTH + " characters.");
+        }
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        requireOwnEntry(danceListId, entryId);
+        entryJooqRepository.updateFreeTextName(entryId, trimmed);
     }
 
     @Transactional
@@ -337,6 +359,11 @@ public class DanceListService {
             .toList();
         Map<UUID, TrackListDto> trackDtosById = trackJooqRepository.findTrackListDtosByIds(trackIds).stream()
             .collect(Collectors.toMap(TrackListDto::getId, trackDto -> trackDto));
+        // The viewer's own library tracks play from the viewer's own file.
+        for (UUID heldId : sourceRepository.findTrackIdsHeldBy(trackIds, viewerId)) {
+            TrackListDto held = trackDtosById.get(heldId);
+            if (held != null) held.setPlayable(true);
+        }
 
         List<DanceListEntryDto> entries = danceListEntries.stream()
             .map(entry -> buildDanceListEntryDto(entry,

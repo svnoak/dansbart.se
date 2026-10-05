@@ -212,6 +212,34 @@ class DanceListEntryJooqRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Nested
+    @DisplayName("updateFreeTextName")
+    class UpdateFreeTextName {
+
+        @Test
+        @DisplayName("stores the new name and keeps the dance link")
+        void storesNewNameAndKeepsDanceLink() {
+            DanceList list = createDanceList();
+            UUID danceId = createDance();
+            DanceListEntry entry = DanceListEntry.builder()
+                .danceListId(list.getId())
+                .danceId(danceId)
+                .freeTextName(null)
+                .playMode("in_order")
+                .position(0)
+                .build();
+            danceListEntryJooqRepository.insert(entry);
+            flush();
+
+            danceListEntryJooqRepository.updateFreeTextName(entry.getId(), "Test Dance (slow)");
+            flush();
+
+            DanceListEntry stored = danceListEntryJooqRepository.findById(entry.getId()).orElseThrow();
+            assertThat(stored.getFreeTextName()).isEqualTo("Test Dance (slow)");
+            assertThat(stored.getDanceId()).isEqualTo(danceId);
+        }
+    }
+
+    @Nested
     @DisplayName("CHECK constraint on dance_id and free_text_name")
     class CheckConstraint {
 

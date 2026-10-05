@@ -12,6 +12,7 @@ import * as toastEmitter from '@/ui/toastEmitter';
 const getDanceList = vi.fn();
 const addEntry = vi.fn();
 const removeEntry = vi.fn();
+const renameEntry = vi.fn();
 const getDances = vi.fn();
 const searchTracks = vi.fn();
 const addTrackToEntry = vi.fn();
@@ -24,6 +25,7 @@ vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
   getDanceList: (...args: unknown[]) => getDanceList(...args),
   addEntry: (...args: unknown[]) => addEntry(...args),
   removeEntry: (...args: unknown[]) => removeEntry(...args),
+  renameEntry: (...args: unknown[]) => renameEntry(...args),
   addTrackToEntry: (...args: unknown[]) => addTrackToEntry(...args),
   removeTrackFromEntry: (...args: unknown[]) => removeTrackFromEntry(...args),
   setPlayMode: (...args: unknown[]) => setPlayMode(...args),
@@ -173,6 +175,7 @@ describe('DanceListPage', () => {
     getDanceList.mockReset();
     addEntry.mockReset();
     removeEntry.mockReset();
+    renameEntry.mockReset();
     getDances.mockReset();
     searchTracks.mockReset();
     addTrackToEntry.mockReset();
@@ -1003,7 +1006,7 @@ describe('DanceListPage', () => {
       clickByLabelIn(entryA, 'Fler alternativ för Familjevals från Ödsmål');
     });
     await act(async () => {
-      clickIn(entryA, 'Ta bort dansen');
+      clickButton('Ta bort dansen')!.click();
     });
     await act(async () => {
       clickIn(entryA, 'Ja, ta bort');
@@ -1017,7 +1020,7 @@ describe('DanceListPage', () => {
       clickByLabelIn(entryB, 'Fler alternativ för Egen dans');
     });
     await act(async () => {
-      clickIn(entryB, 'Ta bort dansen');
+      clickButton('Ta bort dansen')!.click();
     });
     await act(async () => {
       clickIn(entryB, 'Ja, ta bort');
@@ -1027,6 +1030,108 @@ describe('DanceListPage', () => {
     expect(removeEntry).toHaveBeenCalledWith('list-1', 'entry-2');
     expect(entryA.querySelector('[role="alert"]')?.textContent).toContain('Det gick inte att ta bort dansen.');
   });
+  it('renames a dance from the row menu', async () => {
+    renameEntry.mockResolvedValue(undefined);
+
+    await renderPage();
+
+    const menuButton = document.body.querySelector(
+      'button[aria-label="Fler alternativ för Egen dans"]',
+    ) as HTMLButtonElement | null;
+    expect(menuButton).not.toBeNull();
+    await act(async () => {
+      menuButton!.click();
+    });
+    await act(async () => {
+      clickButton('Byt namn')!.click();
+    });
+
+    const input = getInputByLabel('Nytt namn för Egen dans');
+    expect(input).not.toBeNull();
+    expect(input!.value).toBe('Egen dans');
+
+    await act(async () => {
+      typeInto(input!, 'Gammal vals');
+    });
+    await act(async () => {
+      clickButton('Spara')!.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(renameEntry).toHaveBeenCalledWith('list-1', 'entry-2', { name: 'Gammal vals' });
+    expect(document.body.textContent).toContain('Gammal vals');
+    expect(document.body.textContent).not.toContain('Egen dans');
+    expect(getInputByLabel('Nytt namn för')).toBeNull();
+    expect(toastSpy).toHaveBeenCalledWith('Namnet sparat');
+  });
+
+  it('shows the rename error next to the form and keeps the old name', async () => {
+    renameEntry.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+
+    await act(async () => {
+      (document.body.querySelector('button[aria-label="Fler alternativ för Egen dans"]') as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      clickButton('Byt namn')!.click();
+    });
+    const input = getInputByLabel('Nytt namn för Egen dans');
+    await act(async () => {
+      typeInto(input!, 'Gammal vals');
+    });
+    await act(async () => {
+      clickButton('Spara')!.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain('Det gick inte att byta namn.');
+    expect(document.body.textContent).toContain('Egen dans');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('can limit the track search to the person\'s own tracks', async () => {
+    searchTracks.mockResolvedValue({
+      items: [
+        { id: 'track-9', title: 'Min polska', artistName: 'Jag', durationMs: 150000, playable: true, playbackLinks: [] },
+      ],
+      total: 1,
+      page: 0,
+      size: 20,
+      hasMore: false,
+    });
+
+    await renderPage();
+
+    const addTrackButton = Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Lägg till låt'),
+    );
+    await act(async () => {
+      addTrackButton?.click();
+    });
+
+    const searchInput = getInputByLabel('Lägg till låt i');
+    await act(async () => {
+      typeInto(searchInput!, 'Min');
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(searchTracks).toHaveBeenLastCalledWith(expect.not.objectContaining({ mine: true }));
+    expect(getSearchResultRow('Min polska').textContent).toContain('Min låt');
+
+    const toggle = clickButton('Bara mina låtar') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    await act(async () => {
+      toggle.click();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(searchTracks).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'Min', mine: true }));
+  });
+
   it('folds the tracks of a dance away and back', async () => {
     await renderPage();
 

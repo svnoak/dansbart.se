@@ -21,6 +21,7 @@ public class TrackService {
 
     private final TrackJooqRepository trackJooqRepository;
     private final PlaybackLinkJooqRepository playbackLinkJooqRepository;
+    private final UserTrackSourceJooqRepository sourceRepository;
 
     public Optional<Track> findById(UUID id) {
         return trackJooqRepository.findById(id);
@@ -157,11 +158,21 @@ public class TrackService {
         return trackJooqRepository.searchByTitle(query, pageable);
     }
 
-    /** Search by title returning TrackListDto (includes danceStyle, subStyle, playback, artist). */
-    public Page<TrackListDto> searchByTitleAsListDtos(String query, Pageable pageable) {
-        Page<Track> page = trackJooqRepository.searchByTitle(query, pageable);
+    /**
+     * Search by title returning TrackListDto (includes danceStyle, subStyle, playback, artist).
+     * A logged-in user also gets their own library tracks, first; with mineOnly, only those.
+     * Own tracks are marked playable so they play from the person's own file.
+     */
+    public Page<TrackListDto> searchByTitleAsListDtos(String query, UUID userId, boolean mineOnly, Pageable pageable) {
+        Page<Track> page = trackJooqRepository.searchByTitle(query, userId, mineOnly, pageable);
         List<UUID> ids = page.getContent().stream().map(Track::getId).toList();
         List<TrackListDto> content = trackJooqRepository.findTrackListDtosByIds(ids);
+        Set<UUID> own = sourceRepository.findTrackIdsHeldBy(ids, userId);
+        for (TrackListDto dto : content) {
+            if (dto != null && own.contains(dto.getId())) {
+                dto.setPlayable(true);
+            }
+        }
         return new PageImpl<>(content, pageable, page.getTotalElements());
     }
 

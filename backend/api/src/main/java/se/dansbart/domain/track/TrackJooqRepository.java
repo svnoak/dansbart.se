@@ -241,15 +241,29 @@ public class TrackJooqRepository {
     private record StyleInfo(String danceStyle, String subStyle, Integer effectiveBpm, String tempoCategory, Float confidence, String source) {}
 
     public Page<Track> searchByTitle(String query, Pageable pageable) {
+        return searchByTitle(query, null, false, pageable);
+    }
+
+    /**
+     * Title search. Public tracks plus the tracks the user holds a source for (their own
+     * library), own tracks first. With mineOnly, only the user's own tracks.
+     */
+    public Page<Track> searchByTitle(String query, UUID userId, boolean mineOnly, Pageable pageable) {
         String pattern = "%" + (query == null ? "" : query).toLowerCase() + "%";
+        Condition own = userId == null
+            ? DSL.falseCondition()
+            : DSL.exists(dsl.selectOne().from(USER_TRACK_SOURCES)
+                .where(USER_TRACK_SOURCES.TRACK_ID.eq(TRACKS.ID))
+                .and(USER_TRACK_SOURCES.USER_ID.eq(userId)));
+        Condition visible = mineOnly ? own : TrackVisibility.publicOnly().or(own);
+        Condition where = DSL.lower(TRACKS.TITLE).like(pattern).and(visible);
         List<Track> items = dsl.selectFrom(TRACKS)
-            .where(DSL.lower(TRACKS.TITLE).like(pattern))
-            .and(TrackVisibility.publicOnly())
-            .orderBy(TRACKS.CREATED_AT.desc())
+            .where(where)
+            .orderBy(DSL.when(own, 0).otherwise(1).asc(), TRACKS.CREATED_AT.desc())
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
             .fetch(this::toTrack);
-        long total = dsl.fetchCount(dsl.selectFrom(TRACKS).where(DSL.lower(TRACKS.TITLE).like(pattern)).and(TrackVisibility.publicOnly()));
+        long total = dsl.fetchCount(dsl.selectFrom(TRACKS).where(where));
         return new PageImpl<>(items, pageable, total);
     }
 

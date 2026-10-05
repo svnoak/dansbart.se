@@ -120,7 +120,7 @@ describe('PlaylistTrackRow', () => {
       menuButton!.click();
     });
 
-    const removeItem = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
+    const removeItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
       (item) => item.textContent?.trim() === 'Ta bort från spellistan',
     ) as HTMLButtonElement | undefined;
     expect(removeItem).toBeTruthy();
@@ -158,7 +158,7 @@ describe('PlaylistTrackRow', () => {
       menuButton!.click();
     });
 
-    const removeItem = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
+    const removeItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
       (item) => item.textContent?.trim() === 'Ta bort från spellistan',
     );
     expect(removeItem).toBeFalsy();

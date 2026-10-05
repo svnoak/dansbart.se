@@ -4,6 +4,7 @@ import {
   getDanceList,
   addEntry,
   removeEntry,
+  renameEntry,
   addTrackToEntry,
   removeTrackFromEntry,
   setPlayMode,
@@ -16,7 +17,19 @@ import type { DanceListEntryDto } from '@/api/models/danceListEntryDto';
 import type { Dance } from '@/api/models/dance';
 import type { PlaylistTrackDto } from '@/api/models/playlistTrackDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
-import { Button, Card, EmptyState, IconButton, InlineError, RowSkeleton, toast } from '@/ui';
+import {
+  AnchoredMenu,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  InlineError,
+  Pill,
+  RowSkeleton,
+  menuDangerItemClassName,
+  menuItemClassName,
+  toast,
+} from '@/ui';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -47,8 +60,11 @@ const PLAY_MODE_OPTIONS: { value: string; label: string }[] = [
   { value: 'random', label: 'Slumpvis' },
 ];
 
-const SEARCH_INPUT_CLASS =
-  'h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] pl-10 pr-3 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-focus))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-focus))]';
+const INPUT_CLASS =
+  'h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] pr-3 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-focus))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-focus))]';
+const SEARCH_INPUT_CLASS = `${INPUT_CLASS} pl-10`;
+const TEXT_INPUT_CLASS = `${INPUT_CLASS} pl-3`;
+const MAX_ENTRY_NAME_LENGTH = 200;
 
 function SearchGlyph() {
   return (
@@ -67,8 +83,57 @@ function SearchGlyph() {
   );
 }
 
+/** The person's own name for the entry wins over the site's dance name. */
 function entryName(entry: DanceListEntryDto): string {
-  return entry.danceName ?? entry.freeTextName ?? 'Namnlös dans';
+  return entry.freeTextName ?? entry.danceName ?? 'Namnlös dans';
+}
+
+/** A track that plays from the person's own file: playable, with no streaming links. */
+function isOwnTrack(track: TrackListDto): boolean {
+  return track.playable === true && !track.playbackLinks?.length;
+}
+
+function EntryMenu({
+  name,
+  open,
+  onToggle,
+  onClose,
+  onRename,
+  onRemove,
+}: {
+  name: string;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onRename: () => void;
+  onRemove: () => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  return (
+    <div>
+      <IconButton
+        ref={buttonRef}
+        aria-label={`Fler alternativ för ${name}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <MoreVerticalIcon className="h-5 w-5" aria-hidden />
+      </IconButton>
+      <AnchoredMenu open={open} anchorRef={buttonRef} onClose={onClose} width={192}>
+        <li role="none">
+          <button type="button" role="menuitem" className={menuItemClassName} onClick={onRename}>
+            Byt namn
+          </button>
+        </li>
+        <li role="none">
+          <button type="button" role="menuitem" className={menuDangerItemClassName} onClick={onRemove}>
+            Ta bort dansen
+          </button>
+        </li>
+      </AnchoredMenu>
+    </div>
+  );
 }
 
 function sortedTracks(entry: DanceListEntryDto): PlaylistTrackDto[] {
@@ -117,6 +182,10 @@ export default function DanceListPage() {
   const [confirmRemoval, setConfirmRemoval] = useState<ConfirmRemoval>(null);
   const [closedEntries, setClosedEntries] = useState<Set<string>>(() => new Set());
   const [menuEntryId, setMenuEntryId] = useState<string | null>(null);
+  const [renamingEntryId, setRenamingEntryId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renaming, setRenaming] = useState(false);
+  const [renameErrors, setRenameErrors] = useState<Record<string, string>>({});
 
   const [danceQuery, setDanceQuery] = useState('');
   const [danceResults, setDanceResults] = useState<Dance[]>([]);
@@ -127,6 +196,7 @@ export default function DanceListPage() {
   const danceSearchDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [trackQuery, setTrackQuery] = useState('');
+  const [mineOnly, setMineOnly] = useState(false);
   const [trackResults, setTrackResults] = useState<TrackListDto[]>([]);
   const [trackSearching, setTrackSearching] = useState(false);
   const [trackSearchFailed, setTrackSearchFailed] = useState(false);
@@ -209,7 +279,11 @@ export default function DanceListPage() {
     setTrackSearchFailed(false);
     clearTimeout(trackSearchDebounceRef.current);
     trackSearchDebounceRef.current = setTimeout(() => {
-      searchTracks({ q: trackQuery.trim(), pageable: { page: 0, size: 20 } })
+      searchTracks({
+        q: trackQuery.trim(),
+        ...(mineOnly ? { mine: true } : {}),
+        pageable: { page: 0, size: 20 },
+      })
         .then((result) => {
           if (cancelled) return;
           setTrackResults(result?.items ?? []);
@@ -227,7 +301,7 @@ export default function DanceListPage() {
       cancelled = true;
       clearTimeout(trackSearchDebounceRef.current);
     };
-  }, [activeSearch, trackQuery]);
+  }, [activeSearch, trackQuery, mineOnly]);
 
   function openDanceSearch() {
     setDanceQuery('');
@@ -281,6 +355,47 @@ export default function DanceListPage() {
       setAddDanceError('Det gick inte att lägga till dansen.');
     } finally {
       setAddingDance(false);
+    }
+  }
+
+  function openRename(entry: DanceListEntryDto) {
+    const entryId = entry.id ?? '';
+    setMenuEntryId(null);
+    setConfirmRemoval(null);
+    setRenameErrors((prev) => {
+      const next = { ...prev };
+      delete next[entryId];
+      return next;
+    });
+    setRenameValue(entryName(entry));
+    setRenamingEntryId(entryId);
+  }
+
+  async function handleRename(entryId: string) {
+    const name = renameValue.trim();
+    if (!id || !name || renaming) return;
+    setRenaming(true);
+    setRenameErrors((prev) => {
+      const next = { ...prev };
+      delete next[entryId];
+      return next;
+    });
+    try {
+      await renameEntry(id, entryId, { name });
+      setDanceList((prev) =>
+        prev
+          ? {
+              ...prev,
+              entries: (prev.entries ?? []).map((e) => (e.id === entryId ? { ...e, freeTextName: name } : e)),
+            }
+          : prev,
+      );
+      setRenamingEntryId(null);
+      toast('Namnet sparat');
+    } catch {
+      setRenameErrors((prev) => ({ ...prev, [entryId]: 'Det gick inte att byta namn.' }));
+    } finally {
+      setRenaming(false);
     }
   }
 
@@ -621,6 +736,7 @@ export default function DanceListPage() {
                 confirmRemoval?.kind === 'entry' && confirmRemoval.entryId === entryId;
               const isTrackSearchOpen = typeof activeSearch === 'object' && activeSearch?.entryId === entryId;
               const isMenuOpen = menuEntryId === entryId;
+              const isRenaming = renamingEntryId === entryId;
               const bodyId = `dance-entry-body-${entryId}`;
               const currentPlayMode = entry.playMode ?? 'in_order';
 
@@ -718,39 +834,18 @@ export default function DanceListPage() {
                         )}
 
                         {canManage && (
-                          <div className="relative">
-                            <IconButton
-                              aria-label={`Fler alternativ för ${name}`}
-                              aria-haspopup="menu"
-                              aria-expanded={isMenuOpen}
-                              onClick={() => setMenuEntryId(isMenuOpen ? null : entryId)}
-                            >
-                              <MoreVerticalIcon className="h-5 w-5" aria-hidden />
-                            </IconButton>
-                            {isMenuOpen && (
-                              <>
-                                <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuEntryId(null)} />
-                                <ul
-                                  role="menu"
-                                  className="absolute right-0 top-full z-20 mt-1 w-48 rounded-[var(--radius)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 [box-shadow:var(--color-card-shadow)]"
-                                >
-                                  <li role="none">
-                                    <button
-                                      type="button"
-                                      role="menuitem"
-                                      className="w-full px-4 py-2.5 text-left text-sm text-[rgb(var(--color-error))] hover:bg-[rgb(var(--color-accent-muted))]"
-                                      onClick={() => {
-                                        setMenuEntryId(null);
-                                        setConfirmRemoval({ kind: 'entry', entryId });
-                                      }}
-                                    >
-                                      Ta bort dansen
-                                    </button>
-                                  </li>
-                                </ul>
-                              </>
-                            )}
-                          </div>
+                          <EntryMenu
+                            name={name}
+                            open={isMenuOpen}
+                            onToggle={() => setMenuEntryId(isMenuOpen ? null : entryId)}
+                            onClose={() => setMenuEntryId(null)}
+                            onRename={() => openRename(entry)}
+                            onRemove={() => {
+                              setMenuEntryId(null);
+                              setRenamingEntryId(null);
+                              setConfirmRemoval({ kind: 'entry', entryId });
+                            }}
+                          />
                         )}
 
                         <IconButton
@@ -767,8 +862,50 @@ export default function DanceListPage() {
                       </div>
                     </div>
 
-                    {(isConfirmingEntryRemoval || entryRemoveErrors[entryId] || playModeErrors[entryId]) && (
+                    {(isRenaming ||
+                      isConfirmingEntryRemoval ||
+                      renameErrors[entryId] ||
+                      entryRemoveErrors[entryId] ||
+                      playModeErrors[entryId]) && (
                       <div className="space-y-2 border-b border-[rgb(var(--color-border))] px-3 py-2.5">
+                        {isRenaming && (
+                          <form
+                            className="flex flex-wrap items-end gap-2"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              void handleRename(entryId);
+                            }}
+                          >
+                            <div className="min-w-0 flex-1 basis-56">
+                              <label
+                                htmlFor={`rename-entry-${entryId}`}
+                                className="mb-1.5 block text-sm font-medium text-[rgb(var(--color-text))]"
+                              >
+                                Nytt namn för {name}
+                              </label>
+                              <input
+                                id={`rename-entry-${entryId}`}
+                                type="text"
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                maxLength={MAX_ENTRY_NAME_LENGTH}
+                                autoFocus
+                                className={TEXT_INPUT_CLASS}
+                              />
+                            </div>
+                            <Button type="submit" disabled={renaming || !renameValue.trim()}>
+                              Spara
+                            </Button>
+                            <Button type="button" variant="ghost" onClick={() => setRenamingEntryId(null)} disabled={renaming}>
+                              Avbryt
+                            </Button>
+                            {entry.danceId && entry.danceName && (
+                              <p className="w-full text-[13px] text-[rgb(var(--color-text-muted))]">
+                                Dansen är fortfarande kopplad till {entry.danceName} på sidan.
+                              </p>
+                            )}
+                          </form>
+                        )}
                         {isConfirmingEntryRemoval && (
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm text-[rgb(var(--color-text))]">
@@ -782,6 +919,7 @@ export default function DanceListPage() {
                             </Button>
                           </div>
                         )}
+                        <InlineError>{renameErrors[entryId]}</InlineError>
                         <InlineError>{entryRemoveErrors[entryId]}</InlineError>
                         <InlineError>{playModeErrors[entryId]}</InlineError>
                       </div>
@@ -884,6 +1022,15 @@ export default function DanceListPage() {
                               />
                             </div>
 
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <Pill active={mineOnly} aria-pressed={mineOnly} onClick={() => setMineOnly((v) => !v)}>
+                                Bara mina låtar
+                              </Pill>
+                              <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                                Dina egna låtar visas först.
+                              </span>
+                            </div>
+
                             {trackSearching && (
                               <p className="text-sm text-[rgb(var(--color-text-muted))]">Söker...</p>
                             )}
@@ -900,6 +1047,13 @@ export default function DanceListPage() {
                                       <TrackRow
                                         track={track}
                                         contextTracks={trackResults}
+                                        badges={
+                                          isOwnTrack(track) ? (
+                                            <span className="mt-0.5 inline-flex h-6 w-fit items-center rounded-full bg-[rgb(var(--color-accent-muted))] px-2 text-xs font-medium text-[rgb(var(--color-text))]">
+                                              Min låt
+                                            </span>
+                                          ) : undefined
+                                        }
                                         action={
                                           alreadyLinked ? (
                                             <span className="px-2 text-[13px] text-[rgb(var(--color-text-muted))]">
@@ -930,7 +1084,9 @@ export default function DanceListPage() {
                             )}
 
                             {!trackSearching && !trackSearchFailed && trackQuery.trim() && trackResults.length === 0 && (
-                              <p className="text-sm text-[rgb(var(--color-text-muted))]">Inga låtar hittades.</p>
+                              <p className="text-sm text-[rgb(var(--color-text-muted))]">
+                                {mineOnly ? 'Ingen av dina låtar matchar.' : 'Inga låtar hittades.'}
+                              </p>
                             )}
 
                             <InlineError>{addTrackError}</InlineError>
