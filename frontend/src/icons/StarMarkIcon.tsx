@@ -2,7 +2,8 @@ import type { IconProps } from './IconProps';
 
 /**
  * The eight-point star (åttabladsrosen), a weaving and knitting motif found
- * across the Nordics. The site's mark, favicon and no-artwork placeholder.
+ * across the Nordics. The no-artwork placeholder and a decorative empty-state
+ * icon. The site's logotype is the D tile in ui/LogoMark.
  */
 export function StarMarkIcon({ className, ...props }: IconProps) {
   return (

@@ -1,7 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth';
-import { Button, Card } from '@/ui';
-import { StarMarkIcon } from '@/icons';
+import { Button, Card, LogoMark } from '@/ui';
 
 const DISCOURSE_URL = import.meta.env.VITE_DISCOURSE_URL ?? 'https://folkhub.se';
 
@@ -26,12 +25,7 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-bg))] px-4">
       <Card className="w-full max-w-sm space-y-6 p-6 sm:p-8">
         <div className="text-center">
-          <div
-            className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]"
-            aria-hidden
-          >
-            <StarMarkIcon className="h-7 w-7" />
-          </div>
+          <LogoMark className="mx-auto h-14 w-14 rounded-[var(--radius-lg)] text-[28px]" />
           <h1 className="mt-4 text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
             Logga in
           </h1>

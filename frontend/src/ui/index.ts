@@ -8,6 +8,7 @@ export { RowSkeleton } from './RowSkeleton';
 export { IconButton } from './IconButton';
 export { InlineError } from './InlineError';
 export { LoadError } from './LoadError';
+export { LogoMark } from './LogoMark';
 export { Modal } from './Modal';
 export { Pill } from './Pill';
 export { SectionTitle } from './SectionTitle';

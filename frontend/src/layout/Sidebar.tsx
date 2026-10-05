@@ -9,7 +9,6 @@ import {
   GroupIcon,
   QueueListIcon,
   MusicNoteIcon,
-  StarMarkIcon,
   UserIcon,
 } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
@@ -144,14 +143,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </NavLink>
 
       <GroupLabel>Utforska</GroupLabel>
-      <NavLink
-        to="/#dansstilar"
-        active={false}
-        onClick={onNavigate}
-        icon={<StarMarkIcon className="h-5 w-5" aria-hidden />}
-      >
-        Dansstilar
-      </NavLink>
       <NavLink
         to="/dances"
         active={isDances}
