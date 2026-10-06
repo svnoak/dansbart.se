@@ -18,10 +18,11 @@ import java.net.URI;
  * The authorization and token URLs come from configuration so that the local profile can point
  * them at {@code HiDriveStubController}. The defaults are the production endpoints of HiDrive.
  * HiDrive scopes are written as {@code role,access}; {@code user,ro} reads the files of the person
- * who connects and nothing else.
+ * who connects and nothing else. HiDrive has no PKCE, so the connector ignores the code challenge
+ * and the code verifier.
  */
 @Component
-public class HiDriveConnector implements ProviderConnector {
+public class HiDriveConnector implements OAuthConnector {
 
     private static final String PROVIDER = ProviderConnection.PROVIDER_HIDRIVE;
     private static final String SCOPE = "user,ro";
@@ -65,12 +66,20 @@ public class HiDriveConnector implements ProviderConnector {
         return PROVIDER;
     }
 
+    @Override
+    public String slug() {
+        return "hidrive";
+    }
+
+    @Override
     public boolean isConfigured() {
         return !clientId.isBlank() && !clientSecret.isBlank() && !redirectUri.isBlank()
                 && !authorizationUrl.isBlank() && !tokenUrl.isBlank();
     }
 
-    public URI authorizationUri(String state) {
+    /** HiDrive has no PKCE, so the code challenge is always null and goes unused. */
+    @Override
+    public URI authorizationUri(String state, String codeChallenge) {
         return UriComponentsBuilder.fromUriString(authorizationUrl)
                 .queryParam("client_id", clientId)
                 .queryParam("redirect_uri", redirectUri)
@@ -82,7 +91,8 @@ public class HiDriveConnector implements ProviderConnector {
                 .toUri();
     }
 
-    public TokenGrant exchangeCode(String code) {
+    @Override
+    public TokenGrant exchangeCode(String code, String codeVerifier) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "authorization_code");
         form.add("code", code);

@@ -52,13 +52,16 @@ class HiDriveConnectorTest {
     }
 
     @Test
-    void identifiesAsHiDrive() {
+    void identifiesAsHiDriveWithoutPkce() {
         assertEquals(ProviderConnection.PROVIDER_HIDRIVE, connector.provider());
+        assertEquals("hidrive", connector.slug());
+        assertFalse(connector.usesPkce());
     }
 
     @Test
     void buildsTheConsentUrlFromTheConfiguredEndpointWithReadOnlyUserScope() {
-        URI uri = connector.authorizationUri("state-1");
+        // The challenge is ignored even when a caller passes one.
+        URI uri = connector.authorizationUri("state-1", "ignored-challenge");
 
         assertEquals("https", uri.getScheme());
         assertEquals("hidrive.example", uri.getHost());
@@ -88,7 +91,7 @@ class HiDriveConnectorTest {
                             + "\"token_type\":\"Bearer\",\"scope\":\"user,ro\",\"userid\":\"u\",\"alias\":\"x\"}",
                         MediaType.APPLICATION_JSON));
 
-        TokenGrant grant = connector.exchangeCode("code-1");
+        TokenGrant grant = connector.exchangeCode("code-1", null);
 
         assertEquals("a", grant.accessToken());
         assertEquals(3600L, grant.expiresInSeconds());
@@ -103,7 +106,7 @@ class HiDriveConnectorTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body("{\"error\":\"invalid_grant\"}"));
 
-        assertThrows(IllegalStateException.class, () -> connector.exchangeCode("stale"));
+        assertThrows(IllegalStateException.class, () -> connector.exchangeCode("stale", null));
     }
 
     @Test
