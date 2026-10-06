@@ -99,14 +99,15 @@ dansbart:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_REDIRECT_URI:}
-    success-url: ${GOOGLE_SUCCESS_URL:/mina-latar}
   hidrive:
     client-id: ${HIDRIVE_CLIENT_ID:}
     client-secret: ${HIDRIVE_CLIENT_SECRET:}
     redirect-uri: ${HIDRIVE_REDIRECT_URI:}
-    success-url: ${HIDRIVE_SUCCESS_URL:/mina-latar}
     # The HiDrive endpoints. Override them to point the connector at a stub.
     authorization-url: ${HIDRIVE_AUTHORIZATION_URL:https://my.hidrive.com/client/authorize}
     token-url: ${HIDRIVE_TOKEN_URL:https://my.hidrive.com/oauth2/token}
+  connections:
+    # Where the browser goes after a provider consent.
+    success-url: ${CONNECTIONS_SUCCESS_URL:/mina-latar}
   tokens:
     encryption-key: ${TOKEN_ENCRYPTION_KEY:}

@@ -54,7 +54,7 @@ class HiDriveStubControllerTest {
 
     @Test
     void consentPageOffersAllowAndDenyForTheConfiguredClient() throws Exception {
-        URI consent = connector.authorizationUri("state-1");
+        URI consent = connector.authorizationUri("state-1", null);
 
         MvcResult result = mockMvc.perform(get(consent))
             .andExpect(status().isOk())
@@ -109,7 +109,7 @@ class HiDriveStubControllerTest {
 
     @Test
     void theConnectorExchangesAStubCodeAndRefreshesTheToken() throws Exception {
-        TokenGrant grant = connector.exchangeCode(HiDriveStubController.CODE_PREFIX + "abc");
+        TokenGrant grant = connector.exchangeCode(HiDriveStubController.CODE_PREFIX + "abc", null);
 
         assertThat(grant.accessToken()).startsWith(HiDriveStubController.ACCESS_PREFIX);
         assertThat(grant.expiresInSeconds()).isEqualTo(HiDriveStubController.EXPIRES_IN_SECONDS);
@@ -125,7 +125,7 @@ class HiDriveStubControllerTest {
     void theConnectorSeesAForeignRefreshTokenAsInvalidGrant() {
         assertThatThrownBy(() -> connector.refreshAccess("not-from-the-stub"))
             .isInstanceOf(InvalidGrantException.class);
-        assertThatThrownBy(() -> connector.exchangeCode("not-a-stub-code"))
+        assertThatThrownBy(() -> connector.exchangeCode("not-a-stub-code", null))
             .isInstanceOf(IllegalStateException.class);
     }
 
@@ -200,7 +200,7 @@ class HiDriveStubControllerTest {
     @Test
     void decodedConsentLinkKeepsTheStateIntact() throws Exception {
         String state = UUID.randomUUID() + "_-";
-        String html = mockMvc.perform(get(connector.authorizationUri(state)))
+        String html = mockMvc.perform(get(connector.authorizationUri(state, null)))
             .andReturn().getResponse().getContentAsString();
         String href = html.substring(html.indexOf("decision=allow"));
         href = href.substring(0, href.indexOf('"'));

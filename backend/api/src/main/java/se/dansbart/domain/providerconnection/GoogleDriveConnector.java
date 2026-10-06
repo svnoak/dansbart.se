@@ -13,7 +13,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 
 @Component
-public class GoogleDriveConnector implements ProviderConnector {
+public class GoogleDriveConnector implements OAuthConnector {
 
     private static final String PROVIDER = "GDRIVE";
     private static final String AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -52,10 +52,22 @@ public class GoogleDriveConnector implements ProviderConnector {
         return PROVIDER;
     }
 
+    @Override
+    public String slug() {
+        return "google";
+    }
+
+    @Override
+    public boolean usesPkce() {
+        return true;
+    }
+
+    @Override
     public boolean isConfigured() {
         return !clientId.isBlank() && !clientSecret.isBlank() && !redirectUri.isBlank();
     }
 
+    @Override
     public URI authorizationUri(String state, String codeChallenge) {
         return UriComponentsBuilder.fromUriString(AUTHORIZATION_URL)
                 .queryParam("client_id", clientId)
@@ -72,6 +84,7 @@ public class GoogleDriveConnector implements ProviderConnector {
                 .toUri();
     }
 
+    @Override
     public TokenGrant exchangeCode(String code, String codeVerifier) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "authorization_code");

@@ -43,6 +43,19 @@ People connect Google Drive or STRATO HiDrive under Mina låtar, and the API
 stores an encrypted refresh token per person and provider. The code lives in
 `backend/api/src/main/java/se/dansbart/domain/providerconnection/`.
 
+`OAuthConnectionService` runs the authorization code flow for every
+`OAuthConnector`. The connector names its provider, its slug in
+`/api/connections/{slug}/start`, whether it uses PKCE, and how to build the
+consent URL, exchange the code and refresh the token. To add a provider:
+
+1. Write the connector and its `MockRestServiceServer` test, like
+   `HiDriveConnector` and `HiDriveConnectorTest`.
+2. Add a migration that widens the `provider` check constraints on
+   `provider_connections` and `user_track_sources`, and the regex in
+   `ImportTrackRequest`.
+3. Add the label to `SOURCE_LABELS` in `MyLibraryPage.tsx`.
+4. Add the client settings to `application.yml` and `.env.example`.
+
 ### Testing the HiDrive connector without a HiDrive account
 
 Nobody on the project has a HiDrive account yet, so the `local` profile points
