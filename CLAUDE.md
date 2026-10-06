@@ -47,6 +47,10 @@ If a worker crashes, its tracks stay in `PROCESSING`. To reset them, call `POST 
 - Other profiles use DiscourseConnect SSO through `/sso/initiate` and `/sso/callback`.
 - Classification does not require login. Anonymous voters send `X-Voter-ID`.
 
+## Cloud storage connectors
+
+`domain/providerconnection/` holds one `*Connector` per provider (`GDRIVE`, `HIDRIVE`) and stores encrypted refresh tokens in `provider_connections`. `OAuthConnectionService` runs the connect flow for every `OAuthConnector`, under `/api/connections/{slug}/start` and `/callback`. A new provider adds a connector, a migration for the `provider` check constraints, and the labels in the frontend. The `local` profile points the HiDrive connector at a stub served under `/stub/hidrive`, so the connect flow works without a HiDrive account. `CONTRIBUTING.md` describes the stub and what is still unverified against the real HiDrive.
+
 ## Dance style configuration
 
 The `dance_style_config` table stores the musical properties of each dance style, for example `beats_per_bar`. After classification, workers use it to re-derive bar positions from stored beat timestamps. A sub-style config has priority over its main style config.

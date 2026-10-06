@@ -12,28 +12,42 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 
+/**
+ * OAuth client for STRATO HiDrive.
+ *
+ * The authorization and token URLs come from configuration so that the local profile can point
+ * them at {@code HiDriveStubController}. The defaults are the production endpoints of HiDrive.
+ * HiDrive scopes are written as {@code role,access}; {@code user,ro} reads the files of the person
+ * who connects and nothing else. HiDrive has no PKCE, so the connector ignores the code challenge
+ * and the code verifier.
+ */
 @Component
-public class GoogleDriveConnector implements OAuthConnector {
+public class HiDriveConnector implements OAuthConnector {
 
-    private static final String PROVIDER = "GDRIVE";
-    private static final String AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth";
-    private static final String TOKEN_URL = "https://oauth2.googleapis.com/token";
-    private static final String DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+    private static final String PROVIDER = ProviderConnection.PROVIDER_HIDRIVE;
+    private static final String SCOPE = "user,ro";
 
     private final RestClient restClient;
     private final String clientId;
     private final String clientSecret;
     private final String redirectUri;
+    private final String authorizationUrl;
+    private final String tokenUrl;
 
-    public GoogleDriveConnector(
+    public HiDriveConnector(
             RestClient.Builder builder,
-            @Value("${dansbart.google.client-id:}") String clientId,
-            @Value("${dansbart.google.client-secret:}") String clientSecret,
-            @Value("${dansbart.google.redirect-uri:}") String redirectUri) {
+            @Value("${dansbart.hidrive.client-id:}") String clientId,
+            @Value("${dansbart.hidrive.client-secret:}") String clientSecret,
+            @Value("${dansbart.hidrive.redirect-uri:}") String redirectUri,
+            @Value("${dansbart.hidrive.authorization-url:https://my.hidrive.com/client/authorize}")
+            String authorizationUrl,
+            @Value("${dansbart.hidrive.token-url:https://my.hidrive.com/oauth2/token}") String tokenUrl) {
         this.restClient = builder.build();
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
+        this.authorizationUrl = authorizationUrl;
+        this.tokenUrl = tokenUrl;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -54,31 +68,24 @@ public class GoogleDriveConnector implements OAuthConnector {
 
     @Override
     public String slug() {
-        return "google";
-    }
-
-    @Override
-    public boolean usesPkce() {
-        return true;
+        return "hidrive";
     }
 
     @Override
     public boolean isConfigured() {
-        return !clientId.isBlank() && !clientSecret.isBlank() && !redirectUri.isBlank();
+        return !clientId.isBlank() && !clientSecret.isBlank() && !redirectUri.isBlank()
+                && !authorizationUrl.isBlank() && !tokenUrl.isBlank();
     }
 
+    /** HiDrive has no PKCE, so the code challenge is always null and goes unused. */
     @Override
     public URI authorizationUri(String state, String codeChallenge) {
-        return UriComponentsBuilder.fromUriString(AUTHORIZATION_URL)
+        return UriComponentsBuilder.fromUriString(authorizationUrl)
                 .queryParam("client_id", clientId)
                 .queryParam("redirect_uri", redirectUri)
                 .queryParam("response_type", "code")
-                .queryParam("scope", DRIVE_FILE_SCOPE)
-                .queryParam("access_type", "offline")
-                .queryParam("prompt", "consent")
+                .queryParam("scope", SCOPE)
                 .queryParam("state", state)
-                .queryParam("code_challenge", codeChallenge)
-                .queryParam("code_challenge_method", "S256")
                 .encode()
                 .build()
                 .toUri();
@@ -92,11 +99,10 @@ public class GoogleDriveConnector implements OAuthConnector {
         form.add("redirect_uri", redirectUri);
         form.add("client_id", clientId);
         form.add("client_secret", clientSecret);
-        form.add("code_verifier", codeVerifier);
         try {
             return requestToken(form);
         } catch (InvalidGrantException e) {
-            throw new IllegalStateException("Google rejected the authorization code", e);
+            throw new IllegalStateException("HiDrive rejected the authorization code", e);
         }
     }
 
@@ -123,25 +129,25 @@ public class GoogleDriveConnector implements OAuthConnector {
             throw new InvalidGrantException(e.getMessage());
         }
         if (response == null || response.accessToken() == null) {
-            throw new IllegalStateException("Google token response had no access token");
+            throw new IllegalStateException("HiDrive token response had no access token");
         }
         return new TokenGrant(response.accessToken(), response.expiresIn(), response.refreshToken());
     }
 
     private TokenResponse postForm(MultiValueMap<String, String> form) {
         return restClient.post()
-                .uri(TOKEN_URL)
+                .uri(tokenUrl)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(form)
                 .exchange((request, result) -> {
                     if (result.getStatusCode().is2xxSuccessful()) {
                         return result.bodyTo(TokenResponse.class);
                     }
-                    if (result.getStatusCode().value() == 400 && isInvalidGrant(result.bodyTo(ErrorResponse.class))) {
-                        throw new InvalidGrantRuntimeException("Google reports the grant as invalid");
+                    int status = result.getStatusCode().value();
+                    if ((status == 400 || status == 401) && isInvalidGrant(result.bodyTo(ErrorResponse.class))) {
+                        throw new InvalidGrantRuntimeException("HiDrive reports the grant as invalid");
                     }
-                    throw new IllegalStateException(
-                            "Google token request failed with status " + result.getStatusCode().value());
+                    throw new IllegalStateException("HiDrive token request failed with status " + status);
                 });
     }
 
