@@ -1,0 +1,25 @@
+// Desktop: the feed and the content column get the width the site uses.
+
+body.dansbart-feed #main-outlet {
+  #list-area {
+    max-width: 44rem;
+    margin: 0 auto;
+  }
+
+  .list-controls .container {
+    max-width: 44rem;
+    margin: 0 auto;
+  }
+}
+
+.topic-post > article {
+  padding: 1.25rem;
+}
+
+.login-fullpage,
+.signup-fullpage {
+  .login-body,
+  .signup-body {
+    padding: 2.5rem 2.5rem 2rem;
+  }
+}

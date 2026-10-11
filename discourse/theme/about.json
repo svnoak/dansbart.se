@@ -1,0 +1,41 @@
+{
+  "name": "Dansbart",
+  "about_url": "https://github.com/svnoak/dansbart.se/tree/main/discourse/theme",
+  "license_url": "https://github.com/svnoak/dansbart.se/blob/main/LICENSE",
+  "component": false,
+  "minimum_discourse_version": "3.4.0",
+  "assets": {
+    "schibsted-normal": "assets/fonts/schibsted-grotesk-latin-wght-normal.woff2",
+    "schibsted-italic": "assets/fonts/schibsted-grotesk-latin-wght-italic.woff2"
+  },
+  "color_schemes": {
+    "Dansbart ljus": {
+      "primary": "15181C",
+      "secondary": "FFFFFF",
+      "tertiary": "1E4A8A",
+      "quaternary": "1E4A8A",
+      "header_background": "FFFFFF",
+      "header_primary": "15181C",
+      "highlight": "F6E3C6",
+      "danger": "B91C1C",
+      "success": "1F6B3A",
+      "love": "1E4A8A",
+      "selected": "E9E9E4",
+      "hover": "F3F3EF"
+    },
+    "Dansbart mörk": {
+      "primary": "ECEDEE",
+      "secondary": "20232A",
+      "tertiary": "8AAEE6",
+      "quaternary": "8AAEE6",
+      "header_background": "20232A",
+      "header_primary": "ECEDEE",
+      "highlight": "4A3A22",
+      "danger": "F87171",
+      "success": "6ED3A3",
+      "love": "8AAEE6",
+      "selected": "2C3035",
+      "hover": "262A31"
+    }
+  }
+}

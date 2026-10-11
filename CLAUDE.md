@@ -11,6 +11,7 @@ Swedish folk music site. People find music to dance to and classify tracks by da
 - `backend/api/`: Java 21, Spring Boot 3.2, jOOQ, Flyway, PostgreSQL with pgvector. Package `se.dansbart`. Port 8000.
 - `frontend/`: React 19, strict TypeScript, Tailwind CSS v4, Vitest. Port 5173.
 - `backend/workers/feature/`: Python Celery worker. Queues `feature` and `light`. Uses `neckenml-core`.
+- `discourse/theme/`: the Discourse theme for the forum (folkhub.se). SCSS, Glimmer components and two colour schemes that mirror `frontend/src/index.css`. See its README for install steps.
 - `backend/workers/audio/`: an unsynced copy of the audio worker. The canonical code is in `svnoak/dansbart.se-audio-worker`. CI builds the production audio image from this copy.
 
 The frontend calls the Java API over REST. The API reads and writes PostgreSQL. The API sends long tasks to the Python workers through Redis and Celery. The workers write results directly to PostgreSQL.
