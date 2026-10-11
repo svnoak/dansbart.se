@@ -145,7 +145,7 @@ const mockDanceListReadOnly = {
 };
 
 const mockSearchResults = {
-  content: [
+  items: [
     {
       id: 'dance-familjevals',
       name: 'Familjevals från Ödsmål',
@@ -153,16 +153,18 @@ const mockSearchResults = {
       bpmMax: 130,
     },
   ],
-  pageNumber: 0,
-  pageSize: 20,
-  totalElements: 1,
+  total: 1,
+  page: 0,
+  size: 20,
+  hasMore: false,
 };
 
 const mockEmptySearchResults = {
-  content: [],
-  pageNumber: 0,
-  pageSize: 20,
-  totalElements: 0,
+  items: [],
+  total: 0,
+  page: 0,
+  size: 20,
+  hasMore: false,
 };
 
 describe('DanceListPage', () => {
