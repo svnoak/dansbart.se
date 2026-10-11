@@ -147,10 +147,10 @@ describe('DancePage', () => {
     return li!;
   }
 
-  /** The vote buttons carry their name as visible text: "Passar" and "Passar inte". */
+  /** The vote buttons are icon-only and carry their name as aria-label: "Passar" and "Passar inte". */
   function getVoteButton(row: HTMLElement, name: 'Passar' | 'Passar inte') {
     const button = Array.from(row.querySelectorAll('button')).find(
-      (el) => el.textContent?.trim() === name,
+      (el) => el.getAttribute('aria-label') === name,
     ) as HTMLButtonElement | undefined;
     expect(button).toBeDefined();
     return button!;
