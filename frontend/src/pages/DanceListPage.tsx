@@ -50,11 +50,6 @@ type ConfirmRemoval =
   | { kind: 'track'; entryId: string; trackId: string }
   | null;
 
-function extractContent<T>(result: unknown): T[] {
-  const content = result && typeof result === 'object' && 'content' in result ? result.content : null;
-  return Array.isArray(content) ? (content as T[]) : [];
-}
-
 const PLAY_MODE_OPTIONS: { value: string; label: string }[] = [
   { value: 'in_order', label: 'I ordning' },
   { value: 'random', label: 'Slumpvis' },
@@ -250,7 +245,7 @@ export default function DanceListPage() {
       getDances({ search: danceQuery.trim() })
         .then((result) => {
           if (cancelled) return;
-          setDanceResults(extractContent<Dance>(result));
+          setDanceResults(result?.items ?? []);
         })
         .catch(() => {
           if (cancelled) return;

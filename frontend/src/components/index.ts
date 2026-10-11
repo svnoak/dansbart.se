@@ -1,3 +1,4 @@
+export { AddToDanceListModal } from './AddToDanceListModal';
 export { AlbumCard } from './AlbumCard';
 export { ArtistCard } from './ArtistCard';
 export { ConfirmDeleteByName } from './ConfirmDeleteByName';
