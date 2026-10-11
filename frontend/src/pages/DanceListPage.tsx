@@ -1059,9 +1059,10 @@ export default function DanceListPage() {
                                               variant="secondary"
                                               disabled={addingTrack}
                                               onClick={() => handleAddTrack(entryId, track)}
+                                              aria-label={`Lägg till ${track.title ?? 'låten'}`}
+                                              className="min-w-11 !px-0"
                                             >
-                                              <PlusIcon className="h-4 w-4" aria-hidden />
-                                              Lägg till
+                                              <PlusIcon className="h-5 w-5" aria-hidden />
                                             </Button>
                                           )
                                         }
