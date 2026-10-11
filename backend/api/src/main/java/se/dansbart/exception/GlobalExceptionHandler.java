@@ -72,6 +72,18 @@ public class GlobalExceptionHandler {
             ));
     }
 
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ErrorResponse> handleExternalService(ExternalServiceException ex) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_GATEWAY)
+            .body(new ErrorResponse(
+                HttpStatus.BAD_GATEWAY.value(),
+                "Bad Gateway",
+                ex.getMessage(),
+                OffsetDateTime.now()
+            ));
+    }
+
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
         return ResponseEntity

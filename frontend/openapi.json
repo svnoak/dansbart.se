@@ -61,6 +61,10 @@
       "description": "Folkwiki tune matching review and confirmation"
     },
     {
+      "name": "Admin Track Submissions",
+      "description": "Review tracks people added from Spotify or YouTube links"
+    },
+    {
       "name": "Discovery",
       "description": "Track discovery endpoints for homepage and exploration"
     },
@@ -79,6 +83,10 @@
     {
       "name": "Admin Style Keywords",
       "description": "Style keyword CRUD management"
+    },
+    {
+      "name": "Track Submissions",
+      "description": "Add tracks from a Spotify or YouTube link"
     },
     {
       "name": "Admin Style Config",
@@ -101,6 +109,10 @@
       "description": "Admin album management endpoints"
     },
     { "name": "Admin", "description": "Administrative task management" },
+    {
+      "name": "Library",
+      "description": "User library for personal track sources"
+    },
     { "name": "Favorites", "description": "User track favorites" },
     {
       "name": "Admin Pending",
@@ -755,36 +767,6 @@
         }
       }
     },
-    "/api/dance-lists/{id}/entries/{entryId}/name": {
-      "put": {
-        "tags": ["Dance Lists"],
-        "summary": "Rename an entry. A dance from the site stays linked; the name is shown in its place",
-        "operationId": "renameEntry",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "entryId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/RenameEntryRequest" }
-            }
-          },
-          "required": true
-        },
-        "responses": { "200": { "description": "OK" } }
-      }
-    },
     "/api/dance-lists/{id}/entries/{entryId}": {
       "put": {
         "tags": ["Dance Lists"],
@@ -858,6 +840,36 @@
           "content": {
             "application/json": {
               "schema": { "$ref": "#/components/schemas/ReorderTracksRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/dance-lists/{id}/entries/{entryId}/name": {
+      "put": {
+        "tags": ["Dance Lists"],
+        "summary": "Rename an entry. A dance from the site stays linked; the name is shown in its place",
+        "operationId": "renameEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RenameEntryRequest" }
             }
           },
           "required": true
@@ -1599,6 +1611,36 @@
         }
       }
     },
+    "/api/submissions": {
+      "post": {
+        "tags": ["Track Submissions"],
+        "summary": "Add the tracks behind a Spotify or YouTube link",
+        "description": "Returns one row per track. Trusted contributors' tracks go straight to analysis; the rest wait for an admin. 400 for a link that is not recognised, 404 when the provider has nothing behind it, 422 when YouTube playlists or channels are not available on this server.",
+        "operationId": "submitMusicLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitMusicLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackSubmissionBatchDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/structure-versions/{versionId}/vote": {
       "post": {
         "tags": ["Structure Versions"],
@@ -1954,47 +1996,13 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/LibraryImportResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/library/my-tracks": {
-      "get": {
-        "tags": ["Library"],
-        "summary": "List the tracks the user holds, newest first",
-        "operationId": "listMyTracks",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/LibraryTrackDto" }
+                  "$ref": "#/components/schemas/LibraryImportResponse"
                 }
               }
             }
           }
         }
-      }
-    },
-    "/api/library/tracks/{trackId}": {
-      "delete": {
-        "tags": ["Library"],
-        "summary": "Delete all of the user's sources for a track",
-        "operationId": "deleteLibraryTrack",
-        "parameters": [
-          {
-            "name": "trackId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          }
-        ],
-        "responses": { "200": { "description": "OK" } }
       }
     },
     "/api/library/sources/{sourceId}/match": {
@@ -2497,6 +2505,28 @@
             }
           }
         }
+      }
+    },
+    "/api/artists/{id}/flag": {
+      "post": {
+        "tags": ["Artists"],
+        "summary": "Flag an artist as not being folk music",
+        "operationId": "flagArtist",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "not_folk_music" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
       }
     },
     "/api/analytics/track/interaction": {
@@ -3049,6 +3079,102 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SuggestionDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/submissions/{id}/reject": {
+      "post": {
+        "tags": ["Admin Track Submissions"],
+        "summary": "Turn a submission down",
+        "operationId": "rejectTrackSubmission",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TrackSubmissionDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/submissions/{id}/approve": {
+      "post": {
+        "tags": ["Admin Track Submissions"],
+        "summary": "Create the track, send it for analysis and reward a signed-in submitter",
+        "operationId": "approveTrackSubmission",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TrackSubmissionDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/submissions/batch/{batchId}/approve": {
+      "post": {
+        "tags": ["Admin Track Submissions"],
+        "summary": "Approve every pending track from one link",
+        "operationId": "approveTrackSubmissionBatch",
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TrackSubmissionDto" }
+                }
               }
             }
           }
@@ -4355,7 +4481,7 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Track" }
+                  "items": { "$ref": "#/components/schemas/TrackListDto" }
                 }
               }
             }
@@ -4451,6 +4577,33 @@
                 "schema": {
                   "type": "array",
                   "items": { "$ref": "#/components/schemas/TrackListDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/submissions/batch/{batchId}": {
+      "get": {
+        "tags": ["Track Submissions"],
+        "summary": "The tracks one link produced, with their current status",
+        "operationId": "getSubmissionBatch",
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackSubmissionBatchDto"
                 }
               }
             }
@@ -4690,6 +4843,26 @@
                   "items": {
                     "$ref": "#/components/schemas/EditablePlaylistDto"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/my-tracks": {
+      "get": {
+        "tags": ["Library"],
+        "summary": "List the tracks the user holds, newest first",
+        "operationId": "listMyTracks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/LibraryTrackDto" }
                 }
               }
             }
@@ -5801,6 +5974,68 @@
         }
       }
     },
+    "/api/admin/submissions": {
+      "get": {
+        "tags": ["Admin Track Submissions"],
+        "summary": "List submissions, newest first",
+        "operationId": "listTrackSubmissions",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "default": "pending" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackSubmissionPageDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/submissions/pending-count": {
+      "get": {
+        "tags": ["Admin Track Submissions"],
+        "summary": "How many submissions wait for review",
+        "operationId": "countPendingTrackSubmissions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/style-keywords/stats": {
       "get": {
         "tags": ["Admin Style Keywords"],
@@ -5838,6 +6073,23 @@
                     "additionalProperties": { "type": "object" }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get admin statistics including private track and play counts",
+        "operationId": "getAdminStats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdminStatsDto" }
               }
             }
           }
@@ -6787,23 +7039,6 @@
         }
       }
     },
-    "/api/admin/stats": {
-      "get": {
-        "tags": ["Admin Analytics"],
-        "summary": "Get admin statistics including private track and play counts",
-        "operationId": "getAdminStats",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/AdminStatsDto" }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/admin/albums": {
       "get": {
         "tags": ["Admin Albums"],
@@ -6862,6 +7097,22 @@
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
           },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/library/tracks/{trackId}": {
+      "delete": {
+        "tags": ["Library"],
+        "summary": "Delete all of the user's sources for a track",
+        "operationId": "deleteLibraryTrack",
+        "parameters": [
           {
             "name": "trackId",
             "in": "path",
@@ -7044,6 +7295,7 @@
           "trackId": { "type": "string", "format": "uuid" },
           "position": { "type": "integer", "format": "int32" },
           "addedAt": { "type": "string", "format": "date-time" },
+          "addedBy": { "type": "string", "format": "uuid" },
           "playlist": { "$ref": "#/components/schemas/Playlist" },
           "track": { "$ref": "#/components/schemas/Track" }
         }
@@ -7074,7 +7326,7 @@
           "isFlagged": { "type": "boolean" },
           "flaggedAt": { "type": "string", "format": "date-time" },
           "flagReason": { "type": "string" },
-          "uploaderId": { "type": "string", "format": "uuid" },
+          "isPrivate": { "type": "boolean" },
           "processingStatus": { "type": "string" },
           "bars": {
             "type": "array",
@@ -7423,6 +7675,52 @@
           "createdAt": { "type": "string", "format": "date-time" }
         }
       },
+      "SubmitMusicLinkRequest": {
+        "required": ["url"],
+        "type": "object",
+        "properties": {
+          "url": { "maxLength": 2048, "minLength": 0, "type": "string" }
+        }
+      },
+      "TrackSubmissionBatchDto": {
+        "type": "object",
+        "properties": {
+          "batchId": { "type": "string", "format": "uuid" },
+          "provider": { "type": "string" },
+          "sourceKind": { "type": "string" },
+          "sourceName": { "type": "string" },
+          "needsReview": { "type": "boolean" },
+          "truncated": { "type": "boolean" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrackSubmissionDto" }
+          }
+        }
+      },
+      "TrackSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "batchId": { "type": "string", "format": "uuid" },
+          "provider": { "type": "string" },
+          "sourceKind": { "type": "string" },
+          "sourceName": { "type": "string" },
+          "sourceUrl": { "type": "string" },
+          "externalId": { "type": "string" },
+          "title": { "type": "string" },
+          "artistName": { "type": "string" },
+          "albumName": { "type": "string" },
+          "suggestedMainStyle": { "type": "string" },
+          "suggestedSubStyle": { "type": "string" },
+          "status": { "type": "string" },
+          "trackId": { "type": "string", "format": "uuid" },
+          "trackStatus": { "type": "string" },
+          "submitterName": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "reviewedAt": { "type": "string", "format": "date-time" },
+          "reviewNote": { "type": "string" }
+        }
+      },
       "VoteRequest": {
         "type": "object",
         "properties": { "voteType": { "type": "string" } }
@@ -7455,18 +7753,21 @@
         }
       },
       "ImportTrackRequest": {
+        "required": ["title"],
         "type": "object",
         "properties": {
-          "contentHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "provider": { "type": "string", "pattern": "^(LOCAL|GDRIVE|HIDRIVE)$" },
+          "contentHash": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+          "provider": {
+            "pattern": "^(LOCAL|GDRIVE|HIDRIVE)$",
+            "type": "string"
+          },
           "providerFileId": { "type": "string" },
-          "title": { "type": "string", "minLength": 1 },
+          "title": { "type": "string" },
           "artist": { "type": "string" },
           "album": { "type": "string" },
           "durationMs": { "type": "integer", "format": "int32" },
           "isrc": { "type": "string" }
-        },
-        "required": ["title"]
+        }
       },
       "LibraryImportResponse": {
         "type": "object",
@@ -7480,32 +7781,12 @@
       "MatchRequest": {
         "type": "object",
         "properties": {
-          "contentHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          "contentHash": { "pattern": "^[0-9a-f]{64}$", "type": "string" }
         }
       },
       "MatchResponse": {
         "type": "object",
-        "properties": {
-          "matches": { "type": "boolean" }
-        }
-      },
-      "LibrarySourceRefDto": {
-        "type": "object",
-        "properties": {
-          "sourceId": { "type": "string", "format": "uuid" },
-          "provider": { "type": "string" }
-        }
-      },
-      "LibraryTrackDto": {
-        "type": "object",
-        "properties": {
-          "track": { "$ref": "#/components/schemas/TrackListDto" },
-          "linkedToCatalog": { "type": "boolean" },
-          "sources": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/LibrarySourceRefDto" }
-          }
-        }
+        "properties": { "matches": { "type": "boolean" } }
       },
       "CreateGroupRequest": {
         "type": "object",
@@ -7614,10 +7895,7 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
           },
-          "sheetMusicUrl": {
-            "type": "string",
-            "description": "Sheet music on folkwiki.se, when an admin has confirmed the match. Null otherwise."
-          }
+          "sheetMusicUrl": { "type": "string" }
         }
       },
       "UserSummaryDto": {
@@ -7785,6 +8063,17 @@
       "SuggestionReviewRequest": {
         "type": "object",
         "properties": { "reviewNote": { "type": "string" } }
+      },
+      "RejectSubmissionRequest": {
+        "type": "object",
+        "properties": { "reviewNote": { "type": "string" } }
+      },
+      "ApproveSubmissionRequest": {
+        "type": "object",
+        "properties": {
+          "mainStyle": { "type": "string" },
+          "subStyle": { "type": "string" }
+        }
       },
       "StyleKeywordRequest": {
         "type": "object",
@@ -7996,6 +8285,24 @@
           "ownerGroupName": { "type": "string" }
         }
       },
+      "LibrarySourceRefDto": {
+        "type": "object",
+        "properties": {
+          "sourceId": { "type": "string", "format": "uuid" },
+          "provider": { "type": "string" }
+        }
+      },
+      "LibraryTrackDto": {
+        "type": "object",
+        "properties": {
+          "track": { "$ref": "#/components/schemas/TrackListDto" },
+          "linkedToCatalog": { "type": "boolean" },
+          "sources": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/LibrarySourceRefDto" }
+          }
+        }
+      },
       "PageResponseGroupSummaryDto": {
         "type": "object",
         "properties": {
@@ -8161,16 +8468,6 @@
           "role": { "type": "string" }
         }
       },
-      "AdminStatsDto": {
-        "type": "object",
-        "properties": {
-          "library": { "$ref": "#/components/schemas/StatsDto" },
-          "privateTrackCount": { "type": "integer", "format": "int64" },
-          "libraryUserCount": { "type": "integer", "format": "int64" },
-          "publicPlayCount": { "type": "integer", "format": "int64" },
-          "privatePlayCount": { "type": "integer", "format": "int64" }
-        }
-      },
       "AdminTrackDto": {
         "type": "object",
         "properties": {
@@ -8221,6 +8518,28 @@
           "subStyle": { "type": "string" },
           "proposedBeatsPerBar": { "type": "integer", "format": "int32" },
           "affectedTrackCount": { "type": "integer", "format": "int64" }
+        }
+      },
+      "TrackSubmissionPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrackSubmissionDto" }
+          },
+          "total": { "type": "integer", "format": "int64" },
+          "limit": { "type": "integer", "format": "int32" },
+          "offset": { "type": "integer", "format": "int32" }
+        }
+      },
+      "AdminStatsDto": {
+        "type": "object",
+        "properties": {
+          "library": { "$ref": "#/components/schemas/StatsDto" },
+          "privateTrackCount": { "type": "integer", "format": "int64" },
+          "libraryUserCount": { "type": "integer", "format": "int64" },
+          "publicPlayCount": { "type": "integer", "format": "int64" },
+          "privatePlayCount": { "type": "integer", "format": "int64" }
         }
       },
       "DanceTrack": {

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static se.dansbart.jooq.Tables.PLAYBACK_LINKS;
+import static se.dansbart.jooq.Tables.TRACKS;
 
 @Repository
 public class PlaybackLinkJooqRepository {
@@ -25,6 +26,18 @@ public class PlaybackLinkJooqRepository {
                 .and(PLAYBACK_LINKS.PLATFORM.eq(platform))
                 .and(PLAYBACK_LINKS.DEEP_LINK.eq(deepLink))
         );
+    }
+
+    /** The public track that already carries this provider id, if any. */
+    public Optional<UUID> findPublicTrackIdByPlatformAndDeepLink(String platform, String deepLink) {
+        return dsl.select(PLAYBACK_LINKS.TRACK_ID)
+            .from(PLAYBACK_LINKS)
+            .join(TRACKS).on(TRACKS.ID.eq(PLAYBACK_LINKS.TRACK_ID))
+            .where(PLAYBACK_LINKS.PLATFORM.eq(platform))
+            .and(PLAYBACK_LINKS.DEEP_LINK.eq(deepLink))
+            .and(TrackVisibility.publicOnly())
+            .limit(1)
+            .fetchOptional(PLAYBACK_LINKS.TRACK_ID);
     }
 
     public PlaybackLink insert(PlaybackLink link) {

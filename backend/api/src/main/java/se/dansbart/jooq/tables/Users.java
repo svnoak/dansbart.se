@@ -47,6 +47,7 @@ import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.ProviderConnections.ProviderConnectionsPath;
+import se.dansbart.jooq.tables.TrackSubmissions.TrackSubmissionsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks.UserDancePrimaryTracksPath;
 import se.dansbart.jooq.tables.UserTrackFavorites.UserTrackFavoritesPath;
@@ -377,6 +378,34 @@ public class Users extends TableImpl<Record> {
             _providerConnections = new ProviderConnectionsPath(this, null, Keys.PROVIDER_CONNECTIONS__PROVIDER_CONNECTIONS_USER_ID_FKEY.getInverseKey());
 
         return _providerConnections;
+    }
+
+    private transient TrackSubmissionsPath _trackSubmissionsReviewedByFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.track_submissions</code> table, via the
+     * <code>track_submissions_reviewed_by_fkey</code> key
+     */
+    public TrackSubmissionsPath trackSubmissionsReviewedByFkey() {
+        if (_trackSubmissionsReviewedByFkey == null)
+            _trackSubmissionsReviewedByFkey = new TrackSubmissionsPath(this, null, Keys.TRACK_SUBMISSIONS__TRACK_SUBMISSIONS_REVIEWED_BY_FKEY.getInverseKey());
+
+        return _trackSubmissionsReviewedByFkey;
+    }
+
+    private transient TrackSubmissionsPath _trackSubmissionsUserIdFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.track_submissions</code> table, via the
+     * <code>track_submissions_user_id_fkey</code> key
+     */
+    public TrackSubmissionsPath trackSubmissionsUserIdFkey() {
+        if (_trackSubmissionsUserIdFkey == null)
+            _trackSubmissionsUserIdFkey = new TrackSubmissionsPath(this, null, Keys.TRACK_SUBMISSIONS__TRACK_SUBMISSIONS_USER_ID_FKEY.getInverseKey());
+
+        return _trackSubmissionsUserIdFkey;
     }
 
     private transient TracksPath _tracks;

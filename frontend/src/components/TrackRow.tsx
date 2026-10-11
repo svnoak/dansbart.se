@@ -21,7 +21,7 @@ import { TrackActionsModal } from './TrackRow/TrackActionsModal';
 import { TrackRowMenu } from './TrackRow/TrackRowMenu';
 import type { ExtraMenuItem } from './TrackRow/trackRowMenuItems';
 import { Button, IconButton, toast } from '@/ui';
-import { HeartIcon, HeartFilledIcon } from '@/icons';
+import { HeartIcon, HeartFilledIcon, PlusIcon } from '@/icons';
 import { addTrack } from '@/api/generated/playlists/playlists';
 
 interface TrackRowProps {
@@ -102,8 +102,10 @@ export function TrackRow({
       size="sm"
       disabled={adding || added}
       onClick={handleAddToPlaylist}
+      aria-label={added ? 'Tillagd' : `Lägg till ${track.title ?? 'låten'} i spellistan`}
+      className={added ? '' : 'min-w-11 !px-0'}
     >
-      {added ? 'Tillagd' : 'Lägg till'}
+      {added ? 'Tillagd' : <PlusIcon className="h-5 w-5" aria-hidden />}
     </Button>
   );
   const rowAction = action ?? addToPlaylistAction;

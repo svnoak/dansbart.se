@@ -93,4 +93,14 @@ describe('Sidebar', () => {
     );
     expect(link).toBeUndefined();
   });
+  it('shows Lägg till musik to everyone', async () => {
+    useAuth.mockReturnValue(authValue());
+    await renderSidebar();
+
+    const link = Array.from(document.body.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Lägg till musik'),
+    );
+    expect(link).toBeDefined();
+    expect(link?.getAttribute('href')).toBe('/lagg-till-musik');
+  });
 });
