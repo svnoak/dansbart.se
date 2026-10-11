@@ -47,6 +47,8 @@ public class TestSecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/dances/*/tracks/*/vote").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/dances/*/tracks/*/vote").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/submissions/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/submissions/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/artists/*/flag").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/playlists/**").authenticated()

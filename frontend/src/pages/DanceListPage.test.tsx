@@ -145,7 +145,7 @@ const mockDanceListReadOnly = {
 };
 
 const mockSearchResults = {
-  content: [
+  items: [
     {
       id: 'dance-familjevals',
       name: 'Familjevals från Ödsmål',
@@ -153,16 +153,18 @@ const mockSearchResults = {
       bpmMax: 130,
     },
   ],
-  pageNumber: 0,
-  pageSize: 20,
-  totalElements: 1,
+  total: 1,
+  page: 0,
+  size: 20,
+  hasMore: false,
 };
 
 const mockEmptySearchResults = {
-  content: [],
-  pageNumber: 0,
-  pageSize: 20,
-  totalElements: 0,
+  items: [],
+  total: 0,
+  page: 0,
+  size: 20,
+  hasMore: false,
 };
 
 describe('DanceListPage', () => {
@@ -270,7 +272,7 @@ describe('DanceListPage', () => {
 
   function addButtonInResult(title: string) {
     const row = getSearchResultRow(title);
-    const button = Array.from(row.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Lägg till');
+    const button = Array.from(row.querySelectorAll('button')).find((b) => b.getAttribute('aria-label')?.startsWith('Lägg till '));
     expect(button).toBeDefined();
     return button;
   }
@@ -803,7 +805,7 @@ describe('DanceListPage', () => {
     const row = getSearchResultRow('Första låten');
     expect(row.textContent).toContain('Redan tillagd');
     const hasAddButton = Array.from(row.querySelectorAll('button')).some(
-      (b) => b.textContent?.trim() === 'Lägg till',
+      (b) => b.getAttribute('aria-label')?.startsWith('Lägg till '),
     );
     expect(hasAddButton).toBe(false);
     expect(addTrackToEntry).not.toHaveBeenCalled();

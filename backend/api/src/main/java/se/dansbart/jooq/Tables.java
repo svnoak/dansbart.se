@@ -40,6 +40,7 @@ import se.dansbart.jooq.tables.TrackPlaybacks;
 import se.dansbart.jooq.tables.TrackSecondaryStyleConfirmations;
 import se.dansbart.jooq.tables.TrackStructureVersions;
 import se.dansbart.jooq.tables.TrackStyleVotes;
+import se.dansbart.jooq.tables.TrackSubmissions;
 import se.dansbart.jooq.tables.Tracks;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
@@ -235,6 +236,11 @@ public class Tables {
      * The table <code>public.track_style_votes</code>.
      */
     public static final TrackStyleVotes TRACK_STYLE_VOTES = TrackStyleVotes.TRACK_STYLE_VOTES;
+
+    /**
+     * The table <code>public.track_submissions</code>.
+     */
+    public static final TrackSubmissions TRACK_SUBMISSIONS = TrackSubmissions.TRACK_SUBMISSIONS;
 
     /**
      * The table <code>public.tracks</code>.

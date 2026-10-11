@@ -53,6 +53,8 @@ import DanceListPage from '@/pages/DanceListPage';
 import { GroupPage } from '@/pages/GroupPage';
 import { GroupSettingsPage } from '@/pages/GroupSettingsPage';
 import { MyLibraryPage } from '@/pages/MyLibraryPage';
+import { AddMusicPage } from '@/pages/AddMusicPage';
+import { AdminSubmissionsPage } from '@/admin/pages/AdminSubmissionsPage';
 
 export function App() {
   return (
@@ -118,6 +120,7 @@ export function App() {
                             </ProtectedRoute>
                           }
                         />
+                        <Route path="/lagg-till-musik" element={<AddMusicPage />} />
                         <Route path="/help" element={<HelpPage />} />
                         <Route path="/help/topic/:slug/:id" element={<HelpTopicPage />} />
                         <Route path="/about" element={<AboutPage />} />
@@ -152,6 +155,7 @@ export function App() {
                       <Route path="ingest" element={<AdminIngestPage />} />
                       <Route path="pending" element={<AdminPendingPage />} />
                       <Route path="suggestions" element={<AdminSuggestionsPage />} />
+                      <Route path="submissions" element={<AdminSubmissionsPage />} />
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />
                       <Route path="folkwiki" element={<AdminFolkwikiPage />} />
                       <Route path="users" element={<AdminUsersPage />} />

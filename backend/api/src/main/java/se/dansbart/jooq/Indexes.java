@@ -38,6 +38,7 @@ import se.dansbart.jooq.tables.TrackFolkwikiMatches;
 import se.dansbart.jooq.tables.TrackPlaybacks;
 import se.dansbart.jooq.tables.TrackSecondaryStyleConfirmations;
 import se.dansbart.jooq.tables.TrackStyleVotes;
+import se.dansbart.jooq.tables.TrackSubmissions;
 import se.dansbart.jooq.tables.Tracks;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
@@ -121,6 +122,9 @@ public class Indexes {
     public static final Index IX_TRACK_PLAYBACKS_TRACK_ID = Internal.createIndex(DSL.name("ix_track_playbacks_track_id"), TrackPlaybacks.TRACK_PLAYBACKS, new OrderField[] { TrackPlaybacks.TRACK_PLAYBACKS.TRACK_ID }, false);
     public static final Index IX_TRACK_STYLE_VOTES_TRACK_STYLE = Internal.createIndex(DSL.name("ix_track_style_votes_track_style"), TrackStyleVotes.TRACK_STYLE_VOTES, new OrderField[] { TrackStyleVotes.TRACK_STYLE_VOTES.TRACK_ID, TrackStyleVotes.TRACK_STYLE_VOTES.SUGGESTED_STYLE }, false);
     public static final Index IX_TRACK_STYLE_VOTES_VOTER_ID = Internal.createIndex(DSL.name("ix_track_style_votes_voter_id"), TrackStyleVotes.TRACK_STYLE_VOTES, new OrderField[] { TrackStyleVotes.TRACK_STYLE_VOTES.VOTER_ID }, false);
+    public static final Index IX_TRACK_SUBMISSIONS_BATCH = Internal.createIndex(DSL.name("ix_track_submissions_batch"), TrackSubmissions.TRACK_SUBMISSIONS, new OrderField[] { TrackSubmissions.TRACK_SUBMISSIONS.BATCH_ID }, false);
+    public static final Index IX_TRACK_SUBMISSIONS_STATUS_CREATED = Internal.createIndex(DSL.name("ix_track_submissions_status_created"), TrackSubmissions.TRACK_SUBMISSIONS, new OrderField[] { TrackSubmissions.TRACK_SUBMISSIONS.STATUS, TrackSubmissions.TRACK_SUBMISSIONS.CREATED_AT.desc() }, false);
+    public static final Index IX_TRACK_SUBMISSIONS_VOTER = Internal.createIndex(DSL.name("ix_track_submissions_voter"), TrackSubmissions.TRACK_SUBMISSIONS, new OrderField[] { TrackSubmissions.TRACK_SUBMISSIONS.VOTER_ID }, false);
     public static final Index IX_TRACKS_ANALYSIS_VERSION = Internal.createIndex(DSL.name("ix_tracks_analysis_version"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.ANALYSIS_VERSION }, false);
     public static final Index IX_TRACKS_IS_DANCEABLE = Internal.createIndex(DSL.name("ix_tracks_is_danceable"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.IS_DANCEABLE }, false);
     public static final Index IX_TRACKS_IS_FLAGGED = Internal.createIndex(DSL.name("ix_tracks_is_flagged"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.IS_FLAGGED }, false);
@@ -137,5 +141,6 @@ public class Indexes {
     public static final Index IX_VISITOR_SESSIONS_LAST_SEEN = Internal.createIndex(DSL.name("ix_visitor_sessions_last_seen"), VisitorSessions.VISITOR_SESSIONS, new OrderField[] { VisitorSessions.VISITOR_SESSIONS.LAST_SEEN }, false);
     public static final Index IX_VISITOR_SESSIONS_SESSION_ID = Internal.createIndex(DSL.name("ix_visitor_sessions_session_id"), VisitorSessions.VISITOR_SESSIONS, new OrderField[] { VisitorSessions.VISITOR_SESSIONS.SESSION_ID }, true);
     public static final Index PATH_COUNTS_DATE_IDX = Internal.createIndex(DSL.name("path_counts_date_idx"), PathCounts.PATH_COUNTS, new OrderField[] { PathCounts.PATH_COUNTS.DATE }, false);
+    public static final Index UX_TRACK_SUBMISSIONS_PENDING_EXTERNAL = Internal.createIndex(DSL.name("ux_track_submissions_pending_external"), TrackSubmissions.TRACK_SUBMISSIONS, new OrderField[] { TrackSubmissions.TRACK_SUBMISSIONS.PROVIDER, TrackSubmissions.TRACK_SUBMISSIONS.EXTERNAL_ID }, true);
     public static final Index UX_TRACKS_CONTENT_HASH = Internal.createIndex(DSL.name("ux_tracks_content_hash"), Tracks.TRACKS, new OrderField[] { Tracks.TRACKS.CONTENT_HASH }, true);
 }

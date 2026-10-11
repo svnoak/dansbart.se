@@ -9,6 +9,7 @@ import {
   GroupIcon,
   QueueListIcon,
   MusicNoteIcon,
+  PlusIcon,
   UserIcon,
 } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
@@ -129,6 +130,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isGroups = path.startsWith('/groups');
   const isFavorites = path === '/favorites';
   const isMinaLatar = path === '/mina-latar';
+  const isAddMusic = path === '/lagg-till-musik';
   const isHelp = path.startsWith('/help');
 
   const footerLink = 'min-h-8 inline-flex items-center text-[13px] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] hover:underline';
@@ -199,6 +201,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       )}
 
       <GroupLabel>Gemenskap</GroupLabel>
+      <NavLink
+        to="/lagg-till-musik"
+        active={isAddMusic}
+        onClick={onNavigate}
+        icon={<PlusIcon className="h-5 w-5" aria-hidden />}
+      >
+        Lägg till musik
+      </NavLink>
       <NavLink
         to="/groups"
         active={isGroups}

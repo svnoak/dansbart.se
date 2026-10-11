@@ -3,10 +3,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { httpClient } from '@/api/http-client';
 import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getPrimaryTrack, getDanceTracks } from '@/api/generated/dances/dances';
-import { EmptyState, InlineError, LoadError, RowSkeleton } from '@/ui';
-import { ChevronRightIcon, PlayIcon, StarMarkIcon } from '@/icons';
+import { EmptyState, IconButton, InlineError, LoadError, RowSkeleton } from '@/ui';
+import { ChevronRightIcon, PlayIcon, PlusIcon, StarMarkIcon } from '@/icons';
+import { AddToDanceListModal } from '@/components/AddToDanceListModal';
+import { LoginRequiredModal } from '@/components/LoginRequiredModal';
 import { StylePill } from '@/components/TrackRow/StylePill';
 import { getStyleColor } from '@/styles/danceStyleColors';
+import { useAuth } from '@/auth/useAuth';
 import { useTheme } from '@/theme/useTheme';
 import { usePlayer } from '@/player/usePlayer';
 
@@ -81,6 +84,7 @@ function ExternalLinkIcon({ className }: { className?: string }) {
 
 export function DancesPage() {
   const { play } = usePlayer();
+  const { isAuthenticated } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [searchParams, setSearchParams] = useSearchParams();
@@ -90,6 +94,8 @@ export function DancesPage() {
 
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [playErrors, setPlayErrors] = useState<Record<string, string>>({});
+  const [danceToAdd, setDanceToAdd] = useState<DanceDto | null>(null);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [dances, setDances] = useState<DanceDto[]>([]);
   const [total, setTotal] = useState(0);
   const [styles, setStyles] = useState<string[]>([]);
@@ -241,6 +247,14 @@ export function DancesPage() {
     } finally {
       setPlayingId(null);
     }
+  }
+
+  function handleAddToDanceList(dance: DanceDto) {
+    if (!isAuthenticated) {
+      setLoginModalOpen(true);
+      return;
+    }
+    setDanceToAdd(dance);
   }
 
   function chipStyle(styleName: string, active: boolean): CSSProperties | undefined {
@@ -419,8 +433,15 @@ export function DancesPage() {
                         </span>
                       </div>
 
-                      {/* Slot 4: open */}
-                      <div className="col-start-3 row-span-2 md:col-start-4 md:row-span-1 flex shrink-0 items-center">
+                      {/* Slot 4: add to dance list, open */}
+                      <div className="col-start-3 row-span-2 md:col-start-4 md:row-span-1 flex shrink-0 items-center gap-0.5">
+                        <IconButton
+                          aria-label={`Lägg till ${dance.name} i danslista`}
+                          title="Lägg till i danslista"
+                          onClick={() => handleAddToDanceList(dance)}
+                        >
+                          <PlusIcon className="h-5 w-5 text-[rgb(var(--color-text-muted))]" aria-hidden />
+                        </IconButton>
                         <Link
                           to={`/dance/${dance.id}`}
                           aria-label={`Öppna ${dance.name}`}
@@ -450,6 +471,17 @@ export function DancesPage() {
           )}
         </>
       )}
+
+      <AddToDanceListModal
+        open={danceToAdd !== null}
+        onClose={() => setDanceToAdd(null)}
+        dance={danceToAdd ?? {}}
+      />
+      <LoginRequiredModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        message="Du behöver skapa ett konto eller logga in för att lägga till en dans i en danslista."
+      />
     </div>
   );
 }
