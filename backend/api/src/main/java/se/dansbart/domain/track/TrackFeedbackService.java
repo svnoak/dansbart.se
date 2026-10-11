@@ -51,11 +51,36 @@ public class TrackFeedbackService {
         if (voterId == null) {
             return Optional.empty();
         }
+        return recordStyleVote(trackId, voterId, reputationService.getWeightForCurrentVoter(), suggestedStyle, tempoCorrection);
+    }
+
+    /**
+     * Record a style vote for a voter who is not the current request's voter, for example
+     * the person who submitted a track when an admin approves it later. The weight is the
+     * caller's to supply (see VoterReputationService.getWeightForVoter).
+     */
+    @Transactional
+    public Optional<StyleFeedbackResult> recordStyleVoteForVoter(
+            UUID trackId,
+            UUID voterId,
+            BigDecimal weight,
+            String suggestedStyle) {
+        if (voterId == null) {
+            return Optional.empty();
+        }
+        return recordStyleVote(trackId, voterId, weight, suggestedStyle, null);
+    }
+
+    private Optional<StyleFeedbackResult> recordStyleVote(
+            UUID trackId,
+            UUID voterId,
+            BigDecimal weight,
+            String suggestedStyle,
+            String tempoCorrection) {
         if (!trackJooqRepository.existsById(trackId)) {
             return Optional.empty();
         }
 
-        BigDecimal weight = reputationService.getWeightForCurrentVoter();
         BigDecimal sumBefore = suggestedStyle != null
             ? voteRepository.weightedSumByTrackIdAndSuggestedStyle(trackId, suggestedStyle)
             : BigDecimal.ZERO;

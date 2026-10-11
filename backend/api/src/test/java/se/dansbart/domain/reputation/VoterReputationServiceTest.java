@@ -69,4 +69,47 @@ class VoterReputationServiceTest {
         BigDecimal expected = VoterReputationService.USER_BASE.multiply(multiplier);
         assertEquals(expected, weight);
     }
+
+    @Test
+    void isTrustedContributor_anonymous_isFalse() {
+        when(voterContext.isAuthenticated()).thenReturn(false);
+
+        assertEquals(false, service().isTrustedContributor());
+    }
+
+    @Test
+    void isTrustedContributor_newUserAtBaseWeight_isFalse() {
+        UUID userId = UUID.randomUUID();
+        when(voterContext.isAuthenticated()).thenReturn(true);
+        when(voterContext.getUserId()).thenReturn(userId);
+        when(voterContext.getVoterId()).thenReturn(userId);
+        when(userJooqRepository.findRoleById(userId)).thenReturn("USER");
+        when(reputationRepository.findMultiplierByVoterId(userId)).thenReturn(Optional.empty());
+
+        assertEquals(false, service().isTrustedContributor());
+    }
+
+    @Test
+    void isTrustedContributor_userAboveTheGate_isTrue() {
+        UUID userId = UUID.randomUUID();
+        when(voterContext.isAuthenticated()).thenReturn(true);
+        when(voterContext.getUserId()).thenReturn(userId);
+        when(voterContext.getVoterId()).thenReturn(userId);
+        when(userJooqRepository.findRoleById(userId)).thenReturn("USER");
+        when(reputationRepository.findMultiplierByVoterId(userId)).thenReturn(Optional.of(new BigDecimal("1.05")));
+
+        assertEquals(true, service().isTrustedContributor());
+    }
+
+    @Test
+    void isTrustedContributor_admin_isTrue() {
+        UUID userId = UUID.randomUUID();
+        when(voterContext.isAuthenticated()).thenReturn(true);
+        when(voterContext.getUserId()).thenReturn(userId);
+        when(voterContext.getVoterId()).thenReturn(userId);
+        when(userJooqRepository.findRoleById(userId)).thenReturn("ADMIN");
+        when(reputationRepository.findMultiplierByVoterId(userId)).thenReturn(Optional.empty());
+
+        assertEquals(true, service().isTrustedContributor());
+    }
 }

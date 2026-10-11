@@ -35,6 +35,15 @@ public class VoterReputationService {
     public static final BigDecimal MATCHING_THRESHOLD = new BigDecimal("0.3");
     public static final BigDecimal SUPPRESSION_THRESHOLD = new BigDecimal("0.6");
 
+    /**
+     * Gate for adding tracks to the catalog without an admin looking first. It is the same
+     * retraining gate the votes use, applied to one person's own weight: a signed-in
+     * account starts at exactly USER_BASE (2.0), so its first submissions go to an admin,
+     * and every rewarded vote or approved submission lifts it above the gate. Admins
+     * (ADMIN_BASE) are always above it.
+     */
+    public static final BigDecimal TRUSTED_CONTRIBUTOR_THRESHOLD = RETRAINING_THRESHOLD;
+
     private static final BigDecimal DELTA_CONFIRM = new BigDecimal("0.05");
     private static final BigDecimal USER_MULT_MIN = new BigDecimal("0.30");
     private static final BigDecimal USER_MULT_MAX = new BigDecimal("3.00");
@@ -53,6 +62,16 @@ public class VoterReputationService {
             .findMultiplierByVoterId(voterContext.getVoterId())
             .orElse(BigDecimal.ONE);
         return base.multiply(mult);
+    }
+
+    /**
+     * Whether the current voter may add tracks that go straight to analysis. Anonymous
+     * voters never are; a signed-in person is once their weight is above
+     * TRUSTED_CONTRIBUTOR_THRESHOLD (strictly, see the constant).
+     */
+    public boolean isTrustedContributor() {
+        if (!voterContext.isAuthenticated()) return false;
+        return getWeightForCurrentVoter().compareTo(TRUSTED_CONTRIBUTOR_THRESHOLD) > 0;
     }
 
     public BigDecimal getWeightForVoter(UUID voterId) {
@@ -77,6 +96,16 @@ public class VoterReputationService {
         BigDecimal min = "ADMIN".equals(role) ? ADMIN_MULT_MIN : USER_MULT_MIN;
         BigDecimal max = "ADMIN".equals(role) ? ADMIN_MULT_MAX : USER_MULT_MAX;
         reputationRepository.adjustMultiplier(voterContext.getVoterId(), DELTA_CONFIRM, min, max);
+    }
+
+    /**
+     * Reward one signed-in voter by the same step as a rewarded vote, for example when an
+     * admin approves a track they submitted. Anonymous voter ids are ignored.
+     */
+    @Transactional
+    public void rewardVoter(UUID voterId) {
+        if (voterId == null) return;
+        rewardUpvoters(List.of(voterId));
     }
 
     @Transactional
