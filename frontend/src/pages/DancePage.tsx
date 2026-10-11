@@ -150,16 +150,23 @@ interface VoteButtonsProps {
   onVote: (vote: 'up' | 'down') => void;
 }
 
-/** The two vote buttons of a recommendation row: "Passar" and "Passar inte". */
+/**
+ * The two vote buttons of a recommendation row: "Passar" and "Passar inte".
+ * Stacked on a phone so the title keeps its width, side by side from `sm` up.
+ */
 function VoteButtons({ vote, voting, onVote }: VoteButtonsProps) {
   const base =
-    'inline-flex h-10 items-center gap-1.5 rounded-[var(--radius)] border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-50';
+    'inline-flex h-10 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-50 sm:w-auto';
   const idle =
     'border-[rgb(var(--color-border-strong))] bg-transparent text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]';
   const pressed =
     'border-[rgb(var(--color-selected))] bg-[rgb(var(--color-selected))]/10 text-[rgb(var(--color-selected))]';
   return (
-    <div className="flex items-center gap-1.5" role="group" aria-label="Rösta på förslaget">
+    <div
+      className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:items-center"
+      role="group"
+      aria-label="Rösta på förslaget"
+    >
       <button
         type="button"
         aria-pressed={vote === 'up'}
@@ -168,7 +175,7 @@ function VoteButtons({ vote, voting, onVote }: VoteButtonsProps) {
         onClick={() => onVote('up')}
         className={`${base} ${vote === 'up' ? pressed : idle}`}
       >
-        <ThumbsUpIcon className="h-4 w-4" />
+        <ThumbsUpIcon className="h-4 w-4 shrink-0" />
         Passar
       </button>
       <button
@@ -179,8 +186,8 @@ function VoteButtons({ vote, voting, onVote }: VoteButtonsProps) {
         onClick={() => onVote('down')}
         className={`${base} ${vote === 'down' ? pressed : idle}`}
       >
-        <ThumbsDownIcon className="h-4 w-4" />
-        <span className="whitespace-nowrap">Passar inte</span>
+        <ThumbsDownIcon className="h-4 w-4 shrink-0" />
+        Passar inte
       </button>
     </div>
   );
