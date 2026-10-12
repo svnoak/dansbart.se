@@ -44,6 +44,13 @@ public class ProviderConnectionJooqRepository {
             .fetchOptional(this::toConnection);
     }
 
+    public Optional<ProviderConnection> findByUserAndProvider(UUID userId, String provider) {
+        return dsl.selectFrom(PROVIDER_CONNECTIONS)
+            .where(PROVIDER_CONNECTIONS.USER_ID.eq(userId))
+            .and(PROVIDER_CONNECTIONS.PROVIDER.eq(provider))
+            .fetchOptional(this::toConnection);
+    }
+
     public List<ProviderConnection> findActiveDueForRefresh(Instant expiryCutoff, Instant staleBefore) {
         var expiresSoon = PROVIDER_CONNECTIONS.REFRESH_TOKEN_EXPIRES_AT.isNotNull()
             .and(PROVIDER_CONNECTIONS.REFRESH_TOKEN_EXPIRES_AT.lt(toOffset(expiryCutoff)));
@@ -80,6 +87,17 @@ public class ProviderConnectionJooqRepository {
             .where(PROVIDER_CONNECTIONS.ID.eq(id))
             .and(PROVIDER_CONNECTIONS.ENCRYPTED_REFRESH_TOKEN.eq(expectedEncryptedRefreshToken))
             .execute() > 0;
+    }
+
+    public void replaceToken(UUID id, byte[] encryptedRefreshToken, Instant refreshTokenExpiresAt, Instant lastRefreshedAt) {
+        dsl.update(PROVIDER_CONNECTIONS)
+            .set(PROVIDER_CONNECTIONS.ENCRYPTED_REFRESH_TOKEN, encryptedRefreshToken)
+            .set(PROVIDER_CONNECTIONS.REFRESH_TOKEN_EXPIRES_AT, toOffset(refreshTokenExpiresAt))
+            .set(PROVIDER_CONNECTIONS.LAST_REFRESHED_AT, toOffset(lastRefreshedAt))
+            .set(PROVIDER_CONNECTIONS.STATUS, ProviderConnection.STATUS_ACTIVE)
+            .set(PROVIDER_CONNECTIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+            .where(PROVIDER_CONNECTIONS.ID.eq(id))
+            .execute();
     }
 
     private ProviderConnection toConnection(Record record) {
