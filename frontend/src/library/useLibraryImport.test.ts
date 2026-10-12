@@ -106,4 +106,20 @@ describe('useLibraryImport', () => {
     expect(saveLocalFile).toHaveBeenCalledWith('s1', { file: file1 }, 't1');
     expect(saveLocalFile).toHaveBeenCalledWith('s2', { file: file2 }, 't2');
   });
+
+  it('names at most five failed files and counts the rest', async () => {
+    await act(async () => root.render(createElement(Probe)));
+    fetchMock.mockRejectedValue(new Error('Network error'));
+    const files = Array.from({ length: 7 }, (_, i) => ({
+      file: new File(['audio'], `låt${i + 1}.mp3`),
+    }));
+
+    await act(async () => {
+      await hook.current!.importFiles(files);
+    });
+
+    expect(hook.current!.error).toBe(
+      'Det gick inte att importera: låt1.mp3, låt2.mp3, låt3.mp3, låt4.mp3, låt5.mp3 och 2 till. Försök igen.',
+    );
+  });
 });
