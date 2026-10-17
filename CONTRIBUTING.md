@@ -20,20 +20,21 @@ If you have an idea or found a bug, open an issue first and describe it. This ke
 Development is trunk-based. There is no long-lived `develop` branch.
 
 ```
-feature branch --PR--> main --CI green--> :beta images --Ansible--> beta
-                        |
-                     tag v1.2.3 --> :latest + :v1.2.3 images --> production
+feature branch --PR--> main --CI green--> :<sha> + :latest images
+                                              |
+                     release PR in the deployment repo --merge--> production
 ```
 
-Every commit that lands on `main` and passes CI is published as a `:beta`
-image. Production is cut separately by tagging a commit that is already on
-`main`; the release workflow refuses tags that point anywhere else, so nothing
-reaches production without having soaked on beta first.
+Every commit that lands on `main` and passes CI is built into images tagged
+with its SHA and `latest`. The release workflow then asks the private
+deployment repository to open a pull request that pins that SHA, or to update
+the one already open. Merging that pull request deploys to production, so the
+merge there is the only release gate. There is no beta environment.
 
 ### Database migrations are append-only
 
 Flyway records a checksum for every migration it applies. Editing a migration
-that has already run on beta or production makes the application fail to start.
+that has already run on production makes the application fail to start.
 CI rejects any PR that modifies, deletes or renames an existing migration — add
 a new one instead.
 

@@ -26,12 +26,12 @@ Branch protection on `main` requires the `CI Gate` status check.
 Development is trunk-based. There is no long-lived `develop` branch.
 
 1. Open a pull request from a branch to `main`.
-2. CI publishes a `:beta` image for each commit that lands on `main`.
-3. Tag a commit that is already on `main` to cut production. The release workflow rejects a tag that points anywhere else.
+2. The release workflow builds an image for each commit that lands on `main` and passes CI, tagged with the commit SHA and `latest`.
+3. The same workflow asks the private deployment repository to open or update a release pull request that pins that SHA. Merging that pull request deploys to production. There is no beta environment.
 
 ## Migrations are append-only
 
-Flyway stores a checksum for each migration that it applies. If you edit a migration that already ran on beta or on production, the application fails to start. CI rejects a pull request that changes, deletes, or renames an existing migration. Add a new migration instead.
+Flyway stores a checksum for each migration that it applies. If you edit a migration that already ran on production, the application fails to start. CI rejects a pull request that changes, deletes, or renames an existing migration. Add a new migration instead.
 
 Run `make migrations` to apply the migrations to the dev database and regenerate the jOOQ classes. Generate the jOOQ classes only from a database that holds the migrations of your branch. A database that holds a migration from another branch writes a field for a column that `main` does not have.
 

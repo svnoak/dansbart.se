@@ -87,7 +87,7 @@ jobs:
           fetch-depth: 0
 
       # Flyway records a checksum per applied migration. Editing a file that has
-      # already run against beta or production makes startup fail with a checksum
+      # already run against production makes startup fail with a checksum
       # mismatch, so existing migrations are append-only.
       - name: Reject edits to already-committed migrations
         if: github.event_name == 'pull_request'
