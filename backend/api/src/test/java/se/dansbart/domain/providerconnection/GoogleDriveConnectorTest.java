@@ -42,6 +42,13 @@ class GoogleDriveConnectorTest {
     }
 
     @Test
+    void identifiesAsGoogleDriveWithPkce() {
+        assertEquals("GDRIVE", connector.provider());
+        assertEquals("google", connector.slug());
+        assertTrue(connector.usesPkce());
+    }
+
+    @Test
     void buildsTheConsentUrlWithDriveFileOfflineAccessAndPkce() {
         URI uri = connector.authorizationUri("state-1", "challenge-1");
 

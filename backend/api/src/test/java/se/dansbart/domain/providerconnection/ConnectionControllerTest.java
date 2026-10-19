@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,7 +38,7 @@ class ConnectionControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private GoogleConnectionService googleConnectionService;
+    private OAuthConnectionService connectionService;
 
     @MockBean
     private VoterContext voterContext;
@@ -49,13 +50,18 @@ class ConnectionControllerTest {
     }
 
     @Test
-    void startRedirectsToGoogle() throws Exception {
+    void startRedirectsToTheProviderNamedInThePath() throws Exception {
         URI googleUri = URI.create("https://accounts.google.com/o/oauth2/v2/auth?state=abc");
-        when(googleConnectionService.start(any(), any())).thenReturn(googleUri);
+        URI hiDriveUri = URI.create("https://my.hidrive.com/client/authorize?state=abc");
+        when(connectionService.start(eq("google"), eq(userId), any())).thenReturn(googleUri);
+        when(connectionService.start(eq("hidrive"), eq(userId), any())).thenReturn(hiDriveUri);
 
         mockMvc.perform(get("/api/connections/google/start").with(authentication(signedIn())))
             .andExpect(status().isFound())
             .andExpect(header().string("Location", googleUri.toString()));
+        mockMvc.perform(get("/api/connections/hidrive/start").with(authentication(signedIn())))
+            .andExpect(status().isFound())
+            .andExpect(header().string("Location", hiDriveUri.toString()));
     }
 
     @Test
@@ -63,12 +69,21 @@ class ConnectionControllerTest {
         mockMvc.perform(get("/api/connections/google/start"))
             .andExpect(status().isUnauthorized());
 
-        verifyNoInteractions(googleConnectionService);
+        verifyNoInteractions(connectionService);
     }
 
     @Test
-    void startAnswersUnavailableWhenGoogleIsNotConfigured() throws Exception {
-        when(googleConnectionService.start(any(), any())).thenThrow(new GoogleNotConfiguredException());
+    void startAnswersNotFoundForAnUnknownProvider() throws Exception {
+        when(connectionService.start(eq("box"), any(), any())).thenThrow(new UnknownProviderException("box"));
+
+        mockMvc.perform(get("/api/connections/box/start").with(authentication(signedIn())))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void startAnswersUnavailableWhenTheProviderIsNotConfigured() throws Exception {
+        when(connectionService.start(eq("google"), any(), any()))
+            .thenThrow(new ProviderNotConfiguredException("GDRIVE"));
 
         mockMvc.perform(get("/api/connections/google/start").with(authentication(signedIn())))
             .andExpect(status().isServiceUnavailable());
@@ -76,10 +91,10 @@ class ConnectionControllerTest {
 
     @Test
     void callbackRedirectsToMinaLatarWhenConnected() throws Exception {
-        when(googleConnectionService.callback(any(), any(), any(), any(), any()))
+        when(connectionService.callback(eq("hidrive"), any(), any(), eq("s"), eq("c"), isNull()))
             .thenReturn(CallbackOutcome.CONNECTED);
 
-        mockMvc.perform(get("/api/connections/google/callback")
+        mockMvc.perform(get("/api/connections/hidrive/callback")
                 .param("state", "s").param("code", "c")
                 .with(authentication(signedIn())))
             .andExpect(status().isFound())
@@ -88,7 +103,7 @@ class ConnectionControllerTest {
 
     @Test
     void callbackRedirectsWithAvbrutenWhenDeclined() throws Exception {
-        when(googleConnectionService.callback(any(), any(), any(), any(), any()))
+        when(connectionService.callback(eq("google"), any(), any(), eq("s"), isNull(), eq("access_denied")))
             .thenReturn(CallbackOutcome.DECLINED);
 
         mockMvc.perform(get("/api/connections/google/callback")
@@ -100,7 +115,7 @@ class ConnectionControllerTest {
 
     @Test
     void callbackRedirectsWithMisslyckadesWhenFailedOrRejected() throws Exception {
-        when(googleConnectionService.callback(any(), any(), any(), any(), any()))
+        when(connectionService.callback(eq("google"), any(), any(), any(), any(), any()))
             .thenReturn(CallbackOutcome.FAILED, CallbackOutcome.REJECTED);
 
         for (int attempt = 0; attempt < 2; attempt++) {
@@ -113,16 +128,26 @@ class ConnectionControllerTest {
     }
 
     @Test
-    void callbackWorksWithoutASignedInPerson() throws Exception {
-        when(googleConnectionService.callback(any(), any(), any(), any(), any()))
+    void callbackWorksWithoutASignedInPersonForEveryProvider() throws Exception {
+        when(connectionService.callback(any(), isNull(), any(), any(), any(), any()))
             .thenReturn(CallbackOutcome.REJECTED);
 
-        mockMvc.perform(get("/api/connections/google/callback")
-                .param("state", "s").param("code", "c"))
-            .andExpect(status().isFound())
-            .andExpect(header().string("Location", SUCCESS_URL + "?anslutning=misslyckades"));
+        for (String provider : List.of("google", "hidrive")) {
+            mockMvc.perform(get("/api/connections/" + provider + "/callback")
+                    .param("state", "s").param("code", "c"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", SUCCESS_URL + "?anslutning=misslyckades"));
+            verify(connectionService).callback(eq(provider), isNull(), any(), eq("s"), eq("c"), isNull());
+        }
+        verify(connectionService, never()).start(any(), any(), any());
+    }
 
-        verify(googleConnectionService).callback(isNull(), any(), any(), any(), any());
-        verify(googleConnectionService, never()).start(any(), any());
+    @Test
+    void callbackAnswersNotFoundForAnUnknownProvider() throws Exception {
+        when(connectionService.callback(eq("box"), any(), any(), any(), any(), any()))
+            .thenThrow(new UnknownProviderException("box"));
+
+        mockMvc.perform(get("/api/connections/box/callback").param("state", "s").param("code", "c"))
+            .andExpect(status().isNotFound());
     }
 }
