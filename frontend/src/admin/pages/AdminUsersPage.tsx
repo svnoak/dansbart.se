@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import { banUser, unbanUser } from '@/api/generated/admin-users/admin-users';
 import { apiFetch } from '@/api/http-client';
+import { toast } from '@/admin/components/toastEmitter';
 import { useAuth } from '@/auth/useAuth';
 import { DataTable } from '@/admin/components/DataTable';
 import type { Column } from '@/admin/components/DataTable';
 import { Select } from '@/admin/components/forms/Select';
-import { Badge, LoadError } from '@/ui';
+import { Badge, Button, InlineError, LoadError } from '@/ui';
 
 interface AdminUser {
   id: string;
@@ -12,6 +14,7 @@ interface AdminUser {
   displayName: string;
   role: string;
   lastLoginAt: string | null;
+  banned?: boolean;
 }
 
 const fieldClass = 'min-h-11 w-auto min-w-36 border-[rgb(var(--color-border-strong))] text-[15px]';
@@ -22,6 +25,7 @@ export function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [banErrors, setBanErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
     setLoading(true);
@@ -51,6 +55,30 @@ export function AdminUsersPage() {
           prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
         );
       }
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  async function toggleBan(target: AdminUser) {
+    const ban = !target.banned;
+    const name = target.displayName || target.username;
+    setUpdating(target.id);
+    setBanErrors((prev) => {
+      const next = { ...prev };
+      delete next[target.id];
+      return next;
+    });
+    try {
+      if (ban) await banUser(target.id);
+      else await unbanUser(target.id);
+      setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, banned: ban } : u)));
+      toast(ban ? `${name} är avstängd` : `${name} är inte längre avstängd`);
+    } catch {
+      setBanErrors((prev) => ({
+        ...prev,
+        [target.id]: ban ? 'Kunde inte stänga av användaren' : 'Kunde inte häva avstängningen',
+      }));
     } finally {
       setUpdating(null);
     }
@@ -96,6 +124,7 @@ export function AdminUsersPage() {
             <Badge variant={user.role === 'ADMIN' ? 'default' : 'muted'}>
               {user.role === 'ADMIN' ? 'Admin' : 'Användare'}
             </Badge>
+            {user.banned && <Badge>Avstängd</Badge>}
             {isUpdating && (
               <span className="text-[13px] text-[rgb(var(--color-text-muted))]" role="status">
                 Sparar…
@@ -135,6 +164,30 @@ export function AdminUsersPage() {
       },
       className: 'w-44 text-right',
     },
+    {
+      key: 'ban',
+      header: 'Avstängning',
+      render: (user) => {
+        // Admins cannot be banned; remove the admin role first.
+        if (user.id === currentUser?.id || user.role === 'ADMIN') return null;
+        const name = user.displayName || user.username;
+        return (
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={updating === user.id}
+              onClick={() => void toggleBan(user)}
+              aria-label={user.banned ? `Häv avstängningen av ${name}` : `Stäng av ${name}`}
+            >
+              {user.banned ? 'Häv avstängning' : 'Stäng av'}
+            </Button>
+            {banErrors[user.id] && <InlineError>{banErrors[user.id]}</InlineError>}
+          </div>
+        );
+      },
+      className: 'w-44 text-right',
+    },
   ];
 
   return (
@@ -144,7 +197,8 @@ export function AdminUsersPage() {
           Användare
         </h1>
         <p className="mt-1 text-[15px] text-[rgb(var(--color-text-muted))]">
-          Alla som har loggat in. Ge någon rollen Admin för att släppa in dem backstage.
+          Alla som har loggat in. Ge någon rollen Admin för att släppa in dem backstage. Den som är
+          avstängd kan inte lägga till låtar eller dansstilar, och rösterna väger som en anonym besökares.
         </p>
       </header>
 

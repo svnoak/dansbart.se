@@ -16,6 +16,8 @@ export interface UseStyleVoteResult {
   mainCategories: string[];
   subStylesFor: (main: string) => string[];
   isSubmitting: boolean;
+  /** Fetches the style tree again, for example after someone added a dance style. */
+  reload: () => Promise<void>;
   submit: (style: string, tempoCorrection?: string) => Promise<StyleVoteSubmitResult>;
 }
 
@@ -27,18 +29,23 @@ export function useStyleVote(
   const [styleTree, setStyleTree] = useState<StyleTree>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const reload = useCallback(async () => {
+    try {
+      const nodes: StyleNode[] = await getStyleTree();
+      const tree: StyleTree = {};
+      for (const node of nodes) {
+        if (node.name) tree[node.name] = node.subStyles ?? [];
+      }
+      setStyleTree(tree);
+    } catch {
+      // Keep the tree we have.
+    }
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
-    getStyleTree()
-      .then((nodes: StyleNode[]) => {
-        const tree: StyleTree = {};
-        for (const node of nodes) {
-          if (node.name) tree[node.name] = node.subStyles ?? [];
-        }
-        setStyleTree(tree);
-      })
-      .catch(() => {});
-  }, [enabled]);
+    void reload();
+  }, [enabled, reload]);
 
   const mainCategories = useMemo(() => Object.keys(styleTree).sort(), [styleTree]);
   const subStylesFor = useCallback((main: string) => styleTree[main] ?? [], [styleTree]);
@@ -63,5 +70,5 @@ export function useStyleVote(
     [trackId],
   );
 
-  return { styleTree, mainCategories, subStylesFor, isSubmitting, submit };
+  return { styleTree, mainCategories, subStylesFor, isSubmitting, reload, submit };
 }

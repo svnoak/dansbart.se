@@ -1,5 +1,7 @@
 # dansbart.se
 
+@AGENTS.md
+
 Swedish folk music site. People find music to dance to and classify tracks by dance style and tempo.
 
 - Contributor workflow and test commands: `CONTRIBUTING.md`.
@@ -50,6 +52,16 @@ If a worker crashes, its tracks stay in `PROCESSING`. To reset them, call `POST 
 ## Cloud storage connectors
 
 `domain/providerconnection/` holds one `*Connector` per provider (`GDRIVE`, `HIDRIVE`) and stores encrypted refresh tokens in `provider_connections`. `OAuthConnectionService` runs the connect flow for every `OAuthConnector`, under `/api/connections/{slug}/start` and `/callback`. A new provider adds a connector, a migration for the `provider` check constraints, and the labels in the frontend. The `local` profile points the HiDrive connector at a stub served under `/stub/hidrive`, so the connect flow works without a HiDrive account. `CONTRIBUTING.md` describes the stub and what is still unverified against the real HiDrive.
+
+## User contributions
+
+Signed-in users add tracks and dance styles to the public library under `/api/contributions` (`domain/contribution/`, frontend `/lagg-till`). Additions are public at once; admins review them afterwards at `/admin/contributions`.
+
+- A YouTube link creates the track and dispatches `analyze_track_task`, which downloads that exact video.
+- A Spotify link dispatches the normal `spotify_ingest_task`. `TrackSubmissionResolverJob` links the `track_submissions` row once the worker has created the track, and after analysis puts the submitter's style back as primary.
+- The submitter's style is stored with `is_user_confirmed`, so the classifier keeps it.
+- A new dance style is a `style_keywords` row with `created_by` set.
+- `users.banned_at` blocks adding. A banned user still votes, with anonymous weight (`VoterReputationService`).
 
 ## Dance style configuration
 

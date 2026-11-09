@@ -16,6 +16,7 @@ export interface User {
   role?: string;
   createdAt?: string;
   lastLoginAt?: string;
+  banned?: boolean;
   confirmedTrackCount?: number;
   playlists?: Playlist[];
   collaborations?: PlaylistCollaborator[];

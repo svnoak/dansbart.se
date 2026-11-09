@@ -12,6 +12,52 @@ import type {
 import { httpClient } from '../../http-client';
 
 /**
+ * @summary Ban a user from adding tracks and dance styles; their votes count as anonymous
+ */
+export const getBanUserUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/admin/users/${userId}/ban`
+}
+
+export const banUser = async (userId: string, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getBanUserUrl(userId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Lift a user's ban
+ */
+export const getUnbanUserUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/admin/users/${userId}/ban`
+}
+
+export const unbanUser = async (userId: string, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getUnbanUserUrl(userId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+  
+
+/**
  * @summary Update a user's role
  */
 export const getUpdateRoleUrl = (userId: string,) => {

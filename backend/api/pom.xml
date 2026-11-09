@@ -22,6 +22,8 @@
         <pgvector.version>0.1.4</pgvector.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <jooq.version>3.19.8</jooq.version>
+        <!-- Overrides Spring Boot 3.2's 1.19.x, which cannot talk to the Docker engine on current CI runners. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
         <!-- JDBC for jOOQ codegen (profile generate-jooq). Override with -Djooq.codegen.jdbc.url=... etc. -->
         <jooq.codegen.jdbc.url>jdbc:postgresql://localhost:5432/dansbart</jooq.codegen.jdbc.url>
         <jooq.codegen.jdbc.user>postgres</jooq.codegen.jdbc.user>

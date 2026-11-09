@@ -2,11 +2,23 @@ import { generateUuid } from '../utils/uuid';
 
 export class ApiError extends Error {
   readonly status: number;
+  /** The `message` of the API's error body, written for the person using the site. */
+  readonly detail?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, detail?: string) {
     super(message);
     this.status = status;
+    this.detail = detail;
     this.name = 'ApiError';
+  }
+}
+
+async function readErrorDetail(res: Response): Promise<string | undefined> {
+  try {
+    const body = JSON.parse(await res.text()) as { message?: unknown };
+    return typeof body.message === 'string' && body.message ? body.message : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -47,7 +59,7 @@ export const httpClient = async <T>(
   }
 
   if (!res.ok) {
-    throw new ApiError(`Request failed: ${res.status} ${res.statusText}`, res.status);
+    throw new ApiError(`Request failed: ${res.status} ${res.statusText}`, res.status, await readErrorDetail(res));
   }
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
