@@ -146,6 +146,18 @@ class ContributionControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
+        @DisplayName("an added track is listed at once, before its analysis, while ingested pending tracks stay hidden")
+        void addedTrackIsListedBeforeAnalysis() throws Exception {
+            testData.track().withTitle("Ingested pending").withDanceStyle("Polska").pending().build();
+            submit(contributor, YOUTUBE_URL, "Polska", null);
+
+            mockMvc.perform(get("/api/tracks").param("mainStyle", "Polska"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].title").value("Polska efter Pelle"));
+        }
+
+        @Test
         @DisplayName("a link the library already has records the style as a vote")
         void existingLinkBecomesVote() throws Exception {
             Track existing = testData.track().withTitle("Known").complete().build();

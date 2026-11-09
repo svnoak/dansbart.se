@@ -459,6 +459,17 @@ public class TrackJooqRepository {
         return dsl.selectCount().from(subquery.asTable("ids")).fetchOne(0, Long.class);
     }
 
+    /**
+     * A track is listed once its analysis is done. A track a person added (uploader_id set)
+     * is listed at once, whatever its analysis status, so they can play it and put it in a
+     * playlist straight away. Ingested tracks still wait: the spider ingests tracks of
+     * artists that an admin has not approved yet.
+     */
+    static Condition analysedOrAddedByUser() {
+        return TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING")
+            .or(TRACKS.UPLOADER_ID.isNotNull());
+    }
+
     private Condition buildPlayableTracksCondition(
         String mainStyle,
         String subStyle,
@@ -477,7 +488,7 @@ public class TrackJooqRepository {
         Float maxArticulation
     ) {
         Condition c = PLAYBACK_LINKS.IS_WORKING.eq(true)
-            .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
+            .and(analysedOrAddedByUser())
             .and(TRACKS.IS_FLAGGED.eq(false))
             .and(TrackVisibility.publicOnly());
         if (mainStyle != null && !mainStyle.isBlank()) c = c.and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(mainStyle));

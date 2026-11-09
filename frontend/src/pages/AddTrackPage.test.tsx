@@ -16,6 +16,16 @@ const createDanceStyle = vi.fn();
 const getStyleTree = vi.fn();
 const useAuth = vi.fn();
 const toast = vi.fn();
+const getTrack = vi.fn();
+
+vi.mock('@/api/generated/tracks/tracks', () => ({
+  getTrack: (id: string) => getTrack(id),
+}));
+
+// The real row needs the player and favourites providers; the page only decides which track it shows.
+vi.mock('@/components/TrackRow', () => ({
+  TrackRow: ({ track }: { track: { title?: string } }) => <div data-testid="track-row">{track.title}</div>,
+}));
 
 vi.mock('@/api/generated/contributions/contributions', () => ({
   previewContributionLink: (...args: unknown[]) => previewContributionLink(...args),
@@ -48,6 +58,8 @@ describe('AddTrackPage', () => {
     createDanceStyle.mockReset();
     getStyleTree.mockReset();
     toast.mockReset();
+    getTrack.mockReset();
+    getTrack.mockResolvedValue({ id: 't1', title: 'Polska efter Pelle', playable: true });
     getStyleTree.mockResolvedValue([
       { name: 'Polska', subStyles: ['Slängpolska'] },
       { name: 'Vals', subStyles: [] },
@@ -137,8 +149,28 @@ describe('AddTrackPage', () => {
       subStyle: 'Slängpolska',
       tempoCategory: 'Lagom',
     });
-    expect(toast).toHaveBeenCalledWith(expect.stringContaining('Låten är tillagd'));
+    expect(toast).toHaveBeenCalledWith('Tack! Låten är tillagd och går att spela direkt.');
     expect((getInputByLabel('Länk till låten') as HTMLInputElement).value).toBe('');
+
+    // The new track is shown at once, ready to play, before any analysis.
+    expect(getTrack).toHaveBeenCalledWith('t1');
+    expect(document.body.textContent).toContain('Låten du lade till');
+    expect(document.body.querySelector('[data-testid="track-row"]')?.textContent).toBe('Polska efter Pelle');
+  });
+
+  it('has no track to show yet for a Spotify link that is still being fetched', async () => {
+    submitTrack.mockResolvedValue({ submissionId: 's2', status: 'QUEUED' });
+    await render();
+    await pasteLink('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC');
+    await choose('Vilken dans passar låten till?', 'Vals');
+    await act(async () => {
+      button('Lägg till låten').click();
+    });
+    await wait();
+
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining('Vi hämtar låten från Spotify'));
+    expect(getTrack).not.toHaveBeenCalled();
+    expect(document.body.querySelector('[data-testid="track-row"]')).toBeNull();
   });
 
   it('says so when the library already has the track', async () => {
