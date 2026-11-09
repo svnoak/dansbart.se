@@ -44,6 +44,32 @@ public class SpotifyHttpClient {
 
     public record SpotifyAlbum(String id, String name, int totalTracks) {}
     public record SpotifyTrack(String id, String name) {}
+    public record SpotifyTrackDetails(String id, String name, List<String> artistNames, Integer durationMs) {}
+
+    /**
+     * Returns one track's name, artists and duration.
+     */
+    public SpotifyTrackDetails getTrack(String trackId) {
+        String token = getToken();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> track = apiClient.get()
+                .uri("/tracks/{id}", trackId)
+                .header("Authorization", "Bearer " + token)
+                .retrieve()
+                .body(Map.class);
+        if (track == null) return null;
+
+        List<String> artistNames = new ArrayList<>();
+        if (track.get("artists") instanceof List<?> artists) {
+            for (Object a : artists) {
+                if (a instanceof Map<?, ?> artist && artist.get("name") instanceof String name) {
+                    artistNames.add(name);
+                }
+            }
+        }
+        Integer durationMs = track.get("duration_ms") instanceof Number n ? n.intValue() : null;
+        return new SpotifyTrackDetails((String) track.get("id"), (String) track.get("name"), artistNames, durationMs);
+    }
 
     /**
      * Returns albums for an artist, excluding compilations.

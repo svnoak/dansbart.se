@@ -37,6 +37,8 @@ export default defineConfig({
           'Favorites',
           'Groups',
           'Library',
+          'Contributions',
+          'Admin: Contributions',
         ],
       },
     },

@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BackArrowIcon } from '@/icons';
+import { BackArrowIcon, PlusIcon } from '@/icons';
+import { useUnreviewedContributionCount } from '@/hooks/useUnreviewedContributionCount';
 
 interface NavItem {
   to: string;
   label: string;
   icon: ReactNode;
+  /** Shows the number of unreviewed user additions. */
+  showContributionCount?: boolean;
 }
 
 interface NavGroup {
@@ -116,6 +119,12 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Inflöde',
     items: [
+      {
+        to: '/admin/contributions',
+        label: 'Nya bidrag',
+        icon: <PlusIcon className="h-5 w-5" aria-hidden />,
+        showContributionCount: true,
+      },
       { to: '/admin/ingest', label: 'Importera', icon: UploadIcon },
       { to: '/admin/pending', label: 'Väntande', icon: ClockIcon },
       { to: '/admin/duplicates', label: 'Dubbletter', icon: CopyIcon },
@@ -139,7 +148,7 @@ function GroupLabel({ children }: { children: string }) {
   );
 }
 
-function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+function NavLinkItem({ item, onNavigate, badge }: { item: NavItem; onNavigate?: () => void; badge?: number }) {
   const location = useLocation();
   const active = location.pathname === item.to;
 
@@ -158,18 +167,33 @@ function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
         {item.icon}
       </span>
       <span className="flex-1">{item.label}</span>
+      {badge != null && badge > 0 && (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-xs font-bold text-[rgb(var(--color-accent-foreground))]">
+          {badge}
+          <span className="sr-only"> att granska</span>
+        </span>
+      )}
     </Link>
   );
 }
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const location = useLocation();
+  // Fetched again on every page change, so the badge drops after reviewing.
+  const contributionCount = useUnreviewedContributionCount(true, location.pathname);
+
   return (
     <nav className="flex h-full flex-col gap-0.5 px-2" aria-label="Admin-navigering">
       {NAV_GROUPS.map((group) => (
         <div key={group.label} className="mt-4 flex flex-col gap-0.5 first:mt-0">
           <GroupLabel>{group.label}</GroupLabel>
           {group.items.map((item) => (
-            <NavLinkItem key={item.to} item={item} onNavigate={onNavigate} />
+            <NavLinkItem
+              key={item.to}
+              item={item}
+              onNavigate={onNavigate}
+              badge={item.showContributionCount ? contributionCount : undefined}
+            />
           ))}
         </div>
       ))}

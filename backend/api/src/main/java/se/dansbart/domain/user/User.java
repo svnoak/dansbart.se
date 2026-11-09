@@ -24,6 +24,10 @@ public class User {
     private OffsetDateTime createdAt;
     private OffsetDateTime lastLoginAt;
 
+    /** A banned user can still listen and vote with anonymous weight, but cannot add
+     *  tracks or dance styles to the public library. */
+    private boolean banned;
+
     /** Distinct tracks this user has helped confirm the style of (private — shown only
      *  to the user themselves via GET /api/users/me, not a public/leaderboard stat).
      *  Populated only by UserController.getCurrentUser; left at its default (0) by

@@ -89,6 +89,19 @@ public class UserJooqRepository {
             .execute();
     }
 
+    public boolean isBanned(UUID id) {
+        return dsl.fetchExists(
+            dsl.selectOne().from(USERS).where(USERS.ID.eq(id)).and(USERS.BANNED_AT.isNotNull()));
+    }
+
+    /** @return true if a user row was updated */
+    public boolean setBanned(UUID id, boolean banned) {
+        return dsl.update(USERS)
+            .set(USERS.BANNED_AT, banned ? OffsetDateTime.now() : null)
+            .where(USERS.ID.eq(id))
+            .execute() > 0;
+    }
+
     /** Filters a list of ids down to those that are real user accounts (vs. anonymous voter ids). */
     public Set<UUID> findExistingIds(List<UUID> ids) {
         if (ids.isEmpty()) return Set.of();
@@ -123,6 +136,7 @@ public class UserJooqRepository {
             .role(r.get(USERS.ROLE))
             .createdAt(createdAt)
             .lastLoginAt(lastLoginAt)
+            .banned(r.get(USERS.BANNED_AT) != null)
             .build();
     }
 }

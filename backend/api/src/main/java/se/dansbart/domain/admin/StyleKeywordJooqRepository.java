@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import se.dansbart.dto.AdminStyleContributionDto;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.UUID;
 import static org.jooq.impl.DSL.count;
 import static org.jooq.impl.DSL.lower;
 import static se.dansbart.jooq.Tables.STYLE_KEYWORDS;
+import static se.dansbart.jooq.Tables.USERS;
 
 @Repository
 public class StyleKeywordJooqRepository {
@@ -177,6 +179,91 @@ public class StyleKeywordJooqRepository {
                 .execute();
         }
         return keyword;
+    }
+
+    /**
+     * Adds a style a user created. The style name doubles as its own keyword, so the
+     * classifier also recognises it in track titles.
+     */
+    public UUID insertContributed(String keyword, String mainStyle, String subStyle,
+                                  UUID createdBy, OffsetDateTime reviewedAt) {
+        UUID id = UUID.randomUUID();
+        dsl.insertInto(STYLE_KEYWORDS)
+            .set(STYLE_KEYWORDS.ID, id)
+            .set(STYLE_KEYWORDS.KEYWORD, keyword)
+            .set(STYLE_KEYWORDS.MAIN_STYLE, mainStyle)
+            .set(STYLE_KEYWORDS.SUB_STYLE, subStyle)
+            .set(STYLE_KEYWORDS.IS_ACTIVE, true)
+            .set(STYLE_KEYWORDS.CREATED_BY, createdBy)
+            .set(STYLE_KEYWORDS.REVIEWED_AT, reviewedAt)
+            .set(STYLE_KEYWORDS.UPDATED_AT, OffsetDateTime.now())
+            .execute();
+        return id;
+    }
+
+    /** The main style's spelling as stored, if an active main style has this name. */
+    public Optional<String> findMainStyleIgnoreCase(String name) {
+        return dsl.selectDistinct(STYLE_KEYWORDS.MAIN_STYLE)
+            .from(STYLE_KEYWORDS)
+            .where(STYLE_KEYWORDS.IS_ACTIVE.eq(true)
+                .and(STYLE_KEYWORDS.MAIN_STYLE.equalIgnoreCase(name)))
+            .limit(1)
+            .fetchOptional(STYLE_KEYWORDS.MAIN_STYLE);
+    }
+
+    /** The sub-style's spelling as stored, if it is an active sub-style of mainStyle. */
+    public Optional<String> findSubStyleIgnoreCase(String mainStyle, String subStyle) {
+        return dsl.selectDistinct(STYLE_KEYWORDS.SUB_STYLE)
+            .from(STYLE_KEYWORDS)
+            .where(STYLE_KEYWORDS.IS_ACTIVE.eq(true)
+                .and(STYLE_KEYWORDS.MAIN_STYLE.eq(mainStyle))
+                .and(STYLE_KEYWORDS.SUB_STYLE.equalIgnoreCase(subStyle)))
+            .limit(1)
+            .fetchOptional(STYLE_KEYWORDS.SUB_STYLE);
+    }
+
+    public long countCreatedBySince(UUID userId, OffsetDateTime since) {
+        return dsl.fetchCount(STYLE_KEYWORDS,
+            STYLE_KEYWORDS.CREATED_BY.eq(userId).and(STYLE_KEYWORDS.CREATED_AT.ge(since)));
+    }
+
+    private org.jooq.Condition unreviewedContribution() {
+        return STYLE_KEYWORDS.CREATED_BY.isNotNull()
+            .and(STYLE_KEYWORDS.REVIEWED_AT.isNull())
+            .and(STYLE_KEYWORDS.IS_ACTIVE.eq(true));
+    }
+
+    public long countUnreviewedContributed() {
+        return dsl.fetchCount(STYLE_KEYWORDS, unreviewedContribution());
+    }
+
+    public List<AdminStyleContributionDto> findUnreviewedContributed(int limit) {
+        return dsl.select(STYLE_KEYWORDS.ID, STYLE_KEYWORDS.MAIN_STYLE, STYLE_KEYWORDS.SUB_STYLE,
+                STYLE_KEYWORDS.CREATED_BY, STYLE_KEYWORDS.CREATED_AT, USERS.USERNAME, USERS.BANNED_AT)
+            .from(STYLE_KEYWORDS)
+            .join(USERS).on(USERS.ID.eq(STYLE_KEYWORDS.CREATED_BY))
+            .where(unreviewedContribution())
+            .orderBy(STYLE_KEYWORDS.CREATED_AT.desc())
+            .limit(limit)
+            .fetch(r -> new AdminStyleContributionDto(
+                r.get(STYLE_KEYWORDS.ID),
+                r.get(STYLE_KEYWORDS.MAIN_STYLE),
+                r.get(STYLE_KEYWORDS.SUB_STYLE),
+                r.get(STYLE_KEYWORDS.CREATED_BY),
+                r.get(USERS.USERNAME),
+                r.get(USERS.BANNED_AT) != null,
+                r.get(STYLE_KEYWORDS.CREATED_AT)));
+    }
+
+    /** Marks a user-added style as looked at; with deactivate it also hides the style. */
+    public boolean markContributionReviewed(UUID id, boolean deactivate) {
+        var update = dsl.update(STYLE_KEYWORDS)
+            .set(STYLE_KEYWORDS.REVIEWED_AT, OffsetDateTime.now())
+            .set(STYLE_KEYWORDS.UPDATED_AT, OffsetDateTime.now());
+        if (deactivate) {
+            update = update.set(STYLE_KEYWORDS.IS_ACTIVE, false);
+        }
+        return update.where(STYLE_KEYWORDS.ID.eq(id).and(STYLE_KEYWORDS.CREATED_BY.isNotNull())).execute() > 0;
     }
 
     public void deleteById(UUID id) {

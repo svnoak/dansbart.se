@@ -43,6 +43,15 @@ public class ArtistJooqRepository {
             .map(this::toArtist);
     }
 
+    public Optional<Artist> findFirstByNameIgnoreCase(String name) {
+        return dsl.selectFrom(ARTISTS)
+            .where(lower(ARTISTS.NAME).eq(name.toLowerCase()))
+            .orderBy(ARTISTS.IS_VERIFIED.desc())
+            .limit(1)
+            .fetchOptional()
+            .map(this::toArtist);
+    }
+
     public Optional<Artist> findById(UUID id) {
         return dsl.selectFrom(ARTISTS)
             .where(ARTISTS.ID.eq(id))

@@ -12,8 +12,11 @@ import java.util.UUID;
 
 import org.jooq.Condition;
 import org.jooq.Field;
+import org.jooq.ForeignKey;
 import org.jooq.Index;
+import org.jooq.InverseForeignKey;
 import org.jooq.Name;
+import org.jooq.Path;
 import org.jooq.PlainSQL;
 import org.jooq.QueryPart;
 import org.jooq.Record;
@@ -32,6 +35,7 @@ import org.jooq.impl.TableImpl;
 import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
+import se.dansbart.jooq.tables.Users.UsersPath;
 
 
 /**
@@ -90,6 +94,16 @@ public class StyleKeywords extends TableImpl<Record> {
      */
     public final TableField<Record, OffsetDateTime> UPDATED_AT = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
 
+    /**
+     * The column <code>public.style_keywords.created_by</code>.
+     */
+    public final TableField<Record, UUID> CREATED_BY = createField(DSL.name("created_by"), SQLDataType.UUID, this, "");
+
+    /**
+     * The column <code>public.style_keywords.reviewed_at</code>.
+     */
+    public final TableField<Record, OffsetDateTime> REVIEWED_AT = createField(DSL.name("reviewed_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+
     private StyleKeywords(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
@@ -119,6 +133,39 @@ public class StyleKeywords extends TableImpl<Record> {
         this(DSL.name("style_keywords"), null);
     }
 
+    public <O extends Record> StyleKeywords(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
+        super(path, childPath, parentPath, STYLE_KEYWORDS);
+    }
+
+    /**
+     * A subtype implementing {@link Path} for simplified path-based joins.
+     */
+    public static class StyleKeywordsPath extends StyleKeywords implements Path<Record> {
+
+        private static final long serialVersionUID = 1L;
+        public <O extends Record> StyleKeywordsPath(Table<O> path, ForeignKey<O, Record> childPath, InverseForeignKey<O, Record> parentPath) {
+            super(path, childPath, parentPath);
+        }
+        private StyleKeywordsPath(Name alias, Table<Record> aliased) {
+            super(alias, aliased);
+        }
+
+        @Override
+        public StyleKeywordsPath as(String alias) {
+            return new StyleKeywordsPath(DSL.name(alias), this);
+        }
+
+        @Override
+        public StyleKeywordsPath as(Name alias) {
+            return new StyleKeywordsPath(alias, this);
+        }
+
+        @Override
+        public StyleKeywordsPath as(Table<?> alias) {
+            return new StyleKeywordsPath(alias.getQualifiedName(), this);
+        }
+    }
+
     @Override
     public Schema getSchema() {
         return aliased() ? null : Public.PUBLIC;
@@ -126,7 +173,7 @@ public class StyleKeywords extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IX_STYLE_KEYWORDS_KEYWORD, Indexes.IX_STYLE_KEYWORDS_MAIN_STYLE);
+        return Arrays.asList(Indexes.IX_STYLE_KEYWORDS_KEYWORD, Indexes.IX_STYLE_KEYWORDS_MAIN_STYLE, Indexes.IX_STYLE_KEYWORDS_UNREVIEWED);
     }
 
     @Override
@@ -137,6 +184,23 @@ public class StyleKeywords extends TableImpl<Record> {
     @Override
     public List<UniqueKey<Record>> getUniqueKeys() {
         return Arrays.asList(Keys.UNIQUE_KEYWORD);
+    }
+
+    @Override
+    public List<ForeignKey<Record, ?>> getReferences() {
+        return Arrays.asList(Keys.STYLE_KEYWORDS__STYLE_KEYWORDS_CREATED_BY_FKEY);
+    }
+
+    private transient UsersPath _users;
+
+    /**
+     * Get the implicit join path to the <code>public.users</code> table.
+     */
+    public UsersPath users() {
+        if (_users == null)
+            _users = new UsersPath(this, Keys.STYLE_KEYWORDS__STYLE_KEYWORDS_CREATED_BY_FKEY, null);
+
+        return _users;
     }
 
     @Override

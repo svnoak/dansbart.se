@@ -9,10 +9,12 @@ import {
   GroupIcon,
   QueueListIcon,
   MusicNoteIcon,
+  PlusIcon,
   UserIcon,
 } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 import { getGroupInvitations } from '@/api/generated/groups/groups';
+import { useUnreviewedContributionCount } from '@/hooks/useUnreviewedContributionCount';
 
 function NavLink({
   to,
@@ -95,9 +97,10 @@ const HelpIcon = (
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { consentStatus, openCookieSettings } = useConsent();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [invitationCount, setInvitationCount] = useState(0);
   const [groupInvitationCount, setGroupInvitationCount] = useState(0);
+  const newContributionCount = useUnreviewedContributionCount(user?.role === 'ADMIN');
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -130,6 +133,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isFavorites = path === '/favorites';
   const isMinaLatar = path === '/mina-latar';
   const isHelp = path.startsWith('/help');
+  const isAddTrack = path === '/lagg-till';
 
   const footerLink = 'min-h-8 inline-flex items-center text-[13px] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] hover:underline';
 
@@ -141,6 +145,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <NavLink to="/search" active={isSearch} onClick={onNavigate} icon={SearchIcon}>
         Sök
       </NavLink>
+      {/* Shown to visitors too, so they find it; the page asks them to log in. */}
+      {!user?.banned && (
+        <NavLink
+          to="/lagg-till"
+          active={isAddTrack}
+          onClick={onNavigate}
+          icon={<PlusIcon className="h-5 w-5" aria-hidden />}
+        >
+          Lägg till låt
+        </NavLink>
+      )}
 
       <GroupLabel>Utforska</GroupLabel>
       <NavLink
@@ -211,6 +226,21 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <NavLink to="/help" active={isHelp} onClick={onNavigate} icon={HelpIcon}>
         Hjälp &amp; nyheter
       </NavLink>
+
+      {newContributionCount > 0 && (
+        <>
+          <GroupLabel>Admin</GroupLabel>
+          <NavLink
+            to="/admin/contributions"
+            active={false}
+            onClick={onNavigate}
+            icon={<PlusIcon className="h-5 w-5" aria-hidden />}
+            badge={newContributionCount}
+          >
+            Nya bidrag att granska
+          </NavLink>
+        </>
+      )}
 
       <div className="mt-auto flex flex-wrap gap-x-3 gap-y-0 border-t border-[rgb(var(--color-border))] px-3 pt-3 mx-1">
         <Link to="/about" onClick={onNavigate} className={footerLink}>Om oss</Link>
