@@ -1,10 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { previewContributionLink, submitTrack } from '@/api/generated/contributions/contributions';
+import { getTrack } from '@/api/generated/tracks/tracks';
 import type { LinkPreviewDto } from '@/api/models/linkPreviewDto';
+import type { TrackListDto } from '@/api/models/trackListDto';
 import { ApiError } from '@/api/http-client';
 import { useAuth } from '@/auth/useAuth';
 import { AddDanceStyleForm } from '@/components/AddDanceStyleForm';
+import { TrackRow } from '@/components/TrackRow';
 import { useStyleVote } from '@/hooks/useStyleVote';
 import { PlusIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
 import { Button, Card, InlineError, toast } from '@/ui';
@@ -48,6 +51,8 @@ export function AddTrackPage() {
   const [addingStyle, setAddingStyle] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  /** The track just added, shown so the person can play it or put it in a playlist at once. */
+  const [addedTrack, setAddedTrack] = useState<TrackListDto | null>(null);
   const requestRef = useRef(0);
 
   useEffect(() => {
@@ -129,11 +134,19 @@ export function AddTrackPage() {
       if (result.status === 'EXISTS') {
         toast('Låten fanns redan. Din dansstil är sparad som en röst.');
       } else if (result.status === 'QUEUED') {
-        toast('Tack! Vi hämtar låten från Spotify och letar upp den på YouTube. Den syns om några minuter.');
+        toast('Tack! Vi hämtar låten från Spotify. Den syns i sökningen om en liten stund.');
       } else {
-        toast('Tack! Låten är tillagd och analyseras nu. Den syns om några minuter.');
+        toast('Tack! Låten är tillagd och går att spela direkt.');
       }
       resetForm();
+      setAddedTrack(null);
+      if (result.trackId) {
+        getTrack(result.trackId)
+          .then(setAddedTrack)
+          .catch(() => {
+            // The toast already confirmed the addition; the shortcut to play it is a bonus.
+          });
+      }
     } catch (e) {
       setSubmitError(errorText(e, 'Det gick inte att lägga till låten. Försök igen.'));
     } finally {
@@ -157,8 +170,28 @@ export function AddTrackPage() {
       <h1 className="mb-2 text-[28px] font-bold leading-tight text-[rgb(var(--color-text))]">Lägg till en låt</h1>
       <p className="mb-6 text-[15px] text-[rgb(var(--color-text-muted))]">
         Saknas en låt i Dansbart? Klistra in en länk från YouTube eller Spotify och berätta vilken
-        dans den passar till. Låten blir synlig för alla och analyseras som alla andra låtar.
+        dans den passar till. Låten går att spela direkt och blir synlig för alla. Tempot och takten
+        analyseras i bakgrunden.
       </p>
+
+      {addedTrack && (
+        <section aria-labelledby={`${id}-added`} className="mb-8">
+          <Card className="p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 id={`${id}-added`} className="text-[17px] font-bold text-[rgb(var(--color-text))]">
+                Låten du lade till
+              </h2>
+              <Button variant="ghost" size="sm" onClick={() => setAddedTrack(null)}>
+                Dölj
+              </Button>
+            </div>
+            <p className="mb-2 text-[14px] text-[rgb(var(--color-text-muted))]">
+              Spela den eller lägg den i en spellista redan nu.
+            </p>
+            <TrackRow track={addedTrack} />
+          </Card>
+        </section>
+      )}
 
       <div className="space-y-6">
         <div>

@@ -60,6 +60,7 @@ Signed-in users add tracks and dance styles to the public library under `/api/co
 - A YouTube link creates the track and dispatches `analyze_track_task`, which downloads that exact video.
 - A Spotify link dispatches the normal `spotify_ingest_task`. `TrackSubmissionResolverJob` links the `track_submissions` row once the worker has created the track, and after analysis puts the submitter's style back as primary.
 - The submitter's style is stored with `is_user_confirmed`, so the classifier keeps it.
+- A track a person added (`tracks.uploader_id` set) is listed in `GET /api/tracks` at once, before its analysis. Other tracks wait for `DONE`, because the spider ingests tracks of artists an admin has not approved.
 - A new dance style is a `style_keywords` row with `created_by` set.
 - `users.banned_at` blocks adding. A banned user still votes, with anonymous weight (`VoterReputationService`).
 
