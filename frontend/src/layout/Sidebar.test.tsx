@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { loggedInAuthValue, authValue } from '@/test/authValue';
 
@@ -46,6 +46,7 @@ describe('Sidebar', () => {
     countUnreviewedContributions.mockReset();
     countUnreviewedContributions.mockResolvedValue({ tracks: 0, styles: 0 });
     useAuth.mockReturnValue(loggedInAuthValue({}));
+    localStorage.clear();
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -141,5 +142,41 @@ describe('Sidebar', () => {
     await renderSidebar();
     expect(findLink('Nya bidrag')).toBeUndefined();
     expect(countUnreviewedContributions).toHaveBeenCalledTimes(1);
+  });
+
+  async function renderSidebarAt(path: string) {
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={[path]}>
+          <Sidebar />
+        </MemoryRouter>,
+      );
+    });
+  }
+
+  it('marks the add-track link as new until the person opens that page', async () => {
+    await renderSidebarAt('/');
+    expect(findLink('Lägg till låt')?.textContent).toContain('Nytt');
+
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await renderSidebarAt('/lagg-till');
+    expect(findLink('Lägg till låt')?.textContent).not.toContain('Nytt');
+
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await renderSidebarAt('/');
+    expect(findLink('Lägg till låt')?.textContent).not.toContain('Nytt');
+  });
+
+  it('stops marking the add-track link as new after the end date', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-01-02'));
+    try {
+      await renderSidebarAt('/');
+      expect(findLink('Lägg till låt')?.textContent).not.toContain('Nytt');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
