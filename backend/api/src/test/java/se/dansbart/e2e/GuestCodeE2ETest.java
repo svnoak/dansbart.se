@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.jooq.DSLContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import se.dansbart.domain.artist.Artist;
 import se.dansbart.domain.playlist.Playlist;
@@ -28,6 +30,9 @@ class GuestCodeE2ETest extends AbstractE2ETest {
     private static final UUID OWNER_ID = UUID.fromString("30000000-0000-0000-0000-000000000001");
     private static final UUID OTHER_USER_ID = UUID.fromString("30000000-0000-0000-0000-000000000002");
     private static final UUID DANCE_ID = UUID.fromString("30000000-0000-0000-0000-000000000003");
+
+    @Autowired
+    private DSLContext dsl;
 
     private User owner;
     private User otherUser;
@@ -236,5 +241,83 @@ class GuestCodeE2ETest extends AbstractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJson(Map.of("trackId", track.getId().toString()))))
             .andExpect(status().isBadRequest());
+    }
+
+    private int voteCount(UUID voterId) {
+        return dsl.fetchOne("select count(*) from dance_track_votes where dance_id = ? and track_id = ? and voter_id = ?",
+            DANCE_ID, track.getId(), voterId).get(0, Integer.class);
+    }
+
+    @Test
+    @DisplayName("a guest adds a dance with a track, which votes for the track with the guest's voter id")
+    void guestAddsDanceWithTrack() throws Exception {
+        String danceListId = createDanceList();
+        String code = createDanceListCode(danceListId);
+        UUID voterId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/public/guest-codes/" + code + "/dances")
+                .header("X-Voter-ID", voterId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(Map.of("danceId", DANCE_ID.toString(), "trackId", track.getId().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.dances[0].name").value("Bakmes"))
+            .andExpect(jsonPath("$.dances[0].tracks", hasSize(1)))
+            .andExpect(jsonPath("$.dances[0].tracks[0].title").value("Hambo från Svärdsjö"));
+        assertThat(voteCount(voterId)).isEqualTo(1);
+
+        String body = mockMvc.perform(get("/api/dance-lists/" + danceListId).with(jwt.userToken(owner.getId())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.entries[0].tracks", hasSize(1)))
+            .andReturn().getResponse().getContentAsString();
+        String entryId = new ObjectMapper().readTree(body).get("entries").get(0).get("id").asText();
+
+        // The owner removes the dance: the guest's vote goes with it.
+        mockMvc.perform(delete("/api/dance-lists/" + danceListId + "/entries/" + entryId)
+                .with(jwt.userToken(owner.getId())))
+            .andExpect(status().isNoContent());
+        assertThat(voteCount(voterId)).isZero();
+    }
+
+    @Test
+    @DisplayName("a track on a dance added by name, or added without a voter id, is linked and casts no vote")
+    void trackWithoutVote() throws Exception {
+        String danceListId = createDanceList();
+        String code = createDanceListCode(danceListId);
+
+        mockMvc.perform(post("/api/public/guest-codes/" + code + "/dances")
+                .header("X-Voter-ID", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(Map.of("name", "Egen polska", "trackId", track.getId().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.dances[0].tracks", hasSize(1)));
+        mockMvc.perform(post("/api/public/guest-codes/" + code + "/dances")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(Map.of("danceId", DANCE_ID.toString(), "trackId", track.getId().toString()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.dances[1].tracks", hasSize(1)));
+
+        assertThat(dsl.fetchOne("select count(*) from dance_track_votes").get(0, Integer.class)).isZero();
+    }
+
+    @Test
+    @DisplayName("a guest cannot add a private track, to a playlist or with a dance")
+    void guestCannotAddPrivateTrack() throws Exception {
+        String playlistCode = createPlaylistCode();
+        String danceListId = createDanceList();
+        String danceListCode = createDanceListCode(danceListId);
+        dsl.execute("update tracks set is_private = true where id = ?", track.getId());
+
+        mockMvc.perform(post("/api/public/guest-codes/" + playlistCode + "/tracks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(Map.of("trackId", track.getId().toString()))))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/public/guest-codes/" + danceListCode + "/dances")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(Map.of("danceId", DANCE_ID.toString(), "trackId", track.getId().toString()))))
+            .andExpect(status().isNotFound());
+
+        // The dance was not added either.
+        mockMvc.perform(get("/api/public/guest-codes/" + danceListCode))
+            .andExpect(jsonPath("$.dances", hasSize(0)));
     }
 }

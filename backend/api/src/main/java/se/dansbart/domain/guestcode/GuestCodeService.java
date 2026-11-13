@@ -5,9 +5,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.CollaborationAccess;
 import se.dansbart.domain.dance.DanceJooqRepository;
+import se.dansbart.domain.dance.DanceService;
 import se.dansbart.domain.dancelist.DanceList;
 import se.dansbart.domain.dancelist.DanceListEntry;
 import se.dansbart.domain.dancelist.DanceListEntryJooqRepository;
+import se.dansbart.domain.dancelist.DanceListEntryTrack;
+import se.dansbart.domain.dancelist.DanceListEntryTrackJooqRepository;
 import se.dansbart.domain.dancelist.DanceListJooqRepository;
 import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
@@ -58,6 +61,8 @@ public class GuestCodeService {
     private final PlaylistTrackJooqRepository playlistTrackJooqRepository;
     private final DanceListJooqRepository danceListJooqRepository;
     private final DanceListEntryJooqRepository entryJooqRepository;
+    private final DanceListEntryTrackJooqRepository entryTrackJooqRepository;
+    private final DanceService danceService;
     private final TrackJooqRepository trackJooqRepository;
     private final DanceJooqRepository danceJooqRepository;
     private final UserJooqRepository userJooqRepository;
@@ -166,8 +171,17 @@ public class GuestCodeService {
         return toGuestListDto(guestCode);
     }
 
+    /**
+     * Adds a dance, and with {@code trackId} a track for it in the same step.
+     *
+     * <p>A track on a dance from the site counts as a vote that the track fits the dance,
+     * as it does when a person who edits the list links one. The vote is cast for
+     * {@code voterId}: the guest's account, or the anonymous voter id of their browser,
+     * which has anonymous weight. Without a voter id the track is linked and no vote is cast.
+     * Removing the track or the dance from the list withdraws the vote.
+     */
     @Transactional
-    public GuestListDto addDance(String rawCode, UUID danceId, String name) {
+    public GuestListDto addDance(String rawCode, UUID danceId, String name, UUID trackId, UUID voterId) {
         GuestCode guestCode = requireCode(rawCode);
         if (guestCode.danceListId() == null) {
             throw new BadRequestException("This code belongs to a playlist. Add a track to it.");
@@ -187,17 +201,35 @@ public class GuestCodeService {
                 throw new ConflictException("This dance is already in the list.");
             }
         }
+        if (trackId != null) {
+            trackJooqRepository.findById(trackId)
+                .orElseThrow(() -> new ResourceNotFoundException("Track", trackId));
+            privateTrackGuard.requireVisible(trackId, null);
+        }
         int nextPosition = entryJooqRepository.count(danceListId);
         if (nextPosition >= MAX_DANCE_LIST_ENTRIES) {
             throw new ConflictException("The dance list is full.");
         }
-        entryJooqRepository.insert(DanceListEntry.builder()
+        DanceListEntry entry = entryJooqRepository.insert(DanceListEntry.builder()
             .danceListId(danceListId)
             .danceId(danceId)
             .freeTextName(danceId == null ? trimmed : null)
             .position(nextPosition)
             .addedByGuest(true)
             .build());
+        if (trackId != null) {
+            boolean castsVote = danceId != null && voterId != null;
+            entryTrackJooqRepository.insert(DanceListEntryTrack.builder()
+                .entryId(entry.getId())
+                .trackId(trackId)
+                .position(0)
+                .voterId(voterId != null ? voterId : UUID.randomUUID())
+                .voteCast(castsVote)
+                .build());
+            if (castsVote) {
+                danceService.castVoteAsVoter(danceId, trackId, voterId, 1);
+            }
+        }
         return toGuestListDto(guestCode);
     }
 
@@ -247,9 +279,23 @@ public class GuestCodeService {
             .filter(Objects::nonNull)
             .distinct()
             .toList());
+        Map<UUID, List<UUID>> trackIdsByEntry = entries.stream()
+            .collect(Collectors.toMap(DanceListEntry::getId,
+                entry -> entryTrackJooqRepository.findByEntryIdOrderByPosition(entry.getId()).stream()
+                    .map(DanceListEntryTrack::getTrackId)
+                    .toList()));
+        List<UUID> allTrackIds = trackIdsByEntry.values().stream().flatMap(List::stream).distinct().toList();
+        Set<UUID> hiddenTrackIds = privateTrackGuard.hiddenTrackIds(allTrackIds, null);
+        Map<UUID, TrackListDto> trackDtosById = trackJooqRepository.findTrackListDtosByIds(allTrackIds).stream()
+            .collect(Collectors.toMap(TrackListDto::getId, dto -> dto));
         List<GuestDanceDto> dances = entries.stream()
             .map(entry -> new GuestDanceDto(entry.getDanceId(),
-                entry.getFreeTextName() != null ? entry.getFreeTextName() : danceNamesById.get(entry.getDanceId())))
+                entry.getFreeTextName() != null ? entry.getFreeTextName() : danceNamesById.get(entry.getDanceId()),
+                trackIdsByEntry.get(entry.getId()).stream()
+                    .filter(id -> !hiddenTrackIds.contains(id))
+                    .map(trackDtosById::get)
+                    .filter(Objects::nonNull)
+                    .toList()))
             .toList();
         return GuestListDto.builder()
             .type("dance_list")

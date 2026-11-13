@@ -16,6 +16,7 @@ const addGuestTrack = vi.fn();
 const addGuestDance = vi.fn();
 const searchTracks = vi.fn();
 const getDances = vi.fn();
+const getMatchingTracks = vi.fn();
 
 vi.mock('@/ui', async () => {
   const actual = await vi.importActual<typeof import('@/ui')>('@/ui');
@@ -34,6 +35,11 @@ vi.mock('@/api/generated/tracks/tracks', () => ({
 
 vi.mock('@/api/generated/dances/dances', () => ({
   getDances: (...args: unknown[]) => getDances(...args),
+  getMatchingTracks: (...args: unknown[]) => getMatchingTracks(...args),
+}));
+
+vi.mock('@/utils/voter', () => ({
+  getVoterId: () => 'voter-1',
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -64,9 +70,10 @@ describe('GuestCodePage', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    for (const mock of [toast, getGuestList, addGuestTrack, addGuestDance, searchTracks, getDances]) {
+    for (const mock of [toast, getGuestList, addGuestTrack, addGuestDance, searchTracks, getDances, getMatchingTracks]) {
       mock.mockReset();
     }
+    getMatchingTracks.mockResolvedValue([]);
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -193,7 +200,9 @@ describe('GuestCodePage', () => {
     expect(result.textContent).toContain('Finns redan');
   });
 
-  it('adds a dance that is not on the site by the name the person typed', async () => {
+  const voterHeader = { headers: { 'X-Voter-ID': 'voter-1' } };
+
+  it('adds a dance that is not on the site by the name the person typed, without a track', async () => {
     getGuestList.mockResolvedValue({ type: 'dance_list', name: 'Kvällens danser', dances: [] });
     getDances.mockResolvedValue({ items: [] });
     addGuestDance.mockResolvedValue({
@@ -205,18 +214,33 @@ describe('GuestCodePage', () => {
 
     await search('Lägg till en dans', 'Slängpolska från Bingsjö');
     await act(async () => {
-      button('Lägg till ”Slängpolska från Bingsjö”').click();
+      button('Välj ”Slängpolska från Bingsjö”').click();
+    });
+    expect(addGuestDance).not.toHaveBeenCalled();
+    await act(async () => {
+      button('Lägg till dansen utan låt').click();
     });
 
-    expect(addGuestDance).toHaveBeenCalledWith('ABC234', { name: 'Slängpolska från Bingsjö' });
+    expect(addGuestDance).toHaveBeenCalledWith(
+      'ABC234',
+      { name: 'Slängpolska från Bingsjö', trackId: undefined },
+      voterHeader,
+    );
     expect(toast).toHaveBeenCalledWith('Dansen är tillagd');
     expect(container.querySelector('ol')?.textContent).toContain('Slängpolska från Bingsjö');
+    // The form starts over for the next dance.
+    expect(getInputByLabel('Lägg till en dans')?.value).toBe('');
   });
 
-  it('keeps the error next to the search when the list already has the dance', async () => {
+  it('adds a dance together with a track the person searched for', async () => {
     getGuestList.mockResolvedValue({ type: 'dance_list', name: 'Kvällens danser', dances: [] });
     getDances.mockResolvedValue({ items: [{ id: 'd1', name: 'Bakmes' }] });
-    addGuestDance.mockRejectedValue(new ApiError('Request failed: 409', 409));
+    searchTracks.mockResolvedValue({ items: [{ id: 't1', title: 'Bakmes från Transtrand', artistName: 'Spelmän' }] });
+    addGuestDance.mockResolvedValue({
+      type: 'dance_list',
+      name: 'Kvällens danser',
+      dances: [{ danceId: 'd1', name: 'Bakmes', tracks: [{ id: 't1', title: 'Bakmes från Transtrand', artistName: 'Spelmän' }] }],
+    });
     await renderAt('/kod/ABC234');
 
     await search('Lägg till en dans', 'bakmes');
@@ -224,10 +248,85 @@ describe('GuestCodePage', () => {
       button('Bakmes').click();
     });
     await act(async () => {
-      button('Lägg till').click();
+      button('Välj dansen').click();
+    });
+    expect(container.textContent).toContain('Dans: Bakmes');
+
+    await search('Välj en låt till dansen', 'transtrand');
+    await act(async () => {
+      button('Bakmes från Transtrand').click();
+    });
+    await act(async () => {
+      button('Lägg till dansen med låten').click();
     });
 
+    expect(addGuestDance).toHaveBeenCalledWith('ABC234', { danceId: 'd1', trackId: 't1' }, voterHeader);
+    expect(toast).toHaveBeenCalledWith('Dansen och låten är tillagda');
+    expect(container.querySelector('ol')?.textContent).toContain('Bakmes från Transtrand – Spelmän');
+  });
+
+  it('offers the tracks other people have chosen for the dance before the person searches', async () => {
+    getGuestList.mockResolvedValue({ type: 'dance_list', name: 'Kvällens danser', dances: [] });
+    getDances.mockResolvedValue({ items: [{ id: 'd1', name: 'Bakmes' }] });
+    getMatchingTracks.mockResolvedValue([{ id: 't9', title: 'Omtyckt bakmes' }]);
+    await renderAt('/kod/ABC234');
+
+    await search('Lägg till en dans', 'bakmes');
+    await act(async () => {
+      button('Bakmes').click();
+    });
+    await act(async () => {
+      button('Välj dansen').click();
+    });
+
+    expect(getMatchingTracks).toHaveBeenCalledWith('d1');
+    expect(container.textContent).toContain('Låtar som andra har valt till dansen:');
+    expect(container.textContent).toContain('Omtyckt bakmes');
+  });
+
+  it('lets the person change the dance before adding', async () => {
+    getGuestList.mockResolvedValue({ type: 'dance_list', name: 'Kvällens danser', dances: [] });
+    getDances.mockResolvedValue({ items: [{ id: 'd1', name: 'Bakmes' }] });
+    await renderAt('/kod/ABC234');
+
+    await search('Lägg till en dans', 'bakmes');
+    await act(async () => {
+      button('Bakmes').click();
+    });
+    await act(async () => {
+      button('Välj dansen').click();
+    });
+    await act(async () => {
+      button('Byt dans').click();
+    });
+
+    expect(getInputByLabel('Lägg till en dans')).not.toBeNull();
+    expect(addGuestDance).not.toHaveBeenCalled();
+  });
+
+  async function pickBakmesAndAdd() {
+    await search('Lägg till en dans', 'bakmes');
+    await act(async () => {
+      button('Bakmes').click();
+    });
+    await act(async () => {
+      button('Välj dansen').click();
+    });
+    await act(async () => {
+      button('Lägg till dansen utan låt').click();
+    });
+  }
+
+  it('keeps the error next to the form when the list already has the dance', async () => {
+    getGuestList.mockResolvedValue({ type: 'dance_list', name: 'Kvällens danser', dances: [] });
+    getDances.mockResolvedValue({ items: [{ id: 'd1', name: 'Bakmes' }] });
+    addGuestDance.mockRejectedValue(new ApiError('Request failed: 409', 409));
+    await renderAt('/kod/ABC234');
+
+    await pickBakmesAndAdd();
+
     expect(container.textContent).toContain('Dansen finns redan i danslistan.');
+    expect(container.textContent).toContain('Dans: Bakmes');
   });
 
   it('shows that the code stopped working when it is turned off while the page is open', async () => {
@@ -236,13 +335,7 @@ describe('GuestCodePage', () => {
     addGuestDance.mockRejectedValue(new ApiError('Request failed: 404', 404));
     await renderAt('/kod/ABC234');
 
-    await search('Lägg till en dans', 'bakmes');
-    await act(async () => {
-      button('Bakmes').click();
-    });
-    await act(async () => {
-      button('Lägg till').click();
-    });
+    await pickBakmesAndAdd();
 
     expect(container.textContent).toContain('Koden gäller inte');
   });

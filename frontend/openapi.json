@@ -1775,7 +1775,7 @@
     "/api/public/guest-codes/{code}/dances": {
       "post": {
         "tags": ["Guest codes"],
-        "summary": "Add a dance to the dance list of a guest code",
+        "summary": "Add a dance to the dance list of a guest code, with a track for it if trackId is given",
         "operationId": "addGuestDance",
         "parameters": [
           {
@@ -7922,7 +7922,11 @@
         "type": "object",
         "properties": {
           "danceId": { "type": "string", "format": "uuid" },
-          "name": { "type": "string" }
+          "name": { "type": "string" },
+          "tracks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrackListDto" }
+          }
         }
       },
       "GuestListDto": {
@@ -7981,7 +7985,8 @@
         "type": "object",
         "properties": {
           "danceId": { "type": "string", "format": "uuid" },
-          "name": { "type": "string" }
+          "name": { "type": "string" },
+          "trackId": { "type": "string", "format": "uuid" }
         }
       },
       "CreatePlaylistRequest": {

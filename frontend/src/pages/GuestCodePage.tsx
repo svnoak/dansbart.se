@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { addGuestDance, addGuestTrack, getGuestList } from '@/api/generated/guest-codes/guest-codes';
-import { getDances } from '@/api/generated/dances/dances';
+import { getDances, getMatchingTracks } from '@/api/generated/dances/dances';
 import { searchTracks } from '@/api/generated/tracks/tracks';
 import { ApiError } from '@/api/http-client';
 import type { Dance } from '@/api/models/dance';
@@ -11,6 +11,7 @@ import { SelectableSearchResults, TrackRow } from '@/components';
 import { PlaylistIcon, PlusIcon, QueueListIcon } from '@/icons';
 import { Button, Card, EmptyState, InlineError, LoadError, RowSkeleton, toast } from '@/ui';
 import { GUEST_CODE_LENGTH, formatGuestCode, normalizeGuestCode } from '@/utils/guestCode';
+import { getVoterId } from '@/utils/voter';
 
 const INPUT_CLASS =
   'min-h-11 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 text-[15px] text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]';
@@ -76,21 +77,277 @@ function GuestCodeEntry() {
 
 type LoadState = 'loading' | 'ready' | 'notFound' | 'tooMany' | 'failed';
 
+/** Runs `run` 300 ms after the person stops typing. An empty query gives no results. */
+function useDebouncedSearch<T>(query: string, run: (query: string) => Promise<T[]>) {
+  // The outcome of the latest finished search, with the query it answers.
+  const [outcome, setOutcome] = useState<{ query: string; results: T[]; failed: boolean } | null>(null);
+  const runRef = useRef(run);
+  useEffect(() => {
+    runRef.current = run;
+  });
+  const trimmed = query.trim();
+
+  useEffect(() => {
+    if (!trimmed) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      runRef
+        .current(trimmed)
+        .then((results) => {
+          if (!cancelled) setOutcome({ query: trimmed, results, failed: false });
+        })
+        .catch(() => {
+          if (!cancelled) setOutcome({ query: trimmed, results: [], failed: true });
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [trimmed]);
+
+  const current = outcome && outcome.query === trimmed ? outcome : null;
+  return {
+    results: current?.results ?? [],
+    searching: !!trimmed && !current,
+    failed: current?.failed ?? false,
+    trimmed,
+  };
+}
+
+function searchPublicTracks(query: string): Promise<TrackListDto[]> {
+  return searchTracks({ q: query, pageable: { page: 0, size: 20 } }).then((result) => result?.items ?? []);
+}
+
+function trackLabel(track: TrackListDto): string {
+  return track.artistName ? `${track.title} – ${track.artistName}` : (track.title ?? '');
+}
+
+const MUTED_TEXT = 'text-sm text-[rgb(var(--color-text-muted))]';
+
+/** The search that adds a track to a playlist. */
+function PlaylistAdder({
+  presentTrackIds,
+  adding,
+  onAdd,
+  onInput,
+}: {
+  presentTrackIds: Set<string>;
+  adding: boolean;
+  onAdd: (track: TrackListDto) => void;
+  onInput: () => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { results, searching, failed, trimmed } = useDebouncedSearch(query, searchPublicTracks);
+
+  return (
+    <>
+      <label htmlFor="guest-add-track" className="block text-base font-bold text-[rgb(var(--color-text))]">
+        Lägg till en låt
+      </label>
+      <input
+        id="guest-add-track"
+        type="search"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setSelectedId(null);
+          onInput();
+        }}
+        placeholder="Sök på låt eller artist"
+        className={INPUT_CLASS}
+      />
+      {searching && <p className={MUTED_TEXT}>Söker...</p>}
+      {!searching && (
+        <SelectableSearchResults
+          results={results}
+          getId={(track) => track.id}
+          renderResult={trackLabel}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onConfirm={onAdd}
+          confirming={adding}
+          disabledIds={presentTrackIds}
+          disabledLabel="Finns redan"
+        />
+      )}
+      {!searching && failed && <p className={MUTED_TEXT}>Sökningen misslyckades. Försök igen.</p>}
+      {!searching && !failed && !!trimmed && results.length === 0 && (
+        <p className={MUTED_TEXT}>Ingen låt matchar sökningen. Pröva med ett annat ord.</p>
+      )}
+    </>
+  );
+}
+
+interface PickedDance {
+  danceId?: string;
+  name: string;
+}
+
+/**
+ * Adds a dance to a dance list in two steps: pick the dance, then pick a track for it
+ * or add the dance without one.
+ */
+function DanceAdder({
+  presentDanceIds,
+  adding,
+  onAdd,
+  onInput,
+}: {
+  presentDanceIds: Set<string>;
+  adding: boolean;
+  onAdd: (dance: PickedDance, track: TrackListDto | null) => void;
+  onInput: () => void;
+}) {
+  const [picked, setPicked] = useState<PickedDance | null>(null);
+  const [danceQuery, setDanceQuery] = useState('');
+  const [trackQuery, setTrackQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<{ danceId: string; tracks: TrackListDto[] } | null>(null);
+
+  const dances = useDebouncedSearch(danceQuery, (query) =>
+    getDances({ search: query }).then((result) => result?.items ?? []),
+  );
+  const tracks = useDebouncedSearch(trackQuery, searchPublicTracks);
+
+  // Tracks other people have chosen for the dance are the likeliest picks.
+  const pickedDanceId = picked?.danceId;
+  useEffect(() => {
+    if (!pickedDanceId) return;
+    let cancelled = false;
+    getMatchingTracks(pickedDanceId)
+      .then((found) => {
+        if (!cancelled) setSuggestion({ danceId: pickedDanceId, tracks: (found ?? []).slice(0, 5) });
+      })
+      .catch(() => {
+        // The suggestions are a shortcut; the search below works without them.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pickedDanceId]);
+
+  function pick(dance: PickedDance) {
+    setPicked(dance);
+    setSelectedId(null);
+    setTrackQuery('');
+    onInput();
+  }
+
+  if (!picked) {
+    return (
+      <>
+        <label htmlFor="guest-add-dance" className="block text-base font-bold text-[rgb(var(--color-text))]">
+          Lägg till en dans
+        </label>
+        <input
+          id="guest-add-dance"
+          type="search"
+          value={danceQuery}
+          onChange={(e) => {
+            setDanceQuery(e.target.value);
+            setSelectedId(null);
+            onInput();
+          }}
+          placeholder="Skriv dansens namn"
+          className={INPUT_CLASS}
+        />
+        {dances.searching && <p className={MUTED_TEXT}>Söker...</p>}
+        {!dances.searching && (
+          <SelectableSearchResults
+            results={dances.results}
+            getId={(dance: Dance) => dance.id}
+            renderResult={(dance) => dance.name}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onConfirm={(dance) => pick({ danceId: dance.id, name: dance.name ?? '' })}
+            confirming={false}
+            disabledIds={presentDanceIds}
+            disabledLabel="Finns redan"
+            confirmLabel="Välj dansen"
+          />
+        )}
+        {!dances.searching && dances.failed && <p className={MUTED_TEXT}>Sökningen misslyckades. Försök igen.</p>}
+        {!dances.searching && !dances.failed && !!dances.trimmed && dances.results.length === 0 && (
+          <div className="space-y-2">
+            <p className={MUTED_TEXT}>Dansen finns inte på sidan. Lägg till den med namnet du skrev:</p>
+            <Button variant="secondary" onClick={() => pick({ name: dances.trimmed })}>
+              <PlusIcon className="h-4 w-4" aria-hidden />
+              Välj ”{dances.trimmed}”
+            </Button>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  const suggested = suggestion && suggestion.danceId === picked.danceId ? suggestion.tracks : [];
+  const showSuggested = !tracks.trimmed && suggested.length > 0;
+  const trackResults = showSuggested ? suggested : tracks.results;
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="min-w-0 text-base text-[rgb(var(--color-text))]">
+          Dans: <span className="font-bold">{picked.name}</span>
+        </p>
+        <Button variant="ghost" size="sm" onClick={() => setPicked(null)} disabled={adding}>
+          Byt dans
+        </Button>
+      </div>
+
+      <label htmlFor="guest-add-dance-track" className="block text-base font-bold text-[rgb(var(--color-text))]">
+        Välj en låt till dansen, om du vill
+      </label>
+      <input
+        id="guest-add-dance-track"
+        type="search"
+        value={trackQuery}
+        onChange={(e) => {
+          setTrackQuery(e.target.value);
+          setSelectedId(null);
+          onInput();
+        }}
+        placeholder="Sök på låt eller artist"
+        className={INPUT_CLASS}
+      />
+      {tracks.searching && <p className={MUTED_TEXT}>Söker...</p>}
+      {showSuggested && <p className={MUTED_TEXT}>Låtar som andra har valt till dansen:</p>}
+      {!tracks.searching && (
+        <SelectableSearchResults
+          results={trackResults}
+          getId={(track) => track.id}
+          renderResult={trackLabel}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onConfirm={(track) => onAdd(picked, track)}
+          confirming={adding}
+          confirmLabel="Lägg till dansen med låten"
+        />
+      )}
+      {!tracks.searching && tracks.failed && <p className={MUTED_TEXT}>Sökningen misslyckades. Försök igen.</p>}
+      {!tracks.searching && !tracks.failed && !!tracks.trimmed && tracks.results.length === 0 && (
+        <p className={MUTED_TEXT}>Ingen låt matchar sökningen. Pröva med ett annat ord.</p>
+      )}
+
+      <Button variant="secondary" onClick={() => onAdd(picked, null)} disabled={adding}>
+        <PlusIcon className="h-4 w-4" aria-hidden />
+        Lägg till dansen utan låt
+      </Button>
+    </>
+  );
+}
+
 /** `/kod/:code`: the list a code belongs to, with the one thing a guest can do: add to it. */
 function GuestList({ code }: { code: string }) {
   const [list, setList] = useState<GuestListDto | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [loadAttempt, setLoadAttempt] = useState(0);
-
-  const [query, setQuery] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [searchFailed, setSearchFailed] = useState(false);
-  const [trackResults, setTrackResults] = useState<TrackListDto[]>([]);
-  const [danceResults, setDanceResults] = useState<Dance[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Counts additions; a new count gives the add form a fresh start.
+  const [addCount, setAddCount] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -113,47 +370,7 @@ function GuestList({ code }: { code: string }) {
     setLoadAttempt((n) => n + 1);
   }, []);
 
-  const isPlaylist = list?.type === 'playlist';
-  const hasList = list !== null;
-  const trimmedQuery = query.trim();
-
-  useEffect(() => {
-    if (!hasList || !trimmedQuery) {
-      setTrackResults([]);
-      setDanceResults([]);
-      setSearching(false);
-      setSearchFailed(false);
-      return;
-    }
-    let cancelled = false;
-    setSearching(true);
-    setSearchFailed(false);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const search = isPlaylist
-        ? searchTracks({ q: trimmedQuery, pageable: { page: 0, size: 20 } }).then((result) => {
-            if (!cancelled) setTrackResults(result?.items ?? []);
-          })
-        : getDances({ search: trimmedQuery }).then((result) => {
-            if (!cancelled) setDanceResults(result?.items ?? []);
-          });
-      search
-        .catch(() => {
-          if (cancelled) return;
-          setTrackResults([]);
-          setDanceResults([]);
-          setSearchFailed(true);
-        })
-        .finally(() => {
-          if (!cancelled) setSearching(false);
-        });
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(debounceRef.current);
-    };
-    // Whether a list is loaded, not its contents: adding to the list must not search again.
-  }, [trimmedQuery, isPlaylist, hasList]);
+  const clearAddError = useCallback(() => setAddError(null), []);
 
   async function add(request: () => Promise<GuestListDto>, done: string, duplicate: string) {
     if (adding) return;
@@ -161,8 +378,7 @@ function GuestList({ code }: { code: string }) {
     setAddError(null);
     try {
       setList(await request());
-      setQuery('');
-      setSelectedId(null);
+      setAddCount((n) => n + 1);
       toast(done);
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 0;
@@ -201,13 +417,11 @@ function GuestList({ code }: { code: string }) {
     );
   }
 
+  const isPlaylist = list.type === 'playlist';
   const tracks = list.tracks ?? [];
   const dances = list.dances ?? [];
   const presentTrackIds = new Set(tracks.map((t) => t.id).filter((id): id is string => !!id));
   const presentDanceIds = new Set(dances.map((d) => d.danceId).filter((id): id is string => !!id));
-  const searchInputId = 'guest-add-search';
-  const noResults =
-    !searching && !searchFailed && !!trimmedQuery && (isPlaylist ? trackResults : danceResults).length === 0;
 
   return (
     <div className="space-y-6">
@@ -223,101 +437,48 @@ function GuestList({ code }: { code: string }) {
         <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
           {isPlaylist
             ? 'Med koden kan du lägga till låtar i spellistan. Du behöver inget konto.'
-            : 'Med koden kan du lägga till danser i danslistan. Du behöver inget konto.'}
+            : 'Med koden kan du lägga till danser i danslistan, med en låt till dansen om du vill. Du behöver inget konto.'}
         </p>
       </Card>
 
       <Card className="space-y-3 p-5">
-        <label htmlFor={searchInputId} className="block text-base font-bold text-[rgb(var(--color-text))]">
-          {isPlaylist ? 'Lägg till en låt' : 'Lägg till en dans'}
-        </label>
-        <input
-          id={searchInputId}
-          type="search"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setSelectedId(null);
-            setAddError(null);
-          }}
-          placeholder={isPlaylist ? 'Sök på låt eller artist' : 'Skriv dansens namn'}
-          className={INPUT_CLASS}
-        />
-
-        {searching && <p className="text-sm text-[rgb(var(--color-text-muted))]">Söker...</p>}
-
-        {!searching && isPlaylist && (
-          <SelectableSearchResults
-            results={trackResults}
-            getId={(track) => track.id}
-            renderResult={(track) => (track.artistName ? `${track.title} – ${track.artistName}` : track.title)}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onConfirm={(track) =>
+        {isPlaylist ? (
+          <PlaylistAdder
+            key={addCount}
+            presentTrackIds={presentTrackIds}
+            adding={adding}
+            onInput={clearAddError}
+            onAdd={(track) =>
               add(
                 () => addGuestTrack(code, { trackId: track.id }),
                 'Låten är tillagd',
                 'Låten finns redan i spellistan.',
               )
             }
-            confirming={adding}
-            disabledIds={presentTrackIds}
-            disabledLabel="Finns redan"
           />
-        )}
-
-        {!searching && !isPlaylist && (
-          <SelectableSearchResults
-            results={danceResults}
-            getId={(dance) => dance.id}
-            renderResult={(dance) => dance.name}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onConfirm={(dance) =>
+        ) : (
+          <DanceAdder
+            key={addCount}
+            presentDanceIds={presentDanceIds}
+            adding={adding}
+            onInput={clearAddError}
+            onAdd={(dance, track) =>
               add(
-                () => addGuestDance(code, { danceId: dance.id }),
-                'Dansen är tillagd',
+                () =>
+                  addGuestDance(
+                    code,
+                    dance.danceId
+                      ? { danceId: dance.danceId, trackId: track?.id }
+                      : { name: dance.name, trackId: track?.id },
+                    // The track counts as the guest's vote that it fits the dance.
+                    { headers: { 'X-Voter-ID': getVoterId() } },
+                  ),
+                track ? 'Dansen och låten är tillagda' : 'Dansen är tillagd',
                 'Dansen finns redan i danslistan.',
               )
             }
-            confirming={adding}
-            disabledIds={presentDanceIds}
-            disabledLabel="Finns redan"
           />
         )}
-
-        {!searching && searchFailed && (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">Sökningen misslyckades. Försök igen.</p>
-        )}
-
-        {noResults && isPlaylist && (
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            Ingen låt matchar sökningen. Pröva med ett annat ord.
-          </p>
-        )}
-
-        {noResults && !isPlaylist && (
-          <div className="space-y-2">
-            <p className="text-sm text-[rgb(var(--color-text-muted))]">
-              Dansen finns inte på sidan. Lägg till den med namnet du skrev:
-            </p>
-            <Button
-              variant="secondary"
-              disabled={adding}
-              onClick={() =>
-                add(
-                  () => addGuestDance(code, { name: trimmedQuery }),
-                  'Dansen är tillagd',
-                  'Dansen finns redan i danslistan.',
-                )
-              }
-            >
-              <PlusIcon className="h-4 w-4" aria-hidden />
-              Lägg till ”{trimmedQuery}”
-            </Button>
-          </div>
-        )}
-
         <InlineError>{addError}</InlineError>
       </Card>
 
@@ -361,26 +522,33 @@ function GuestList({ code }: { code: string }) {
             {dances.map((dance, i) => (
               <li
                 key={`${i}-${dance.danceId ?? dance.name}`}
-                className="flex min-h-11 items-center gap-3 border-b border-[rgb(var(--color-border))] px-3 py-2 last:border-b-0"
+                className="flex min-h-11 items-start gap-3 border-b border-[rgb(var(--color-border))] px-3 py-2.5 last:border-b-0"
               >
                 <span
-                  className="w-6 shrink-0 text-right text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]"
+                  className="w-6 shrink-0 pt-0.5 text-right text-[13px] tabular-nums text-[rgb(var(--color-text-muted))]"
                   aria-hidden
                 >
                   {i + 1}
                 </span>
-                {dance.danceId ? (
-                  <Link
-                    to={`/dance/${dance.danceId}`}
-                    className="min-w-0 truncate text-[15px] font-medium text-[rgb(var(--color-text))] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
-                  >
-                    {dance.name}
-                  </Link>
-                ) : (
-                  <span className="min-w-0 truncate text-[15px] font-medium text-[rgb(var(--color-text))]">
-                    {dance.name}
-                  </span>
-                )}
+                <div className="min-w-0 flex-1">
+                  {dance.danceId ? (
+                    <Link
+                      to={`/dance/${dance.danceId}`}
+                      className="block truncate text-[15px] font-medium text-[rgb(var(--color-text))] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                    >
+                      {dance.name}
+                    </Link>
+                  ) : (
+                    <span className="block truncate text-[15px] font-medium text-[rgb(var(--color-text))]">
+                      {dance.name}
+                    </span>
+                  )}
+                  {(dance.tracks ?? []).map((track) => (
+                    <p key={track.id} className="truncate text-sm text-[rgb(var(--color-text-muted))]">
+                      {trackLabel(track)}
+                    </p>
+                  ))}
+                </div>
               </li>
             ))}
           </ol>

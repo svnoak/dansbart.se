@@ -4,8 +4,10 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { TrackListDto } from './trackListDto';
 
 export interface GuestDanceDto {
   danceId?: string;
   name?: string;
+  tracks?: TrackListDto[];
 }

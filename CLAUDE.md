@@ -69,7 +69,8 @@ Signed-in users add tracks and dance styles to the public library under `/api/co
 A guest code lets anyone add to one playlist or one dance list without an account, for a dance evening or a course (`domain/guestcode/`, table `list_guest_codes`, frontend `/kod` and `GuestCodePanel`). The QR code of a list is the address `/kod/{code}`.
 
 - The people with full control of a list create, replace and remove its code: `POST` and `DELETE /api/playlists/{id}/guest-code` and `/api/dance-lists/{id}/guest-code`. A list has at most one code. `guestCode` in the list's DTO is sent only to them.
-- A guest reads the list and adds to it under `/api/public/guest-codes/{code}`. A playlist code adds tracks; a dance list code adds dances, from the site or by name. The code gives no other right: a guest cannot remove, reorder or rename.
+- A guest reads the list and adds to it under `/api/public/guest-codes/{code}`. A playlist code adds tracks; a dance list code adds dances, from the site or by name, each with one track if the guest picks one. The code gives no other right: a guest cannot remove, reorder or rename.
+- A track a guest picks for a dance from the site is a vote that the track fits the dance, as it is when a person who edits the list links one. The vote is cast for the guest's `X-Voter-ID`, with anonymous weight, or for their account if they are signed in. Removing the track or the dance from the list withdraws it.
 - A guest cannot add a private track. What a guest added has `added_by_guest` set and shows as "Tillagd med kod" to the people who edit the list.
 - `GuestCodeRateLimiter` caps the public endpoints per address. It counts in memory, per API instance.
 

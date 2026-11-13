@@ -39,7 +39,7 @@ export const addGuestTrack = async (code: string,
   
 
 /**
- * @summary Add a dance to the dance list of a guest code
+ * @summary Add a dance to the dance list of a guest code, with a track for it if trackId is given
  */
 export const getAddGuestDanceUrl = (code: string,) => {
 

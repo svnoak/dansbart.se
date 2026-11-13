@@ -8,4 +8,5 @@
 export interface AddGuestDanceRequest {
   danceId?: string;
   name?: string;
+  trackId?: string;
 }

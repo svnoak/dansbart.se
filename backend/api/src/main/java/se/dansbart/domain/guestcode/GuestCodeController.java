@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import se.dansbart.dto.GuestCodeDto;
 import se.dansbart.dto.GuestListDto;
+import se.dansbart.voter.VoterContext;
 
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ public class GuestCodeController {
 
     private final GuestCodeService guestCodeService;
     private final GuestCodeRateLimiter rateLimiter;
+    private final VoterContext voterContext;
 
     @PostMapping("/api/playlists/{id}/guest-code")
     @Operation(operationId = "createPlaylistGuestCode", summary = "Create the guest code of a playlist; replaces a code that exists")
@@ -64,13 +66,13 @@ public class GuestCodeController {
     }
 
     @PostMapping("/api/public/guest-codes/{code}/dances")
-    @Operation(operationId = "addGuestDance", summary = "Add a dance to the dance list of a guest code")
+    @Operation(operationId = "addGuestDance", summary = "Add a dance to the dance list of a guest code, with a track for it if trackId is given")
     public ResponseEntity<GuestListDto> addGuestDance(
             @PathVariable String code, @RequestBody AddGuestDanceRequest body, HttpServletRequest request) {
         rateLimiter.check(request.getRemoteAddr());
-        return ResponseEntity.ok(guestCodeService.addDance(code, body.danceId(), body.name()));
+        return ResponseEntity.ok(guestCodeService.addDance(code, body.danceId(), body.name(), body.trackId(), voterContext.getVoterId()));
     }
 
     public record AddGuestTrackRequest(UUID trackId) {}
-    public record AddGuestDanceRequest(UUID danceId, String name) {}
+    public record AddGuestDanceRequest(UUID danceId, String name, UUID trackId) {}
 }

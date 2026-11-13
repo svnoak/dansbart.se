@@ -25,5 +25,6 @@ public class GuestListDto {
     private List<TrackListDto> tracks;
     private List<GuestDanceDto> dances;
 
-    public record GuestDanceDto(UUID danceId, String name) {}
+    /** A dance in the list, with the tracks picked for it. */
+    public record GuestDanceDto(UUID danceId, String name, List<TrackListDto> tracks) {}
 }
