@@ -7,14 +7,18 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Download dependencies (cached layer)
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+# Download dependencies (cached layer). The Maven repository is also a cache
+# mount, so the package step below reuses what is already downloaded instead of
+# asking Maven Central again on every build.
+RUN --mount=type=cache,id=maven,target=/root/.m2 \
+    chmod +x mvnw && ./mvnw dependency:go-offline -B
 
 # Copy source code
 COPY src src
 
 # Build the application (skip Flyway + jOOQ codegen; no DB at build time; use committed jOOQ sources)
-RUN ./mvnw package -DskipTests -B -DskipDbBuild=true
+RUN --mount=type=cache,id=maven,target=/root/.m2 \
+    ./mvnw package -DskipTests -B -DskipDbBuild=true
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine

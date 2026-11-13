@@ -65,6 +65,26 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Maven Central rate-limits shared runner addresses, and the package step
+      # downloads POMs that dependency:go-offline does not. Keep the Maven
+      # repository between runs and hand it to the Dockerfile's cache mount.
+      - name: Restore Maven repository
+        if: matrix.service == 'api'
+        id: maven-cache
+        uses: actions/cache@v6
+        with:
+          path: maven-cache
+          key: maven-${{ hashFiles('backend/api/pom.xml', 'backend/api/.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-
+
+      - name: Inject Maven repository into the build cache
+        if: matrix.service == 'api'
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          cache-map: |
+            {"maven-cache": {"target": "/root/.m2", "id": "maven"}}
+          skip-extraction: ${{ steps.maven-cache.outputs.cache-hit }}
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
