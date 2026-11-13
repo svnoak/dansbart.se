@@ -1,7 +1,9 @@
-name: Deploy to Beta
+name: Release
 
-# Trunk-based: every commit that lands on main and passes CI becomes beta.
-# Promotion to production is a version tag (see deploy-production.yml).
+# Trunk-based: every commit that lands on main and passes CI is built into
+# images, tagged with its full SHA and :latest. Deployment is a pull request in
+# the deployment repository. This workflow asks that repository to open or
+# update it through a repository_dispatch event; merging it there deploys.
 on:
   workflow_run:
     workflows: ["CI"]
@@ -76,7 +78,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
           tags: |
-            type=raw,value=beta
+            type=raw,value=latest
             type=raw,value=${{ steps.commit.outputs.sha }}
 
       - name: Compute frontend build args
@@ -109,56 +111,65 @@ jobs:
           platforms: linux/amd64
 
   notify:
-    name: Notify deployment
+    name: Open the release pull request
     needs: [build-and-push]
     runs-on: ubuntu-latest
 
     steps:
       - name: Resolve tested commit
         id: commit
+        env:
+          RUN_MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
+          PUSH_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            message="$PUSH_MESSAGE"
           else
             echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+            message="$RUN_MESSAGE"
           fi
+          echo "subject=$(printf '%s' "$message" | head -n 1)" >> "$GITHUB_OUTPUT"
 
-      # Deployment itself lives in a separate private Ansible repo. Set the
-      # DEPLOY_DISPATCH_REPO variable (owner/name) and a DEPLOY_DISPATCH_TOKEN
-      # secret with repo scope there to have it pulled automatically; without
-      # them this step is skipped and images simply wait to be pulled manually.
-      - name: Trigger deployment repository
+      # The deployment repository is private. Set the DEPLOY_DISPATCH_REPO
+      # variable (owner/name) and a DEPLOY_DISPATCH_TOKEN secret that can write
+      # to it; without them this step is skipped and the images wait to be
+      # pinned by hand.
+      - name: Dispatch to the deployment repository
         if: vars.DEPLOY_DISPATCH_REPO != ''
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
           TARGET_REPO: ${{ vars.DEPLOY_DISPATCH_REPO }}
           SHA: ${{ steps.commit.outputs.sha }}
+          SUBJECT: ${{ steps.commit.outputs.subject }}
         run: |
-          payload=$(jq -n --arg sha "$SHA" \
-            '{event_type: "dansbart-beta", client_payload: {sha: $sha, environment: "beta", tag: "beta"}}')
+          payload=$(jq -n --arg sha "$SHA" --arg subject "$SUBJECT" --arg repo "${{ github.repository }}" \
+            '{event_type: "dansbart-release", client_payload: {sha: $sha, subject: $subject, repository: $repo}}')
           curl -sS -f -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/$TARGET_REPO/dispatches" \
             -d "$payload"
-          echo "Dispatched dansbart-beta to $TARGET_REPO"
+          echo "Dispatched dansbart-release for $SHA to $TARGET_REPO"
 
       - name: Summary
         env:
           SHA: ${{ steps.commit.outputs.sha }}
         run: |
           {
-            echo "## Beta images pushed"
+            echo "## Images pushed"
             echo ""
             echo "Commit: \`$SHA\`"
             echo ""
             echo "| Image | Tags |"
             echo "|-------|------|"
             for svc in frontend api feature-worker audio-worker; do
-              echo "| \`${REGISTRY}/${IMAGE_PREFIX}-${svc}\` | \`beta\`, \`${SHA}\` |"
+              echo "| \`${REGISTRY}/${IMAGE_PREFIX}-${svc}\` | \`latest\`, \`${SHA}\` |"
             done
             echo ""
             if [ -z "${{ vars.DEPLOY_DISPATCH_REPO }}" ]; then
-              echo "_No DEPLOY_DISPATCH_REPO configured; pull these manually from the Ansible repo._"
+              echo "_No DEPLOY_DISPATCH_REPO configured; pin this SHA in the deployment repository by hand._"
+            else
+              echo "_A release pull request was opened or updated in ${{ vars.DEPLOY_DISPATCH_REPO }}._"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

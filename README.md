@@ -148,11 +148,11 @@ pytest
 
 Development is trunk-based:
 
-- **Beta** — every commit that lands on `main` and passes CI is published to
-  GitHub Container Registry as `:beta`, plus an immutable `:<sha>` tag.
-- **Production** — cut by pushing a version tag (`v1.2.3`), which publishes
-  `:latest`, `:1.2.3` and `:<sha>`. The release workflow refuses tags that do
-  not point at a commit on `main`, so every release has soaked on beta.
+- **Images** — every commit that lands on `main` and passes CI is published to
+  GitHub Container Registry as an immutable `:<sha>` tag, plus `:latest`.
+- **Production** — the release workflow asks the deployment repository to open
+  a pull request that pins the new SHA, or to update the one already open.
+  Merging that pull request deploys. There is no beta environment.
 
 Images (`ghcr.io/svnoak/…`): `dansbart-frontend`, `dansbart-api`,
 `dansbart-feature-worker`, `dansbart-audio-worker`.
