@@ -13,5 +13,6 @@ export interface DanceListEntryDto {
   freeTextName?: string;
   playMode?: string;
   position?: number;
+  addedByGuest?: boolean;
   tracks?: PlaylistTrackDto[];
 }

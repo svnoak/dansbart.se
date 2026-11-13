@@ -22,6 +22,7 @@ import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.GroupMembers;
 import se.dansbart.jooq.tables.Groups;
+import se.dansbart.jooq.tables.ListGuestCodes;
 import se.dansbart.jooq.tables.PathCounts;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -146,6 +147,11 @@ public class Tables {
      * The table <code>public.groups</code>.
      */
     public static final Groups GROUPS = Groups.GROUPS;
+
+    /**
+     * The table <code>public.list_guest_codes</code>.
+     */
+    public static final ListGuestCodes LIST_GUEST_CODES = ListGuestCodes.LIST_GUEST_CODES;
 
     /**
      * The table <code>public.path_counts</code>.

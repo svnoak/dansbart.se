@@ -40,6 +40,7 @@ import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.DanceListCollaborators.DanceListCollaboratorsPath;
 import se.dansbart.jooq.tables.DanceListEntries.DanceListEntriesPath;
 import se.dansbart.jooq.tables.Groups.GroupsPath;
+import se.dansbart.jooq.tables.ListGuestCodes.ListGuestCodesPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
 
 
@@ -239,6 +240,19 @@ public class DanceLists extends TableImpl<Record> {
             _danceListEntries = new DanceListEntriesPath(this, null, Keys.DANCE_LIST_ENTRIES__DANCE_LIST_ENTRIES_DANCE_LIST_ID_FKEY.getInverseKey());
 
         return _danceListEntries;
+    }
+
+    private transient ListGuestCodesPath _listGuestCodes;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.list_guest_codes</code> table
+     */
+    public ListGuestCodesPath listGuestCodes() {
+        if (_listGuestCodes == null)
+            _listGuestCodes = new ListGuestCodesPath(this, null, Keys.LIST_GUEST_CODES__LIST_GUEST_CODES_DANCE_LIST_ID_FKEY.getInverseKey());
+
+        return _listGuestCodes;
     }
 
     @Override

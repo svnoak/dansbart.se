@@ -30,6 +30,7 @@ import { PlaylistsPage } from '@/pages/PlaylistsPage';
 import { PlaylistPage } from '@/pages/PlaylistPage';
 import { PlaylistSettingsPage } from '@/pages/PlaylistSettingsPage';
 import { SharedPlaylistPage } from '@/pages/SharedPlaylistPage';
+import { GuestCodePage } from '@/pages/GuestCodePage';
 import { AdminLayout } from '@/admin/layout/AdminLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { AdminLibraryPage } from '@/admin/pages/AdminLibraryPage';
@@ -99,6 +100,8 @@ export function App() {
                           }
                         />
                         <Route path="/shared/:token" element={<SharedPlaylistPage />} />
+                        <Route path="/kod" element={<GuestCodePage />} />
+                        <Route path="/kod/:code" element={<GuestCodePage />} />
                         <Route path="/groups" element={<GroupsPage />} />
                         <Route path="/dance-lists" element={<DanceListsPage />} />
                         <Route path="/dance-lists/:id" element={<DanceListPage />} />

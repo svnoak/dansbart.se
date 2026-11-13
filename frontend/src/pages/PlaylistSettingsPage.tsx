@@ -13,7 +13,7 @@ import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
 import { ChevronLeftIcon, CloseIcon, PlaylistIcon, StarMarkIcon } from '@/icons';
 import { Button, Card, EmptyState, IconButton, InlineError, RowSkeleton, TextField, toast } from '@/ui';
-import { ConfirmDeleteByName } from '@/components';
+import { ConfirmDeleteByName, GuestCodePanel } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
 import { describePlaylistInviteError } from '@/utils/describePlaylistInviteError';
@@ -511,6 +511,21 @@ export function PlaylistSettingsPage() {
               )}
             </div>
           </div>
+        </SettingsSection>
+      )}
+
+      {/* Låt andra lägga till */}
+      {isOwner && id && (
+        <SettingsSection
+          title="Låt andra lägga till"
+          description="En kod och en QR-kod till danskvällen eller kursen. Den som har koden kan lägga till låtar, men inte ändra något annat."
+        >
+          <GuestCodePanel
+            kind="playlist"
+            listId={id}
+            code={playlist.guestCode ?? null}
+            onChange={(code) => setPlaylist((prev) => (prev ? { ...prev, guestCode: code ?? undefined } : prev))}
+          />
         </SettingsSection>
       )}
 

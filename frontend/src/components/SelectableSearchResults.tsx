@@ -18,7 +18,8 @@ interface SelectableSearchResultsProps<T> {
 
 /**
  * Search results in the bordered list container. A row is a button that
- * selects the result; the selected row shows its confirm button inline.
+ * selects the result; the selected row shows its confirm button inline, or on
+ * its own line when the row is too narrow for both.
  */
 export function SelectableSearchResults<T>({
   results,
@@ -55,7 +56,7 @@ export function SelectableSearchResults<T>({
                 onSelect(selectedId === resultId ? null : (resultId ?? null));
               }}
               disabled={isDisabled}
-              className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[var(--radius)] px-2 text-left text-[15px] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-60 disabled:hover:bg-transparent"
+              className="flex min-h-11 min-w-0 flex-[1_1_12rem] items-center gap-3 rounded-[var(--radius)] px-2 text-left text-[15px] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] disabled:opacity-60 disabled:hover:bg-transparent"
             >
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${

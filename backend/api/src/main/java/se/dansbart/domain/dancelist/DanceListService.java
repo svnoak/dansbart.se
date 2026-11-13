@@ -9,6 +9,7 @@ import se.dansbart.domain.dance.DanceService;
 import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.group.GroupMemberJooqRepository;
+import se.dansbart.domain.guestcode.GuestCodeJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.track.UserTrackSourceJooqRepository;
 import se.dansbart.domain.user.UserJooqRepository;
@@ -52,6 +53,7 @@ public class DanceListService {
     private final DanceJooqRepository danceJooqRepository;
     private final DanceService danceService;
     private final CollaborationAccess collaborationAccess;
+    private final GuestCodeJooqRepository guestCodeJooqRepository;
 
     @Transactional
     public DanceList create(UUID userId, String name, String description, Boolean isPublic) {
@@ -339,6 +341,7 @@ public class DanceListService {
                 .orElse(null)
             : null;
         Boolean viewerCanManage = viewerId != null ? hasEditAccess(danceList, viewerId) : null;
+        Boolean viewerHasFullControl = viewerId != null ? hasFullControl(danceList, viewerId) : null;
         boolean includeShareToken = viewerId == null || hasEditAccess(danceList, viewerId);
         List<DanceListEntry> danceListEntries = entryJooqRepository.findByDanceListIdOrderByPosition(danceList.getId());
 
@@ -393,11 +396,15 @@ public class DanceListService {
             .description(danceList.getDescription())
             .isPublic(danceList.getIsPublic())
             .shareToken(includeShareToken ? danceList.getShareToken() : null)
+            .guestCode(Boolean.TRUE.equals(viewerHasFullControl)
+                ? guestCodeJooqRepository.findCodeByDanceListId(danceList.getId()).orElse(null)
+                : null)
             .createdAt(danceList.getCreatedAt())
             .updatedAt(danceList.getUpdatedAt())
             .owner(owner)
             .ownerGroup(ownerGroup)
             .viewerCanManage(viewerCanManage)
+            .viewerHasFullControl(viewerHasFullControl)
             .entries(entries)
             .collaborators(collaborators)
             .build();
@@ -431,6 +438,7 @@ public class DanceListService {
             .freeTextName(entry.getFreeTextName())
             .playMode(entry.getPlayMode())
             .position(entry.getPosition())
+            .addedByGuest(Boolean.TRUE.equals(entry.getAddedByGuest()))
             .tracks(trackListDtos)
             .build();
     }

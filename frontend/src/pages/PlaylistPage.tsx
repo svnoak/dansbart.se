@@ -938,6 +938,7 @@ export function PlaylistPage() {
                 contextTracks={contextTracks}
                 position={i + 1}
                 showGrip={sort === 'position' && canEdit}
+                addedByGuest={canEdit && pt.addedByGuest === true}
                 isDragOver={dragOverIndex === i}
                 error={pt.id ? (removeTrackErrors[pt.id] ?? null) : null}
                 onRemove={canEdit && pt.id ? () => handleRemoveTrack(pt.id!, pt.track!.id!) : undefined}

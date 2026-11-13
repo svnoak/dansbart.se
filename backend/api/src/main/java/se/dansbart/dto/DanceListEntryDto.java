@@ -21,5 +21,8 @@ public class DanceListEntryDto {
     private String playMode;
     private Integer position;
 
+    // True when someone added the dance with the guest code of the list
+    private Boolean addedByGuest;
+
     private List<PlaylistTrackDto> tracks;
 }

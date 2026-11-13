@@ -20,6 +20,9 @@ public class PlaylistTrack {
     private OffsetDateTime addedAt;
     private UUID addedBy;
 
+    @Builder.Default
+    private Boolean addedByGuest = false;
+
     private Playlist playlist;
     private Track track;
 }

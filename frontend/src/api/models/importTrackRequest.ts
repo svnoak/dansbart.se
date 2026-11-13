@@ -11,7 +11,6 @@ export interface ImportTrackRequest {
   /** @pattern ^(LOCAL|GDRIVE|HIDRIVE)$ */
   provider?: string;
   providerFileId?: string;
-  /** @minLength 1 */
   title: string;
   artist?: string;
   album?: string;

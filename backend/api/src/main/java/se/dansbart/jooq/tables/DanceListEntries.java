@@ -105,6 +105,11 @@ public class DanceListEntries extends TableImpl<Record> {
      */
     public final TableField<Record, OffsetDateTime> CREATED_AT = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
 
+    /**
+     * The column <code>public.dance_list_entries.added_by_guest</code>.
+     */
+    public final TableField<Record, Boolean> ADDED_BY_GUEST = createField(DSL.name("added_by_guest"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
     private DanceListEntries(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
