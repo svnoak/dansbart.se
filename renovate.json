@@ -4,6 +4,10 @@
   "schedule": ["before 9am on Monday"],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
+  "vulnerabilityAlerts": {
+    "automerge": true,
+    "schedule": ["at any time"]
+  },
   "packageRules": [
     {
       "description": "Group all non-major updates into a single PR",
