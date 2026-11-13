@@ -168,6 +168,13 @@ rather than advisory:
   in CI after it is already published.
 - **`production` environment** — add required reviewers to turn each release
   tag into an approval gate.
+- **Issue agent** (`.github/workflows/issue-agent.yml`): add the
+  `CLAUDE_CODE_OAUTH_TOKEN` secret (or `ANTHROPIC_API_KEY`) and install the
+  Claude GitHub App on the repository. When a maintainer opens an issue, the
+  agent asks questions in the issue if it is ambiguous and adds
+  `needs-clarification`. Answering in a comment triggers a new review. Adding
+  `implementation-ready` makes the agent implement the issue and open a pull
+  request that closes it.
 - **Optional deploy notification** — set the `DEPLOY_DISPATCH_REPO` variable
   (`owner/name` of the Ansible repo) and a `DEPLOY_DISPATCH_TOKEN` secret to
   have deploys triggered automatically. Without them the workflows just publish
