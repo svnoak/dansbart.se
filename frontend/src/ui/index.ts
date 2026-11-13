@@ -10,6 +10,7 @@ export { InlineError } from './InlineError';
 export { LoadError } from './LoadError';
 export { LogoMark } from './LogoMark';
 export { Modal } from './Modal';
+export { NewLabel } from './NewLabel';
 export { Pill } from './Pill';
 export { SectionTitle } from './SectionTitle';
 export { TextField } from './TextField';

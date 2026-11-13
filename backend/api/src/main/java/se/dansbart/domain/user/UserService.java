@@ -84,4 +84,22 @@ public class UserService {
     public void setRole(UUID userId, String role) {
         userJooqRepository.updateRole(userId, role);
     }
+
+    /**
+     * Bans or unbans a user. An admin cannot ban themselves or another admin.
+     *
+     * @return false if the user does not exist
+     */
+    @Transactional
+    public boolean setBanned(UUID userId, boolean banned, UUID actingAdminId) {
+        if (banned) {
+            if (userId.equals(actingAdminId)) {
+                throw new IllegalArgumentException("You cannot ban yourself");
+            }
+            if ("ADMIN".equals(userJooqRepository.findRoleById(userId))) {
+                throw new IllegalArgumentException("Remove the admin role before banning this user");
+            }
+        }
+        return userJooqRepository.setBanned(userId, banned);
+    }
 }

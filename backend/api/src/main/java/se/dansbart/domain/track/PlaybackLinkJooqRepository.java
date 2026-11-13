@@ -2,12 +2,14 @@ package se.dansbart.domain.track;
 
 import org.jooq.DSLContext;
 import org.jooq.Record;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import static se.dansbart.jooq.Tables.PLAYBACK_LINKS;
+import static se.dansbart.jooq.Tables.TRACKS;
 
 @Repository
 public class PlaybackLinkJooqRepository {
@@ -25,6 +27,24 @@ public class PlaybackLinkJooqRepository {
                 .and(PLAYBACK_LINKS.PLATFORM.eq(platform))
                 .and(PLAYBACK_LINKS.DEEP_LINK.eq(deepLink))
         );
+    }
+
+    /**
+     * Finds the oldest track with a link to this YouTube video or Spotify track.
+     * Stored links are usually the bare id, but some hold a full URL, so a link that
+     * contains the id also matches.
+     */
+    public Optional<UUID> findTrackIdByPlatformAndExternalId(String platform, String externalId) {
+        return dsl.select(PLAYBACK_LINKS.TRACK_ID)
+            .from(PLAYBACK_LINKS)
+            .join(TRACKS).on(TRACKS.ID.eq(PLAYBACK_LINKS.TRACK_ID))
+            .where(DSL.lower(PLAYBACK_LINKS.PLATFORM).eq(platform.toLowerCase()))
+            .and(PLAYBACK_LINKS.DEEP_LINK.eq(externalId)
+                .or(PLAYBACK_LINKS.DEEP_LINK.contains(externalId)))
+            .and(TRACKS.IS_PRIVATE.isFalse())
+            .orderBy(TRACKS.CREATED_AT.asc())
+            .limit(1)
+            .fetchOptional(PLAYBACK_LINKS.TRACK_ID);
     }
 
     public PlaybackLink insert(PlaybackLink link) {

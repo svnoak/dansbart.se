@@ -25,10 +25,12 @@ import { AuthProvider } from '@/auth/AuthContext';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { FavoritesProvider } from '@/favorites/FavoritesContext';
 import { FavoritesPage } from '@/pages/FavoritesPage';
+import { AddTrackPage } from '@/pages/AddTrackPage';
 import { PlaylistsPage } from '@/pages/PlaylistsPage';
 import { PlaylistPage } from '@/pages/PlaylistPage';
 import { PlaylistSettingsPage } from '@/pages/PlaylistSettingsPage';
 import { SharedPlaylistPage } from '@/pages/SharedPlaylistPage';
+import { GuestCodePage } from '@/pages/GuestCodePage';
 import { AdminLayout } from '@/admin/layout/AdminLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { AdminLibraryPage } from '@/admin/pages/AdminLibraryPage';
@@ -39,6 +41,7 @@ import { AdminKeywordsPage } from '@/admin/pages/AdminKeywordsPage';
 import { AdminIngestPage } from '@/admin/pages/AdminIngestPage';
 import { AdminPendingPage } from '@/admin/pages/AdminPendingPage';
 import { AdminSuggestionsPage } from '@/admin/pages/AdminSuggestionsPage';
+import { AdminContributionsPage } from '@/admin/pages/AdminContributionsPage';
 import { AdminDuplicatesPage } from '@/admin/pages/AdminDuplicatesPage';
 import { AdminMaintenancePage } from '@/admin/pages/AdminMaintenancePage';
 import { AdminStyleConfigPage } from '@/admin/pages/AdminStyleConfigPage';
@@ -97,6 +100,8 @@ export function App() {
                           }
                         />
                         <Route path="/shared/:token" element={<SharedPlaylistPage />} />
+                        <Route path="/kod" element={<GuestCodePage />} />
+                        <Route path="/kod/:code" element={<GuestCodePage />} />
                         <Route path="/groups" element={<GroupsPage />} />
                         <Route path="/dance-lists" element={<DanceListsPage />} />
                         <Route path="/dance-lists/:id" element={<DanceListPage />} />
@@ -115,6 +120,14 @@ export function App() {
                           element={
                             <ProtectedRoute>
                               <MyLibraryPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/lagg-till"
+                          element={
+                            <ProtectedRoute>
+                              <AddTrackPage />
                             </ProtectedRoute>
                           }
                         />
@@ -152,6 +165,7 @@ export function App() {
                       <Route path="ingest" element={<AdminIngestPage />} />
                       <Route path="pending" element={<AdminPendingPage />} />
                       <Route path="suggestions" element={<AdminSuggestionsPage />} />
+                      <Route path="contributions" element={<AdminContributionsPage />} />
                       <Route path="duplicates" element={<AdminDuplicatesPage />} />
                       <Route path="folkwiki" element={<AdminFolkwikiPage />} />
                       <Route path="users" element={<AdminUsersPage />} />

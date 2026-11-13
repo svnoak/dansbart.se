@@ -13,6 +13,8 @@ export interface PlaylistTrack {
   trackId?: string;
   position?: number;
   addedAt?: string;
+  addedBy?: string;
+  addedByGuest?: boolean;
   playlist?: Playlist;
   track?: Track;
 }

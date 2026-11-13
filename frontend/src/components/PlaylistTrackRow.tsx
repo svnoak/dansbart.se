@@ -12,6 +12,8 @@ interface PlaylistTrackRowProps {
   /** When false, the grip handle is invisible but still reserves its space so layout stays stable. */
   showGrip?: boolean;
   error?: string | null;
+  /** True when someone added the track with the guest code of the playlist. */
+  addedByGuest?: boolean;
   /** When given, the row menu gets a "Ta bort från spellistan" item. The heart stays in the row. */
   onRemove?: () => void;
   onDragStart: () => void;
@@ -31,6 +33,7 @@ export function PlaylistTrackRow({
   isDragOver,
   showGrip = true,
   error,
+  addedByGuest = false,
   onRemove,
   onDragStart,
   onDragOver,
@@ -69,7 +72,18 @@ export function PlaylistTrackRow({
         {position}
       </span>
       <div className="min-w-0 flex-1">
-        <TrackRow track={track} contextTracks={contextTracks} extraMenuItems={extraMenuItems} />
+        <TrackRow
+          track={track}
+          contextTracks={contextTracks}
+          extraMenuItems={extraMenuItems}
+          badges={
+            addedByGuest ? (
+              <span className="inline-flex h-6 w-fit items-center rounded-full bg-[rgb(var(--color-accent-muted))] px-2 text-[13px] font-medium text-[rgb(var(--color-text-muted))]">
+                Tillagd med kod
+              </span>
+            ) : undefined
+          }
+        />
       </div>
       {error && (
         <div className="w-full px-4 pb-2">

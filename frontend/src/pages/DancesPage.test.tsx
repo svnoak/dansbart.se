@@ -3,6 +3,8 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { DancesPage } from './DancesPage';
+import { authValue, loggedInAuthValue } from '@/test/authValue';
+import { typeInto } from '@/test/typeInto';
 import { ToastContainer } from '@/ui';
 import * as toastEmitter from '@/ui/toastEmitter';
 
@@ -12,6 +14,10 @@ const httpClient = vi.fn();
 const getStyleOverview = vi.fn();
 const getPrimaryTrack = vi.fn();
 const getDanceTracks = vi.fn();
+const getMyDanceLists = vi.fn();
+const addEntry = vi.fn();
+const createDanceList = vi.fn();
+const useAuth = vi.fn();
 const usePlayerMock = { play: vi.fn() };
 
 vi.mock('@/api/http-client', () => ({
@@ -25,6 +31,16 @@ vi.mock('@/api/generated/discovery/discovery', () => ({
 vi.mock('@/api/generated/dances/dances', () => ({
   getPrimaryTrack: (...args: unknown[]) => getPrimaryTrack(...args),
   getDanceTracks: (...args: unknown[]) => getDanceTracks(...args),
+}));
+
+vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
+  getMyDanceLists: (...args: unknown[]) => getMyDanceLists(...args),
+  addEntry: (...args: unknown[]) => addEntry(...args),
+  createDanceList: (...args: unknown[]) => createDanceList(...args),
+}));
+
+vi.mock('@/auth/useAuth', () => ({
+  useAuth: () => useAuth(),
 }));
 
 vi.mock('@/player/usePlayer', () => ({
@@ -49,6 +65,11 @@ describe('DancesPage', () => {
     getStyleOverview.mockReset();
     getPrimaryTrack.mockReset();
     getDanceTracks.mockReset();
+    getMyDanceLists.mockReset();
+    addEntry.mockReset();
+    createDanceList.mockReset();
+    useAuth.mockReset();
+    useAuth.mockReturnValue(authValue());
     usePlayerMock.play.mockReset();
     getStyleOverview.mockResolvedValue([]);
     httpClient.mockImplementation((input: string) => {
@@ -165,5 +186,91 @@ describe('DancesPage', () => {
 
     expect(usePlayerMock.play).toHaveBeenCalledWith(expect.objectContaining({ id: 'track-2' }));
     expect(liA.querySelector('[role="alert"]')?.textContent).toContain('Inga låtar länkade till denna dans');
+  });
+
+  function getAddToDanceListButton(danceName: string) {
+    const button = document.body.querySelector(
+      `button[aria-label="Lägg till ${danceName} i danslista"]`,
+    ) as HTMLButtonElement | null;
+    expect(button).not.toBeNull();
+    return button!;
+  }
+
+  it('asks an anonymous person to log in before adding a dance to a dance list', async () => {
+    await renderPage();
+
+    await act(async () => {
+      getAddToDanceListButton('Familjevals från Ödsmål').click();
+    });
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('Logga in först');
+    expect(getMyDanceLists).not.toHaveBeenCalled();
+  });
+
+  it('adds a dance to one of the person\'s dance lists', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1' }));
+    getMyDanceLists.mockResolvedValue([{ id: 'list-1', name: 'Fredagsdansen' }]);
+    addEntry.mockResolvedValue({ id: 'entry-1', danceId: 'dance-1', danceName: 'Familjevals från Ödsmål' });
+
+    await renderPage();
+
+    await act(async () => {
+      getAddToDanceListButton('Familjevals från Ödsmål').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('Lägg till i danslista');
+    const listButton = Array.from(dialog!.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Fredagsdansen'),
+    );
+    expect(listButton).toBeDefined();
+
+    await act(async () => {
+      listButton!.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(addEntry).toHaveBeenCalledWith('list-1', { danceId: 'dance-1' });
+    expect(toastSpy).toHaveBeenCalledWith('Dans tillagd i danslistan');
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('creates a new dance list with the dance as its first entry', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1' }));
+    getMyDanceLists.mockResolvedValue([]);
+    createDanceList.mockResolvedValue({ id: 'list-new', name: 'Lördag' });
+    addEntry.mockResolvedValue({ id: 'entry-1', danceId: 'dance-1' });
+
+    await renderPage();
+
+    await act(async () => {
+      getAddToDanceListButton('Familjevals från Ödsmål').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const dialog = document.body.querySelector('[role="dialog"]')!;
+    expect(dialog.textContent).toContain('Du har inga danslistor ännu.');
+    const newListButton = Array.from(dialog.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Ny danslista'),
+    );
+    await act(async () => {
+      newListButton!.click();
+    });
+
+    const input = dialog.querySelector('input[type="text"]') as HTMLInputElement;
+    await act(async () => {
+      typeInto(input, 'Lördag');
+    });
+    const form = dialog.querySelector('form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(createDanceList).toHaveBeenCalledWith({ name: 'Lördag' });
+    expect(addEntry).toHaveBeenCalledWith('list-new', { danceId: 'dance-1' });
+    expect(toastSpy).toHaveBeenCalledWith('Danslista skapad och dans tillagd');
   });
 });

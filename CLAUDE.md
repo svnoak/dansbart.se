@@ -1,5 +1,7 @@
 # dansbart.se
 
+@AGENTS.md
+
 Swedish folk music site. People find music to dance to and classify tracks by dance style and tempo.
 
 - Contributor workflow and test commands: `CONTRIBUTING.md`.
@@ -46,6 +48,31 @@ If a worker crashes, its tracks stay in `PROCESSING`. To reset them, call `POST 
 - `SPRING_PROFILES_ACTIVE=local` turns off all authentication. Use it only for local development.
 - Other profiles use DiscourseConnect SSO through `/sso/initiate` and `/sso/callback`.
 - Classification does not require login. Anonymous voters send `X-Voter-ID`.
+
+## Cloud storage connectors
+
+`domain/providerconnection/` holds one `*Connector` per provider (`GDRIVE`, `HIDRIVE`) and stores encrypted refresh tokens in `provider_connections`. `OAuthConnectionService` runs the connect flow for every `OAuthConnector`, under `/api/connections/{slug}/start` and `/callback`. A new provider adds a connector, a migration for the `provider` check constraints, and the labels in the frontend. The `local` profile points the HiDrive connector at a stub served under `/stub/hidrive`, so the connect flow works without a HiDrive account. `CONTRIBUTING.md` describes the stub and what is still unverified against the real HiDrive.
+
+## User contributions
+
+Signed-in users add tracks and dance styles to the public library under `/api/contributions` (`domain/contribution/`, frontend `/lagg-till`). Additions are public at once; admins review them afterwards at `/admin/contributions`.
+
+- A YouTube link creates the track and dispatches `analyze_track_task`, which downloads that exact video.
+- A Spotify link dispatches the normal `spotify_ingest_task`. `TrackSubmissionResolverJob` links the `track_submissions` row once the worker has created the track, and after analysis puts the submitter's style back as primary.
+- The submitter's style is stored with `is_user_confirmed`, so the classifier keeps it.
+- A track a person added (`tracks.uploader_id` set) is listed in `GET /api/tracks` at once, before its analysis. Other tracks wait for `DONE`, because the spider ingests tracks of artists an admin has not approved.
+- A new dance style is a `style_keywords` row with `created_by` set.
+- `users.banned_at` blocks adding. A banned user still votes, with anonymous weight (`VoterReputationService`).
+
+## Guest codes
+
+A guest code lets anyone add to one playlist or one dance list without an account, for a dance evening or a course (`domain/guestcode/`, table `list_guest_codes`, frontend `/kod` and `GuestCodePanel`). The QR code of a list is the address `/kod/{code}`.
+
+- The people with full control of a list create, replace and remove its code: `POST` and `DELETE /api/playlists/{id}/guest-code` and `/api/dance-lists/{id}/guest-code`. A list has at most one code. `guestCode` in the list's DTO is sent only to them.
+- A guest reads the list and adds to it under `/api/public/guest-codes/{code}`. A playlist code adds tracks; a dance list code adds dances, from the site or by name, each with one track if the guest picks one. The code gives no other right: a guest cannot remove, reorder or rename.
+- A track a guest picks for a dance from the site is a vote that the track fits the dance, as it is when a person who edits the list links one. The vote is cast for the guest's `X-Voter-ID`, with anonymous weight, or for their account if they are signed in. Removing the track or the dance from the list withdraws it.
+- A guest cannot add a private track. What a guest added has `added_by_guest` set and shows as "Tillagd med kod" to the people who edit the list.
+- `GuestCodeRateLimiter` caps the public endpoints per address. It counts in memory, per API instance.
 
 ## Dance style configuration
 

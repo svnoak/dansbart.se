@@ -35,6 +35,16 @@ public class TrackDanceStyleJooqRepository {
             .fetchOptional(this::toDanceStyle);
     }
 
+    /** Like findByTrackIdAndDanceStyle, but tolerates duplicate rows; prefers a user-confirmed one. */
+    public Optional<TrackDanceStyle> findFirstByTrackIdAndDanceStyle(UUID trackId, String danceStyle) {
+        return dsl.selectFrom(TRACK_DANCE_STYLES)
+            .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
+                .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(danceStyle)))
+            .orderBy(TRACK_DANCE_STYLES.IS_USER_CONFIRMED.desc(), TRACK_DANCE_STYLES.IS_PRIMARY.desc())
+            .limit(1)
+            .fetchOptional(this::toDanceStyle);
+    }
+
     public Optional<TrackDanceStyle> findByTrackIdAndIsPrimaryTrue(UUID trackId) {
         return dsl.selectFrom(TRACK_DANCE_STYLES)
             .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
@@ -59,6 +69,14 @@ public class TrackDanceStyleJooqRepository {
             .where(TRACK_DANCE_STYLES.DANCE_STYLE.isNotNull())
             .orderBy(TRACK_DANCE_STYLES.DANCE_STYLE.asc())
             .fetch(TRACK_DANCE_STYLES.DANCE_STYLE);
+    }
+
+    /** Makes styleId the track's only primary style. */
+    public void makeOnlyPrimary(UUID trackId, UUID styleId) {
+        dsl.update(TRACK_DANCE_STYLES)
+            .set(TRACK_DANCE_STYLES.IS_PRIMARY, org.jooq.impl.DSL.field(TRACK_DANCE_STYLES.ID.eq(styleId)))
+            .where(TRACK_DANCE_STYLES.TRACK_ID.eq(trackId))
+            .execute();
     }
 
     public TrackDanceStyle save(TrackDanceStyle style) {

@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             username: data.username,
             role: data.role ?? 'USER',
             confirmedTrackCount: data.confirmedTrackCount ?? 0,
+            banned: data.banned === true,
           });
         }
       })

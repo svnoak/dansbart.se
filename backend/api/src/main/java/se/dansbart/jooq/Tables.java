@@ -22,6 +22,7 @@ import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.GroupMembers;
 import se.dansbart.jooq.tables.Groups;
+import se.dansbart.jooq.tables.ListGuestCodes;
 import se.dansbart.jooq.tables.PathCounts;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -40,6 +41,7 @@ import se.dansbart.jooq.tables.TrackPlaybacks;
 import se.dansbart.jooq.tables.TrackSecondaryStyleConfirmations;
 import se.dansbart.jooq.tables.TrackStructureVersions;
 import se.dansbart.jooq.tables.TrackStyleVotes;
+import se.dansbart.jooq.tables.TrackSubmissions;
 import se.dansbart.jooq.tables.Tracks;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks;
 import se.dansbart.jooq.tables.UserInteractions;
@@ -147,6 +149,11 @@ public class Tables {
     public static final Groups GROUPS = Groups.GROUPS;
 
     /**
+     * The table <code>public.list_guest_codes</code>.
+     */
+    public static final ListGuestCodes LIST_GUEST_CODES = ListGuestCodes.LIST_GUEST_CODES;
+
+    /**
      * The table <code>public.path_counts</code>.
      */
     public static final PathCounts PATH_COUNTS = PathCounts.PATH_COUNTS;
@@ -235,6 +242,11 @@ public class Tables {
      * The table <code>public.track_style_votes</code>.
      */
     public static final TrackStyleVotes TRACK_STYLE_VOTES = TrackStyleVotes.TRACK_STYLE_VOTES;
+
+    /**
+     * The table <code>public.track_submissions</code>.
+     */
+    public static final TrackSubmissions TRACK_SUBMISSIONS = TrackSubmissions.TRACK_SUBMISSIONS;
 
     /**
      * The table <code>public.tracks</code>.

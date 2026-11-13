@@ -1,8 +1,9 @@
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckIcon, CloseIcon } from '@/icons';
+import { CheckIcon, CloseIcon, PlusIcon } from '@/icons';
 import { Button } from '@/ui/Button';
 import { IconButton } from '@/ui/IconButton';
+import { AddDanceStyleForm } from '@/components/AddDanceStyleForm';
 import { StylePicker } from '@/components/StylePicker';
 import { TempoPicker } from '@/components/TempoPicker';
 import { useStyleVote } from '@/hooks/useStyleVote';
@@ -10,7 +11,7 @@ import { useAuth } from '@/auth/useAuth';
 import { StylePill } from './StylePill';
 import { stylePillState } from './stylePillState';
 
-type Step = 'main' | 'sub' | 'tempo' | 'success';
+type Step = 'main' | 'sub' | 'newStyle' | 'tempo' | 'success';
 
 interface StyleVotePanelProps {
   trackId: string;
@@ -44,7 +45,9 @@ function StyleVoteDialog({
   const titleId = useId();
 
   const styleVote = useStyleVote(trackId, true);
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, user, login } = useAuth();
+  const canAddStyle = isAuthenticated && !user?.banned;
+  const [stepBeforeNewStyle, setStepBeforeNewStyle] = useState<Step>('main');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -70,6 +73,18 @@ function StyleVoteDialog({
       setStep('success');
       onVoted?.(selectedStyle, confirmed);
     }
+  }
+
+  function openNewStyle() {
+    setStepBeforeNewStyle(step);
+    setStep('newStyle');
+  }
+
+  /** The new style is picked at once, as if the person had chosen it in the list. */
+  async function handleStyleCreated(main: string, sub: string | null) {
+    await styleVote.reload();
+    setSelectedMain(main);
+    handleSelect(sub ?? main);
   }
 
   function handleSelectMain(main: string) {
@@ -104,7 +119,7 @@ function StyleVoteDialog({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-md rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
+      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] p-6 shadow-[var(--color-card-shadow)]">
         <IconButton
           aria-label="Stäng"
           onClick={onClose}
@@ -208,6 +223,22 @@ function StyleVoteDialog({
               </Button>
             </div>
           </>
+        )}
+
+        {step === 'newStyle' && (
+          <AddDanceStyleForm
+            mainStyles={styleVote.mainCategories}
+            defaultParent={stepBeforeNewStyle === 'sub' ? selectedMain : undefined}
+            onCreated={(main, sub) => void handleStyleCreated(main, sub)}
+            onCancel={() => setStep(stepBeforeNewStyle)}
+          />
+        )}
+
+        {(step === 'main' || step === 'sub') && canAddStyle && (
+          <Button variant="outline" className="mt-3 w-full" onClick={openNewStyle}>
+            <PlusIcon className="h-5 w-5" aria-hidden />
+            Dansen saknas – lägg till en ny dansstil
+          </Button>
         )}
 
         {step === 'sub' && (

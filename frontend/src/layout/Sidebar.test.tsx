@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { loggedInAuthValue, authValue } from '@/test/authValue';
 
@@ -17,6 +17,12 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
 
 vi.mock('@/api/generated/groups/groups', () => ({
   getGroupInvitations: (...args: unknown[]) => getGroupInvitations(...args),
+}));
+
+const countUnreviewedContributions = vi.fn();
+
+vi.mock('@/api/generated/admin-contributions/admin-contributions', () => ({
+  countUnreviewedContributions: () => countUnreviewedContributions(),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -37,7 +43,10 @@ describe('Sidebar', () => {
     useAuth.mockReset();
     getInvitations.mockResolvedValue([]);
     getGroupInvitations.mockResolvedValue([]);
+    countUnreviewedContributions.mockReset();
+    countUnreviewedContributions.mockResolvedValue({ tracks: 0, styles: 0 });
     useAuth.mockReturnValue(loggedInAuthValue({}));
+    localStorage.clear();
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -92,5 +101,82 @@ describe('Sidebar', () => {
       a.textContent?.includes('Mina låtar'),
     );
     expect(link).toBeUndefined();
+  });
+
+  function findLink(text: string) {
+    return Array.from(document.body.querySelectorAll('a')).find((a) => a.textContent?.includes(text));
+  }
+
+  it('links to the add-track page, also for visitors so they find it', async () => {
+    await renderSidebar();
+    expect(findLink('Lägg till låt')?.getAttribute('href')).toBe('/lagg-till');
+
+    useAuth.mockReturnValue(authValue());
+    await renderSidebar();
+    expect(findLink('Lägg till låt')?.getAttribute('href')).toBe('/lagg-till');
+  });
+
+  it('hides the add-track link from a banned person', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ banned: true }));
+    await renderSidebar();
+    expect(findLink('Lägg till låt')).toBeUndefined();
+  });
+
+  it('shows an admin how many additions wait for review', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ role: 'ADMIN' }));
+    countUnreviewedContributions.mockResolvedValue({ tracks: 2, styles: 1 });
+    await renderSidebar();
+
+    const link = findLink('Nya bidrag att granska');
+    expect(link?.getAttribute('href')).toBe('/admin/contributions');
+    expect(link?.textContent).toContain('3');
+  });
+
+  it('shows no review link when nothing waits or the person is not an admin', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ role: 'ADMIN' }));
+    await renderSidebar();
+    expect(findLink('Nya bidrag')).toBeUndefined();
+
+    useAuth.mockReturnValue(loggedInAuthValue({}));
+    countUnreviewedContributions.mockResolvedValue({ tracks: 5, styles: 0 });
+    await renderSidebar();
+    expect(findLink('Nya bidrag')).toBeUndefined();
+    expect(countUnreviewedContributions).toHaveBeenCalledTimes(1);
+  });
+
+  async function renderSidebarAt(path: string) {
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={[path]}>
+          <Sidebar />
+        </MemoryRouter>,
+      );
+    });
+  }
+
+  it('marks the add-track link as new until the person opens that page', async () => {
+    await renderSidebarAt('/');
+    expect(findLink('Lägg till låt')?.textContent).toContain('Nytt');
+
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await renderSidebarAt('/lagg-till');
+    expect(findLink('Lägg till låt')?.textContent).not.toContain('Nytt');
+
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await renderSidebarAt('/');
+    expect(findLink('Lägg till låt')?.textContent).not.toContain('Nytt');
+  });
+
+  it('stops marking the add-track link as new after the end date', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-01-02'));
+    try {
+      await renderSidebarAt('/');
+      expect(findLink('Lägg till låt')?.textContent).not.toContain('Nytt');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

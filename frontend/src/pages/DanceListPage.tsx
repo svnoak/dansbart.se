@@ -24,6 +24,7 @@ import {
   EmptyState,
   IconButton,
   InlineError,
+  Modal,
   Pill,
   RowSkeleton,
   menuDangerItemClassName,
@@ -39,9 +40,10 @@ import {
   PlayIcon,
   PlusIcon,
   QueueListIcon,
+  ShareIcon,
 } from '@/icons';
 import { usePlayer } from '@/player/usePlayer';
-import { SelectableSearchResults, TrackRow } from '@/components';
+import { GuestCodePanel, SelectableSearchResults, TrackRow } from '@/components';
 import { StylePill } from '@/components/TrackRow/StylePill';
 
 type ActiveSearch = 'dance' | { entryId: string } | null;
@@ -49,11 +51,6 @@ type ConfirmRemoval =
   | { kind: 'entry'; entryId: string }
   | { kind: 'track'; entryId: string; trackId: string }
   | null;
-
-function extractContent<T>(result: unknown): T[] {
-  const content = result && typeof result === 'object' && 'content' in result ? result.content : null;
-  return Array.isArray(content) ? (content as T[]) : [];
-}
 
 const PLAY_MODE_OPTIONS: { value: string; label: string }[] = [
   { value: 'in_order', label: 'I ordning' },
@@ -215,6 +212,8 @@ export default function DanceListPage() {
   const [dragArmedEntryId, setDragArmedEntryId] = useState<string | null>(null);
 
   const canManage = danceList?.viewerCanManage === true;
+  const hasFullControl = danceList?.viewerHasFullControl === true;
+  const [showGuestCode, setShowGuestCode] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -250,7 +249,7 @@ export default function DanceListPage() {
       getDances({ search: danceQuery.trim() })
         .then((result) => {
           if (cancelled) return;
-          setDanceResults(extractContent<Dance>(result));
+          setDanceResults(result?.items ?? []);
         })
         .catch(() => {
           if (cancelled) return;
@@ -635,11 +634,36 @@ export default function DanceListPage() {
                   <PlusIcon className="h-4 w-4" aria-hidden />
                   Lägg till dans
                 </Button>
+                {hasFullControl && (
+                  <Button variant="secondary" onClick={() => setShowGuestCode(true)}>
+                    <ShareIcon className="h-4 w-4" aria-hidden />
+                    {danceList.guestCode ? 'Visa koden' : 'Låt andra lägga till'}
+                  </Button>
+                )}
               </div>
             )}
           </div>
         </div>
       </Card>
+
+      {hasFullControl && id && (
+        <Modal open={showGuestCode} onClose={() => setShowGuestCode(false)} label="Låt andra lägga till">
+          <div className="space-y-3">
+            <h2 className="text-xl font-bold text-[rgb(var(--color-text))]">Låt andra lägga till</h2>
+            <GuestCodePanel
+              kind="danceList"
+              listId={id}
+              code={danceList.guestCode ?? null}
+              onChange={(code) =>
+                setDanceList((prev) => (prev ? { ...prev, guestCode: code ?? undefined } : prev))
+              }
+            />
+            <Button variant="ghost" onClick={() => setShowGuestCode(false)}>
+              Stäng
+            </Button>
+          </div>
+        </Modal>
+      )}
 
       {canManage && isDanceSearchOpen && (
         <Card className="p-5">
@@ -791,6 +815,11 @@ export default function DanceListPage() {
                             Egen rad
                           </span>
                         ) : null}
+                        {entry.addedByGuest && (
+                          <span className="inline-flex h-7 items-center rounded-full bg-[rgb(var(--color-accent-muted))] px-2.5 text-[13px] font-medium text-[rgb(var(--color-text-muted))]">
+                            Tillagd med kod
+                          </span>
+                        )}
                         <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
                           {countLabel(tracks.length, 'låt', 'låtar')}
                         </span>
@@ -1064,9 +1093,10 @@ export default function DanceListPage() {
                                               variant="secondary"
                                               disabled={addingTrack}
                                               onClick={() => handleAddTrack(entryId, track)}
+                                              aria-label={`Lägg till ${track.title ?? 'låten'}`}
+                                              className="min-w-11 !px-0"
                                             >
-                                              <PlusIcon className="h-4 w-4" aria-hidden />
-                                              Lägg till
+                                              <PlusIcon className="h-5 w-5" aria-hidden />
                                             </Button>
                                           )
                                         }

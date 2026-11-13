@@ -20,6 +20,9 @@ public class PlaylistDto {
     private String description;
     private Boolean isPublic;
     private String shareToken;
+
+    // The code that lets anyone add to the list; only sent to a viewer who can manage the list
+    private String guestCode;
     private String danceStyle;
     private String subStyle;
     private String tempoCategory;

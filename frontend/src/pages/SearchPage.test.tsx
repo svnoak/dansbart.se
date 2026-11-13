@@ -213,7 +213,9 @@ describe('SearchPage', () => {
     await renderPageAt('/search?addTo=p1');
     await settle(300);
 
-    const addButton = getButtonByText('Lägg till');
+    const addButton = Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.getAttribute('aria-label')?.startsWith('Lägg till '),
+    );
     expect(addButton).toBeDefined();
   });
 

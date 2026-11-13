@@ -11,5 +11,6 @@ export interface PlaylistTrackDto {
   position?: number;
   addedAt?: string;
   addedByUserId?: string;
+  addedByGuest?: boolean;
   track?: TrackListDto;
 }

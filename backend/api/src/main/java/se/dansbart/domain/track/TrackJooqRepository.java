@@ -58,7 +58,7 @@ public class TrackJooqRepository {
         dsl.insertInto(TRACKS)
             .columns(TRACKS.ID, TRACKS.TITLE, TRACKS.ISRC, TRACKS.DURATION_MS, TRACKS.PROCESSING_STATUS,
                 TRACKS.HAS_VOCALS, TRACKS.SWING_RATIO, TRACKS.ARTICULATION, TRACKS.BOUNCINESS, TRACKS.LOUDNESS,
-                TRACKS.IS_PRIVATE, TRACKS.CONTENT_HASH)
+                TRACKS.IS_PRIVATE, TRACKS.CONTENT_HASH, TRACKS.UPLOADER_ID)
             .values(
                 track.getId(),
                 track.getTitle(),
@@ -71,7 +71,8 @@ public class TrackJooqRepository {
                 track.getBounciness() != null ? track.getBounciness().doubleValue() : null,
                 track.getLoudness() != null ? track.getLoudness().doubleValue() : null,
                 track.getIsPrivate() != null ? track.getIsPrivate() : false,
-                track.getContentHash()
+                track.getContentHash(),
+                track.getUploaderId()
             )
             .execute();
         return track;
@@ -82,6 +83,14 @@ public class TrackJooqRepository {
         dsl.insertInto(TRACK_ARTISTS)
             .columns(TRACK_ARTISTS.ID, TRACK_ARTISTS.TRACK_ID, TRACK_ARTISTS.ARTIST_ID, TRACK_ARTISTS.ROLE)
             .values(UUID.randomUUID(), trackId, artistId, role != null ? role : "primary")
+            .execute();
+    }
+
+    /** Records who added a track, unless someone already is recorded. */
+    public void setUploaderIfMissing(UUID trackId, UUID userId) {
+        dsl.update(TRACKS)
+            .set(TRACKS.UPLOADER_ID, userId)
+            .where(TRACKS.ID.eq(trackId).and(TRACKS.UPLOADER_ID.isNull()))
             .execute();
     }
 
@@ -450,6 +459,17 @@ public class TrackJooqRepository {
         return dsl.selectCount().from(subquery.asTable("ids")).fetchOne(0, Long.class);
     }
 
+    /**
+     * A track is listed once its analysis is done. A track a person added (uploader_id set)
+     * is listed at once, whatever its analysis status, so they can play it and put it in a
+     * playlist straight away. Ingested tracks still wait: the spider ingests tracks of
+     * artists that an admin has not approved yet.
+     */
+    static Condition analysedOrAddedByUser() {
+        return TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING")
+            .or(TRACKS.UPLOADER_ID.isNotNull());
+    }
+
     private Condition buildPlayableTracksCondition(
         String mainStyle,
         String subStyle,
@@ -468,7 +488,7 @@ public class TrackJooqRepository {
         Float maxArticulation
     ) {
         Condition c = PLAYBACK_LINKS.IS_WORKING.eq(true)
-            .and(TRACKS.PROCESSING_STATUS.in("DONE", "REANALYZING"))
+            .and(analysedOrAddedByUser())
             .and(TRACKS.IS_FLAGGED.eq(false))
             .and(TrackVisibility.publicOnly());
         if (mainStyle != null && !mainStyle.isBlank()) c = c.and(TRACK_DANCE_STYLES.DANCE_STYLE.eq(mainStyle));

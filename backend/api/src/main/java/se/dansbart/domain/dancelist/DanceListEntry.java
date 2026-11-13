@@ -22,5 +22,8 @@ public class DanceListEntry {
     private String playMode = "in_order";
 
     private Integer position;
+
+    @Builder.Default
+    private Boolean addedByGuest = false;
     private OffsetDateTime createdAt;
 }

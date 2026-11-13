@@ -24,6 +24,5 @@ export interface TrackListDto {
   albumId?: string;
   albumTitle?: string;
   playbackLinks?: PlaybackLinkDto[];
-  /** Sheet music on folkwiki.se, when an admin has confirmed the match. Null otherwise. */
   sheetMusicUrl?: string;
 }

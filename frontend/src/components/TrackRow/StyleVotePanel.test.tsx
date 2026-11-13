@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { StyleVotePanel } from './StyleVotePanel';
+import { authValue, loggedInAuthValue } from '@/test/authValue';
+import { getInputByLabel } from '@/test/getInputByLabel';
+import { typeInto } from '@/test/typeInto';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -15,6 +18,12 @@ vi.mock('@/api/generated/styles/styles', () => ({
 
 vi.mock('@/api/generated/tracks/tracks', () => ({
   submitFeedback: (...args: unknown[]) => submitFeedback(...args),
+}));
+
+const createDanceStyle = vi.fn();
+
+vi.mock('@/api/generated/contributions/contributions', () => ({
+  createDanceStyle: (...args: unknown[]) => createDanceStyle(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -327,5 +336,80 @@ describe('StyleVotePanel', () => {
     expect(
       Array.from(document.body.querySelectorAll('button')).some((b) => b.textContent?.includes('Logga in'))
     ).toBe(false);
+  });
+
+  describe('adding a dance style', () => {
+    it('is offered to a signed-in person', async () => {
+      useAuth.mockReturnValue(loggedInAuthValue({}));
+      await renderPanel();
+      expect(clickButton('Dansen saknas')).toBeDefined();
+    });
+
+    it('is not offered to a visitor or a banned person', async () => {
+      useAuth.mockReturnValue(authValue());
+      await renderPanel();
+      expect(document.body.textContent).not.toContain('Dansen saknas');
+
+      useAuth.mockReturnValue(loggedInAuthValue({ banned: true }));
+      await renderPanel();
+      expect(document.body.textContent).not.toContain('Dansen saknas');
+    });
+
+    it('votes for a new variant right after it is added', async () => {
+      useAuth.mockReturnValue(loggedInAuthValue({}));
+      createDanceStyle.mockResolvedValue({ id: 'k1', mainStyle: 'Polska', subStyle: 'Bondpolska' });
+      await renderPanel({ currentStyle: null });
+
+      await act(async () => {
+        clickButton('Polska')?.click();
+      });
+      await act(async () => {
+        clickButton('Dansen saknas')?.click();
+      });
+      // Opened from the Polska variants, so "variant of Polska" is pre-selected.
+      expect((getInputByLabel('Variant av') as unknown as HTMLSelectElement).value).toBe('Polska');
+
+      await act(async () => {
+        typeInto(getInputByLabel('Namn på dansstilen')!, 'Bondpolska');
+      });
+      getStyleTree.mockResolvedValue([
+        { name: 'Polska', subStyles: ['Bondpolska', 'Värmländska', 'Uppländska'] },
+        { name: 'Halling', subStyles: [] },
+      ]);
+      await act(async () => {
+        clickButton('Lägg till dansstilen')?.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      expect(createDanceStyle).toHaveBeenCalledWith({ name: 'Bondpolska', parentStyle: 'Polska' });
+      expect(document.body.textContent).toContain('Hur snabbt är danstempot?');
+
+      await skipTempo();
+      expect(submitFeedback).toHaveBeenCalledWith(
+        'track-1',
+        { suggestedStyle: 'Bondpolska', tempoCorrection: undefined },
+        expect.anything(),
+      );
+    });
+
+    it('shows the reason next to the form when the style already exists', async () => {
+      useAuth.mockReturnValue(loggedInAuthValue({}));
+      const { ApiError } = await import('@/api/http-client');
+      createDanceStyle.mockRejectedValue(new ApiError('Request failed: 409', 409, 'Dansstilen Halling finns redan.'));
+      await renderPanel();
+
+      await act(async () => {
+        clickButton('Dansen saknas')?.click();
+      });
+      await act(async () => {
+        typeInto(getInputByLabel('Namn på dansstilen')!, 'Halling');
+      });
+      await act(async () => {
+        clickButton('Lägg till dansstilen')?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(document.body.querySelector('[role="alert"]')?.textContent).toBe('Dansstilen Halling finns redan.');
+    });
   });
 });

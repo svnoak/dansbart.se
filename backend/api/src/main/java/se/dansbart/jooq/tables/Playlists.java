@@ -38,6 +38,7 @@ import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.Groups.GroupsPath;
+import se.dansbart.jooq.tables.ListGuestCodes.ListGuestCodesPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
@@ -229,6 +230,19 @@ public class Playlists extends TableImpl<Record> {
             _groups = new GroupsPath(this, Keys.PLAYLISTS__PLAYLISTS_GROUP_ID_FKEY, null);
 
         return _groups;
+    }
+
+    private transient ListGuestCodesPath _listGuestCodes;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.list_guest_codes</code> table
+     */
+    public ListGuestCodesPath listGuestCodes() {
+        if (_listGuestCodes == null)
+            _listGuestCodes = new ListGuestCodesPath(this, null, Keys.LIST_GUEST_CODES__LIST_GUEST_CODES_PLAYLIST_ID_FKEY.getInverseKey());
+
+        return _listGuestCodes;
     }
 
     private transient PlaylistCollaboratorsPath _playlistCollaborators;

@@ -1,5 +1,4 @@
 import { httpClient } from '@/api/http-client';
-import { getVoterId } from '@/utils/voter';
 
 /**
  * Hand-written calls for the community-suggestions endpoints (POST /api/suggestions,
@@ -29,18 +28,6 @@ export interface SuggestionActivationPreviewDto {
   subStyle?: string;
   proposedBeatsPerBar: number;
   affectedTrackCount: number;
-}
-
-export async function createSuggestion(
-  kind: 'content' | 'dance_style',
-  payload: Record<string, unknown>,
-  note?: string,
-): Promise<SuggestionDto> {
-  return httpClient<SuggestionDto>('/api/suggestions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Voter-ID': getVoterId() },
-    body: JSON.stringify({ kind, payload, note }),
-  });
 }
 
 export async function getAdminSuggestions(

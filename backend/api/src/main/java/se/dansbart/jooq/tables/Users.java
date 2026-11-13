@@ -43,10 +43,13 @@ import se.dansbart.jooq.tables.DanceTracks.DanceTracksPath;
 import se.dansbart.jooq.tables.Dances.DancesPath;
 import se.dansbart.jooq.tables.GroupMembers.GroupMembersPath;
 import se.dansbart.jooq.tables.Groups.GroupsPath;
+import se.dansbart.jooq.tables.ListGuestCodes.ListGuestCodesPath;
 import se.dansbart.jooq.tables.PlaylistCollaborators.PlaylistCollaboratorsPath;
 import se.dansbart.jooq.tables.PlaylistTracks.PlaylistTracksPath;
 import se.dansbart.jooq.tables.Playlists.PlaylistsPath;
 import se.dansbart.jooq.tables.ProviderConnections.ProviderConnectionsPath;
+import se.dansbart.jooq.tables.StyleKeywords.StyleKeywordsPath;
+import se.dansbart.jooq.tables.TrackSubmissions.TrackSubmissionsPath;
 import se.dansbart.jooq.tables.Tracks.TracksPath;
 import se.dansbart.jooq.tables.UserDancePrimaryTracks.UserDancePrimaryTracksPath;
 import se.dansbart.jooq.tables.UserTrackFavorites.UserTrackFavoritesPath;
@@ -119,6 +122,11 @@ public class Users extends TableImpl<Record> {
      * The column <code>public.users.discourse_id</code>.
      */
     public final TableField<Record, String> DISCOURSE_ID = createField(DSL.name("discourse_id"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+
+    /**
+     * The column <code>public.users.banned_at</code>.
+     */
+    public final TableField<Record, OffsetDateTime> BANNED_AT = createField(DSL.name("banned_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     private Users(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -312,6 +320,19 @@ public class Users extends TableImpl<Record> {
         return _groupMembersUserIdFkey;
     }
 
+    private transient ListGuestCodesPath _listGuestCodes;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.list_guest_codes</code> table
+     */
+    public ListGuestCodesPath listGuestCodes() {
+        if (_listGuestCodes == null)
+            _listGuestCodes = new ListGuestCodesPath(this, null, Keys.LIST_GUEST_CODES__LIST_GUEST_CODES_CREATED_BY_FKEY.getInverseKey());
+
+        return _listGuestCodes;
+    }
+
     private transient PlaylistCollaboratorsPath _playlistCollaboratorsInvitedByFkey;
 
     /**
@@ -377,6 +398,47 @@ public class Users extends TableImpl<Record> {
             _providerConnections = new ProviderConnectionsPath(this, null, Keys.PROVIDER_CONNECTIONS__PROVIDER_CONNECTIONS_USER_ID_FKEY.getInverseKey());
 
         return _providerConnections;
+    }
+
+    private transient StyleKeywordsPath _styleKeywords;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.style_keywords</code> table
+     */
+    public StyleKeywordsPath styleKeywords() {
+        if (_styleKeywords == null)
+            _styleKeywords = new StyleKeywordsPath(this, null, Keys.STYLE_KEYWORDS__STYLE_KEYWORDS_CREATED_BY_FKEY.getInverseKey());
+
+        return _styleKeywords;
+    }
+
+    private transient TrackSubmissionsPath _trackSubmissionsReviewedByFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.track_submissions</code> table, via the
+     * <code>track_submissions_reviewed_by_fkey</code> key
+     */
+    public TrackSubmissionsPath trackSubmissionsReviewedByFkey() {
+        if (_trackSubmissionsReviewedByFkey == null)
+            _trackSubmissionsReviewedByFkey = new TrackSubmissionsPath(this, null, Keys.TRACK_SUBMISSIONS__TRACK_SUBMISSIONS_REVIEWED_BY_FKEY.getInverseKey());
+
+        return _trackSubmissionsReviewedByFkey;
+    }
+
+    private transient TrackSubmissionsPath _trackSubmissionsUserIdFkey;
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.track_submissions</code> table, via the
+     * <code>track_submissions_user_id_fkey</code> key
+     */
+    public TrackSubmissionsPath trackSubmissionsUserIdFkey() {
+        if (_trackSubmissionsUserIdFkey == null)
+            _trackSubmissionsUserIdFkey = new TrackSubmissionsPath(this, null, Keys.TRACK_SUBMISSIONS__TRACK_SUBMISSIONS_USER_ID_FKEY.getInverseKey());
+
+        return _trackSubmissionsUserIdFkey;
     }
 
     private transient TracksPath _tracks;

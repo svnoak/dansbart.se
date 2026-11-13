@@ -45,8 +45,10 @@ public class VoterReputationService {
     private final UserJooqRepository userJooqRepository;
     private final VoterContext voterContext;
 
+    /** A banned user still votes, but only with anonymous weight. */
     public BigDecimal getWeightForCurrentVoter() {
         if (!voterContext.isAuthenticated()) return ANONYMOUS_WEIGHT;
+        if (userJooqRepository.isBanned(voterContext.getUserId())) return ANONYMOUS_WEIGHT;
         String role = userJooqRepository.findRoleById(voterContext.getUserId());
         BigDecimal base = "ADMIN".equals(role) ? ADMIN_BASE : USER_BASE;
         BigDecimal mult = reputationRepository
@@ -57,7 +59,7 @@ public class VoterReputationService {
 
     public BigDecimal getWeightForVoter(UUID voterId) {
         Optional<User> user = userJooqRepository.findById(voterId);
-        if (user.isEmpty()) return ANONYMOUS_WEIGHT;
+        if (user.isEmpty() || user.get().isBanned()) return ANONYMOUS_WEIGHT;
         String role = userJooqRepository.findRoleById(voterId);
         BigDecimal multiplier = reputationRepository
             .findMultiplierByVoterId(voterId)
@@ -73,6 +75,7 @@ public class VoterReputationService {
     @Transactional
     public void rewardCurrentVoter() {
         if (!voterContext.isAuthenticated()) return;
+        if (userJooqRepository.isBanned(voterContext.getUserId())) return;
         String role = userJooqRepository.findRoleById(voterContext.getUserId());
         BigDecimal min = "ADMIN".equals(role) ? ADMIN_MULT_MIN : USER_MULT_MIN;
         BigDecimal max = "ADMIN".equals(role) ? ADMIN_MULT_MAX : USER_MULT_MAX;
@@ -84,6 +87,7 @@ public class VoterReputationService {
         if (voterIds.isEmpty()) return;
         Set<UUID> existingUserIds = userJooqRepository.findExistingIds(voterIds);
         for (UUID id : existingUserIds) {
+            if (userJooqRepository.isBanned(id)) continue;
             String role = userJooqRepository.findRoleById(id);
             BigDecimal min = "ADMIN".equals(role) ? ADMIN_MULT_MIN : USER_MULT_MIN;
             BigDecimal max = "ADMIN".equals(role) ? ADMIN_MULT_MAX : USER_MULT_MAX;

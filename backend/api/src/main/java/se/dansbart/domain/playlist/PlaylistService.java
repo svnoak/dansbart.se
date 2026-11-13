@@ -8,6 +8,7 @@ import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.group.GroupMemberJooqRepository;
+import se.dansbart.domain.guestcode.GuestCodeJooqRepository;
 import se.dansbart.domain.track.PrivateTrackGuard;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.track.UserTrackSourceJooqRepository;
@@ -52,6 +53,7 @@ public class PlaylistService {
     private final CollaborationAccess collaborationAccess;
     private final PrivateTrackGuard privateTrackGuard;
     private final UserTrackSourceJooqRepository sourceRepository;
+    private final GuestCodeJooqRepository guestCodeJooqRepository;
 
     private static final Set<String> VALID_TEMPO_CATEGORIES = Set.of("Slow", "SlowMed", "Medium", "Fast", "Turbo");
     private static final int MAX_PAGE_SIZE = 100;
@@ -351,6 +353,7 @@ public class PlaylistService {
                 .position(pt.getPosition())
                 .addedAt(pt.getAddedAt())
                 .addedByUserId(null)
+                .addedByGuest(Boolean.TRUE.equals(pt.getAddedByGuest()))
                 .track(trackDto)
                 .build());
         }
@@ -363,6 +366,9 @@ public class PlaylistService {
             .description(playlist.getDescription())
             .isPublic(playlist.getIsPublic())
             .shareToken(playlist.getShareToken())
+            .guestCode(Boolean.TRUE.equals(viewerCanManage)
+                ? guestCodeJooqRepository.findCodeByPlaylistId(playlist.getId()).orElse(null)
+                : null)
             .danceStyle(playlist.getDanceStyle())
             .subStyle(playlist.getSubStyle())
             .tempoCategory(playlist.getTempoCategory())

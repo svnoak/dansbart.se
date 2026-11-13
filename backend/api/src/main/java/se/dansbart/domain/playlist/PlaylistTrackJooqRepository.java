@@ -25,11 +25,17 @@ public class PlaylistTrackJooqRepository {
         UUID id = track.getId() != null ? track.getId() : UUID.randomUUID();
         dsl.insertInto(PLAYLIST_TRACKS)
             .columns(PLAYLIST_TRACKS.ID, PLAYLIST_TRACKS.PLAYLIST_ID, PLAYLIST_TRACKS.TRACK_ID, PLAYLIST_TRACKS.POSITION,
-                PLAYLIST_TRACKS.ADDED_BY)
-            .values(id, track.getPlaylistId(), track.getTrackId(), track.getPosition(), track.getAddedBy())
+                PLAYLIST_TRACKS.ADDED_BY, PLAYLIST_TRACKS.ADDED_BY_GUEST)
+            .values(id, track.getPlaylistId(), track.getTrackId(), track.getPosition(), track.getAddedBy(),
+                Boolean.TRUE.equals(track.getAddedByGuest()))
             .execute();
         track.setId(id);
         return track;
+    }
+
+    public boolean existsByPlaylistIdAndTrackId(UUID playlistId, UUID trackId) {
+        return dsl.fetchExists(dsl.selectOne().from(PLAYLIST_TRACKS)
+            .where(PLAYLIST_TRACKS.PLAYLIST_ID.eq(playlistId).and(PLAYLIST_TRACKS.TRACK_ID.eq(trackId))));
     }
 
     public void deleteByPlaylistIdAndTrackId(UUID playlistId, UUID trackId) {
@@ -63,6 +69,7 @@ public class PlaylistTrackJooqRepository {
         pt.setTrackId(r.get(PLAYLIST_TRACKS.TRACK_ID));
         pt.setPosition(r.get(PLAYLIST_TRACKS.POSITION));
         pt.setAddedBy(r.get(PLAYLIST_TRACKS.ADDED_BY));
+        pt.setAddedByGuest(Boolean.TRUE.equals(r.get(PLAYLIST_TRACKS.ADDED_BY_GUEST)));
 
         LocalDateTime addedAtRaw = r.get(PLAYLIST_TRACKS.ADDED_AT);
         OffsetDateTime addedAt = addedAtRaw != null ? addedAtRaw.atOffset(ZoneOffset.UTC) : null;

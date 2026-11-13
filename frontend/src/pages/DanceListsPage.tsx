@@ -74,6 +74,12 @@ export function DanceListsPage() {
           <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
             Kvällens program: danser i ordning, med låtar till varje dans.
           </p>
+          <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+            Har du fått en kod till en danslista?{' '}
+            <Link to="/kod" className="font-medium text-[rgb(var(--color-link))] hover:underline">
+              Lägg till med kod
+            </Link>
+          </p>
         </div>
         {isAuthenticated && (
           <Button onClick={() => setShowForm((s) => !s)} aria-expanded={showForm} className="shrink-0">

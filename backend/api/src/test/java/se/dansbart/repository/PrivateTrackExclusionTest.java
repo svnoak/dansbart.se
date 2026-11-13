@@ -66,6 +66,7 @@ class PrivateTrackExclusionTest extends AbstractRepositoryTest {
             "findTrackListDtosByIds",
             "findTrackIdsWithSecondaryStyle",
             "setProcessingStatus",
+            "setUploaderIfMissing",
             "deleteWithRelations",
             "deleteById",
             "deleteAllById",

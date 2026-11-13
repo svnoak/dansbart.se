@@ -19,6 +19,9 @@ public class PlaylistTrackDto {
     private OffsetDateTime addedAt;
     private UUID addedByUserId;
 
+    // True when someone added the track with the guest code of the list
+    private Boolean addedByGuest;
+
     // Embedded track info
     private TrackListDto track;
 }

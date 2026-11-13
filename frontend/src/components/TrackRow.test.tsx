@@ -118,7 +118,7 @@ describe('TrackRow add to playlist', () => {
     });
 
     const addButton = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.includes('Lägg till'),
+      (btn) => btn.getAttribute('aria-label')?.startsWith('Lägg till '),
     );
 
     expect(addButton).toBeFalsy();
@@ -137,7 +137,7 @@ describe('TrackRow add to playlist', () => {
     });
 
     const addButton = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.includes('Lägg till'),
+      (btn) => btn.getAttribute('aria-label')?.startsWith('Lägg till '),
     );
 
     expect(addButton).toBeTruthy();
@@ -169,7 +169,7 @@ describe('TrackRow add to playlist', () => {
     });
 
     const addButton = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.includes('Lägg till'),
+      (btn) => btn.getAttribute('aria-label')?.startsWith('Lägg till '),
     );
 
     expect(addButton).toBeTruthy();
@@ -179,7 +179,7 @@ describe('TrackRow add to playlist', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
     });
 
-    expect(addButton?.textContent).toContain('Lägg till');
+    expect(addButton?.getAttribute('aria-label')).toContain('Lägg till');
     expect(addButton?.disabled).toBe(false);
     expect(vi.mocked(toast)).toHaveBeenCalledWith('Det gick inte att lägga till låten.', 'error');
   });
@@ -226,7 +226,7 @@ describe('TrackRow heart replacement', () => {
     const rightGroup = menuWrapper!.parentElement;
 
     const addButton = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.textContent?.includes('Lägg till'),
+      (btn) => btn.getAttribute('aria-label')?.startsWith('Lägg till '),
     );
     expect(addButton).toBeTruthy();
 
