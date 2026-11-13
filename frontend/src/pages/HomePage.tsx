@@ -11,8 +11,10 @@ import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { StatsDto } from '@/api/models/statsDto';
 import { StyleShortcutCard } from '@/components/StyleShortcutCard';
 import { ArtistCard, PlaylistShortcutCard } from '@/components';
-import { SectionTitle, Button, Card, LoadError, RowSkeleton } from '@/ui';
-import { MusicNoteIcon, StarMarkIcon } from '@/icons';
+import { SectionTitle, Button, Card, LoadError, NewLabel, RowSkeleton } from '@/ui';
+import { MusicNoteIcon, PlusIcon, StarMarkIcon } from '@/icons';
+import { useAuth } from '@/auth/useAuth';
+import { useNewFeature } from '@/hooks/useNewFeature';
 
 /** A check inside a circle, 1.5 px stroke like the other Iconoir icons. */
 function CircleCheckIcon({ className }: { className?: string }) {
@@ -68,6 +70,8 @@ function StatPill({ icon, value, label }: { icon: React.ReactNode; value: string
 export function HomePage() {
   useAnalyticsFlag('library');
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const addTrackIsNew = useNewFeature('lagg-till');
   const [searchQuery, setSearchQuery] = useState('');
   const [styles, setStyles] = useState<StyleOverviewDto[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -192,6 +196,29 @@ export function HomePage() {
           </Button>
         </form>
       </div>
+
+      {/* Adding tracks and dance styles. A banned person cannot add, so the card is hidden. */}
+      {!user?.banned && (
+        <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-5">
+          <div className="min-w-0 flex-1">
+            <h2 className="flex flex-wrap items-center gap-2 text-base font-bold text-[rgb(var(--color-text))]">
+              Saknar du en låt eller en dans?
+              {addTrackIsNew && <NewLabel />}
+            </h2>
+            <p className="mt-1 text-sm text-[rgb(var(--color-text-muted))]">
+              Lägg till låtar från YouTube eller Spotify, och dansstilar som inte finns ännu. Alla
+              med konto kan bidra.
+            </p>
+          </div>
+          <Link
+            to="/lagg-till"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] transition-colors hover:bg-[rgb(var(--color-accent-hover))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] focus-visible:ring-offset-2"
+          >
+            <PlusIcon className="h-5 w-5" aria-hidden />
+            Lägg till låt
+          </Link>
+        </Card>
+      )}
 
       {/* Dance styles */}
       <section id="dansstilar" aria-labelledby="style-shortcuts-heading" className="scroll-mt-6">

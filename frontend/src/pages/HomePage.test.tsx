@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
 import { ThemeProvider } from '@/theme/ThemeContext';
 import { typeInto } from '@/test/typeInto';
+import { authValue, loggedInAuthValue } from '@/test/authValue';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -13,6 +14,11 @@ const getArtists = vi.fn();
 const getPublicPlaylists = vi.fn();
 const getStats = vi.fn();
 const navigateMock = vi.fn();
+const useAuth = vi.fn();
+
+vi.mock('@/auth/useAuth', () => ({
+  useAuth: () => useAuth(),
+}));
 
 vi.mock('@/analytics/useAnalyticsFlag', () => ({
   useAnalyticsFlag: vi.fn(),
@@ -52,6 +58,9 @@ describe('HomePage', () => {
     getPublicPlaylists.mockReset();
     getStats.mockReset();
     navigateMock.mockReset();
+    useAuth.mockReset();
+    useAuth.mockReturnValue(authValue());
+    localStorage.clear();
     getStyleOverview.mockResolvedValue([{ style: 'Polska', trackCount: 3 }]);
     getArtists.mockResolvedValue({ items: [{ id: 'a1', name: 'Spelmanslaget' }] });
     getPublicPlaylists.mockResolvedValue({
@@ -192,5 +201,35 @@ describe('HomePage', () => {
     await renderPage();
 
     expect(document.body.textContent).toContain('Inga offentliga spellistor ännu.');
+  });
+
+  function addTrackLink() {
+    return Array.from(document.body.querySelectorAll('a')).find(
+      (a) => a.getAttribute('href') === '/lagg-till',
+    );
+  }
+
+  it('invites a visitor to add tracks and dance styles, marked as new', async () => {
+    await renderPage();
+
+    expect(addTrackLink()?.textContent).toContain('Lägg till låt');
+    const text = document.body.textContent;
+    expect(text).toContain('Saknar du en låt eller en dans?');
+    expect(text).toContain('Nytt');
+  });
+
+  it('drops the "Nytt" label once the person has opened the add-track page', async () => {
+    localStorage.setItem('feature_seen_lagg-till', 'true');
+    await renderPage();
+
+    expect(addTrackLink()).toBeDefined();
+    expect(document.body.textContent).not.toContain('Nytt');
+  });
+
+  it('hides the invitation to add from a banned person', async () => {
+    useAuth.mockReturnValue(loggedInAuthValue({ banned: true }));
+    await renderPage();
+
+    expect(addTrackLink()).toBeUndefined();
   });
 });

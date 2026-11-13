@@ -15,6 +15,8 @@ import {
 import { getInvitations } from '@/api/generated/playlists/playlists';
 import { getGroupInvitations } from '@/api/generated/groups/groups';
 import { useUnreviewedContributionCount } from '@/hooks/useUnreviewedContributionCount';
+import { useNewFeature } from '@/hooks/useNewFeature';
+import { NewLabel } from '@/ui';
 
 function NavLink({
   to,
@@ -22,6 +24,7 @@ function NavLink({
   icon,
   hint,
   badge,
+  isNew,
   onClick,
   children,
 }: {
@@ -31,6 +34,8 @@ function NavLink({
   /** A short grey word after the label, for example "namngivna" after Danser. */
   hint?: string;
   badge?: number;
+  /** Shows the word "Nytt" after the label. */
+  isNew?: boolean;
   onClick?: () => void;
   children: string;
 }) {
@@ -50,6 +55,7 @@ function NavLink({
       </span>
       <span className="flex-1">{children}</span>
       {hint && <span className="text-xs text-[rgb(var(--color-text-muted))]">{hint}</span>}
+      {isNew && <NewLabel />}
       {badge != null && badge > 0 && (
         <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] px-1.5 text-xs font-bold text-[rgb(var(--color-accent-foreground))]">
           {badge}
@@ -134,6 +140,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isMinaLatar = path === '/mina-latar';
   const isHelp = path.startsWith('/help');
   const isAddTrack = path === '/lagg-till';
+  const addTrackIsNew = useNewFeature('lagg-till', isAddTrack);
 
   const footerLink = 'min-h-8 inline-flex items-center text-[13px] text-[rgb(var(--color-text-muted))] hover:text-[rgb(var(--color-text))] hover:underline';
 
@@ -150,6 +157,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <NavLink
           to="/lagg-till"
           active={isAddTrack}
+          isNew={addTrackIsNew}
           onClick={onNavigate}
           icon={<PlusIcon className="h-5 w-5" aria-hidden />}
         >
