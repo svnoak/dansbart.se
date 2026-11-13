@@ -91,6 +91,11 @@ public class PlaylistTracks extends TableImpl<Record> {
      */
     public final TableField<Record, UUID> ADDED_BY = createField(DSL.name("added_by"), SQLDataType.UUID, this, "");
 
+    /**
+     * The column <code>public.playlist_tracks.added_by_guest</code>.
+     */
+    public final TableField<Record, Boolean> ADDED_BY_GUEST = createField(DSL.name("added_by_guest"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+
     private PlaylistTracks(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

@@ -155,6 +155,12 @@ export function PlaylistsPage() {
           <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
             Samla låtar i egna listor och dela dem med andra.
           </p>
+          <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
+            Har du fått en kod till en spellista?{' '}
+            <Link to="/kod" className="font-medium text-[rgb(var(--color-link))] hover:underline">
+              Lägg till med kod
+            </Link>
+          </p>
         </div>
         {isAuthenticated && (
           <Button size="sm" onClick={() => setShowForm((s) => !s)} aria-expanded={showForm}>

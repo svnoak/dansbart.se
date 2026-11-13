@@ -50,7 +50,8 @@ public class DanceListEntryJooqRepository {
             .set(DANCE_LIST_ENTRIES.DANCE_ID, entry.getDanceId())
             .set(DANCE_LIST_ENTRIES.FREE_TEXT_NAME, entry.getFreeTextName())
             .set(DANCE_LIST_ENTRIES.SUGGESTION_ID, entry.getSuggestionId())
-            .set(DANCE_LIST_ENTRIES.POSITION, entry.getPosition());
+            .set(DANCE_LIST_ENTRIES.POSITION, entry.getPosition())
+            .set(DANCE_LIST_ENTRIES.ADDED_BY_GUEST, Boolean.TRUE.equals(entry.getAddedByGuest()));
         if (entry.getPlayMode() != null) {
             step.set(DANCE_LIST_ENTRIES.PLAY_MODE, entry.getPlayMode());
         }
@@ -87,6 +88,7 @@ public class DanceListEntryJooqRepository {
             .suggestionId(r.get(DANCE_LIST_ENTRIES.SUGGESTION_ID))
             .playMode(r.get(DANCE_LIST_ENTRIES.PLAY_MODE))
             .position(r.get(DANCE_LIST_ENTRIES.POSITION))
+            .addedByGuest(Boolean.TRUE.equals(r.get(DANCE_LIST_ENTRIES.ADDED_BY_GUEST)))
             .createdAt(r.get(DANCE_LIST_ENTRIES.CREATED_AT))
             .build();
     }

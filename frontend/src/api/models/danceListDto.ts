@@ -15,11 +15,13 @@ export interface DanceListDto {
   description?: string;
   isPublic?: boolean;
   shareToken?: string;
+  guestCode?: string;
   createdAt?: string;
   updatedAt?: string;
   owner?: UserSummaryDto;
   ownerGroup?: GroupSummaryDto;
   viewerCanManage?: boolean;
+  viewerHasFullControl?: boolean;
   entries?: DanceListEntryDto[];
   collaborators?: CollaboratorDto[];
 }

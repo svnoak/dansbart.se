@@ -29,7 +29,7 @@ export interface Track {
   isFlagged?: boolean;
   flaggedAt?: string;
   flagReason?: string;
-  uploaderId?: string;
+  isPrivate?: boolean;
   processingStatus?: string;
   bars?: number[];
   sections?: number[];

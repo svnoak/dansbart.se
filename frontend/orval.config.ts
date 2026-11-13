@@ -39,6 +39,7 @@ export default defineConfig({
           'Library',
           'Contributions',
           'Admin: Contributions',
+          'Guest codes',
         ],
       },
     },

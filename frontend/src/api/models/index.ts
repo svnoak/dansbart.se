@@ -6,6 +6,8 @@
  */
 
 export * from './addEntryRequest';
+export * from './addGuestDanceRequest';
+export * from './addGuestTrackRequest';
 export * from './addToBlocklist200';
 export * from './addTrackRequest';
 export * from './adminContributionCountDto';
@@ -151,6 +153,9 @@ export * from './groupDto';
 export * from './groupInvitationDto';
 export * from './groupMemberDto';
 export * from './groupSummaryDto';
+export * from './guestCodeDto';
+export * from './guestDanceDto';
+export * from './guestListDto';
 export * from './importDances200';
 export * from './importTrackRequest';
 export * from './ingest200';

@@ -29,6 +29,7 @@ import se.dansbart.jooq.tables.FolkwikiTunes;
 import se.dansbart.jooq.tables.GenreProfiles;
 import se.dansbart.jooq.tables.GroupMembers;
 import se.dansbart.jooq.tables.Groups;
+import se.dansbart.jooq.tables.ListGuestCodes;
 import se.dansbart.jooq.tables.PathCounts;
 import se.dansbart.jooq.tables.PendingArtistApprovals;
 import se.dansbart.jooq.tables.PlaybackLinks;
@@ -160,6 +161,11 @@ public class Public extends SchemaImpl {
      * The table <code>public.groups</code>.
      */
     public final Groups GROUPS = Groups.GROUPS;
+
+    /**
+     * The table <code>public.list_guest_codes</code>.
+     */
+    public final ListGuestCodes LIST_GUEST_CODES = ListGuestCodes.LIST_GUEST_CODES;
 
     /**
      * The table <code>public.path_counts</code>.
@@ -330,6 +336,7 @@ public class Public extends SchemaImpl {
             GenreProfiles.GENRE_PROFILES,
             GroupMembers.GROUP_MEMBERS,
             Groups.GROUPS,
+            ListGuestCodes.LIST_GUEST_CODES,
             PathCounts.PATH_COUNTS,
             PendingArtistApprovals.PENDING_ARTIST_APPROVALS,
             PlaybackLinks.PLAYBACK_LINKS,

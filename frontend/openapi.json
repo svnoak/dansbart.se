@@ -74,6 +74,10 @@
       "description": "Admin review queue for community suggestions"
     },
     {
+      "name": "Guest codes",
+      "description": "Codes that let anyone add to a playlist or a dance list"
+    },
+    {
       "name": "Admin: Contributions",
       "description": "Review tracks and dance styles that users added"
     },
@@ -1735,6 +1739,72 @@
         }
       }
     },
+    "/api/public/guest-codes/{code}/tracks": {
+      "post": {
+        "tags": ["Guest codes"],
+        "summary": "Add a track to the playlist of a guest code",
+        "operationId": "addGuestTrack",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AddGuestTrackRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GuestListDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/guest-codes/{code}/dances": {
+      "post": {
+        "tags": ["Guest codes"],
+        "summary": "Add a dance to the dance list of a guest code",
+        "operationId": "addGuestDance",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AddGuestDanceRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GuestListDto" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/playlists": {
       "get": {
         "tags": ["Playlists"],
@@ -1882,6 +1952,45 @@
         "tags": ["Playlists"],
         "summary": "Invalidate the share token for playlist",
         "operationId": "invalidateShareToken",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/playlists/{id}/guest-code": {
+      "post": {
+        "tags": ["Guest codes"],
+        "summary": "Create the guest code of a playlist; replaces a code that exists",
+        "operationId": "createPlaylistGuestCode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GuestCodeDto" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Guest codes"],
+        "summary": "Remove the guest code of a playlist",
+        "operationId": "removePlaylistGuestCode",
         "parameters": [
           {
             "name": "id",
@@ -2306,6 +2415,45 @@
         "tags": ["Dance Lists"],
         "summary": "Invalidate the share token for dance list",
         "operationId": "invalidateShareToken_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/dance-lists/{id}/guest-code": {
+      "post": {
+        "tags": ["Guest codes"],
+        "summary": "Create the guest code of a dance list; replaces a code that exists",
+        "operationId": "createDanceListGuestCode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GuestCodeDto" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Guest codes"],
+        "summary": "Remove the guest code of a dance list",
+        "operationId": "removeDanceListGuestCode",
         "parameters": [
           {
             "name": "id",
@@ -4194,6 +4342,13 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/sso/initiate": {
+      "get": {
+        "tags": ["mock-auth-controller"],
+        "operationId": "initiate",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/users/{id}": {
       "get": {
         "tags": ["Users"],
@@ -4718,6 +4873,31 @@
                     "additionalProperties": { "type": "object" }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/guest-codes/{code}": {
+      "get": {
+        "tags": ["Guest codes"],
+        "summary": "Get the list a guest code belongs to",
+        "operationId": "getGuestList",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GuestListDto" }
               }
             }
           }
@@ -7341,6 +7521,7 @@
           "position": { "type": "integer", "format": "int32" },
           "addedAt": { "type": "string", "format": "date-time" },
           "addedBy": { "type": "string", "format": "uuid" },
+          "addedByGuest": { "type": "boolean" },
           "playlist": { "$ref": "#/components/schemas/Playlist" },
           "track": { "$ref": "#/components/schemas/Track" }
         }
@@ -7733,6 +7914,76 @@
         "type": "object",
         "properties": { "spotifyAlbumId": { "type": "string" } }
       },
+      "AddGuestTrackRequest": {
+        "type": "object",
+        "properties": { "trackId": { "type": "string", "format": "uuid" } }
+      },
+      "GuestDanceDto": {
+        "type": "object",
+        "properties": {
+          "danceId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" }
+        }
+      },
+      "GuestListDto": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "ownerName": { "type": "string" },
+          "tracks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrackListDto" }
+          },
+          "dances": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/GuestDanceDto" }
+          }
+        }
+      },
+      "PlaybackLinkDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "platform": { "type": "string" },
+          "deepLink": { "type": "string" },
+          "isWorking": { "type": "boolean" }
+        }
+      },
+      "TrackListDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "playable": { "type": "boolean" },
+          "durationMs": { "type": "integer", "format": "int32" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "matchedStyle": { "type": "string" },
+          "effectiveBpm": { "type": "integer", "format": "int32" },
+          "tempoCategory": { "type": "string" },
+          "confidence": { "type": "number", "format": "float" },
+          "source": { "type": "string" },
+          "hasVocals": { "type": "boolean" },
+          "artistId": { "type": "string", "format": "uuid" },
+          "artistName": { "type": "string" },
+          "albumId": { "type": "string", "format": "uuid" },
+          "albumTitle": { "type": "string" },
+          "playbackLinks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
+          },
+          "sheetMusicUrl": { "type": "string" }
+        }
+      },
+      "AddGuestDanceRequest": {
+        "type": "object",
+        "properties": {
+          "danceId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" }
+        }
+      },
       "CreatePlaylistRequest": {
         "type": "object",
         "properties": {
@@ -7743,6 +7994,10 @@
       "AddTrackRequest": {
         "type": "object",
         "properties": { "trackId": { "type": "string", "format": "uuid" } }
+      },
+      "GuestCodeDto": {
+        "type": "object",
+        "properties": { "code": { "type": "string" } }
       },
       "InviteCollaboratorRequest": {
         "type": "object",
@@ -7826,15 +8081,6 @@
           "isPublic": { "type": "boolean" }
         }
       },
-      "PlaybackLinkDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "platform": { "type": "string" },
-          "deepLink": { "type": "string" },
-          "isWorking": { "type": "boolean" }
-        }
-      },
       "PlaylistDto": {
         "type": "object",
         "properties": {
@@ -7843,6 +8089,7 @@
           "description": { "type": "string" },
           "isPublic": { "type": "boolean" },
           "shareToken": { "type": "string" },
+          "guestCode": { "type": "string" },
           "danceStyle": { "type": "string" },
           "subStyle": { "type": "string" },
           "tempoCategory": { "type": "string" },
@@ -7869,33 +8116,8 @@
           "position": { "type": "integer", "format": "int32" },
           "addedAt": { "type": "string", "format": "date-time" },
           "addedByUserId": { "type": "string", "format": "uuid" },
+          "addedByGuest": { "type": "boolean" },
           "track": { "$ref": "#/components/schemas/TrackListDto" }
-        }
-      },
-      "TrackListDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "title": { "type": "string" },
-          "playable": { "type": "boolean" },
-          "durationMs": { "type": "integer", "format": "int32" },
-          "danceStyle": { "type": "string" },
-          "subStyle": { "type": "string" },
-          "matchedStyle": { "type": "string" },
-          "effectiveBpm": { "type": "integer", "format": "int32" },
-          "tempoCategory": { "type": "string" },
-          "confidence": { "type": "number", "format": "float" },
-          "source": { "type": "string" },
-          "hasVocals": { "type": "boolean" },
-          "artistId": { "type": "string", "format": "uuid" },
-          "artistName": { "type": "string" },
-          "albumId": { "type": "string", "format": "uuid" },
-          "albumTitle": { "type": "string" },
-          "playbackLinks": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
-          },
-          "sheetMusicUrl": { "type": "string" }
         }
       },
       "UserSummaryDto": {
@@ -7940,6 +8162,7 @@
           "freeTextName": { "type": "string" },
           "playMode": { "type": "string" },
           "position": { "type": "integer", "format": "int32" },
+          "addedByGuest": { "type": "boolean" },
           "tracks": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/PlaylistTrackDto" }
@@ -8392,11 +8615,13 @@
           "description": { "type": "string" },
           "isPublic": { "type": "boolean" },
           "shareToken": { "type": "string" },
+          "guestCode": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" },
           "owner": { "$ref": "#/components/schemas/UserSummaryDto" },
           "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" },
           "viewerCanManage": { "type": "boolean" },
+          "viewerHasFullControl": { "type": "boolean" },
           "entries": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/DanceListEntryDto" }

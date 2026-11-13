@@ -46,6 +46,7 @@ public class SecurityConfig {
                     new AntPathRequestMatcher("/api/tracks/**", "PATCH"),
                     new AntPathRequestMatcher("/api/artists/*/flag", "POST"),
                     new AntPathRequestMatcher("/api/suggestions/**", "POST"),
+                    new AntPathRequestMatcher("/api/public/guest-codes/**", "POST"),
                     new AntPathRequestMatcher("/api/dances/*/tracks/*/vote", "POST"),
                     new AntPathRequestMatcher("/api/dances/*/tracks/*/vote", "DELETE")))
             .authorizeHttpRequests(auth -> auth
@@ -61,6 +62,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/stats/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/discovery/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                // Adding to a list with its guest code needs no account.
+                .requestMatchers(HttpMethod.POST, "/api/public/guest-codes/**").permitAll()
                 // Anonymous community contributions (feedback, flagging, links, analytics, suggestions)
                 .requestMatchers(HttpMethod.POST, "/api/analytics/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/tracks/**").permitAll()

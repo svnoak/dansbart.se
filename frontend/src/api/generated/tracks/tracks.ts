@@ -23,7 +23,6 @@ import type {
   SubmitMovementVote200,
   SubmitStructureProposal200,
   SubmitStructureProposalParams,
-  Track,
   TrackListDto,
   TrackStructureVersion,
   TrackStyleVoteDto,
@@ -340,9 +339,9 @@ export const getGetSimilarTracksUrl = (id: string,
 }
 
 export const getSimilarTracks = async (id: string,
-    params?: GetSimilarTracksParams, options?: RequestInit): Promise<Track[]> => {
+    params?: GetSimilarTracksParams, options?: RequestInit): Promise<TrackListDto[]> => {
   
-  return httpClient<Track[]>(getGetSimilarTracksUrl(id,params),
+  return httpClient<TrackListDto[]>(getGetSimilarTracksUrl(id,params),
   {      
     ...options,
     method: 'GET'
@@ -376,7 +375,7 @@ export const getSecondaryStyles = async (id: string, options?: RequestInit): Pro
   
 
 /**
- * @summary Search tracks by title
+ * @summary Search tracks by title. A logged-in person also gets their own library tracks, listed first; mine=true returns only those
  */
 export const getSearchTracksUrl = (params: SearchTracksParams,) => {
   const normalizedParams = new URLSearchParams();

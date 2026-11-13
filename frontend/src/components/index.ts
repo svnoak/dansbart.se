@@ -4,6 +4,7 @@ export { ArtistCard } from './ArtistCard';
 export { ConfirmDeleteByName } from './ConfirmDeleteByName';
 export { FilterBar } from './FilterBar';
 export { FlagTrackModal } from './FlagTrackModal';
+export { GuestCodePanel } from './GuestCodePanel';
 export { PlaylistShortcutCard } from './PlaylistShortcutCard';
 export { SearchBar } from './SearchBar';
 export { SelectableSearchResults } from './SelectableSearchResults';

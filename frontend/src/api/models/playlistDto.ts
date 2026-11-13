@@ -15,6 +15,7 @@ export interface PlaylistDto {
   description?: string;
   isPublic?: boolean;
   shareToken?: string;
+  guestCode?: string;
   danceStyle?: string;
   subStyle?: string;
   tempoCategory?: string;
