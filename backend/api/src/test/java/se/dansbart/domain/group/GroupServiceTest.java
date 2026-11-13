@@ -5,11 +5,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import se.dansbart.domain.dancelist.DanceList;
+import se.dansbart.domain.dancelist.DanceListJooqRepository;
 import se.dansbart.domain.playlist.PlaylistJooqRepository;
 import se.dansbart.domain.playlist.PlaylistService;
 import se.dansbart.domain.user.UserJooqRepository;
+import se.dansbart.dto.DanceListSummaryDto;
+import se.dansbart.dto.GroupDto;
 import se.dansbart.exception.ConflictException;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,9 +42,12 @@ class GroupServiceTest {
     @Mock
     private PlaylistService playlistService;
 
+    @Mock
+    private DanceListJooqRepository danceListJooqRepository;
+
     private GroupService service() {
         return new GroupService(groupJooqRepository, groupMemberJooqRepository, userJooqRepository,
-            playlistJooqRepository, playlistService);
+            playlistJooqRepository, playlistService, danceListJooqRepository);
     }
 
     @Test
@@ -74,5 +82,29 @@ class GroupServiceTest {
             () -> service().update(groupId, userId, "Barngruppen", null, null));
 
         assertEquals("A group with that name already exists.", exception.getMessage());
+    }
+
+    @Test
+    void findByIdAsDto_nonMemberSeesOnlyPublicDanceLists() {
+        UUID groupId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        UUID outsiderId = UUID.randomUUID();
+        DanceList publicList = DanceList.builder().id(UUID.randomUUID()).name("Öppen lista").isPublic(true).build();
+        DanceList privateList = DanceList.builder().id(UUID.randomUUID()).name("Privat lista").isPublic(false).build();
+        GroupMember membership = GroupMember.builder().groupId(groupId).userId(memberId).status("accepted").build();
+        when(groupJooqRepository.findById(groupId))
+            .thenReturn(Optional.of(Group.builder().id(groupId).name("Barngruppen").isPublic(true).build()));
+        when(groupMemberJooqRepository.findByGroupIdAndUserId(groupId, outsiderId)).thenReturn(Optional.empty());
+        when(groupMemberJooqRepository.findByGroupIdAndUserId(groupId, memberId)).thenReturn(Optional.of(membership));
+        when(danceListJooqRepository.findByGroupId(groupId, false)).thenReturn(List.of(publicList));
+        when(danceListJooqRepository.findByGroupId(groupId, true)).thenReturn(List.of(publicList, privateList));
+
+        GroupDto outsiderView = service().findByIdAsDto(groupId, outsiderId).orElseThrow();
+        GroupDto memberView = service().findByIdAsDto(groupId, memberId).orElseThrow();
+
+        assertEquals(List.of(publicList.getId()),
+            outsiderView.getDanceLists().stream().map(DanceListSummaryDto::id).toList());
+        assertEquals(List.of(publicList.getId(), privateList.getId()),
+            memberView.getDanceLists().stream().map(DanceListSummaryDto::id).toList());
     }
 }

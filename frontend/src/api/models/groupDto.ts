@@ -4,6 +4,7 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { DanceListSummaryDto } from './danceListSummaryDto';
 import type { GroupMemberDto } from './groupMemberDto';
 import type { PlaylistSummaryDto } from './playlistSummaryDto';
 
@@ -16,5 +17,6 @@ export interface GroupDto {
   updatedAt?: string;
   members?: GroupMemberDto[];
   playlists?: PlaylistSummaryDto[];
+  danceLists?: DanceListSummaryDto[];
   memberCount?: number;
 }

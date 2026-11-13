@@ -21,5 +21,6 @@ public class GroupDto {
 
     private List<GroupMemberDto> members;
     private List<PlaylistSummaryDto> playlists;
+    private List<DanceListSummaryDto> danceLists;
     private Integer memberCount;
 }

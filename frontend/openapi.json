@@ -7628,6 +7628,15 @@
           "isPublic": { "type": "boolean" }
         }
       },
+      "DanceListSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isPublic": { "type": "boolean" }
+        }
+      },
       "GroupDto": {
         "type": "object",
         "properties": {
@@ -7644,6 +7653,10 @@
           "playlists": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/PlaylistSummaryDto" }
+          },
+          "danceLists": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DanceListSummaryDto" }
           },
           "memberCount": { "type": "integer", "format": "int32" }
         }

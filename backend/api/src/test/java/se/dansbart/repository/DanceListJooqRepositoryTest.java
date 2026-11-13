@@ -1,5 +1,6 @@
 package se.dansbart.repository;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -106,27 +107,38 @@ class DanceListJooqRepositoryTest extends AbstractRepositoryTest {
     @DisplayName("findByGroupId")
     class FindByGroupId {
 
+        private Group group;
+        private DanceList publicList;
+        private DanceList privateList;
+
+        @BeforeEach
+        void insertGroupLists() {
+            group = Group.builder().name("Test Group").build();
+            groupJooqRepository.insert(group);
+            flush();
+            publicList = DanceList.builder().groupId(group.getId()).name("Öppen lista").isPublic(true).build();
+            privateList = DanceList.builder().groupId(group.getId()).name("Privat lista").isPublic(false).build();
+            danceListJooqRepository.insert(publicList);
+            danceListJooqRepository.insert(privateList);
+            flush();
+        }
+
         @Test
         @DisplayName("returns the group's dance lists")
         void returnsGroupsLists() {
-            Group group = Group.builder().name("Test Group").build();
-            groupJooqRepository.insert(group);
-            flush();
+            List<DanceList> found = danceListJooqRepository.findByGroupId(group.getId(), true);
 
-            DanceList groupList = DanceList.builder()
-                .userId(null)
-                .groupId(group.getId())
-                .name("Gruppens danslista")
-                .build();
-            danceListJooqRepository.insert(groupList);
-            flush();
+            assertThat(found).extracting(DanceList::getId)
+                .containsExactlyInAnyOrder(publicList.getId(), privateList.getId());
+            assertThat(found).allMatch(list -> list.getGroupId().equals(group.getId()) && list.getUserId() == null);
+        }
 
-            List<DanceList> found = danceListJooqRepository.findByGroupId(group.getId());
+        @Test
+        @DisplayName("hides private lists when includePrivate is false")
+        void hidesPrivateListsWhenIncludePrivateIsFalse() {
+            List<DanceList> publicOnly = danceListJooqRepository.findByGroupId(group.getId(), false);
 
-            assertThat(found).hasSize(1);
-            assertThat(found.get(0).getId()).isEqualTo(groupList.getId());
-            assertThat(found.get(0).getGroupId()).isEqualTo(group.getId());
-            assertThat(found.get(0).getUserId()).isNull();
+            assertThat(publicOnly).extracting(DanceList::getId).containsExactly(publicList.getId());
         }
     }
 

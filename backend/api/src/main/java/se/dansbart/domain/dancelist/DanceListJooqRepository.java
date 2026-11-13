@@ -31,8 +31,11 @@ public class DanceListJooqRepository {
         return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.USER_ID.eq(userId)).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
     }
 
-    public List<DanceList> findByGroupId(UUID groupId) {
-        return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.GROUP_ID.eq(groupId)).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
+    public List<DanceList> findByGroupId(UUID groupId, boolean includePrivate) {
+        var condition = includePrivate
+            ? DANCE_LISTS.GROUP_ID.eq(groupId)
+            : DANCE_LISTS.GROUP_ID.eq(groupId).and(DANCE_LISTS.IS_PUBLIC.isTrue());
+        return dsl.selectFrom(DANCE_LISTS).where(condition).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
     }
 
     public DanceList insert(DanceList danceList) {

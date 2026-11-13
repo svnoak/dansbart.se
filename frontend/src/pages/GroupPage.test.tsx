@@ -15,12 +15,17 @@ import * as ui from '@/ui';
 const getGroup = vi.fn();
 const removeMember = vi.fn();
 const createGroupPlaylist = vi.fn();
+const createDanceList = vi.fn();
 const useAuth = vi.fn();
 
 vi.mock('@/api/generated/groups/groups', () => ({
   getGroup: (...args: unknown[]) => getGroup(...args),
   removeMember: (...args: unknown[]) => removeMember(...args),
   createGroupPlaylist: (...args: unknown[]) => createGroupPlaylist(...args),
+}));
+
+vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
+  createDanceList: (...args: unknown[]) => createDanceList(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -35,6 +40,7 @@ describe('GroupPage', () => {
     getGroup.mockReset();
     removeMember.mockReset();
     createGroupPlaylist.mockReset();
+    createDanceList.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(authValue());
     container = document.createElement('div');
@@ -293,7 +299,7 @@ describe('GroupPage', () => {
     expect(document.body.textContent).toContain('Gruppen har inga spellistor ännu.');
   });
 
-  it('a member who can manage playlists creates one', async () => {
+  async function renderGroupAsMember(canManagePlaylists: boolean, extra: object = {}) {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
     getGroup.mockResolvedValue({
       id: 'g1',
@@ -301,118 +307,87 @@ describe('GroupPage', () => {
       aboutUs: 'Vi dansar polska',
       isPublic: true,
       members: [
-        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: true, status: 'accepted' },
+        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists, status: 'accepted' },
       ],
       playlists: [],
-    });
-    createGroupPlaylist.mockResolvedValue({
-      id: 'p1',
-      name: 'Höstens danser',
-      description: undefined,
-      isPublic: false,
-      trackCount: 0,
+      danceLists: [],
+      ...extra,
     });
     await renderPage();
-
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
+  }
 
-    const newPlaylistButton = getButtonByText('Ny spellista');
-    expect(newPlaylistButton).toBeDefined();
-
+  async function submitNewList(k: (typeof listKinds)[number]) {
     await act(async () => {
-      newPlaylistButton?.click();
+      getButtonByText(k.open)?.click();
     });
-
-    const nameInput = getInputByLabel('Spellistans namn');
-    expect(nameInput).toBeDefined();
-
     await act(async () => {
-      await typeInto(nameInput!, 'Höstens danser');
+      await typeInto(getInputByLabel(k.input)!, k.name);
     });
-
-    const createButton = getButtonByText('Skapa spellista');
-    expect(createButton).toBeDefined();
-
+    const submitButton = getButtonByText(k.submit);
     await act(async () => {
-      createButton?.click();
+      submitButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
+    return submitButton;
+  }
 
-    expect(createGroupPlaylist).toHaveBeenCalledWith('g1', { name: 'Höstens danser' });
-    expect(document.body.textContent).toContain('Höstens danser');
+  const listKinds = [
+    {
+      kind: 'playlist', open: 'Ny spellista', input: 'Spellistans namn', submit: 'Skapa spellista', name: 'Höstens danser',
+      error: 'Det gick inte att skapa spellistan.', create: createGroupPlaylist,
+      created: { id: 'p1', name: 'Höstens danser', isPublic: false, trackCount: 0 },
+      calledWith: ['g1', { name: 'Höstens danser' }],
+    },
+    {
+      kind: 'dance list', open: 'Ny danslista', input: 'Danslistans namn', submit: 'Skapa danslista', name: 'Hambo',
+      error: 'Det gick inte att skapa danslistan.', create: createDanceList,
+      created: { id: 'd2', name: 'Hambo', isPublic: false },
+      calledWith: [{ name: 'Hambo', groupId: 'g1' }],
+    },
+  ];
+
+  describe.each(listKinds)('creating a $kind', (k) => {
+    it('a member who can manage playlists creates one', async () => {
+      k.create.mockResolvedValue(k.created);
+      await renderGroupAsMember(true);
+
+      await submitNewList(k);
+
+      expect(k.create).toHaveBeenCalledWith(...k.calledWith);
+      expect(document.body.textContent).toContain(k.name);
+    });
+
+    it('a member without the permission sees no create buttons', async () => {
+      await renderGroupAsMember(false);
+
+      expect(getButtonByText(k.open)).toBeUndefined();
+      expect(getButtonByText(k.submit)).toBeUndefined();
+    });
+
+    it('a failed creation shows the error in the form, not as a toast', async () => {
+      k.create.mockRejectedValue(new Error('Network error'));
+      const toastSpy = vi.spyOn(ui, 'toast');
+      await renderGroupAsMember(true);
+
+      const submitButton = await submitNewList(k);
+
+      const alert = submitButton?.closest('form')?.querySelector('[role="alert"]');
+      expect(alert?.textContent).toBe(k.error);
+      expect(toastSpy).not.toHaveBeenCalledWith(k.error, 'error');
+
+      toastSpy.mockRestore();
+    });
   });
 
-  it('a member without the permission sees no Ny spellista', async () => {
-    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
-    getGroup.mockResolvedValue({
-      id: 'g1',
-      name: 'Barngruppen',
-      aboutUs: 'Vi dansar polska',
-      isPublic: true,
-      members: [
-        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: false, status: 'accepted' },
-      ],
-      playlists: [],
-    });
-    await renderPage();
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  it("lists the group's dance lists", async () => {
+    await renderGroupAsMember(false, {
+      danceLists: [{ id: 'd1', name: 'Hambo', description: 'Tre danser', isPublic: true }],
     });
 
-    const newPlaylistButton = getButtonByText('Ny spellista');
-    expect(newPlaylistButton).toBeUndefined();
-  });
-
-  it('a failed playlist creation shows the error in the form, not as a toast', async () => {
-    useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1', username: 'user1', role: 'USER' }));
-    getGroup.mockResolvedValue({
-      id: 'g1',
-      name: 'Barngruppen',
-      aboutUs: 'Vi dansar polska',
-      isPublic: true,
-      members: [
-        { id: 'm1', userId: 'u1', username: 'user1', displayName: 'User 1', isAdmin: false, canEditInfo: false, canInviteMembers: false, canRemoveMembers: false, canManagePlaylists: true, status: 'accepted' },
-      ],
-      playlists: [],
-    });
-    createGroupPlaylist.mockRejectedValue(new Error('Network error'));
-    const toastSpy = vi.spyOn(ui, 'toast');
-    await renderPage();
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
-
-    const newPlaylistButton = getButtonByText('Ny spellista');
-    expect(newPlaylistButton).toBeDefined();
-
-    await act(async () => {
-      newPlaylistButton?.click();
-    });
-
-    const nameInput = getInputByLabel('Spellistans namn');
-    expect(nameInput).toBeDefined();
-
-    await act(async () => {
-      await typeInto(nameInput!, 'Höstens danser');
-    });
-
-    const createButton = getButtonByText('Skapa spellista');
-    expect(createButton).toBeDefined();
-
-    await act(async () => {
-      createButton?.click();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
-
-    const form = createButton?.closest('form');
-    const alert = form?.querySelector('[role="alert"]');
-    expect(alert?.textContent).toBe('Det gick inte att skapa spellistan.');
-    expect(toastSpy).not.toHaveBeenCalledWith('Det gick inte att skapa spellistan.', 'error');
-
-    toastSpy.mockRestore();
+    expect(document.body.textContent).toContain('Gruppens danslistor');
+    expect(getLinkByText('Hambo')?.getAttribute('href')).toBe('/dance-lists/d1');
   });
 });

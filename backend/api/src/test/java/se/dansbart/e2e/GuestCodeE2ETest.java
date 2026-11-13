@@ -9,6 +9,7 @@ import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import se.dansbart.domain.artist.Artist;
+import se.dansbart.domain.group.Group;
 import se.dansbart.domain.playlist.Playlist;
 import se.dansbart.domain.track.Track;
 import se.dansbart.domain.user.User;
@@ -68,8 +69,12 @@ class GuestCodeE2ETest extends AbstractE2ETest {
     }
 
     private String createDanceListCode(String danceListId) throws Exception {
+        return createDanceListCode(danceListId, owner);
+    }
+
+    private String createDanceListCode(String danceListId, User user) throws Exception {
         String body = mockMvc.perform(post("/api/dance-lists/" + danceListId + "/guest-code")
-                .with(jwt.userToken(owner.getId())))
+                .with(jwt.userToken(user.getId())))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
         return new ObjectMapper().readTree(body).get("code").asText();
@@ -319,5 +324,40 @@ class GuestCodeE2ETest extends AbstractE2ETest {
         // The dance was not added either.
         mockMvc.perform(get("/api/public/guest-codes/" + danceListCode))
             .andExpect(jsonPath("$.dances", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("a group member who can manage playlists creates the guest code of a group dance list, and a member without the permission cannot")
+    void groupMemberWithCanManagePlaylistsCreatesDanceListGuestCode() throws Exception {
+        User groupManager = testData.user().withUsername("guest_code_group_manager").build();
+        User groupReader = testData.user().withUsername("guest_code_group_reader").build();
+        Group group = testData.group().withName("Dansgrupp").build();
+        testData.addGroupMember(group, owner, true, true, true, true, true);
+        testData.addGroupMember(group, groupManager, false, false, true, false, false);
+        testData.addGroupMember(group, groupReader, false, false, false, false, false);
+
+        String body = mockMvc.perform(post("/api/dance-lists")
+                .with(jwt.userToken(owner.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(Map.of("name", "Gruppens danser", "groupId", group.getId().toString()))))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        String danceListId = new ObjectMapper().readTree(body).get("id").asText();
+
+        mockMvc.perform(post("/api/dance-lists/" + danceListId + "/guest-code")
+                .with(jwt.userToken(groupReader.getId())))
+            .andExpect(status().isForbidden());
+
+        String code = createDanceListCode(danceListId, groupManager);
+
+        mockMvc.perform(get("/api/dance-lists/" + danceListId).with(jwt.userToken(groupManager.getId())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.guestCode").value(code))
+            .andExpect(jsonPath("$.viewerHasFullControl").value(true));
+
+        mockMvc.perform(get("/api/dance-lists/" + danceListId).with(jwt.userToken(groupReader.getId())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.guestCode").doesNotExist())
+            .andExpect(jsonPath("$.viewerHasFullControl").value(false));
     }
 }
