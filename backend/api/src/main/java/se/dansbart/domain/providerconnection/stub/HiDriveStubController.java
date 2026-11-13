@@ -1,5 +1,6 @@
 package se.dansbart.domain.providerconnection.stub;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ByteArrayResource;
@@ -54,6 +55,7 @@ public class HiDriveStubController {
     private final String clientSecret;
     private final String redirectUri;
 
+    @Autowired
     public HiDriveStubController(
             @Value("${dansbart.hidrive.client-id:}") String clientId,
             @Value("${dansbart.hidrive.client-secret:}") String clientSecret,
