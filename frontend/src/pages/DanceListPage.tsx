@@ -40,6 +40,7 @@ import {
   PlayIcon,
   PlusIcon,
   QueueListIcon,
+  SettingsIcon,
   ShareIcon,
 } from '@/icons';
 import { usePlayer } from '@/player/usePlayer';
@@ -624,6 +625,7 @@ export default function DanceListPage() {
             <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
               {countLabel(entries.length, 'dans', 'danser')} · {countLabel(totalTracks, 'låt', 'låtar')}
               {durationLabel ? ` · ${durationLabel}` : ''}
+              {hasFullControl ? ` · ${danceList.isPublic ? 'Offentlig' : 'Privat'}` : ''}
             </p>
             {canManage && (
               <div className="flex flex-wrap gap-2 pt-2">
@@ -639,6 +641,15 @@ export default function DanceListPage() {
                     <ShareIcon className="h-4 w-4" aria-hidden />
                     {danceList.guestCode ? 'Visa koden' : 'Låt andra lägga till'}
                   </Button>
+                )}
+                {hasFullControl && (
+                  <Link
+                    to={`/dance-lists/${id}/settings`}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                  >
+                    <SettingsIcon className="h-4 w-4" aria-hidden />
+                    Inställningar
+                  </Link>
                 )}
               </div>
             )}

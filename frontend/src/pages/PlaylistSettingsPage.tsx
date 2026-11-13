@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   getPlaylist,
@@ -12,8 +12,8 @@ import {
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { CollaboratorDto } from '@/api/models/collaboratorDto';
 import { ChevronLeftIcon, CloseIcon, PlaylistIcon, StarMarkIcon } from '@/icons';
-import { Button, Card, EmptyState, IconButton, InlineError, RowSkeleton, TextField, toast } from '@/ui';
-import { ConfirmDeleteByName, GuestCodePanel } from '@/components';
+import { Button, EmptyState, IconButton, InlineError, RowSkeleton, TextField, toast } from '@/ui';
+import { ConfirmDeleteByName, GuestCodePanel, SettingsSection } from '@/components';
 import { useAuth } from '@/auth/useAuth';
 import { usePlaylistShareLink } from '@/hooks/usePlaylistShareLink';
 import { describePlaylistInviteError } from '@/utils/describePlaylistInviteError';
@@ -54,32 +54,6 @@ function initialOf(name: string | undefined): string {
 }
 
 // ── Layout pieces ─────────────────────────────────────────────────────────────
-
-interface SettingsSectionProps {
-  title: string;
-  description: string;
-  danger?: boolean;
-  children: ReactNode;
-}
-
-/** One settings section: heading and explanation on the left, the controls in a card on the right. */
-function SettingsSection({ title, description, danger = false, children }: SettingsSectionProps) {
-  return (
-    <section className="grid gap-4 border-t border-[rgb(var(--color-border))] pt-6 md:grid-cols-[260px_minmax(0,1fr)] md:gap-8">
-      <div className="space-y-1">
-        <h2
-          className={`text-lg font-bold ${
-            danger ? 'text-[rgb(var(--color-error))]' : 'text-[rgb(var(--color-text))]'
-          }`}
-        >
-          {title}
-        </h2>
-        <p className="text-sm text-[rgb(var(--color-text-muted))]">{description}</p>
-      </div>
-      <Card className={`p-5 ${danger ? 'border-[rgb(var(--color-error))]' : ''}`}>{children}</Card>
-    </section>
-  );
-}
 
 interface AvatarProps {
   name: string | undefined;
