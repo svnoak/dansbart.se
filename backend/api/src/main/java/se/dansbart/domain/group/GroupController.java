@@ -7,8 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import se.dansbart.domain.dancelist.DanceListService;
 import se.dansbart.domain.playlist.PlaylistService;
 import se.dansbart.domain.user.PlaylistCollaborator;
+import se.dansbart.dto.DanceListInvitationDto;
 import se.dansbart.dto.GroupDto;
 import se.dansbart.dto.GroupInvitationDto;
 import se.dansbart.dto.GroupMemberDto;
@@ -30,6 +32,7 @@ public class GroupController {
 
     private final GroupService groupService;
     private final PlaylistService playlistService;
+    private final DanceListService danceListService;
 
     @GetMapping
     @Operation(summary = "Get groups the current user belongs to")
@@ -114,6 +117,26 @@ public class GroupController {
             @RequestBody RespondToPlaylistInvitationRequest request) {
         return playlistService.respondToGroupInvitation(id, invitationId, userId, request.accept())
             .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/{id}/dance-list-invitations")
+    @Operation(operationId = "getGroupDanceListInvitations", summary = "Get pending dance list invitations for the group")
+    public ResponseEntity<List<DanceListInvitationDto>> getGroupDanceListInvitations(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(danceListService.getPendingInvitationsForGroup(id, userId));
+    }
+
+    @PutMapping("/{id}/dance-list-invitations/{invitationId}")
+    @Operation(operationId = "respondToGroupDanceListInvitation", summary = "Accept or reject a dance list invitation sent to the group")
+    public ResponseEntity<Void> respondToGroupDanceListInvitation(
+            @PathVariable UUID id,
+            @PathVariable UUID invitationId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody RespondToPlaylistInvitationRequest request) {
+        return danceListService.respondToGroupInvitation(id, invitationId, userId, request.accept())
+            .<ResponseEntity<Void>>map(collab -> ResponseEntity.ok().build())
             .orElseGet(() -> ResponseEntity.noContent().build());
     }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { getMyDanceLists, addEntry, createDanceList } from '@/api/generated/dance-lists/dance-lists';
+import { getEditableDanceLists, addEntry, createDanceList } from '@/api/generated/dance-lists/dance-lists';
 import type { DanceList } from '@/api/models/danceList';
 import { CloseIcon, PlusIcon, QueueListIcon } from '@/icons';
 import { Button, IconButton, InlineError, toast } from '@/ui';
@@ -38,7 +38,7 @@ export function AddToDanceListModal({ open, onClose, dance }: AddToDanceListModa
     setNewName('');
     setAddError(null);
     setCreateError(null);
-    getMyDanceLists()
+    getEditableDanceLists()
       .then((lists) => setDanceLists(lists ?? []))
       .catch(() => {
         setDanceLists([]);

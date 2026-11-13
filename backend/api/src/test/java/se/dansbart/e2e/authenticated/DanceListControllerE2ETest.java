@@ -1209,7 +1209,7 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(otherUser.getId().toString()))
                 .andExpect(jsonPath("$.permission").value("edit"));
@@ -1226,7 +1226,7 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
                     .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", thirdUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", thirdUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isForbidden());
         }
 
@@ -1238,7 +1238,7 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", owner.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", owner.getUsername(), "permission", "edit"))))
                 .andExpect(status().isBadRequest());
         }
 
@@ -1250,13 +1250,13 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isOk());
 
             mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "view"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "view"))))
                 .andExpect(status().isConflict());
         }
 
@@ -1268,7 +1268,7 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "admin"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "admin"))))
                 .andExpect(status().isBadRequest());
         }
 
@@ -1280,7 +1280,7 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(toJson(Map.of("userId", otherUser.getId(), "permission", "edit"))))
+                    .content(toJson(Map.of("username", otherUser.getUsername(), "permission", "edit"))))
                 .andExpect(status().isOk());
 
             mockMvc.perform(get("/api/dance-lists/{id}/collaborators", danceListId)
@@ -1294,9 +1294,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         @DisplayName("invited person should accept invitation")
         void respondToInvitation_accept_shouldBecomeAcceptedCollaborator() throws Exception {
             String danceListId = createDanceList("My Dance List", owner);
-            testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
+            var invitation = testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
 
-            mockMvc.perform(post("/api/dance-lists/{id}/collaborators/respond", danceListId)
+            mockMvc.perform(put("/api/dance-lists/invitations/{invitationId}", invitation.getId())
                     .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("accept", true))))
@@ -1313,9 +1313,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         @DisplayName("invited person should decline invitation")
         void respondToInvitation_decline_shouldRemoveInvitation() throws Exception {
             String danceListId = createDanceList("My Dance List", owner);
-            testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
+            var invitation = testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
 
-            mockMvc.perform(post("/api/dance-lists/{id}/collaborators/respond", danceListId)
+            mockMvc.perform(put("/api/dance-lists/invitations/{invitationId}", invitation.getId())
                     .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("accept", false))))
@@ -1332,8 +1332,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             String danceListId = createDanceList("My Dance List", owner);
             UUID thirdUserId = UUID.fromString("10000000-0000-0000-0000-000000000003");
             User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
+            var invitation = testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
 
-            mockMvc.perform(post("/api/dance-lists/{id}/collaborators/respond", danceListId)
+            mockMvc.perform(put("/api/dance-lists/invitations/{invitationId}", invitation.getId())
                     .with(jwt.userToken(thirdUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("accept", true))))
@@ -1344,9 +1345,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         @DisplayName("owner should be able to update collaborator permission")
         void updateCollaborator_byOwner_shouldChangesPermission() throws Exception {
             String danceListId = createDanceList("My Dance List", owner);
-            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+            var collab = testData.addDanceListCollaborator(danceListId, otherUser, "view");
 
-            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{userId}", danceListId, otherUser.getId())
+            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{collaboratorId}", danceListId, collab.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("permission", "edit"))))
@@ -1358,9 +1359,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         @DisplayName("update collaborator with unknown permission should return 400")
         void updateCollaborator_withUnknownPermission_shouldReturn400() throws Exception {
             String danceListId = createDanceList("My Dance List", owner);
-            testData.addDanceListCollaborator(danceListId, otherUser, "view");
+            var collab = testData.addDanceListCollaborator(danceListId, otherUser, "view");
 
-            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{userId}", danceListId, otherUser.getId())
+            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{collaboratorId}", danceListId, collab.getId())
                     .with(jwt.userToken(owner.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("permission", "admin"))))
@@ -1374,9 +1375,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             testData.addDanceListCollaborator(danceListId, otherUser, "edit");
             UUID thirdUserId = UUID.fromString("10000000-0000-0000-0000-000000000003");
             User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
-            testData.addDanceListCollaborator(danceListId, thirdUser, "view");
+            var collab = testData.addDanceListCollaborator(danceListId, thirdUser, "view");
 
-            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{userId}", danceListId, thirdUser.getId())
+            mockMvc.perform(put("/api/dance-lists/{id}/collaborators/{collaboratorId}", danceListId, collab.getId())
                     .with(jwt.userToken(otherUser.getId()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(toJson(Map.of("permission", "edit"))))
@@ -1387,9 +1388,9 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
         @DisplayName("owner should be able to remove collaborator")
         void removeCollaborator_byOwner_shouldRemove() throws Exception {
             String danceListId = createDanceList("My Dance List", owner);
-            testData.addDanceListCollaborator(danceListId, otherUser, "edit");
+            var collab = testData.addDanceListCollaborator(danceListId, otherUser, "edit");
 
-            mockMvc.perform(delete("/api/dance-lists/{id}/collaborators/{userId}", danceListId, otherUser.getId())
+            mockMvc.perform(delete("/api/dance-lists/{id}/collaborators/{collaboratorId}", danceListId, collab.getId())
                     .with(jwt.userToken(owner.getId())))
                 .andExpect(status().isNoContent());
 
@@ -1405,11 +1406,120 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
             testData.addDanceListCollaborator(danceListId, otherUser, "edit");
             UUID thirdUserId = UUID.fromString("10000000-0000-0000-0000-000000000003");
             User thirdUser = testData.user().withId(thirdUserId).withUsername("third_user").build();
-            testData.addDanceListCollaborator(danceListId, thirdUser, "view");
+            var collab = testData.addDanceListCollaborator(danceListId, thirdUser, "view");
 
-            mockMvc.perform(delete("/api/dance-lists/{id}/collaborators/{userId}", danceListId, thirdUser.getId())
+            mockMvc.perform(delete("/api/dance-lists/{id}/collaborators/{collaboratorId}", danceListId, collab.getId())
                     .with(jwt.userToken(otherUser.getId())))
                 .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("inviting an unknown username should return 422")
+        void inviteCollaborator_unknownUsername_shouldReturn422() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("username", "nobody_here", "permission", "view"))))
+                .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("invited person should see the invitation")
+        void getInvitations_shouldListPendingInvitation() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            testData.addPendingDanceListCollaborator(danceListId, otherUser, "edit");
+
+            mockMvc.perform(get("/api/dance-lists/invitations")
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].danceListId").value(danceListId))
+                .andExpect(jsonPath("$[0].danceListName").value("My Dance List"))
+                .andExpect(jsonPath("$[0].permission").value("edit"));
+        }
+
+        @Test
+        @DisplayName("owner should be able to invite a group by name")
+        void inviteGroup_byOwner_shouldSucceed() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            var group = testData.group().withName("Polskegruppen").build();
+
+            mockMvc.perform(post("/api/dance-lists/{id}/collaborators", danceListId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("groupName", "polskegruppen", "permission", "edit"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.groupId").value(group.getId().toString()))
+                .andExpect(jsonPath("$.status").value("pending"));
+        }
+
+        @Test
+        @DisplayName("group admin accepts the invitation and the members can edit the list")
+        void groupInvitation_accepted_shouldGiveMembersAccess() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            var group = testData.group().withName("Polskegruppen").build();
+            testData.addGroupAdmin(group, otherUser);
+            UUID memberId = UUID.fromString("10000000-0000-0000-0000-000000000004");
+            User member = testData.user().withId(memberId).withUsername("group_member").build();
+            testData.addGroupMember(group, member, false, false, false, false, false);
+            var invitation = testData.addDanceListGroupCollaborator(danceListId, group, "edit", "pending");
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isNotFound());
+
+            mockMvc.perform(get("/api/groups/{id}/dance-list-invitations", group.getId())
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(invitation.getId().toString()));
+
+            mockMvc.perform(put("/api/groups/{id}/dance-list-invitations/{invitationId}", group.getId(), invitation.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/dance-lists/{id}/entries", danceListId)
+                    .with(jwt.userToken(member.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("danceId", DANCE_ID.toString()))))
+                .andExpect(status().isCreated());
+
+            mockMvc.perform(get("/api/dance-lists")
+                    .with(jwt.userToken(member.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(danceListId)));
+        }
+
+        @Test
+        @DisplayName("a group member who is not admin cannot answer the group's invitation")
+        void groupInvitation_byNonAdmin_shouldReturn403() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            var group = testData.group().withName("Polskegruppen").build();
+            testData.addGroupMember(group, otherUser, false, false, true, false, false);
+            var invitation = testData.addDanceListGroupCollaborator(danceListId, group, "edit", "pending");
+
+            mockMvc.perform(put("/api/groups/{id}/dance-list-invitations/{invitationId}", group.getId(), invitation.getId())
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("accept", true))))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("view collaborators are left out of the editable lists")
+        void getEditableDanceLists_shouldLeaveOutViewOnlyLists() throws Exception {
+            String editableId = createDanceList("Editable", owner);
+            String viewOnlyId = createDanceList("View only", owner);
+            testData.addDanceListCollaborator(editableId, otherUser, "edit");
+            testData.addDanceListCollaborator(viewOnlyId, otherUser, "view");
+
+            mockMvc.perform(get("/api/dance-lists/editable")
+                    .with(jwt.userToken(otherUser.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(editableId)))
+                .andExpect(jsonPath("$[?(@.id == '" + viewOnlyId + "')]").isEmpty());
         }
     }
 

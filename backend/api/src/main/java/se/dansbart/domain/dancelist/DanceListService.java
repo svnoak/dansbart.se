@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.CollaborationAccess;
 import se.dansbart.domain.dance.DanceJooqRepository;
 import se.dansbart.domain.dance.DanceService;
+import se.dansbart.domain.group.Group;
 import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.group.GroupMemberJooqRepository;
@@ -13,8 +14,10 @@ import se.dansbart.domain.guestcode.GuestCodeJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.track.UserTrackSourceJooqRepository;
 import se.dansbart.domain.user.UserJooqRepository;
+import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.DanceListDto;
 import se.dansbart.dto.DanceListEntryDto;
+import se.dansbart.dto.DanceListInvitationDto;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.PlaylistTrackDto;
 import se.dansbart.dto.TrackListDto;
@@ -23,6 +26,7 @@ import se.dansbart.exception.BadRequestException;
 import se.dansbart.exception.ConflictException;
 import se.dansbart.exception.ForbiddenException;
 import se.dansbart.exception.ResourceNotFoundException;
+import se.dansbart.exception.UnprocessableEntityException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -91,8 +95,13 @@ public class DanceListService {
     }
 
     @Transactional(readOnly = true)
-    public List<DanceList> findByUserId(UUID userId) {
-        return danceListJooqRepository.findByUserId(userId);
+    public List<DanceList> findVisibleToUser(UUID userId) {
+        return danceListJooqRepository.findVisibleToUser(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DanceList> findEditableByUser(UUID userId) {
+        return danceListJooqRepository.findEditableByUser(userId);
     }
 
     @Transactional(readOnly = true)
@@ -313,7 +322,8 @@ public class DanceListService {
 
     private boolean hasEditAccess(DanceList danceList, UUID userId) {
         return collaborationAccess.hasEditAccess(danceList.getUserId(), danceList.getGroupId(), userId,
-            () -> collaboratorRepository.existsByDanceListIdAndUserIdAndPermission(danceList.getId(), userId, "edit"));
+            () -> collaboratorRepository.existsByDanceListIdAndUserIdAndPermission(danceList.getId(), userId, "edit")
+                || collaboratorRepository.hasAcceptedGroupCollaboration(danceList.getId(), userId, "edit"));
     }
 
     private boolean canView(DanceList danceList, UUID viewerId) {
@@ -321,7 +331,8 @@ public class DanceListService {
             () -> hasEditAccess(danceList, viewerId),
             () -> collaboratorRepository.findByDanceListIdAndUserId(danceList.getId(), viewerId)
                 .filter(c -> "accepted".equals(c.getStatus()))
-                .isPresent());
+                .isPresent()
+                || collaboratorRepository.hasAcceptedGroupCollaboration(danceList.getId(), viewerId, null));
     }
 
     private DanceListDto toDanceListDto(DanceList danceList, UUID viewerId) {
@@ -374,20 +385,8 @@ public class DanceListService {
                 linksByEntryId.get(entry.getId()), trackDtosById))
             .collect(Collectors.toList());
 
-        List<se.dansbart.dto.CollaboratorDto> collaborators = collaboratorRepository.findByDanceListId(danceList.getId()).stream()
-            .map(c -> {
-                var user = c.getUser();
-                return se.dansbart.dto.CollaboratorDto.builder()
-                    .id(c.getId())
-                    .userId(c.getUserId())
-                    .username(user != null ? user.getUsername() : null)
-                    .displayName(user != null ? user.getDisplayName() : null)
-                    .permission(c.getPermission())
-                    .status(c.getStatus())
-                    .invitedAt(c.getInvitedAt())
-                    .acceptedAt(c.getAcceptedAt())
-                    .build();
-            })
+        List<CollaboratorDto> collaborators = collaboratorRepository.findByDanceListId(danceList.getId()).stream()
+            .map(this::toCollaboratorDto)
             .collect(Collectors.toList());
 
         return DanceListDto.builder()
@@ -455,75 +454,134 @@ public class DanceListService {
     }
 
     @Transactional
-    public Optional<DanceListCollaborator> inviteCollaborator(UUID danceListId, UUID ownerId, UUID inviteeId, String permission) {
+    public Optional<DanceListCollaborator> inviteCollaborator(UUID danceListId, UUID ownerId, String username,
+                                                              String groupName, String permission) {
         if (permission != null && !PERMISSIONS.contains(permission)) {
             throw new BadRequestException("Permission must be 'view' or 'edit'.");
         }
-
         DanceList danceList = danceListJooqRepository.findById(danceListId)
             .orElseThrow(() -> new ResourceNotFoundException("The dance list does not exist."));
-
         if (!hasFullControl(danceList, ownerId)) {
             throw new ForbiddenException("You do not have permission to manage collaborators.");
         }
 
+        boolean hasUsername = username != null && !username.isBlank();
+        boolean hasGroupName = groupName != null && !groupName.isBlank();
+        if (hasUsername == hasGroupName) {
+            throw new BadRequestException("Invite exactly one of a username or a group name.");
+        }
+
+        DanceListCollaborator.DanceListCollaboratorBuilder collab = DanceListCollaborator.builder()
+            .danceListId(danceListId)
+            .permission(permission != null ? permission : "view")
+            .status("pending")
+            .invitedBy(ownerId);
+
+        if (hasGroupName) {
+            UUID groupId = groupJooqRepository.findByNameIgnoreCase(groupName.trim())
+                .map(group -> group.getId())
+                .orElseThrow(() -> new UnprocessableEntityException("No group has that name."));
+            if (groupId.equals(danceList.getGroupId())) {
+                throw new BadRequestException("The group already owns this dance list.");
+            }
+            if (collaboratorRepository.findByDanceListIdAndGroupId(danceListId, groupId).isPresent()) {
+                return Optional.empty();
+            }
+            return Optional.of(collaboratorRepository.save(collab.groupId(groupId).build()));
+        }
+
+        UUID inviteeId = userJooqRepository.findByUsernameIgnoreCase(username.trim())
+            .map(user -> user.getId())
+            .orElseThrow(() -> new UnprocessableEntityException("No user has that username."));
         if (inviteeId.equals(ownerId)) {
             throw new BadRequestException("You cannot invite yourself.");
         }
-
         if (collaboratorRepository.findByDanceListIdAndUserId(danceListId, inviteeId).isPresent()) {
             return Optional.empty();
         }
-
-        DanceListCollaborator collab = DanceListCollaborator.builder()
-            .danceListId(danceListId)
-            .userId(inviteeId)
-            .permission(permission != null ? permission : "view")
-            .status("pending")
-            .invitedBy(ownerId)
-            .build();
-        return Optional.of(collaboratorRepository.save(collab));
+        return Optional.of(collaboratorRepository.save(collab.userId(inviteeId).build()));
     }
 
     @Transactional(readOnly = true)
-    public Optional<List<se.dansbart.dto.CollaboratorDto>> getCollaborators(UUID danceListId, UUID viewerId) {
+    public Optional<List<CollaboratorDto>> getCollaborators(UUID danceListId, UUID viewerId) {
         return danceListJooqRepository.findById(danceListId)
             .filter(danceList -> canView(danceList, viewerId))
             .map(danceList -> collaboratorRepository.findByDanceListId(danceListId).stream()
-                .map(collab -> {
-                    var user = collab.getUser();
-                    return se.dansbart.dto.CollaboratorDto.builder()
-                        .id(collab.getId())
-                        .userId(collab.getUserId())
-                        .username(user != null ? user.getUsername() : null)
-                        .displayName(user != null ? user.getDisplayName() : null)
-                        .permission(collab.getPermission())
-                        .status(collab.getStatus())
-                        .invitedAt(collab.getInvitedAt())
-                        .acceptedAt(collab.getAcceptedAt())
-                        .build();
-                })
+                .map(this::toCollaboratorDto)
                 .collect(Collectors.toList()));
     }
 
+    @Transactional(readOnly = true)
+    public List<DanceListInvitationDto> getPendingInvitations(UUID userId) {
+        return collaboratorRepository.findByUserIdAndStatus(userId, "pending").stream()
+            .map(collab -> DanceListInvitationDto.builder()
+                .id(collab.getId())
+                .danceListId(collab.getDanceListId())
+                .danceListName(danceListJooqRepository.findById(collab.getDanceListId())
+                    .map(DanceList::getName).orElse(null))
+                .invitedByUserId(collab.getInvitedBy())
+                .invitedByDisplayName(displayNameOf(collab.getInvitedBy()))
+                .permission(collab.getPermission())
+                .invitedAt(collab.getInvitedAt())
+                .build())
+            .collect(Collectors.toList());
+    }
+
     @Transactional
-    public boolean respondToInvitation(UUID danceListId, UUID userId, boolean accept) {
-        var collab = collaboratorRepository.findByDanceListIdAndUserId(danceListId, userId)
-            .filter(c -> "pending".equals(c.getStatus()));
+    public Optional<DanceListCollaborator> respondToInvitation(UUID invitationId, UUID userId, boolean accept) {
+        DanceListCollaborator collab = collaboratorRepository.findById(invitationId)
+            .filter(c -> userId.equals(c.getUserId()) && "pending".equals(c.getStatus()))
+            .orElseThrow(() -> new ResourceNotFoundException("This invitation does not exist."));
+        return answer(collab, accept);
+    }
 
-        if (collab.isEmpty()) {
-            return false;
-        }
+    @Transactional(readOnly = true)
+    public List<DanceListInvitationDto> getPendingInvitationsForGroup(UUID groupId, UUID viewerId) {
+        requireGroupAdmin(groupId, viewerId);
+        return collaboratorRepository.findByGroupIdAndStatus(groupId, "pending").stream()
+            .map(invitation -> DanceListInvitationDto.builder()
+                .id(invitation.id())
+                .danceListId(invitation.danceListId())
+                .danceListName(invitation.danceListName())
+                .invitedByUserId(invitation.invitedByUserId())
+                .invitedByDisplayName(invitation.invitedByDisplayName())
+                .permission(invitation.permission())
+                .invitedAt(invitation.invitedAt())
+                .build())
+            .collect(Collectors.toList());
+    }
 
-        DanceListCollaborator c = collab.get();
+    @Transactional
+    public Optional<DanceListCollaborator> respondToGroupInvitation(UUID groupId, UUID invitationId, UUID viewerId,
+                                                                    boolean accept) {
+        requireGroupAdmin(groupId, viewerId);
+        DanceListCollaborator collab = collaboratorRepository.findById(invitationId)
+            .filter(c -> groupId.equals(c.getGroupId()) && "pending".equals(c.getStatus()))
+            .orElseThrow(() -> new ResourceNotFoundException("This invitation does not exist."));
+        return answer(collab, accept);
+    }
+
+    private Optional<DanceListCollaborator> answer(DanceListCollaborator collab, boolean accept) {
         if (accept) {
-            c.setStatus("accepted");
-            c.setAcceptedAt(OffsetDateTime.now());
-            collaboratorRepository.save(c);
-        } else {
-            collaboratorRepository.delete(c);
+            collab.setStatus("accepted");
+            collab.setAcceptedAt(OffsetDateTime.now());
+            return Optional.of(collaboratorRepository.save(collab));
         }
-        return true;
+        collaboratorRepository.delete(collab);
+        return Optional.empty();
+    }
+
+    private void requireGroupAdmin(UUID groupId, UUID viewerId) {
+        Group group = groupJooqRepository.findById(groupId)
+            .orElseThrow(() -> new ResourceNotFoundException("The group does not exist, or you do not have access to it."));
+        var membership = groupMemberJooqRepository.findByGroupIdAndUserId(groupId, viewerId)
+            .filter(GroupMember::isAccepted);
+        if (membership.isEmpty() && !Boolean.TRUE.equals(group.getIsPublic())) {
+            throw new ResourceNotFoundException("The group does not exist, or you do not have access to it.");
+        }
+        if (membership.isEmpty() || !Boolean.TRUE.equals(membership.get().getIsAdmin())) {
+            throw new ForbiddenException("You do not have permission to do this in the group.");
+        }
     }
 
     @Transactional
@@ -531,15 +589,13 @@ public class DanceListService {
         if (!PERMISSIONS.contains(permission)) {
             throw new BadRequestException("Permission must be 'view' or 'edit'.");
         }
-
         DanceList danceList = danceListJooqRepository.findById(danceListId)
             .orElseThrow(() -> new ResourceNotFoundException("The dance list does not exist."));
-
         if (!hasFullControl(danceList, userId)) {
             throw new ForbiddenException("You do not have permission to manage collaborators.");
         }
-
-        return collaboratorRepository.findByDanceListIdAndUserId(danceListId, collaboratorId)
+        return collaboratorRepository.findById(collaboratorId)
+            .filter(collab -> danceListId.equals(collab.getDanceListId()))
             .map(collab -> {
                 collab.setPermission(permission);
                 return collaboratorRepository.save(collab);
@@ -550,17 +606,38 @@ public class DanceListService {
     public boolean removeCollaborator(UUID danceListId, UUID userId, UUID collaboratorId) {
         DanceList danceList = danceListJooqRepository.findById(danceListId)
             .orElseThrow(() -> new ResourceNotFoundException("The dance list does not exist."));
-
         if (!hasFullControl(danceList, userId)) {
             throw new ForbiddenException("You do not have permission to manage collaborators.");
         }
-
-        return collaboratorRepository.findByDanceListIdAndUserId(danceListId, collaboratorId)
+        return collaboratorRepository.findById(collaboratorId)
+            .filter(collab -> danceListId.equals(collab.getDanceListId()))
             .map(collab -> {
                 collaboratorRepository.delete(collab);
                 return true;
             })
             .orElse(false);
+    }
+
+    private CollaboratorDto toCollaboratorDto(DanceListCollaborator collab) {
+        var user = collab.getUser();
+        var group = collab.getGroup();
+        return CollaboratorDto.builder()
+            .id(collab.getId())
+            .userId(collab.getUserId())
+            .username(user != null ? user.getUsername() : null)
+            .displayName(user != null ? user.getDisplayName() : null)
+            .groupId(group != null ? group.getId() : null)
+            .groupName(group != null ? group.getName() : null)
+            .permission(collab.getPermission())
+            .status(collab.getStatus())
+            .invitedAt(collab.getInvitedAt())
+            .acceptedAt(collab.getAcceptedAt())
+            .build();
+    }
+
+    private String displayNameOf(UUID userId) {
+        if (userId == null) return null;
+        return userJooqRepository.findById(userId).map(u -> u.getDisplayName()).orElse(null);
     }
 
     @Transactional

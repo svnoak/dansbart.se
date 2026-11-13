@@ -1,7 +1,10 @@
 package se.dansbart.domain.dancelist;
 
+import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Record;
+import org.jooq.Record1;
+import org.jooq.SelectConditionStep;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -9,6 +12,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static se.dansbart.jooq.Tables.DANCE_LISTS;
+import static se.dansbart.jooq.Tables.DANCE_LIST_COLLABORATORS;
+import static se.dansbart.jooq.Tables.GROUP_MEMBERS;
 
 @Repository
 public class DanceListJooqRepository {
@@ -29,6 +34,54 @@ public class DanceListJooqRepository {
 
     public List<DanceList> findByUserId(UUID userId) {
         return dsl.selectFrom(DANCE_LISTS).where(DANCE_LISTS.USER_ID.eq(userId)).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
+    }
+
+    /** Lists the user owns, lists of the user's groups and lists shared with the user or one of the user's groups. */
+    public List<DanceList> findVisibleToUser(UUID userId) {
+        return dsl.selectFrom(DANCE_LISTS)
+            .where(DANCE_LISTS.USER_ID.eq(userId))
+            .or(DANCE_LISTS.GROUP_ID.in(acceptedGroupsSubquery(userId, false)))
+            .or(DANCE_LISTS.ID.in(individualCollaborationsSubquery(userId, null)))
+            .or(DANCE_LISTS.ID.in(groupCollaborationsSubquery(userId, null)))
+            .orderBy(DANCE_LISTS.NAME.asc())
+            .fetch(this::toDanceList);
+    }
+
+    /** Lists the user may add dances to. */
+    public List<DanceList> findEditableByUser(UUID userId) {
+        return dsl.selectFrom(DANCE_LISTS)
+            .where(DANCE_LISTS.USER_ID.eq(userId))
+            .or(DANCE_LISTS.GROUP_ID.in(acceptedGroupsSubquery(userId, true)))
+            .or(DANCE_LISTS.ID.in(individualCollaborationsSubquery(userId, "edit")))
+            .or(DANCE_LISTS.ID.in(groupCollaborationsSubquery(userId, "edit")))
+            .orderBy(DANCE_LISTS.NAME.asc())
+            .fetch(this::toDanceList);
+    }
+
+    private SelectConditionStep<Record1<UUID>> acceptedGroupsSubquery(UUID userId, boolean managedOnly) {
+        Condition condition = GROUP_MEMBERS.USER_ID.eq(userId).and(GROUP_MEMBERS.STATUS.eq("accepted"));
+        if (managedOnly) {
+            condition = condition.and(GROUP_MEMBERS.IS_ADMIN.isTrue().or(GROUP_MEMBERS.CAN_MANAGE_PLAYLISTS.isTrue()));
+        }
+        return dsl.select(GROUP_MEMBERS.GROUP_ID).from(GROUP_MEMBERS).where(condition);
+    }
+
+    private SelectConditionStep<Record1<UUID>> individualCollaborationsSubquery(UUID userId, String permission) {
+        Condition condition = DANCE_LIST_COLLABORATORS.USER_ID.eq(userId)
+            .and(DANCE_LIST_COLLABORATORS.STATUS.eq("accepted"));
+        if (permission != null) {
+            condition = condition.and(DANCE_LIST_COLLABORATORS.PERMISSION.eq(permission));
+        }
+        return dsl.select(DANCE_LIST_COLLABORATORS.DANCE_LIST_ID).from(DANCE_LIST_COLLABORATORS).where(condition);
+    }
+
+    private SelectConditionStep<Record1<UUID>> groupCollaborationsSubquery(UUID userId, String permission) {
+        Condition condition = DANCE_LIST_COLLABORATORS.GROUP_ID.in(acceptedGroupsSubquery(userId, false))
+            .and(DANCE_LIST_COLLABORATORS.STATUS.eq("accepted"));
+        if (permission != null) {
+            condition = condition.and(DANCE_LIST_COLLABORATORS.PERMISSION.eq(permission));
+        }
+        return dsl.select(DANCE_LIST_COLLABORATORS.DANCE_LIST_ID).from(DANCE_LIST_COLLABORATORS).where(condition);
     }
 
     public List<DanceList> findByGroupId(UUID groupId, boolean includePrivate) {

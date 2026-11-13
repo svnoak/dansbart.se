@@ -8,6 +8,7 @@ export { GuestCodePanel } from './GuestCodePanel';
 export { PlaylistShortcutCard } from './PlaylistShortcutCard';
 export { SearchBar } from './SearchBar';
 export { SelectableSearchResults } from './SelectableSearchResults';
+export { SettingsSection } from './SettingsSection';
 export { SharePlaylistPanel } from './SharePlaylistPanel';
 export { StyleShortcutCard } from './StyleShortcutCard';
 export { TrackCard } from './TrackCard';

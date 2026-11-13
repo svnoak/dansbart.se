@@ -9,16 +9,19 @@ import {
   removeMember,
   getGroupPlaylistInvitations,
   respondToGroupPlaylistInvitation,
+  getGroupDanceListInvitations,
+  respondToGroupDanceListInvitation,
 } from '@/api/generated/groups/groups';
 import { ApiError } from '@/api/http-client';
 import type { GroupDto } from '@/api/models/groupDto';
 import type { GroupMemberDto } from '@/api/models/groupMemberDto';
 import type { InvitationDto } from '@/api/models/invitationDto';
+import type { DanceListInvitationDto } from '@/api/models/danceListInvitationDto';
 import { useAuth } from '@/auth/useAuth';
 import { useTheme } from '@/theme/useTheme';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import { ConfirmDeleteByName } from '@/components';
-import { ChevronLeftIcon, CloseIcon, StarMarkIcon } from '@/icons';
+import { ChevronLeftIcon, CloseIcon, QueueListIcon, StarMarkIcon } from '@/icons';
 import { Badge, Button, Card, IconButton, InlineError, Modal, RowSkeleton, TextField, toast } from '@/ui';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
@@ -111,6 +114,7 @@ export function GroupSettingsPage() {
   const [invitations, setInvitations] = useState<InvitationDto[]>([]);
   const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null);
   const [invitationErrors, setInvitationErrors] = useState<Record<string, string>>({});
+  const [danceListInvitations, setDanceListInvitations] = useState<DanceListInvitationDto[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -141,6 +145,11 @@ export function GroupSettingsPage() {
     getGroupPlaylistInvitations(id)
       .then((data) => {
         if (!cancelled) setInvitations(data);
+      })
+      .catch(() => {});
+    getGroupDanceListInvitations(id)
+      .then((data) => {
+        if (!cancelled) setDanceListInvitations(data);
       })
       .catch(() => {});
     return () => {
@@ -300,6 +309,25 @@ export function GroupSettingsPage() {
     try {
       await respondToGroupPlaylistInvitation(id, invitationId, { accept });
       setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+      toast(accept ? 'Inbjudan accepterad' : 'Inbjudan avböjd');
+    } catch {
+      setInvitationErrors((prev) => ({ ...prev, [invitationId]: 'Det gick inte att svara på inbjudan.' }));
+    } finally {
+      setRespondingInvitationId(null);
+    }
+  }
+
+  async function handleRespondToDanceListInvitation(invitationId: string, accept: boolean) {
+    if (!id) return;
+    setRespondingInvitationId(invitationId);
+    setInvitationErrors((prev) => {
+      const next = { ...prev };
+      delete next[invitationId];
+      return next;
+    });
+    try {
+      await respondToGroupDanceListInvitation(id, invitationId, { accept });
+      setDanceListInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
       toast(accept ? 'Inbjudan accepterad' : 'Inbjudan avböjd');
     } catch {
       setInvitationErrors((prev) => ({ ...prev, [invitationId]: 'Det gick inte att svara på inbjudan.' }));
@@ -579,6 +607,63 @@ export function GroupSettingsPage() {
           </div>
         )}
       </SettingsSection>
+
+      {isAdmin && danceListInvitations.length > 0 && (
+        <SettingsSection
+          title="Inbjudningar till danslistor"
+          description="Danslistor som andra vill dela med gruppen. Svara för gruppens räkning."
+        >
+          <ul className={LIST_CLASS}>
+            {danceListInvitations.map((inv) => {
+              const permissionText =
+                inv.permission === 'edit' ? 'kan redigera' : inv.permission === 'view' ? 'kan se' : null;
+              return (
+                <li key={inv.id} className={ROW_CLASS}>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]"
+                      aria-hidden
+                    >
+                      <QueueListIcon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-bold text-[rgb(var(--color-text))]">
+                        {inv.danceListName}
+                      </p>
+                      <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                        Inbjuden av {inv.invitedByDisplayName ?? 'okänd'}
+                        {permissionText && ` · ${permissionText}`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        className="h-10 min-h-10"
+                        disabled={respondingInvitationId === inv.id}
+                        onClick={() => handleRespondToDanceListInvitation(inv.id!, true)}
+                      >
+                        Acceptera
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-10 min-h-10"
+                        disabled={respondingInvitationId === inv.id}
+                        onClick={() => handleRespondToDanceListInvitation(inv.id!, false)}
+                      >
+                        Avböj
+                      </Button>
+                    </div>
+                  </div>
+                  {inv.id && invitationErrors[inv.id] && (
+                    <div className="mt-2 sm:pl-[52px]">
+                      <InlineError>{invitationErrors[inv.id]}</InlineError>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </SettingsSection>
+      )}
 
       {isAdmin && invitations.length > 0 && (
         <SettingsSection

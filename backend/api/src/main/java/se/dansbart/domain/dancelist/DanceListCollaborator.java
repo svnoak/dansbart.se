@@ -1,6 +1,7 @@
 package se.dansbart.domain.dancelist;
 
 import lombok.*;
+import se.dansbart.domain.group.Group;
 import se.dansbart.domain.user.User;
 
 import java.time.OffsetDateTime;
@@ -16,6 +17,7 @@ public class DanceListCollaborator {
     private UUID id;
     private UUID danceListId;
     private UUID userId;
+    private UUID groupId;
 
     @Builder.Default
     private String permission = "view";
@@ -28,4 +30,5 @@ public class DanceListCollaborator {
     private OffsetDateTime acceptedAt;
 
     private User user;
+    private Group group;
 }

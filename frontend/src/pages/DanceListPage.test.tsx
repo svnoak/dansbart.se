@@ -23,6 +23,7 @@ const usePlayerMock = { play: vi.fn() };
 
 vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
   getDanceList: (...args: unknown[]) => getDanceList(...args),
+  getDanceListByShareToken: (...args: unknown[]) => getDanceListByShareToken(...args),
   addEntry: (...args: unknown[]) => addEntry(...args),
   removeEntry: (...args: unknown[]) => removeEntry(...args),
   renameEntry: (...args: unknown[]) => renameEntry(...args),
@@ -56,11 +57,12 @@ vi.mock('@/theme/useTheme', () => ({
   useTheme: () => ({ theme: 'light' }),
 }));
 
+let routeParams: Record<string, string> = { id: 'list-1' };
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    useParams: () => ({ id: 'list-1' }),
+    useParams: () => routeParams,
   };
 });
 
@@ -167,6 +169,8 @@ const mockEmptySearchResults = {
   hasMore: false,
 };
 
+const getDanceListByShareToken = vi.fn();
+
 describe('DanceListPage', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -186,6 +190,8 @@ describe('DanceListPage', () => {
     reorderEntries.mockReset();
     usePlayerMock.play.mockReset();
     getDanceList.mockResolvedValue(mockDanceListFull);
+    getDanceListByShareToken.mockReset();
+    routeParams = { id: 'list-1' };
     vi.useFakeTimers();
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -1221,5 +1227,29 @@ describe('DanceListPage', () => {
     clickButton('Låt andra lägga till');
     clickButton('Lägg till dans');
     expect(document.body.querySelector('button[aria-label="Fler alternativ för Familjevals från Ödsmål"]')).not.toBeNull();
+  });
+
+  it('a share link shows the list without any editing controls', async () => {
+    routeParams = { token: 'tok' };
+    getDanceListByShareToken.mockResolvedValue({
+      ...mockDanceListFull,
+      viewerCanManage: undefined,
+      viewerHasFullControl: undefined,
+    });
+    await renderPage();
+
+    expect(getDanceListByShareToken).toHaveBeenCalledWith('tok');
+    expect(getDanceList).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('My Dances');
+    expect(document.body.textContent).not.toContain('Lägg till dans');
+    expect(document.body.textContent).not.toContain('Inställningar');
+  });
+
+  it('an editor sees the settings link', async () => {
+    getDanceList.mockResolvedValue({ ...mockDanceListFull, viewerCanManage: true, viewerHasFullControl: false });
+    await renderPage();
+
+    const link = document.body.querySelector('a[href="/dance-lists/list-1/settings"]');
+    expect(link?.textContent).toContain('Inställningar');
   });
 });

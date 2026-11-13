@@ -13,17 +13,14 @@ import type {
   DanceListDto,
   DanceListEntryDto,
   DanceListEntryTrack,
-  GenerateShareToken1200,
-  InviteCollaborator1200,
+  DanceListInvitationDto,
   InviteCollaboratorRequest,
   RenameEntryRequest,
   ReorderEntriesRequest,
   ReorderTracksRequest,
-  RespondToInvitation1200,
   RespondToInvitationRequest,
   SetPlayModeRequest,
   TransferOwnershipRequest,
-  UpdateCollaborator1200,
   UpdateCollaboratorRequest,
   UpdateDanceListRequest
 } from '../../models';
@@ -104,7 +101,7 @@ export const deleteDanceList = async (id: string, options?: RequestInit): Promis
 /**
  * @summary Transfer dance list ownership to another user
  */
-export const getTransferOwnership1Url = (id: string,) => {
+export const getTransferDanceListOwnershipUrl = (id: string,) => {
 
 
   
@@ -112,10 +109,10 @@ export const getTransferOwnership1Url = (id: string,) => {
   return `/api/dance-lists/${id}/transfer-ownership`
 }
 
-export const transferOwnership1 = async (id: string,
+export const transferDanceListOwnership = async (id: string,
     transferOwnershipRequest: TransferOwnershipRequest, options?: RequestInit): Promise<DanceList> => {
   
-  return httpClient<DanceList>(getTransferOwnership1Url(id),
+  return httpClient<DanceList>(getTransferDanceListOwnershipUrl(id),
   {      
     ...options,
     method: 'PUT',
@@ -149,33 +146,6 @@ export const setPlayMode = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       setPlayModeRequest,)
-  }
-);}
-  
-
-/**
- * @summary Rename an entry. A dance from the site stays linked; the name is shown in its place
- */
-export const getRenameEntryUrl = (id: string,
-    entryId: string,) => {
-
-
-  
-
-  return `/api/dance-lists/${id}/entries/${entryId}/name`
-}
-
-export const renameEntry = async (id: string,
-    entryId: string,
-    renameEntryRequest: RenameEntryRequest, options?: RequestInit): Promise<void> => {
-  
-  return httpClient<void>(getRenameEntryUrl(id,entryId),
-  {      
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      renameEntryRequest,)
   }
 );}
   
@@ -233,6 +203,33 @@ export const reorderTracksInEntry = async (id: string,
   
 
 /**
+ * @summary Rename an entry. A dance from the site stays linked; the name is shown in its place
+ */
+export const getRenameEntryUrl = (id: string,
+    entryId: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/entries/${entryId}/name`
+}
+
+export const renameEntry = async (id: string,
+    entryId: string,
+    renameEntryRequest: RenameEntryRequest, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getRenameEntryUrl(id,entryId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      renameEntryRequest,)
+  }
+);}
+  
+
+/**
  * @summary Reorder entries in a dance list
  */
 export const getReorderEntriesUrl = (id: string,) => {
@@ -260,20 +257,20 @@ export const reorderEntries = async (id: string,
 /**
  * @summary Update dance list collaborator permission
  */
-export const getUpdateCollaborator1Url = (id: string,
-    userId: string,) => {
+export const getUpdateDanceListCollaboratorUrl = (id: string,
+    collaboratorId: string,) => {
 
 
   
 
-  return `/api/dance-lists/${id}/collaborators/${userId}`
+  return `/api/dance-lists/${id}/collaborators/${collaboratorId}`
 }
 
-export const updateCollaborator1 = async (id: string,
-    userId: string,
-    updateCollaboratorRequest: UpdateCollaboratorRequest, options?: RequestInit): Promise<UpdateCollaborator1200> => {
+export const updateDanceListCollaborator = async (id: string,
+    collaboratorId: string,
+    updateCollaboratorRequest: UpdateCollaboratorRequest, options?: RequestInit): Promise<CollaboratorDto> => {
   
-  return httpClient<UpdateCollaborator1200>(getUpdateCollaborator1Url(id,userId),
+  return httpClient<CollaboratorDto>(getUpdateDanceListCollaboratorUrl(id,collaboratorId),
   {      
     ...options,
     method: 'PUT',
@@ -287,19 +284,19 @@ export const updateCollaborator1 = async (id: string,
 /**
  * @summary Remove a collaborator from dance list
  */
-export const getRemoveCollaborator1Url = (id: string,
-    userId: string,) => {
+export const getRemoveDanceListCollaboratorUrl = (id: string,
+    collaboratorId: string,) => {
 
 
   
 
-  return `/api/dance-lists/${id}/collaborators/${userId}`
+  return `/api/dance-lists/${id}/collaborators/${collaboratorId}`
 }
 
-export const removeCollaborator1 = async (id: string,
-    userId: string, options?: RequestInit): Promise<void> => {
+export const removeDanceListCollaborator = async (id: string,
+    collaboratorId: string, options?: RequestInit): Promise<void> => {
   
-  return httpClient<void>(getRemoveCollaborator1Url(id,userId),
+  return httpClient<void>(getRemoveDanceListCollaboratorUrl(id,collaboratorId),
   {      
     ...options,
     method: 'DELETE'
@@ -310,7 +307,32 @@ export const removeCollaborator1 = async (id: string,
   
 
 /**
- * @summary Get current user's dance lists
+ * @summary Accept or reject a dance list invitation
+ */
+export const getRespondToDanceListInvitationUrl = (invitationId: string,) => {
+
+
+  
+
+  return `/api/dance-lists/invitations/${invitationId}`
+}
+
+export const respondToDanceListInvitation = async (invitationId: string,
+    respondToInvitationRequest: RespondToInvitationRequest, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getRespondToDanceListInvitationUrl(invitationId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      respondToInvitationRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Get the dance lists the current user owns, or sees through a group or a collaboration
  */
 export const getGetMyDanceListsUrl = () => {
 
@@ -359,7 +381,7 @@ export const createDanceList = async (createDanceListRequest: CreateDanceListReq
 /**
  * @summary Generate a share token for dance list
  */
-export const getGenerateShareToken1Url = (id: string,) => {
+export const getGenerateDanceListShareTokenUrl = (id: string,) => {
 
 
   
@@ -367,9 +389,9 @@ export const getGenerateShareToken1Url = (id: string,) => {
   return `/api/dance-lists/${id}/share-token`
 }
 
-export const generateShareToken1 = async (id: string, options?: RequestInit): Promise<GenerateShareToken1200> => {
+export const generateDanceListShareToken = async (id: string, options?: RequestInit): Promise<DanceList> => {
   
-  return httpClient<GenerateShareToken1200>(getGenerateShareToken1Url(id),
+  return httpClient<DanceList>(getGenerateDanceListShareTokenUrl(id),
   {      
     ...options,
     method: 'POST'
@@ -382,7 +404,7 @@ export const generateShareToken1 = async (id: string, options?: RequestInit): Pr
 /**
  * @summary Invalidate the share token for dance list
  */
-export const getInvalidateShareToken1Url = (id: string,) => {
+export const getInvalidateDanceListShareTokenUrl = (id: string,) => {
 
 
   
@@ -390,9 +412,9 @@ export const getInvalidateShareToken1Url = (id: string,) => {
   return `/api/dance-lists/${id}/share-token`
 }
 
-export const invalidateShareToken1 = async (id: string, options?: RequestInit): Promise<void> => {
+export const invalidateDanceListShareToken = async (id: string, options?: RequestInit): Promise<void> => {
   
-  return httpClient<void>(getInvalidateShareToken1Url(id),
+  return httpClient<void>(getInvalidateDanceListShareTokenUrl(id),
   {      
     ...options,
     method: 'DELETE'
@@ -457,7 +479,7 @@ export const addTrackToEntry = async (id: string,
 /**
  * @summary Get dance list collaborators
  */
-export const getGetCollaborators1Url = (id: string,) => {
+export const getGetDanceListCollaboratorsUrl = (id: string,) => {
 
 
   
@@ -465,9 +487,9 @@ export const getGetCollaborators1Url = (id: string,) => {
   return `/api/dance-lists/${id}/collaborators`
 }
 
-export const getCollaborators1 = async (id: string, options?: RequestInit): Promise<CollaboratorDto[]> => {
+export const getDanceListCollaborators = async (id: string, options?: RequestInit): Promise<CollaboratorDto[]> => {
   
-  return httpClient<CollaboratorDto[]>(getGetCollaborators1Url(id),
+  return httpClient<CollaboratorDto[]>(getGetDanceListCollaboratorsUrl(id),
   {      
     ...options,
     method: 'GET'
@@ -478,9 +500,9 @@ export const getCollaborators1 = async (id: string, options?: RequestInit): Prom
   
 
 /**
- * @summary Invite a collaborator to dance list
+ * @summary Invite a user or a group to a dance list
  */
-export const getInviteCollaborator1Url = (id: string,) => {
+export const getInviteDanceListCollaboratorUrl = (id: string,) => {
 
 
   
@@ -488,41 +510,16 @@ export const getInviteCollaborator1Url = (id: string,) => {
   return `/api/dance-lists/${id}/collaborators`
 }
 
-export const inviteCollaborator1 = async (id: string,
-    inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<InviteCollaborator1200> => {
+export const inviteDanceListCollaborator = async (id: string,
+    inviteCollaboratorRequest: InviteCollaboratorRequest, options?: RequestInit): Promise<CollaboratorDto> => {
   
-  return httpClient<InviteCollaborator1200>(getInviteCollaborator1Url(id),
+  return httpClient<CollaboratorDto>(getInviteDanceListCollaboratorUrl(id),
   {      
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       inviteCollaboratorRequest,)
-  }
-);}
-  
-
-/**
- * @summary Accept or reject a dance list invitation
- */
-export const getRespondToInvitation1Url = (id: string,) => {
-
-
-  
-
-  return `/api/dance-lists/${id}/collaborators/respond`
-}
-
-export const respondToInvitation1 = async (id: string,
-    respondToInvitationRequest: RespondToInvitationRequest, options?: RequestInit): Promise<RespondToInvitation1200> => {
-  
-  return httpClient<RespondToInvitation1200>(getRespondToInvitation1Url(id),
-  {      
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      respondToInvitationRequest,)
   }
 );}
   
@@ -541,6 +538,52 @@ export const getGetDanceListByShareTokenUrl = (shareToken: string,) => {
 export const getDanceListByShareToken = async (shareToken: string, options?: RequestInit): Promise<DanceListDto> => {
   
   return httpClient<DanceListDto>(getGetDanceListByShareTokenUrl(shareToken),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get pending dance list invitations for the current user
+ */
+export const getGetDanceListInvitationsUrl = () => {
+
+
+  
+
+  return `/api/dance-lists/invitations`
+}
+
+export const getDanceListInvitations = async ( options?: RequestInit): Promise<DanceListInvitationDto[]> => {
+  
+  return httpClient<DanceListInvitationDto[]>(getGetDanceListInvitationsUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get the dance lists the current user can add dances to
+ */
+export const getGetEditableDanceListsUrl = () => {
+
+
+  
+
+  return `/api/dance-lists/editable`
+}
+
+export const getEditableDanceLists = async ( options?: RequestInit): Promise<DanceList[]> => {
+  
+  return httpClient<DanceList[]>(getGetEditableDanceListsUrl(),
   {      
     ...options,
     method: 'GET'

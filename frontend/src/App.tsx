@@ -53,6 +53,7 @@ import { DancePage } from '@/pages/DancePage';
 import { GroupsPage } from '@/pages/GroupsPage';
 import { DanceListsPage } from '@/pages/DanceListsPage';
 import DanceListPage from '@/pages/DanceListPage';
+import { DanceListSettingsPage } from '@/pages/DanceListSettingsPage';
 import { GroupPage } from '@/pages/GroupPage';
 import { GroupSettingsPage } from '@/pages/GroupSettingsPage';
 import { MyLibraryPage } from '@/pages/MyLibraryPage';
@@ -105,6 +106,15 @@ export function App() {
                         <Route path="/groups" element={<GroupsPage />} />
                         <Route path="/dance-lists" element={<DanceListsPage />} />
                         <Route path="/dance-lists/:id" element={<DanceListPage />} />
+                        <Route path="/dance-lists/shared/:token" element={<DanceListPage />} />
+                        <Route
+                          path="/dance-lists/:id/settings"
+                          element={
+                            <ProtectedRoute>
+                              <DanceListSettingsPage />
+                            </ProtectedRoute>
+                          }
+                        />
                         <Route path="/groups/:id" element={<GroupPage />} />
                         <Route
                           path="/groups/:id/settings"
