@@ -106,6 +106,7 @@ export function App() {
                         <Route path="/groups" element={<GroupsPage />} />
                         <Route path="/dance-lists" element={<DanceListsPage />} />
                         <Route path="/dance-lists/:id" element={<DanceListPage />} />
+                        <Route path="/dance-lists/shared/:token" element={<DanceListPage />} />
                         <Route
                           path="/dance-lists/:id/settings"
                           element={

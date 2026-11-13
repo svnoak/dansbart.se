@@ -650,6 +650,19 @@ public class TestDataFactory {
         return saveDanceListCollaborator(danceListId, user, permission, "pending");
     }
 
+    /**
+     * Add a group collaboration on a dance list, with no user_id.
+     */
+    public DanceListCollaborator addDanceListGroupCollaborator(String danceListId, Group group, String permission, String status) {
+        DanceListCollaborator collab = DanceListCollaborator.builder()
+            .danceListId(java.util.UUID.fromString(danceListId))
+            .groupId(group.getId())
+            .permission(permission)
+            .status(status)
+            .build();
+        return danceListCollaboratorJooqRepository.save(collab);
+    }
+
     private DanceListCollaborator saveDanceListCollaborator(String danceListId, User user, String permission, String status) {
         DanceListCollaborator collab = DanceListCollaborator.builder()
             .danceListId(java.util.UUID.fromString(danceListId))

@@ -14,6 +14,7 @@ import {
 } from '@/icons';
 import { getInvitations } from '@/api/generated/playlists/playlists';
 import { getGroupInvitations } from '@/api/generated/groups/groups';
+import { getDanceListInvitations } from '@/api/generated/dance-lists/dance-lists';
 import { useUnreviewedContributionCount } from '@/hooks/useUnreviewedContributionCount';
 import { useNewFeature } from '@/hooks/useNewFeature';
 import { NewLabel } from '@/ui';
@@ -106,6 +107,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { isAuthenticated, user } = useAuth();
   const [invitationCount, setInvitationCount] = useState(0);
   const [groupInvitationCount, setGroupInvitationCount] = useState(0);
+  const [danceListInvitationCount, setDanceListInvitationCount] = useState(0);
   const newContributionCount = useUnreviewedContributionCount(user?.role === 'ADMIN');
 
   useEffect(() => {
@@ -117,6 +119,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       })
       .catch(() => {
         if (!cancelled) setInvitationCount(0);
+      });
+    getDanceListInvitations()
+      .then((invitations) => {
+        if (!cancelled) setDanceListInvitationCount(invitations.length);
+      })
+      .catch(() => {
+        if (!cancelled) setDanceListInvitationCount(0);
       });
     getGroupInvitations()
       .then((invitations) => {
@@ -199,6 +208,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         active={isDanceLists}
         onClick={onNavigate}
         icon={<QueueListIcon className="h-5 w-5" aria-hidden />}
+        badge={danceListInvitationCount}
       >
         Danslistor
       </NavLink>

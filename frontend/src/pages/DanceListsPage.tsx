@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getMyDanceLists, createDanceList } from '@/api/generated/dance-lists/dance-lists';
+import {
+  getMyDanceLists,
+  createDanceList,
+  getDanceListInvitations,
+  respondToDanceListInvitation,
+} from '@/api/generated/dance-lists/dance-lists';
 import type { DanceList } from '@/api/models/danceList';
+import type { DanceListInvitationDto } from '@/api/models/danceListInvitationDto';
 import { QueueListIcon, PlusIcon, ChevronRightIcon } from '@/icons';
-import { Button, Card, EmptyState, InlineError, LoadError, RowSkeleton, SectionTitle } from '@/ui';
+import { Button, Card, EmptyState, InlineError, LoadError, RowSkeleton, SectionTitle, toast } from '@/ui';
 import { useAuth } from '@/auth/useAuth';
 
 const PRIMARY_LINK_CLASS =
@@ -137,6 +143,8 @@ export function DanceListsPage() {
         />
       )}
 
+      {isAuthenticated && <DanceListInvitations onAccepted={load} />}
+
       {isAuthenticated && (
         <section className="space-y-3" aria-labelledby="my-dance-lists-title">
           <SectionTitle id="my-dance-lists-title">Mina danslistor</SectionTitle>
@@ -167,6 +175,87 @@ export function DanceListsPage() {
         </section>
       )}
     </div>
+  );
+}
+
+/** Invitations to other people's dance lists, answered here. Shows nothing when there are none. */
+function DanceListInvitations({ onAccepted }: { onAccepted: () => void }) {
+  const [invitations, setInvitations] = useState<DanceListInvitationDto[]>([]);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [respondErrors, setRespondErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getDanceListInvitations({ signal: controller.signal })
+      .then((invs) => setInvitations(invs ?? []))
+      .catch(() => {
+        if (!controller.signal.aborted) setInvitations([]);
+      });
+    return () => controller.abort();
+  }, []);
+
+  async function handleRespond(invitationId: string, accept: boolean) {
+    setRespondingId(invitationId);
+    setRespondErrors((prev) => {
+      const next = { ...prev };
+      delete next[invitationId];
+      return next;
+    });
+    try {
+      await respondToDanceListInvitation(invitationId, { accept });
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+      toast(accept ? 'Inbjudan accepterad' : 'Inbjudan avböjd');
+      if (accept) onAccepted();
+    } catch {
+      setRespondErrors((prev) => ({ ...prev, [invitationId]: 'Det gick inte att svara på inbjudan.' }));
+    } finally {
+      setRespondingId(null);
+    }
+  }
+
+  if (invitations.length === 0) return null;
+
+  return (
+    <section className="space-y-3" aria-labelledby="dance-list-invitations-title">
+      <SectionTitle id="dance-list-invitations-title">Inbjudningar</SectionTitle>
+      <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]">
+        {invitations.map((inv) => (
+          <li key={inv.id} className="space-y-2 border-b border-[rgb(var(--color-border))] px-4 py-3 last:border-b-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text-muted))]"
+                aria-hidden
+              >
+                <QueueListIcon className="h-5 w-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-bold text-[rgb(var(--color-text))]">
+                  {inv.danceListName ?? 'Okänd danslista'}
+                </p>
+                <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">
+                  Inbjuden av {inv.invitedByDisplayName ?? 'okänd'}
+                  {inv.permission && <span> · {inv.permission === 'edit' ? 'Redigera' : 'Se'}</span>}
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button size="sm" disabled={respondingId === inv.id} onClick={() => handleRespond(inv.id!, true)}>
+                  Acceptera
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={respondingId === inv.id}
+                  onClick={() => handleRespond(inv.id!, false)}
+                >
+                  Avböj
+                </Button>
+              </div>
+            </div>
+            <InlineError>{inv.id ? respondErrors[inv.id] : null}</InlineError>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

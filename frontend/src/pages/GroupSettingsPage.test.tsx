@@ -30,6 +30,8 @@ vi.mock('@/api/generated/groups/groups', () => ({
   removeMember: (...args: unknown[]) => removeMember(...args),
   getGroupPlaylistInvitations: (...args: unknown[]) => getGroupPlaylistInvitations(...args),
   respondToGroupPlaylistInvitation: (...args: unknown[]) => respondToGroupPlaylistInvitation(...args),
+  getGroupDanceListInvitations: () => Promise.resolve([]),
+  respondToGroupDanceListInvitation: vi.fn(),
 }));
 
 vi.mock('@/auth/useAuth', () => ({

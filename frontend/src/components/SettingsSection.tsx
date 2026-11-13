@@ -11,7 +11,7 @@ export interface SettingsSectionProps {
 /** One settings section: heading and explanation on the left, the controls in a card on the right. */
 export function SettingsSection({ title, description, danger = false, children }: SettingsSectionProps) {
   return (
-    <section className="grid gap-4 border-t border-[rgb(var(--color-border))] pt-6 md:grid-cols-[260px_minmax(0,1fr)] md:gap-8">
+    <section className="grid grid-cols-[minmax(0,1fr)] gap-4 border-t border-[rgb(var(--color-border))] pt-6 md:grid-cols-[260px_minmax(0,1fr)] md:gap-8">
       <div className="space-y-1">
         <h2
           className={`text-lg font-bold ${

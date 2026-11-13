@@ -15,6 +15,11 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
   getInvitations: (...args: unknown[]) => getInvitations(...args),
 }));
 
+const getDanceListInvitations = vi.fn();
+vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
+  getDanceListInvitations: (...args: unknown[]) => getDanceListInvitations(...args),
+}));
+
 vi.mock('@/api/generated/groups/groups', () => ({
   getGroupInvitations: (...args: unknown[]) => getGroupInvitations(...args),
 }));
@@ -43,6 +48,8 @@ describe('Sidebar', () => {
     useAuth.mockReset();
     getInvitations.mockResolvedValue([]);
     getGroupInvitations.mockResolvedValue([]);
+    getDanceListInvitations.mockReset();
+    getDanceListInvitations.mockResolvedValue([]);
     countUnreviewedContributions.mockReset();
     countUnreviewedContributions.mockResolvedValue({ tracks: 0, styles: 0 });
     useAuth.mockReturnValue(loggedInAuthValue({}));

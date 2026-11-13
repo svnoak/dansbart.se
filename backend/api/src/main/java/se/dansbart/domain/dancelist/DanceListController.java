@@ -7,8 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.DanceListDto;
 import se.dansbart.dto.DanceListEntryDto;
+import se.dansbart.dto.DanceListInvitationDto;
 
 import java.net.URI;
 import java.util.List;
@@ -23,9 +25,32 @@ public class DanceListController {
     private final DanceListService danceListService;
 
     @GetMapping
-    @Operation(summary = "Get current user's dance lists")
+    @Operation(summary = "Get the dance lists the current user owns, or sees through a group or a collaboration")
     public ResponseEntity<List<DanceList>> getMyDanceLists(@AuthenticationPrincipal UUID userId) {
-        return ResponseEntity.ok(danceListService.findByUserId(userId));
+        return ResponseEntity.ok(danceListService.findVisibleToUser(userId));
+    }
+
+    @GetMapping("/editable")
+    @Operation(operationId = "getEditableDanceLists", summary = "Get the dance lists the current user can add dances to")
+    public ResponseEntity<List<DanceList>> getEditableDanceLists(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(danceListService.findEditableByUser(userId));
+    }
+
+    @GetMapping("/invitations")
+    @Operation(operationId = "getDanceListInvitations", summary = "Get pending dance list invitations for the current user")
+    public ResponseEntity<List<DanceListInvitationDto>> getInvitations(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(danceListService.getPendingInvitations(userId));
+    }
+
+    @PutMapping("/invitations/{invitationId}")
+    @Operation(operationId = "respondToDanceListInvitation", summary = "Accept or reject a dance list invitation")
+    public ResponseEntity<Void> respondToInvitation(
+            @PathVariable UUID invitationId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody RespondToInvitationRequest request) {
+        return danceListService.respondToInvitation(invitationId, userId, request.accept())
+            .<ResponseEntity<Void>>map(collab -> ResponseEntity.ok().build())
+            .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @GetMapping("/{id}")
@@ -149,7 +174,7 @@ public class DanceListController {
     }
 
     @GetMapping("/share/{shareToken}")
-    @Operation(summary = "Get dance list by share token")
+    @Operation(operationId = "getDanceListByShareToken", summary = "Get dance list by share token")
     public ResponseEntity<DanceListDto> getDanceListByShareToken(@PathVariable String shareToken) {
         return danceListService.findByShareTokenAsDto(shareToken)
             .map(ResponseEntity::ok)
@@ -157,58 +182,41 @@ public class DanceListController {
     }
 
     @PostMapping("/{id}/collaborators")
-    @Operation(summary = "Invite a collaborator to dance list")
-    public ResponseEntity<?> inviteCollaborator(
+    @Operation(operationId = "inviteDanceListCollaborator", summary = "Invite a user or a group to a dance list")
+    public ResponseEntity<CollaboratorDto> inviteCollaborator(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody InviteCollaboratorRequest request) {
-        return danceListService.inviteCollaborator(id, userId, request.userId(), request.permission())
-            .map(ResponseEntity::ok)
+        return danceListService.inviteCollaborator(id, userId, request.username(), request.groupName(), request.permission())
+            .map(collab -> ResponseEntity.ok(toCollaboratorDto(collab)))
             .orElse(ResponseEntity.status(409).build());
     }
 
     @GetMapping("/{id}/collaborators")
-    @Operation(summary = "Get dance list collaborators")
-    public ResponseEntity<List<se.dansbart.dto.CollaboratorDto>> getCollaborators(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
+    @Operation(operationId = "getDanceListCollaborators", summary = "Get dance list collaborators")
+    public ResponseEntity<List<CollaboratorDto>> getCollaborators(@PathVariable UUID id, @AuthenticationPrincipal UUID userId) {
         return danceListService.getCollaborators(id, userId)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/{id}/collaborators/respond")
-    @Operation(summary = "Accept or reject a dance list invitation")
-    public ResponseEntity<?> respondToInvitation(
+    @PutMapping("/{id}/collaborators/{collaboratorId}")
+    @Operation(operationId = "updateDanceListCollaborator", summary = "Update dance list collaborator permission")
+    public ResponseEntity<CollaboratorDto> updateCollaborator(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UUID userId,
-            @RequestBody RespondToInvitationRequest request) {
-        boolean hasInvitation = danceListService.respondToInvitation(id, userId, request.accept());
-        if (!hasInvitation) {
-            return ResponseEntity.notFound().build();
-        }
-        if (request.accept()) {
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.noContent().build();
-        }
-    }
-
-    @PutMapping("/{id}/collaborators/{userId}")
-    @Operation(summary = "Update dance list collaborator permission")
-    public ResponseEntity<?> updateCollaborator(
-            @PathVariable UUID id,
-            @PathVariable("userId") UUID collaboratorId,
+            @PathVariable UUID collaboratorId,
             @AuthenticationPrincipal UUID userId,
             @RequestBody UpdateCollaboratorRequest request) {
         return danceListService.updateCollaborator(id, userId, collaboratorId, request.permission())
-            .map(ResponseEntity::ok)
+            .map(collab -> ResponseEntity.ok(toCollaboratorDto(collab)))
             .orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{id}/collaborators/{userId}")
-    @Operation(summary = "Remove a collaborator from dance list")
+    @DeleteMapping("/{id}/collaborators/{collaboratorId}")
+    @Operation(operationId = "removeDanceListCollaborator", summary = "Remove a collaborator from dance list")
     public ResponseEntity<Void> removeCollaborator(
             @PathVariable UUID id,
-            @PathVariable("userId") UUID collaboratorId,
+            @PathVariable UUID collaboratorId,
             @AuthenticationPrincipal UUID userId) {
         if (danceListService.removeCollaborator(id, userId, collaboratorId)) {
             return ResponseEntity.noContent().build();
@@ -217,8 +225,8 @@ public class DanceListController {
     }
 
     @PostMapping("/{id}/share-token")
-    @Operation(summary = "Generate a share token for dance list")
-    public ResponseEntity<?> generateShareToken(
+    @Operation(operationId = "generateDanceListShareToken", summary = "Generate a share token for dance list")
+    public ResponseEntity<DanceList> generateShareToken(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId) {
         return danceListService.generateShareToken(id, userId)
@@ -227,7 +235,7 @@ public class DanceListController {
     }
 
     @DeleteMapping("/{id}/share-token")
-    @Operation(summary = "Invalidate the share token for dance list")
+    @Operation(operationId = "invalidateDanceListShareToken", summary = "Invalidate the share token for dance list")
     public ResponseEntity<Void> invalidateShareToken(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId) {
@@ -238,12 +246,24 @@ public class DanceListController {
     }
 
     @PutMapping("/{id}/transfer-ownership")
-    @Operation(summary = "Transfer dance list ownership to another user")
+    @Operation(operationId = "transferDanceListOwnership", summary = "Transfer dance list ownership to another user")
     public ResponseEntity<DanceList> transferOwnership(
             @PathVariable UUID id,
             @AuthenticationPrincipal UUID userId,
             @RequestBody TransferOwnershipRequest request) {
         return ResponseEntity.ok(danceListService.transferOwnership(id, userId, request.newOwnerId()));
+    }
+
+    private static CollaboratorDto toCollaboratorDto(DanceListCollaborator collab) {
+        return CollaboratorDto.builder()
+            .id(collab.getId())
+            .userId(collab.getUserId())
+            .groupId(collab.getGroupId())
+            .permission(collab.getPermission())
+            .status(collab.getStatus())
+            .invitedAt(collab.getInvitedAt())
+            .acceptedAt(collab.getAcceptedAt())
+            .build();
     }
 
     public record CreateDanceListRequest(String name, String description, Boolean isPublic, UUID groupId) {}
@@ -254,7 +274,7 @@ public class DanceListController {
     public record RenameEntryRequest(String name) {}
     public record AddTrackRequest(UUID trackId) {}
     public record ReorderTracksRequest(List<UUID> trackIds) {}
-    public record InviteCollaboratorRequest(UUID userId, String permission) {}
+    public record InviteCollaboratorRequest(String username, String groupName, String permission) {}
     public record UpdateCollaboratorRequest(String permission) {}
     public record RespondToInvitationRequest(boolean accept) {}
     public record TransferOwnershipRequest(UUID newOwnerId) {}

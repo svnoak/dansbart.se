@@ -14,7 +14,7 @@ const httpClient = vi.fn();
 const getStyleOverview = vi.fn();
 const getPrimaryTrack = vi.fn();
 const getDanceTracks = vi.fn();
-const getMyDanceLists = vi.fn();
+const getEditableDanceLists = vi.fn();
 const addEntry = vi.fn();
 const createDanceList = vi.fn();
 const useAuth = vi.fn();
@@ -34,7 +34,7 @@ vi.mock('@/api/generated/dances/dances', () => ({
 }));
 
 vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
-  getMyDanceLists: (...args: unknown[]) => getMyDanceLists(...args),
+  getEditableDanceLists: (...args: unknown[]) => getEditableDanceLists(...args),
   addEntry: (...args: unknown[]) => addEntry(...args),
   createDanceList: (...args: unknown[]) => createDanceList(...args),
 }));
@@ -65,7 +65,7 @@ describe('DancesPage', () => {
     getStyleOverview.mockReset();
     getPrimaryTrack.mockReset();
     getDanceTracks.mockReset();
-    getMyDanceLists.mockReset();
+    getEditableDanceLists.mockReset();
     addEntry.mockReset();
     createDanceList.mockReset();
     useAuth.mockReset();
@@ -205,12 +205,12 @@ describe('DancesPage', () => {
 
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain('Logga in först');
-    expect(getMyDanceLists).not.toHaveBeenCalled();
+    expect(getEditableDanceLists).not.toHaveBeenCalled();
   });
 
   it('adds a dance to one of the person\'s dance lists', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1' }));
-    getMyDanceLists.mockResolvedValue([{ id: 'list-1', name: 'Fredagsdansen' }]);
+    getEditableDanceLists.mockResolvedValue([{ id: 'list-1', name: 'Fredagsdansen' }]);
     addEntry.mockResolvedValue({ id: 'entry-1', danceId: 'dance-1', danceName: 'Familjevals från Ödsmål' });
 
     await renderPage();
@@ -239,7 +239,7 @@ describe('DancesPage', () => {
 
   it('creates a new dance list with the dance as its first entry', async () => {
     useAuth.mockReturnValue(loggedInAuthValue({ id: 'u1' }));
-    getMyDanceLists.mockResolvedValue([]);
+    getEditableDanceLists.mockResolvedValue([]);
     createDanceList.mockResolvedValue({ id: 'list-new', name: 'Lördag' });
     addEntry.mockResolvedValue({ id: 'entry-1', danceId: 'dance-1' });
 

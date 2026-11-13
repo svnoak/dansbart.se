@@ -570,6 +570,38 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/api/groups/{id}/dance-list-invitations/{invitationId}": {
+      "put": {
+        "tags": ["Groups"],
+        "summary": "Accept or reject a dance list invitation sent to the group",
+        "operationId": "respondToGroupDanceListInvitation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToPlaylistInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
     "/api/groups/invitations/{invitationId}": {
       "put": {
         "tags": ["Groups"],
@@ -744,7 +776,7 @@
       "put": {
         "tags": ["Dance Lists"],
         "summary": "Transfer dance list ownership to another user",
-        "operationId": "transferOwnership_1",
+        "operationId": "transferDanceListOwnership",
         "parameters": [
           {
             "name": "id",
@@ -909,11 +941,11 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
-    "/api/dance-lists/{id}/collaborators/{userId}": {
+    "/api/dance-lists/{id}/collaborators/{collaboratorId}": {
       "put": {
         "tags": ["Dance Lists"],
         "summary": "Update dance list collaborator permission",
-        "operationId": "updateCollaborator_1",
+        "operationId": "updateDanceListCollaborator",
         "parameters": [
           {
             "name": "id",
@@ -922,7 +954,7 @@
             "schema": { "type": "string", "format": "uuid" }
           },
           {
-            "name": "userId",
+            "name": "collaboratorId",
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
@@ -942,7 +974,9 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": { "schema": { "type": "object" } }
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CollaboratorDto" }
+              }
             }
           }
         }
@@ -950,7 +984,7 @@
       "delete": {
         "tags": ["Dance Lists"],
         "summary": "Remove a collaborator from dance list",
-        "operationId": "removeCollaborator_1",
+        "operationId": "removeDanceListCollaborator",
         "parameters": [
           {
             "name": "id",
@@ -959,12 +993,38 @@
             "schema": { "type": "string", "format": "uuid" }
           },
           {
-            "name": "userId",
+            "name": "collaboratorId",
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
           }
         ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/dance-lists/invitations/{invitationId}": {
+      "put": {
+        "tags": ["Dance Lists"],
+        "summary": "Accept or reject a dance list invitation",
+        "operationId": "respondToDanceListInvitation",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": { "200": { "description": "OK" } }
       }
     },
@@ -1350,6 +1410,63 @@
           }
         ],
         "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/stub/hidrive/oauth2/token": {
+      "post": {
+        "tags": ["hi-drive-stub-controller"],
+        "operationId": "token",
+        "parameters": [
+          {
+            "name": "grant_type",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "client_secret",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "refresh_token",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/tracks/{id}/structure": {
@@ -2347,7 +2464,7 @@
     "/api/dance-lists": {
       "get": {
         "tags": ["Dance Lists"],
-        "summary": "Get current user's dance lists",
+        "summary": "Get the dance lists the current user owns, or sees through a group or a collaboration",
         "operationId": "getMyDanceLists",
         "responses": {
           "200": {
@@ -2393,7 +2510,7 @@
       "post": {
         "tags": ["Dance Lists"],
         "summary": "Generate a share token for dance list",
-        "operationId": "generateShareToken_1",
+        "operationId": "generateDanceListShareToken",
         "parameters": [
           {
             "name": "id",
@@ -2406,7 +2523,9 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": { "schema": { "type": "object" } }
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DanceList" }
+              }
             }
           }
         }
@@ -2414,7 +2533,7 @@
       "delete": {
         "tags": ["Dance Lists"],
         "summary": "Invalidate the share token for dance list",
-        "operationId": "invalidateShareToken_1",
+        "operationId": "invalidateDanceListShareToken",
         "parameters": [
           {
             "name": "id",
@@ -2541,7 +2660,7 @@
       "get": {
         "tags": ["Dance Lists"],
         "summary": "Get dance list collaborators",
-        "operationId": "getCollaborators_1",
+        "operationId": "getDanceListCollaborators",
         "parameters": [
           {
             "name": "id",
@@ -2566,8 +2685,8 @@
       },
       "post": {
         "tags": ["Dance Lists"],
-        "summary": "Invite a collaborator to dance list",
-        "operationId": "inviteCollaborator_1",
+        "summary": "Invite a user or a group to a dance list",
+        "operationId": "inviteDanceListCollaborator",
         "parameters": [
           {
             "name": "id",
@@ -2590,40 +2709,9 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": { "schema": { "type": "object" } }
-            }
-          }
-        }
-      }
-    },
-    "/api/dance-lists/{id}/collaborators/respond": {
-      "post": {
-        "tags": ["Dance Lists"],
-        "summary": "Accept or reject a dance list invitation",
-        "operationId": "respondToInvitation_1",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RespondToInvitationRequest"
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CollaboratorDto" }
               }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": { "schema": { "type": "object" } }
             }
           }
         }
@@ -4342,6 +4430,132 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/stub/hidrive/client/decide": {
+      "get": {
+        "tags": ["hi-drive-stub-controller"],
+        "operationId": "decide",
+        "parameters": [
+          {
+            "name": "decision",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/stub/hidrive/client/authorize": {
+      "get": {
+        "tags": ["hi-drive-stub-controller"],
+        "operationId": "authorize",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "text/html": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/stub/hidrive/2.1/file": {
+      "get": {
+        "tags": ["hi-drive-stub-controller"],
+        "operationId": "file",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "type": "string", "format": "binary" } }
+            }
+          }
+        }
+      }
+    },
+    "/stub/hidrive/2.1/dir": {
+      "get": {
+        "tags": ["hi-drive-stub-controller"],
+        "operationId": "dir",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/sso/initiate": {
       "get": {
         "tags": ["mock-auth-controller"],
@@ -5072,6 +5286,36 @@
         }
       }
     },
+    "/api/groups/{id}/dance-list-invitations": {
+      "get": {
+        "tags": ["Groups"],
+        "summary": "Get pending dance list invitations for the group",
+        "operationId": "getGroupDanceListInvitations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DanceListInvitationDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/groups/public": {
       "get": {
         "tags": ["Groups"],
@@ -5560,6 +5804,48 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/DanceListDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dance-lists/invitations": {
+      "get": {
+        "tags": ["Dance Lists"],
+        "summary": "Get pending dance list invitations for the current user",
+        "operationId": "getDanceListInvitations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DanceListInvitationDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dance-lists/editable": {
+      "get": {
+        "tags": ["Dance Lists"],
+        "summary": "Get the dance lists the current user can add dances to",
+        "operationId": "getEditableDanceLists",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DanceList" }
+                }
               }
             }
           }
@@ -7747,6 +8033,21 @@
           }
         }
       },
+      "CollaboratorDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "groupId": { "type": "string", "format": "uuid" },
+          "groupName": { "type": "string" },
+          "permission": { "type": "string" },
+          "status": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "UpdateDanceStyleRequest": {
         "type": "object",
         "properties": {
@@ -8074,21 +8375,6 @@
         "properties": {
           "name": { "type": "string" },
           "description": { "type": "string" }
-        }
-      },
-      "CollaboratorDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "userId": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "displayName": { "type": "string" },
-          "groupId": { "type": "string", "format": "uuid" },
-          "groupName": { "type": "string" },
-          "permission": { "type": "string" },
-          "status": { "type": "string" },
-          "invitedAt": { "type": "string", "format": "date-time" },
-          "acceptedAt": { "type": "string", "format": "date-time" }
         }
       },
       "GroupSummaryDto": {
@@ -8565,6 +8851,18 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/LibrarySourceRefDto" }
           }
+        }
+      },
+      "DanceListInvitationDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "danceListId": { "type": "string", "format": "uuid" },
+          "danceListName": { "type": "string" },
+          "invitedByUserId": { "type": "string", "format": "uuid" },
+          "invitedByDisplayName": { "type": "string" },
+          "permission": { "type": "string" },
+          "invitedAt": { "type": "string", "format": "date-time" }
         }
       },
       "PageResponseGroupSummaryDto": {

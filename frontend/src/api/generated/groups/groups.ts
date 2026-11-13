@@ -7,6 +7,7 @@
 import type {
   CreateGroupPlaylistRequest,
   CreateGroupRequest,
+  DanceListInvitationDto,
   GetPublicGroupsParams,
   GroupDto,
   GroupInvitationDto,
@@ -176,6 +177,33 @@ export const removeMember = async (id: string,
   
 
 /**
+ * @summary Accept or reject a dance list invitation sent to the group
+ */
+export const getRespondToGroupDanceListInvitationUrl = (id: string,
+    invitationId: string,) => {
+
+
+  
+
+  return `/api/groups/${id}/dance-list-invitations/${invitationId}`
+}
+
+export const respondToGroupDanceListInvitation = async (id: string,
+    invitationId: string,
+    respondToPlaylistInvitationRequest: RespondToPlaylistInvitationRequest, options?: RequestInit): Promise<void> => {
+  
+  return httpClient<void>(getRespondToGroupDanceListInvitationUrl(id,invitationId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      respondToPlaylistInvitationRequest,)
+  }
+);}
+  
+
+/**
  * @summary Accept or reject a group invitation
  */
 export const getRespondToGroupInvitationUrl = (invitationId: string,) => {
@@ -311,6 +339,29 @@ export const getGetGroupPlaylistInvitationsUrl = (id: string,) => {
 export const getGroupPlaylistInvitations = async (id: string, options?: RequestInit): Promise<InvitationDto[]> => {
   
   return httpClient<InvitationDto[]>(getGetGroupPlaylistInvitationsUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+/**
+ * @summary Get pending dance list invitations for the group
+ */
+export const getGetGroupDanceListInvitationsUrl = (id: string,) => {
+
+
+  
+
+  return `/api/groups/${id}/dance-list-invitations`
+}
+
+export const getGroupDanceListInvitations = async (id: string, options?: RequestInit): Promise<DanceListInvitationDto[]> => {
+  
+  return httpClient<DanceListInvitationDto[]>(getGetGroupDanceListInvitationsUrl(id),
   {      
     ...options,
     method: 'GET'

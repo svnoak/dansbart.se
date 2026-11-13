@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   getDanceList,
+  getDanceListByShareToken,
   addEntry,
   removeEntry,
   renameEntry,
@@ -171,7 +172,10 @@ function formatTotalDuration(ms: number): string | null {
 }
 
 export default function DanceListPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId, token } = useParams<{ id?: string; token?: string }>();
+  // A share link shows the list read-only; the id then comes from the loaded list.
+  const [loadedId, setLoadedId] = useState<string | undefined>(undefined);
+  const id = routeId ?? loadedId;
   const { play } = usePlayer();
   const [danceList, setDanceList] = useState<DanceListDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -217,12 +221,15 @@ export default function DanceListPage() {
   const [showGuestCode, setShowGuestCode] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!routeId && !token) return;
     let cancelled = false;
     async function load() {
       try {
-        const data = await getDanceList(id as string);
-        if (!cancelled) setDanceList(data);
+        const data = routeId ? await getDanceList(routeId) : await getDanceListByShareToken(token as string);
+        if (!cancelled) {
+          setDanceList(data);
+          setLoadedId(data.id);
+        }
       } catch {
         if (!cancelled) setNotFound(true);
       } finally {
@@ -233,7 +240,7 @@ export default function DanceListPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [routeId, token]);
 
   useEffect(() => {
     if (activeSearch !== 'dance' || !danceQuery.trim()) {
@@ -625,7 +632,7 @@ export default function DanceListPage() {
             <p className="text-[15px] text-[rgb(var(--color-text-muted))]">
               {countLabel(entries.length, 'dans', 'danser')} · {countLabel(totalTracks, 'låt', 'låtar')}
               {durationLabel ? ` · ${durationLabel}` : ''}
-              {hasFullControl ? ` · ${danceList.isPublic ? 'Offentlig' : 'Privat'}` : ''}
+              {canManage ? ` · ${danceList.isPublic ? 'Offentlig' : 'Privat'}` : ''}
             </p>
             {canManage && (
               <div className="flex flex-wrap gap-2 pt-2">
@@ -642,7 +649,7 @@ export default function DanceListPage() {
                     {danceList.guestCode ? 'Visa koden' : 'Låt andra lägga till'}
                   </Button>
                 )}
-                {hasFullControl && (
+                {canManage && (
                   <Link
                     to={`/dance-lists/${id}/settings`}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"

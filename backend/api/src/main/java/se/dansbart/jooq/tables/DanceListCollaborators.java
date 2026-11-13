@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.jooq.Check;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
@@ -29,6 +30,7 @@ import org.jooq.TableField;
 import org.jooq.TableOptions;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
+import org.jooq.impl.Internal;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
@@ -36,6 +38,7 @@ import se.dansbart.jooq.Indexes;
 import se.dansbart.jooq.Keys;
 import se.dansbart.jooq.Public;
 import se.dansbart.jooq.tables.DanceLists.DanceListsPath;
+import se.dansbart.jooq.tables.Groups.GroupsPath;
 import se.dansbart.jooq.tables.Users.UsersPath;
 
 
@@ -73,7 +76,7 @@ public class DanceListCollaborators extends TableImpl<Record> {
     /**
      * The column <code>public.dance_list_collaborators.user_id</code>.
      */
-    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<Record, UUID> USER_ID = createField(DSL.name("user_id"), SQLDataType.UUID, this, "");
 
     /**
      * The column <code>public.dance_list_collaborators.permission</code>.
@@ -99,6 +102,11 @@ public class DanceListCollaborators extends TableImpl<Record> {
      * The column <code>public.dance_list_collaborators.accepted_at</code>.
      */
     public final TableField<Record, OffsetDateTime> ACCEPTED_AT = createField(DSL.name("accepted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+
+    /**
+     * The column <code>public.dance_list_collaborators.group_id</code>.
+     */
+    public final TableField<Record, UUID> GROUP_ID = createField(DSL.name("group_id"), SQLDataType.UUID, this, "");
 
     private DanceListCollaborators(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -171,7 +179,7 @@ public class DanceListCollaborators extends TableImpl<Record> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_DANCE_LIST_COLLABORATORS_DANCE_LIST, Indexes.IDX_DANCE_LIST_COLLABORATORS_STATUS, Indexes.IDX_DANCE_LIST_COLLABORATORS_USER);
+        return Arrays.asList(Indexes.IDX_DANCE_LIST_COLLABORATORS_DANCE_LIST, Indexes.IDX_DANCE_LIST_COLLABORATORS_GROUP, Indexes.IDX_DANCE_LIST_COLLABORATORS_STATUS, Indexes.IDX_DANCE_LIST_COLLABORATORS_USER);
     }
 
     @Override
@@ -181,12 +189,12 @@ public class DanceListCollaborators extends TableImpl<Record> {
 
     @Override
     public List<UniqueKey<Record>> getUniqueKeys() {
-        return Arrays.asList(Keys.UNIQUE_DANCE_LIST_USER_COLLABORATION);
+        return Arrays.asList(Keys.UNIQUE_DANCE_LIST_GROUP_COLLABORATION, Keys.UNIQUE_DANCE_LIST_USER_COLLABORATION);
     }
 
     @Override
     public List<ForeignKey<Record, ?>> getReferences() {
-        return Arrays.asList(Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_DANCE_LIST_ID_FKEY, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_USER_ID_FKEY, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_INVITED_BY_FKEY);
+        return Arrays.asList(Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_DANCE_LIST_ID_FKEY, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_USER_ID_FKEY, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_INVITED_BY_FKEY, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_GROUP_ID_FKEY);
     }
 
     private transient DanceListsPath _danceLists;
@@ -225,6 +233,25 @@ public class DanceListCollaborators extends TableImpl<Record> {
             _danceListCollaboratorsInvitedByFkey = new UsersPath(this, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_INVITED_BY_FKEY, null);
 
         return _danceListCollaboratorsInvitedByFkey;
+    }
+
+    private transient GroupsPath _groups;
+
+    /**
+     * Get the implicit join path to the <code>public.groups</code> table.
+     */
+    public GroupsPath groups() {
+        if (_groups == null)
+            _groups = new GroupsPath(this, Keys.DANCE_LIST_COLLABORATORS__DANCE_LIST_COLLABORATORS_GROUP_ID_FKEY, null);
+
+        return _groups;
+    }
+
+    @Override
+    public List<Check<Record>> getChecks() {
+        return Arrays.asList(
+            Internal.createCheck(this, DSL.name("dance_list_collaborators_collaborator_check"), "(((user_id IS NULL) <> (group_id IS NULL)))", true)
+        );
     }
 
     @Override

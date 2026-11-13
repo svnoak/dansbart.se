@@ -13,11 +13,15 @@ import * as toastEmitter from '@/ui/toastEmitter';
 
 const getMyDanceLists = vi.fn();
 const createDanceList = vi.fn();
+const getDanceListInvitations = vi.fn();
+const respondToDanceListInvitation = vi.fn();
 const useAuth = vi.fn();
 
 vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
   getMyDanceLists: () => getMyDanceLists(),
   createDanceList: (...args: unknown[]) => createDanceList(...args),
+  getDanceListInvitations: (...args: unknown[]) => getDanceListInvitations(...args),
+  respondToDanceListInvitation: (...args: unknown[]) => respondToDanceListInvitation(...args),
 }));
 
 vi.mock('@/auth/useAuth', () => ({
@@ -32,6 +36,9 @@ describe('DanceListsPage', () => {
   beforeEach(() => {
     toastSpy = vi.spyOn(toastEmitter, 'toast');
     getMyDanceLists.mockReset();
+    getDanceListInvitations.mockReset();
+    getDanceListInvitations.mockResolvedValue([]);
+    respondToDanceListInvitation.mockReset();
     createDanceList.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(loggedInAuthValue({}));
@@ -231,5 +238,28 @@ describe('DanceListsPage', () => {
     const alert = form!.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Det gick inte att skapa danslistan.');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('accepts an invitation and reloads the lists', async () => {
+    getMyDanceLists.mockResolvedValue([]);
+    getDanceListInvitations.mockResolvedValue([
+      { id: 'inv1', danceListId: 'dl9', danceListName: 'Kursens danser', invitedByDisplayName: 'Anna', permission: 'edit' },
+    ]);
+    respondToDanceListInvitation.mockResolvedValue(undefined);
+    await renderPage();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(document.body.textContent).toContain('Kursens danser');
+    expect(document.body.textContent).toContain('Inbjuden av Anna · Redigera');
+
+    await act(async () => {
+      getButtonByText('Acceptera')?.click();
+    });
+
+    expect(respondToDanceListInvitation).toHaveBeenCalledWith('inv1', { accept: true });
+    expect(getMyDanceLists).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).not.toContain('Kursens danser');
   });
 });
