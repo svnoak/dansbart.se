@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getGroup, removeMember, createGroupPlaylist } from '@/api/generated/groups/groups';
+import { createDanceList } from '@/api/generated/dance-lists/dance-lists';
 import type { GroupDto } from '@/api/models/groupDto';
 import { useAuth } from '@/auth/useAuth';
 import { useTheme } from '@/theme/useTheme';
@@ -8,7 +9,7 @@ import { getStyleColor } from '@/styles/danceStyleColors';
 import { canOpenGroupSettings, hasGroupPermission } from '@/utils/groupPermissions';
 import { describeGroupError } from '@/utils/describeGroupError';
 import { Badge, Button, Card, EmptyState, InlineError, RowSkeleton, toast } from '@/ui';
-import { ChevronLeftIcon, ChevronRightIcon, PlaylistIcon, PlusIcon, SettingsIcon, StarMarkIcon } from '@/icons';
+import { ChevronLeftIcon, ChevronRightIcon, PlaylistIcon, PlusIcon, QueueListIcon, SettingsIcon, StarMarkIcon } from '@/icons';
 
 const LIST_CLASS =
   'overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))]';
@@ -23,13 +24,117 @@ function initialOf(name: string | undefined): string {
   return (name ?? '').trim().charAt(0).toUpperCase() || '?';
 }
 
+interface CreateByNameFormProps {
+  inputId: string;
+  label: string;
+  submitLabel: string;
+  errorMessage: string;
+  onCreate: (name: string) => Promise<void>;
+  onClose: () => void;
+}
+
+function CreateByNameForm({ inputId, label, submitLabel, errorMessage, onCreate, onClose }: CreateByNameFormProps) {
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onCreate(name.trim());
+      onClose();
+    } catch {
+      setError(errorMessage);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
+        <div className="space-y-1.5">
+          <label htmlFor={inputId} className="block text-sm font-medium text-[rgb(var(--color-text))]">{label}</label>
+          <input
+            id={inputId}
+            value={name}
+            autoFocus
+            onChange={(e) => { setName(e.target.value); setError(null); }}
+            className={INPUT_CLASS}
+          />
+        </div>
+        <InlineError>{error}</InlineError>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={saving || !name.trim()}>{submitLabel}</Button>
+          <Button type="button" variant="ghost" disabled={saving} onClick={onClose}>Avbryt</Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+interface GroupListSectionProps {
+  titleId: string;
+  title: string;
+  rows: { id?: string; name?: string; secondLine: string }[];
+  linkBase: string;
+  fallbackName: string;
+  emptyIcon: ReactNode;
+  emptyTitle: string;
+  emptyHint?: string;
+  children?: ReactNode;
+}
+
+function GroupListSection({ titleId, title, rows, linkBase, fallbackName, emptyIcon, emptyTitle, emptyHint, children }: GroupListSectionProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const color = getStyleColor(null);
+
+  return (
+    <section className="space-y-3" aria-labelledby={titleId}>
+      <h2 id={titleId} className="text-xl font-bold text-[rgb(var(--color-text))]">{title}</h2>
+
+      {children}
+
+      {rows.length > 0 ? (
+        <ul className={LIST_CLASS}>
+          {rows.map((row) => (
+            <li key={row.id} className={ROW_CLASS}>
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)]"
+                style={{ backgroundColor: isDark ? color.bgDark : color.bg, color: isDark ? color.textDark : color.text }}
+                aria-hidden
+              >
+                <StarMarkIcon className="h-5 w-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <Link to={`${linkBase}/${row.id}`} className="block truncate text-[15px] font-bold text-[rgb(var(--color-text))] hover:underline">
+                  {row.name}
+                </Link>
+                <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">{row.secondLine}</p>
+              </div>
+              <Link
+                to={`${linkBase}/${row.id}`}
+                aria-label={`Öppna ${row.name ?? fallbackName}`}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))]"
+              >
+                <ChevronRightIcon className="h-5 w-5" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyHint} />
+      )}
+    </section>
+  );
+}
+
 export function GroupPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-
   const [group, setGroup] = useState<GroupDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -37,9 +142,7 @@ export function GroupPage() {
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
   const [creatingPlaylist, setCreatingPlaylist] = useState(false);
-  const [playlistName, setPlaylistName] = useState('');
-  const [savingPlaylist, setSavingPlaylist] = useState(false);
-  const [createPlaylistError, setCreatePlaylistError] = useState<string | null>(null);
+  const [creatingDanceList, setCreatingDanceList] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -99,22 +202,19 @@ export function GroupPage() {
     }
   }
 
-  async function handleCreatePlaylist() {
-    if (!group?.id || !playlistName.trim()) return;
-    setSavingPlaylist(true);
-    setCreatePlaylistError(null);
-    try {
-      const created = await createGroupPlaylist(group.id, { name: playlistName.trim() });
-      setGroup((prev) =>
-        prev ? { ...prev, playlists: [...(prev.playlists ?? []), created] } : prev,
-      );
-      setPlaylistName('');
-      setCreatingPlaylist(false);
-    } catch {
-      setCreatePlaylistError('Det gick inte att skapa spellistan.');
-    } finally {
-      setSavingPlaylist(false);
-    }
+  async function handleCreatePlaylist(name: string) {
+    const groupId = group?.id;
+    if (!groupId) return;
+    const created = await createGroupPlaylist(groupId, { name });
+    setGroup((prev) => (prev ? { ...prev, playlists: [...(prev.playlists ?? []), created] } : prev));
+  }
+
+  async function handleCreateDanceList(name: string) {
+    const groupId = group?.id;
+    if (!groupId) return;
+    const { id, name: createdName, description, isPublic } = await createDanceList({ name, groupId });
+    const summary = { id, name: createdName, description, isPublic };
+    setGroup((prev) => (prev ? { ...prev, danceLists: [...(prev.danceLists ?? []), summary] } : prev));
   }
 
   const metaParts: string[] = [];
@@ -122,8 +222,6 @@ export function GroupPage() {
     metaParts.push(`${group.memberCount} ${group.memberCount === 1 ? 'medlem' : 'medlemmar'}`);
   }
   metaParts.push(group.isPublic ? 'Offentlig' : 'Privat');
-
-  const hasPlaylists = !!group.playlists && group.playlists.length > 0;
 
   return (
     <div className="space-y-8">
@@ -160,6 +258,12 @@ export function GroupPage() {
                     Ny spellista
                   </Button>
                 )}
+                {canManagePlaylists && !creatingDanceList && (
+                  <Button onClick={() => setCreatingDanceList(true)}>
+                    <PlusIcon className="h-4 w-4" aria-hidden />
+                    Ny danslista
+                  </Button>
+                )}
                 {canSeeSettings && (
                   <Link to={`/groups/${id}/settings`} className={OUTLINE_LINK_CLASS}>
                     <SettingsIcon className="h-4 w-4" aria-hidden />
@@ -190,113 +294,53 @@ export function GroupPage() {
         </div>
       </Card>
 
-      <section className="space-y-3" aria-labelledby="group-playlists-title">
-        <h2 id="group-playlists-title" className="text-xl font-bold text-[rgb(var(--color-text))]">
-          Gruppens spellistor
-        </h2>
-
+      <GroupListSection
+        titleId="group-playlists-title"
+        title="Gruppens spellistor"
+        rows={(group.playlists ?? []).map(({ id, name, description, trackCount = 0 }) => ({
+          id,
+          name,
+          secondLine: [`${trackCount} ${trackCount === 1 ? 'låt' : 'låtar'}`, description].filter(Boolean).join(' · '),
+        }))}
+        linkBase="/playlists"
+        fallbackName="spellistan"
+        emptyIcon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
+        emptyTitle="Gruppen har inga spellistor ännu."
+        emptyHint={canManagePlaylists ? 'Skapa den första med Ny spellista här ovanför.' : undefined}
+      >
         {canManagePlaylists && creatingPlaylist && (
-          <Card className="p-5">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleCreatePlaylist();
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="group-playlist-name"
-                  className="block text-sm font-medium text-[rgb(var(--color-text))]"
-                >
-                  Spellistans namn
-                </label>
-                <input
-                  id="group-playlist-name"
-                  value={playlistName}
-                  autoFocus
-                  onChange={(e) => {
-                    setPlaylistName(e.target.value);
-                    setCreatePlaylistError(null);
-                  }}
-                  className={INPUT_CLASS}
-                />
-              </div>
-              <InlineError>{createPlaylistError}</InlineError>
-              <div className="flex flex-wrap gap-2">
-                <Button type="submit" disabled={savingPlaylist || !playlistName.trim()}>
-                  Skapa spellista
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={savingPlaylist}
-                  onClick={() => {
-                    setCreatingPlaylist(false);
-                    setPlaylistName('');
-                    setCreatePlaylistError(null);
-                  }}
-                >
-                  Avbryt
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
-
-        {hasPlaylists ? (
-          <ul className={LIST_CLASS}>
-            {group.playlists!.map((playlist) => {
-              const color = getStyleColor(null);
-              const trackCount = playlist.trackCount ?? 0;
-              const second = [
-                `${trackCount} ${trackCount === 1 ? 'låt' : 'låtar'}`,
-                playlist.description,
-              ].filter(Boolean);
-              return (
-                <li key={playlist.id} className={ROW_CLASS}>
-                  <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)]"
-                    style={{
-                      backgroundColor: isDark ? color.bgDark : color.bg,
-                      color: isDark ? color.textDark : color.text,
-                    }}
-                    aria-hidden
-                  >
-                    <StarMarkIcon className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      to={`/playlists/${playlist.id}`}
-                      className="block truncate text-[15px] font-bold text-[rgb(var(--color-text))] hover:underline"
-                    >
-                      {playlist.name}
-                    </Link>
-                    <p className="truncate text-[13px] text-[rgb(var(--color-text-muted))]">
-                      {second.join(' · ')}
-                    </p>
-                  </div>
-                  <Link
-                    to={`/playlists/${playlist.id}`}
-                    aria-label={`Öppna ${playlist.name ?? 'spellistan'}`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))]"
-                  >
-                    <ChevronRightIcon className="h-5 w-5" aria-hidden />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <EmptyState
-            icon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
-            title="Gruppen har inga spellistor ännu."
-            description={
-              canManagePlaylists ? 'Skapa den första med Ny spellista här ovanför.' : undefined
-            }
+          <CreateByNameForm
+            inputId="group-playlist-name"
+            label="Spellistans namn"
+            submitLabel="Skapa spellista"
+            errorMessage="Det gick inte att skapa spellistan."
+            onCreate={handleCreatePlaylist}
+            onClose={() => setCreatingPlaylist(false)}
           />
         )}
-      </section>
+      </GroupListSection>
+
+      <GroupListSection
+        titleId="group-dance-lists-title"
+        title="Gruppens danslistor"
+        rows={(group.danceLists ?? []).map(({ id, name, description }) => ({ id, name, secondLine: description ?? '' }))}
+        linkBase="/dance-lists"
+        fallbackName="danslistan"
+        emptyIcon={<QueueListIcon className="h-7 w-7" aria-hidden />}
+        emptyTitle="Gruppen har inga danslistor ännu."
+        emptyHint={canManagePlaylists ? 'Skapa den första med Ny danslista här ovanför.' : undefined}
+      >
+        {canManagePlaylists && creatingDanceList && (
+          <CreateByNameForm
+            inputId="group-dance-list-name"
+            label="Danslistans namn"
+            submitLabel="Skapa danslista"
+            errorMessage="Det gick inte att skapa danslistan."
+            onCreate={handleCreateDanceList}
+            onClose={() => setCreatingDanceList(false)}
+          />
+        )}
+      </GroupListSection>
 
       {group.members && (
         <section className="space-y-3" aria-labelledby="group-members-title">

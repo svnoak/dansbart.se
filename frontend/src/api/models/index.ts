@@ -55,6 +55,7 @@ export * from './danceList';
 export * from './danceListDto';
 export * from './danceListEntryDto';
 export * from './danceListEntryTrack';
+export * from './danceListSummaryDto';
 export * from './danceStyleCreateRequest';
 export * from './danceStyleDto';
 export * from './danceTrack';

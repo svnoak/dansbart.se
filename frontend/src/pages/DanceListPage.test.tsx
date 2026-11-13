@@ -1206,4 +1206,20 @@ describe('DanceListPage', () => {
     expect(document.body.querySelector('button[aria-label^="Flytta dans"]')).toBeNull();
     expect(document.body.querySelector('button[aria-label^="Fler alternativ för"]')).toBeNull();
   });
+
+  it('shows the guest code button for a group-owned list when viewerHasFullControl is true', async () => {
+    getDanceList.mockResolvedValue({
+      ...mockDanceListFull,
+      owner: null,
+      ownerGroup: { id: 'group-1', name: 'Dansgruppen' },
+      viewerCanManage: true,
+      viewerHasFullControl: true,
+    });
+
+    await renderPage();
+
+    clickButton('Låt andra lägga till');
+    clickButton('Lägg till dans');
+    expect(document.body.querySelector('button[aria-label="Fler alternativ för Familjevals från Ödsmål"]')).not.toBeNull();
+  });
 });

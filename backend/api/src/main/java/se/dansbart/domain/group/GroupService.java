@@ -4,10 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.dansbart.domain.dancelist.DanceListJooqRepository;
 import se.dansbart.domain.playlist.PlaylistJooqRepository;
 import se.dansbart.domain.playlist.PlaylistService;
 import se.dansbart.domain.user.User;
 import se.dansbart.domain.user.UserJooqRepository;
+import se.dansbart.dto.DanceListSummaryDto;
 import se.dansbart.dto.GroupDto;
 import se.dansbart.dto.GroupInvitationDto;
 import se.dansbart.dto.GroupMemberDto;
@@ -36,6 +38,7 @@ public class GroupService {
     private final UserJooqRepository userJooqRepository;
     private final PlaylistJooqRepository playlistJooqRepository;
     private final PlaylistService playlistService;
+    private final DanceListJooqRepository danceListJooqRepository;
 
     @Transactional
     public GroupDto create(UUID creatorId, String name, String aboutUs, Boolean isPublic) {
@@ -342,6 +345,10 @@ public class GroupService {
                 .trackCount(pwc.trackCount())
                 .build())
             .collect(Collectors.toList());
+        List<DanceListSummaryDto> danceLists = danceListJooqRepository.findByGroupId(group.getId(), includeMembers).stream()
+            .map(list -> new DanceListSummaryDto(
+                list.getId(), list.getName(), list.getDescription(), list.getIsPublic()))
+            .collect(Collectors.toList());
         boolean canOpenSettings = viewerMembership
             .map(m -> m.canEditInfo() || m.canInviteMembers() || m.canRemoveMembers())
             .orElse(false);
@@ -358,6 +365,7 @@ public class GroupService {
             .updatedAt(group.getUpdatedAt())
             .members(members)
             .playlists(playlists)
+            .danceLists(danceLists)
             .memberCount(memberCount)
             .build();
     }
