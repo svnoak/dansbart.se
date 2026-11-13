@@ -20,7 +20,7 @@ REDIS_URL    ?= redis://localhost:6379/0
 
 PYTEST_ENV := DATABASE_URL="$(DATABASE_URL)" REDIS_URL="$(REDIS_URL)" TESTING=true
 
-.PHONY: help install check lint test fix \
+.PHONY: help install check lint test fix discourse-theme \
         lint-frontend lint-feature lint-audio \
         test-frontend test-api test-feature test-audio \
         migrations up down ps logs e2e
@@ -95,3 +95,8 @@ logs: ## Tail dev stack logs
 
 e2e: ## Run the Playwright end-to-end suite against the full stack
 	./e2e/run-e2e.sh
+
+discourse-theme: ## Zip the Discourse theme for upload (discourse/dansbart-theme.zip)
+	rm -f discourse/dansbart-theme.zip
+	cd discourse/theme && zip -qr ../dansbart-theme.zip . -x '.DS_Store' '*/.DS_Store'
+	@echo "Wrote discourse/dansbart-theme.zip"

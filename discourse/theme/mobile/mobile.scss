@@ -1,0 +1,40 @@
+// Mobile: the same cards with tighter gutters. Discourse already renders the
+// mobile topic list as one cell per row, so the feed needs fewer overrides.
+
+body.dansbart-feed #list-area {
+  .topic-list-item {
+    padding: 0.875rem;
+
+    .topic-item-metadata {
+      width: 100%;
+    }
+
+    .topic-item-stats .num.views {
+      display: none;
+    }
+  }
+}
+
+.dansbart-site-link .dansbart-site-link__label {
+  display: none;
+}
+
+.dansbart-composer-prompt {
+  margin-inline: 0.5rem;
+}
+
+.login-fullpage,
+.signup-fullpage {
+  padding: 0.75rem;
+
+  .login-body,
+  .signup-body {
+    padding: 1.5rem 1rem;
+  }
+
+  // On a phone Discourse already renders the social buttons above the
+  // email form, so only the sizing from common.scss applies here.
+  #login-buttons {
+    padding: 0;
+  }
+}
