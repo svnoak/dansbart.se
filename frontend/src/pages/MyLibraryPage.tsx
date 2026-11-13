@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { listMyTracks, deleteLibraryTrack } from '@/api/generated/library/library';
 import type { LibraryTrackDto } from '@/api/models/libraryTrackDto';
 import { TrackRow } from '@/components/TrackRow';
-import { canKeepHandles, pickAudioFiles } from '@/library/localHandles';
+import {
+  audioFilesFromDrop,
+  audioFilesOf,
+  canKeepFolderHandles,
+  canKeepHandles,
+  canPickFolder,
+  pickAudioFiles,
+  pickAudioFolder,
+  type PickedFile,
+} from '@/library/localHandles';
 import { deleteLocalCopy, requestPersistentStorage } from '@/library/localCopies';
 import { useLibraryImport, type ImportResult } from '@/library/useLibraryImport';
 import { Badge, Button, EmptyState, InlineError, LoadError, RowSkeleton, toast } from '@/ui';
@@ -25,6 +34,9 @@ export function MyLibraryPage() {
   const [entries, setEntries] = useState<LibraryTrackDto[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
+  const [pickError, setPickError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   const { importFiles, progress, error } = useLibraryImport();
 
   const load = useCallback(async () => {
@@ -40,7 +52,21 @@ export function MyLibraryPage() {
     listMyTracks().then(setEntries, () => setLoadFailed(true));
   }, []);
 
-  async function importAndReload(picked: Parameters<typeof importFiles>[0]) {
+  useEffect(() => {
+    // A file dropped beside the drop area would otherwise open in the tab and leave the page.
+    const keepPage = (e: globalThis.DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+    };
+    window.addEventListener('dragover', keepPage);
+    window.addEventListener('drop', keepPage);
+    return () => {
+      window.removeEventListener('dragover', keepPage);
+      window.removeEventListener('drop', keepPage);
+    };
+  }, []);
+
+  async function importAndReload(picked: PickedFile[]) {
+    setPickError(null);
     const result = await importFiles(picked);
     if (result.imported > 0 || result.skipped > 0) toast(importResultText(result));
     await load();
@@ -59,6 +85,53 @@ export function MyLibraryPage() {
     }
   }
 
+  /** Imports the audio files of a folder or a drop, or says that there were none. */
+  async function importFound(found: PickedFile[]) {
+    if (found.length === 0) {
+      setPickError('Det fanns inga ljudfiler i det du valde.');
+      return;
+    }
+    await importAndReload(found);
+  }
+
+  async function handleFolderClick() {
+    requestPersistentStorage();
+    if (!canKeepFolderHandles()) {
+      folderInput.current?.click();
+      return;
+    }
+    try {
+      const found = await pickAudioFolder();
+      if (found) await importFound(found);
+    } catch {
+      setPickError('Det gick inte att läsa mappen. Försök igen.');
+    }
+  }
+
+  const isFileDrag = (e: DragEvent) => e.dataTransfer.types.includes('Files');
+
+  function handleDragOver(e: DragEvent<HTMLDivElement>) {
+    if (!isFileDrag(e) || progress !== null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setDragging(true);
+  }
+
+  function handleDragLeave(e: DragEvent<HTMLDivElement>) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+  }
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    setDragging(false);
+    if (progress !== null) return;
+    requestPersistentStorage();
+    audioFilesFromDrop(e.dataTransfer).then(importFound, () =>
+      setPickError('Det gick inte att läsa filerna. Försök igen.'),
+    );
+  }
+
   async function remove(trackId: string) {
     try {
       await deleteLibraryTrack(trackId);
@@ -70,14 +143,37 @@ export function MyLibraryPage() {
     }
   }
 
-  const importButton = (
-    <Button disabled={progress !== null} onClick={() => void handleImportClick()}>
-      Importera låtar
-    </Button>
+  const importButtons = (
+    <div className="flex flex-wrap gap-2">
+      <Button disabled={progress !== null} onClick={() => void handleImportClick()}>
+        Importera låtar
+      </Button>
+      {canPickFolder() && (
+        <Button
+          variant="secondary"
+          disabled={progress !== null}
+          onClick={() => void handleFolderClick()}
+        >
+          Importera mapp
+        </Button>
+      )}
+    </div>
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div
+      className="relative mx-auto max-w-3xl space-y-6"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragging && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[var(--radius-lg)] border-2 border-dashed border-[rgb(var(--color-accent))] bg-[rgb(var(--color-bg-elevated)/0.92)]">
+          <p className="text-lg font-semibold text-[rgb(var(--color-text))]">
+            Släpp filer eller mappar för att importera
+          </p>
+        </div>
+      )}
       <div className="space-y-2">
         <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
           Mina låtar
@@ -88,7 +184,10 @@ export function MyLibraryPage() {
       </div>
 
       <div className="space-y-3">
-        {importButton}
+        {importButtons}
+        <p className="hidden text-sm text-[rgb(var(--color-text-muted))] md:block">
+          Du kan också dra filer eller mappar hit.
+        </p>
         <input
           ref={fileInput}
           type="file"
@@ -100,12 +199,24 @@ export function MyLibraryPage() {
             e.target.value = '';
           }}
         />
+        <input
+          ref={(input) => {
+            folderInput.current = input;
+            if (input) input.webkitdirectory = true;
+          }}
+          type="file"
+          hidden
+          onChange={(e) => {
+            void importFound(audioFilesOf(e.target.files ?? []));
+            e.target.value = '';
+          }}
+        />
         {progress && (
           <p role="status" className="text-sm text-[rgb(var(--color-text-muted))]">
             Importerar låt {progress.done + 1} av {progress.total}
           </p>
         )}
-        <InlineError>{error}</InlineError>
+        <InlineError>{error ?? pickError}</InlineError>
       </div>
 
       <div>

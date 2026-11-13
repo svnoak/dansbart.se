@@ -14,6 +14,14 @@ export interface ImportProgress {
   total: number;
 }
 
+const LISTED_FAILURES = 5;
+
+function failureText(names: string[]): string {
+  const listed = names.slice(0, LISTED_FAILURES).join(', ');
+  const rest = names.length - LISTED_FAILURES;
+  return rest > 0 ? `${listed} och ${rest} till` : listed;
+}
+
 /** Imports picked files one at a time. Only the hash and the tags leave the device. */
 export function useLibraryImport() {
   const [progress, setProgress] = useState<ImportProgress | null>(null);
@@ -45,7 +53,7 @@ export function useLibraryImport() {
     }
     setProgress(null);
     if (failedNames.length > 0) {
-      setError(`Det gick inte att importera: ${failedNames.join(', ')}. Försök igen.`);
+      setError(`Det gick inte att importera: ${failureText(failedNames)}. Försök igen.`);
     }
     return result;
   }, []);

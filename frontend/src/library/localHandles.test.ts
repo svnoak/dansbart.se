@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getLocalFileForTrack, saveLocalFile, pickAudioFiles } from './localHandles';
+import {
+  audioFilesFromDrop,
+  audioFilesOf,
+  getLocalFileForTrack,
+  pickAudioFiles,
+  pickAudioFolder,
+  saveLocalFile,
+} from './localHandles';
 import { installFakeOpfs } from '@/test/fakeOpfs';
 
 describe('localHandles', () => {
@@ -156,5 +163,108 @@ describe('localHandles local copies', () => {
     expect(await first.getLocalFileForTrack('t1')).toBe(file);
     const reloaded = await loadFresh();
     expect(await reloaded.getLocalFileForTrack('t1')).toBeUndefined();
+  });
+});
+
+function fileHandle(name: string) {
+  return { kind: 'file', name, getFile: async () => new File(['audio'], name) };
+}
+
+function directoryHandle(name: string, children: unknown[]) {
+  return {
+    kind: 'directory',
+    name,
+    async *values() {
+      yield* children;
+    },
+  };
+}
+
+describe('localHandles folders', () => {
+  const originalShowDirectoryPicker = window.showDirectoryPicker;
+
+  afterEach(() => {
+    window.showDirectoryPicker = originalShowDirectoryPicker;
+  });
+
+  it('picks the audio files of a folder and its subfolders with their handles', async () => {
+    const polska = fileHandle('polska.flac');
+    const vals = fileHandle('Vals.MP3');
+    window.showDirectoryPicker = vi.fn().mockResolvedValue(
+      directoryHandle('Musik', [
+        fileHandle('omslag.jpg'),
+        vals,
+        directoryHandle('Skiva 2', [polska, fileHandle('noter.pdf')]),
+      ]),
+    );
+
+    const picked = await pickAudioFolder();
+
+    expect(picked?.map(({ file }) => file.name)).toEqual(['polska.flac', 'Vals.MP3']);
+    expect(picked?.map(({ handle }) => handle)).toEqual([polska, vals]);
+  });
+
+  it('returns null when the person closes the folder picker', async () => {
+    window.showDirectoryPicker = vi
+      .fn()
+      .mockRejectedValue(new DOMException('Closed', 'AbortError'));
+
+    expect(await pickAudioFolder()).toBeNull();
+  });
+
+  it('keeps the audio files of a folder picked with a file input, in path order', () => {
+    const withPath = (name: string, path: string, type = '') => {
+      const file = new File(['audio'], name, { type });
+      Object.defineProperty(file, 'webkitRelativePath', { value: path });
+      return file;
+    };
+
+    const picked = audioFilesOf([
+      withPath('b.mp3', 'Musik/b.mp3'),
+      withPath('omslag.jpg', 'Musik/omslag.jpg', 'image/jpeg'),
+      withPath('spår', 'Musik/A/spår', 'audio/ogg'),
+    ]);
+
+    expect(picked.map(({ file }) => file.name)).toEqual(['spår', 'b.mp3']);
+  });
+
+  it('reads dropped files and folders, subfolders included', async () => {
+    const fileEntry = (name: string, fullPath: string) => ({
+      isFile: true,
+      isDirectory: false,
+      fullPath,
+      file: (resolve: (file: File) => void) => resolve(new File(['audio'], name)),
+    });
+    const directoryEntry = (children: unknown[]) => ({
+      isFile: false,
+      isDirectory: true,
+      createReader: () => {
+        let read = false;
+        return {
+          readEntries: (resolve: (batch: unknown[]) => void) => {
+            const batch = read ? [] : children;
+            read = true;
+            setTimeout(() => resolve(batch), 0);
+          },
+        };
+      },
+    });
+    const item = (entry: unknown) => ({ kind: 'file', webkitGetAsEntry: () => entry });
+    const dataTransfer = {
+      items: [
+        item(fileEntry('vals.mp3', '/vals.mp3')),
+        item(
+          directoryEntry([
+            fileEntry('omslag.jpg', '/Musik/omslag.jpg'),
+            fileEntry('polska.flac', '/Musik/polska.flac'),
+          ]),
+        ),
+        { kind: 'string', webkitGetAsEntry: () => null },
+      ],
+    } as unknown as DataTransfer;
+
+    const dropped = await audioFilesFromDrop(dataTransfer);
+
+    expect(dropped.map(({ file }) => file.name)).toEqual(['polska.flac', 'vals.mp3']);
   });
 });

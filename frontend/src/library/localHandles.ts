@@ -10,11 +10,19 @@ interface OpenFilePickerOptions {
   types: { description: string; accept: Record<string, string[]> }[];
 }
 
+/** The folder entries a directory handle yields. TypeScript's DOM library leaves out its async iterator. */
+interface IterableDirectoryHandle {
+  values(): AsyncIterable<FileSystemFileHandle | FileSystemDirectoryHandle>;
+}
+
 declare global {
   interface Window {
     showOpenFilePicker?: (options: OpenFilePickerOptions) => Promise<FileSystemFileHandle[]>;
+    showDirectoryPicker?: (options: { mode: 'read' }) => Promise<FileSystemDirectoryHandle>;
   }
 }
+
+const AUDIO_EXTENSIONS = ['.mp3', '.flac', '.m4a', '.ogg', '.wav'];
 
 const DATABASE_NAME = 'dansbart-library';
 const STORE_NAME = 'handles';
@@ -33,6 +41,112 @@ interface PermissionHandle {
 export class LocalFilePermissionDenied extends Error {}
 
 export const canKeepHandles = () => typeof window.showOpenFilePicker === 'function';
+
+/** True when the browser can pick a folder and keep a handle for each of its files. */
+export const canKeepFolderHandles = () => typeof window.showDirectoryPicker === 'function';
+
+/** True when the browser can pick a folder in some way. */
+export const canPickFolder = () =>
+  canKeepFolderHandles() || 'webkitdirectory' in HTMLInputElement.prototype;
+
+const hasAudioExtension = (name: string) =>
+  AUDIO_EXTENSIONS.some((extension) => name.toLowerCase().endsWith(extension));
+
+export const isAudioFile = (file: File) =>
+  file.type.startsWith('audio/') || hasAudioExtension(file.name);
+
+/** Keeps the audio files of a picked folder, in the order of their paths in the folder. */
+export function audioFilesOf(files: Iterable<File>): PickedFile[] {
+  return Array.from(files)
+    .filter(isAudioFile)
+    .sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name))
+    .map((file) => ({ file }));
+}
+
+async function collectFolder(
+  directory: FileSystemDirectoryHandle,
+  path: string,
+  found: (PickedFile & { path: string })[],
+) {
+  for await (const entry of (directory as unknown as IterableDirectoryHandle).values()) {
+    const entryPath = `${path}/${entry.name}`;
+    if (entry.kind === 'directory') {
+      await collectFolder(entry as FileSystemDirectoryHandle, entryPath, found);
+    } else if (hasAudioExtension(entry.name)) {
+      const handle = entry as FileSystemFileHandle;
+      found.push({ file: await handle.getFile(), handle, path: entryPath });
+    }
+  }
+}
+
+/**
+ * Picks a folder and returns its audio files with their handles, subfolders included.
+ * Returns null when the person closes the picker. Needs `canKeepFolderHandles()`.
+ */
+export async function pickAudioFolder(): Promise<PickedFile[] | null> {
+  let directory: FileSystemDirectoryHandle;
+  try {
+    directory = await window.showDirectoryPicker!({ mode: 'read' });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return null;
+    throw error;
+  }
+  const found: (PickedFile & { path: string })[] = [];
+  await collectFolder(directory, directory.name, found);
+  return found
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .map(({ file, handle }) => ({ file, handle }));
+}
+
+function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const all: FileSystemEntry[] = [];
+    // readEntries returns the entries in batches and an empty batch at the end.
+    const readBatch = () =>
+      reader.readEntries((batch) => {
+        if (batch.length === 0) {
+          resolve(all);
+          return;
+        }
+        all.push(...batch);
+        readBatch();
+      }, reject);
+    readBatch();
+  });
+}
+
+async function collectEntry(entry: FileSystemEntry, found: { file: File; path: string }[]) {
+  if (entry.isDirectory) {
+    const children = await readAllEntries((entry as FileSystemDirectoryEntry).createReader());
+    for (const child of children) await collectEntry(child, found);
+  } else if (entry.isFile) {
+    const file = await new Promise<File>((resolve, reject) =>
+      (entry as FileSystemFileEntry).file(resolve, reject),
+    );
+    found.push({ file, path: entry.fullPath });
+  }
+}
+
+/**
+ * Returns the audio files of dropped files and folders, subfolders included.
+ * Call it inside the drop handler: the browser empties the dropped items after the event.
+ */
+export function audioFilesFromDrop(dataTransfer: DataTransfer): Promise<PickedFile[]> {
+  const entries = Array.from(dataTransfer.items)
+    .filter((item) => item.kind === 'file')
+    .map((item) => item.webkitGetAsEntry?.() ?? item.getAsFile());
+  return (async () => {
+    const found: { file: File; path: string }[] = [];
+    for (const entry of entries) {
+      if (entry instanceof File) found.push({ file: entry, path: entry.name });
+      else if (entry) await collectEntry(entry, found);
+    }
+    return found
+      .filter(({ file }) => isAudioFile(file))
+      .sort((a, b) => a.path.localeCompare(b.path))
+      .map(({ file }) => ({ file }));
+  })();
+}
 
 function pickWithFileInput(): Promise<PickedFile[]> {
   return new Promise((resolve) => {
@@ -60,7 +174,7 @@ export async function pickAudioFiles(): Promise<PickedFile[]> {
       types: [
         {
           description: 'Ljudfiler',
-          accept: { 'audio/*': ['.mp3', '.flac', '.m4a', '.ogg', '.wav'] },
+          accept: { 'audio/*': AUDIO_EXTENSIONS },
         },
       ],
     });
