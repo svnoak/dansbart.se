@@ -39,7 +39,7 @@ services:
       - default
       - caddy_net
     labels:
-      caddy: beta.dansbart.se dansbart.se
+      caddy: dansbart.se
       caddy.reverse_proxy: "{{upstreams 80}}"
     restart: unless-stopped
 
