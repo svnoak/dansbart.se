@@ -342,39 +342,45 @@ describe('SearchPage', () => {
   it('a tempo word travels as a BPM range', async () => {
     await renderPageAt('/search');
 
-    const tempoGroup = document.body.querySelector('[role="group"][aria-label="Tempo"]');
-    expect(tempoGroup).not.toBeNull();
-    expect(getButtonByName('Visa alla tempon')?.getAttribute('aria-pressed')).toBe('true');
+    const tempo = () => getInputByLabel('Tempo') as unknown as HTMLSelectElement;
+    const chooseTempo = async (value: string) => {
+      await act(async () => {
+        tempo().value = value;
+        tempo().dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await settle();
+    };
+    expect(tempo()).not.toBeNull();
+    expect(tempo().value).toBe('');
 
-    await click(getButtonByName('Visa lagom tempo'));
+    await chooseTempo('Medium');
 
     expect(lastTracksParams().minBpm).toBe(110);
     expect(lastTracksParams().maxBpm).toBe(135);
-    expect(getButtonByName('Visa lagom tempo')?.getAttribute('aria-pressed')).toBe('true');
+    expect(tempo().value).toBe('Medium');
     expect(document.body.querySelector('h2')?.textContent).toContain('Lagom');
 
-    await click(getButtonByName('Visa långsamt tempo'));
+    await chooseTempo('Slow');
     expect(lastTracksParams().minBpm).toBeUndefined();
     expect(lastTracksParams().maxBpm).toBe(90);
 
-    await click(getButtonByName('Visa v. snabbt tempo'));
+    await chooseTempo('Turbo');
     expect(lastTracksParams().minBpm).toBe(165);
     expect(lastTracksParams().maxBpm).toBeUndefined();
 
-    await click(getButtonByName('Visa alla tempon'));
+    await chooseTempo('');
     expect(lastTracksParams().minBpm).toBeUndefined();
     expect(lastTracksParams().maxBpm).toBeUndefined();
   });
 
-  it('an exact BPM range from the URL shows no tempo word and counts as an advanced filter', async () => {
+  it('an exact BPM range from the URL shows as itself, not as a tempo word, and counts as an advanced filter', async () => {
     await renderPageAt('/search?tempo=true&minBpm=100&maxBpm=120');
 
     expect(lastTracksParams().minBpm).toBe(100);
     expect(lastTracksParams().maxBpm).toBe(120);
-    const pressed = Array.from(
-      document.body.querySelectorAll('[role="group"][aria-label="Tempo"] button[aria-pressed="true"]'),
-    );
-    expect(pressed).toHaveLength(0);
+    const tempo = getInputByLabel('Tempo') as unknown as HTMLSelectElement;
+    expect(tempo.value).toBe('custom');
+    expect(tempo.selectedOptions[0]?.textContent).toBe('100–120 BPM');
     expect(document.body.querySelector('h2')?.textContent).toContain('100–120 BPM');
 
     const more = getButtonByText('Fler filter');
