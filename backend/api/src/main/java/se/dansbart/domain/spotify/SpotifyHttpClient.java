@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,10 +45,17 @@ public class SpotifyHttpClient {
 
     public record SpotifyAlbum(String id, String name, int totalTracks) {}
     public record SpotifyTrack(String id, String name) {}
-    public record SpotifyTrackDetails(String id, String name, List<String> artistNames, Integer durationMs) {}
+    public record SpotifyTrackDetails(String id, String name, List<String> artistNames, Integer durationMs, String isrc) {}
+
+    /** Spotify did not hand out an access token, so no request could be made. */
+    public static class SpotifyUnavailableException extends RuntimeException {
+        public SpotifyUnavailableException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 
     /**
-     * Returns one track's name, artists and duration.
+     * Returns one track's name, artists, duration and ISRC.
      */
     public SpotifyTrackDetails getTrack(String trackId) {
         String token = getToken();
@@ -68,7 +76,9 @@ public class SpotifyHttpClient {
             }
         }
         Integer durationMs = track.get("duration_ms") instanceof Number n ? n.intValue() : null;
-        return new SpotifyTrackDetails((String) track.get("id"), (String) track.get("name"), artistNames, durationMs);
+        String isrc = track.get("external_ids") instanceof Map<?, ?> ids && ids.get("isrc") instanceof String s && !s.isBlank()
+                ? s : null;
+        return new SpotifyTrackDetails((String) track.get("id"), (String) track.get("name"), artistNames, durationMs, isrc);
     }
 
     /**
@@ -152,16 +162,23 @@ public class SpotifyHttpClient {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "client_credentials");
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = accountsClient.post()
-                .uri("/api/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .headers(h -> h.setBasicAuth(clientId, clientSecret))
-                .body(form)
-                .retrieve()
-                .body(Map.class);
+        Map<String, Object> response;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = accountsClient.post()
+                    .uri("/api/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .headers(h -> h.setBasicAuth(clientId, clientSecret))
+                    .body(form)
+                    .retrieve()
+                    .body(Map.class);
+            response = body;
+        } catch (RestClientException e) {
+            // Without this, a refused client id answers 400 like an unknown track would.
+            throw new SpotifyUnavailableException("Could not obtain a Spotify token: " + e.getMessage(), e);
+        }
 
-        if (response == null) throw new RuntimeException("Failed to obtain Spotify token");
+        if (response == null) throw new SpotifyUnavailableException("Spotify returned no token", null);
 
         accessToken = (String) response.get("access_token");
         int expiresIn = response.get("expires_in") instanceof Number n ? n.intValue() : 3600;

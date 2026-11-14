@@ -31,6 +31,7 @@ class TestFullPipelineSingleTrack:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = track_id
@@ -146,6 +147,7 @@ class TestFullPipelinePlaylist:
         """Test: All tracks from playlist are ingested and queued."""
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         created_tracks = []
 
@@ -194,6 +196,8 @@ class TestFullPipelinePlaylist:
 
         mock_repo.get_by_isrc.side_effect = get_by_isrc_side_effect
 
+        mock_repo.get_by_spotify_link.return_value = None
+
         new_track = MagicMock()
         new_track.id = uuid.uuid4()
         new_track.processing_status = "PENDING"
@@ -222,6 +226,7 @@ class TestFullPipelineAlbum:
         """Test: Album metadata is preserved throughout the pipeline."""
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         captured_album_data = []
 
@@ -257,6 +262,7 @@ class TestFullPipelineArtist:
         """Test: Full artist discography is ingested."""
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         track_count = [0]
 
@@ -382,6 +388,7 @@ class TestPipelineDataIntegrity:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = track_id
@@ -477,6 +484,7 @@ class TestPipelineErrorRecovery:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         processed_tracks = []
 
@@ -540,6 +548,7 @@ class TestPipelinePerformance:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()

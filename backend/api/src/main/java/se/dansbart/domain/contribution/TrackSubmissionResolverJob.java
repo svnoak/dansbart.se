@@ -17,8 +17,9 @@ import java.util.UUID;
 /**
  * Follows user-added tracks through ingest and analysis.
  *
- * QUEUED (Spotify): once the worker has created a track with this Spotify link, the
- * submission is linked to it and the submitter's style is stored on it. A track the
+ * QUEUED (Spotify, only submissions made before the API created Spotify tracks itself):
+ * once the worker has created a track with this Spotify link, the submission is linked
+ * to it and the submitter's style is stored on it. A track the
  * worker created after the submission counts as created by it; an older one was
  * already in the library. After {@link #QUEUED_TIMEOUT} without a track, the
  * submission is FAILED (for example when the worker rejected the track).

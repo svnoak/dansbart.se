@@ -158,8 +158,8 @@ describe('AddTrackPage', () => {
     expect(document.body.querySelector('[data-testid="track-row"]')?.textContent).toBe('Polska efter Pelle');
   });
 
-  it('has no track to show yet for a Spotify link that is still being fetched', async () => {
-    submitTrack.mockResolvedValue({ submissionId: 's2', status: 'QUEUED' });
+  it('shows a track added from a Spotify link at once', async () => {
+    submitTrack.mockResolvedValue({ submissionId: 's2', trackId: 't2', status: 'CREATED' });
     await render();
     await pasteLink('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC');
     await choose('Vilken dans passar låten till?', 'Vals');
@@ -168,9 +168,8 @@ describe('AddTrackPage', () => {
     });
     await wait();
 
-    expect(toast).toHaveBeenCalledWith(expect.stringContaining('Vi hämtar låten från Spotify'));
-    expect(getTrack).not.toHaveBeenCalled();
-    expect(document.body.querySelector('[data-testid="track-row"]')).toBeNull();
+    expect(toast).toHaveBeenCalledWith('Tack! Låten är tillagd och går att spela direkt.');
+    expect(getTrack).toHaveBeenCalledWith('t2');
   });
 
   it('says so when the library already has the track', async () => {
