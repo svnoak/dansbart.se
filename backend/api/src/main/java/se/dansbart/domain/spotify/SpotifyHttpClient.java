@@ -154,6 +154,119 @@ public class SpotifyHttpClient {
         return tracks;
     }
 
+    // ---------------------------------------------------------------- import
+
+    public record SpotifyArtistRef(String id, String name) {}
+
+    public record SpotifyAlbumRef(String id, String name, String coverUrl, String releaseDate,
+                                  List<SpotifyArtistRef> artists) {}
+
+    /** A track as an import stores it. The ISRC is null for tracks read from an album's track list. */
+    public record SpotifyImportTrack(String id, String name, Integer durationMs, String isrc,
+                                     List<SpotifyArtistRef> artists, SpotifyAlbumRef album) {}
+
+    public record SpotifyImportAlbum(SpotifyAlbumRef album, List<SpotifyImportTrack> tracks) {}
+
+    /** One track with its album and artists, for an import. */
+    public SpotifyImportTrack getTrackForImport(String trackId) {
+        Map<String, Object> track = getJson("/tracks/" + trackId);
+        return track != null ? toImportTrack(track, null) : null;
+    }
+
+    /**
+     * An album and all its tracks. The album's track list has no ISRCs, and Spotify no
+     * longer offers a batch lookup that would add them.
+     */
+    @SuppressWarnings("unchecked")
+    public SpotifyImportAlbum getAlbumForImport(String albumId) {
+        Map<String, Object> body = getJson("/albums/" + albumId);
+        if (body == null) return null;
+        SpotifyAlbumRef album = toAlbumRef(body);
+        List<SpotifyImportTrack> tracks = new ArrayList<>();
+        Map<String, Object> page = body.get("tracks") instanceof Map<?, ?> m ? (Map<String, Object>) m : null;
+        while (page != null) {
+            if (page.get("items") instanceof List<?> items) {
+                for (Object item : items) {
+                    if (item instanceof Map<?, ?> t && t.get("id") != null) {
+                        tracks.add(toImportTrack((Map<String, Object>) t, album));
+                    }
+                }
+            }
+            page = page.get("next") instanceof String next ? getJson(next.replace(API_URL, "")) : null;
+        }
+        return new SpotifyImportAlbum(album, tracks);
+    }
+
+    /** The music tracks of a playlist. Local files, episodes and removed tracks are left out. */
+    @SuppressWarnings("unchecked")
+    public List<SpotifyImportTrack> getPlaylistTracksForImport(String playlistId) {
+        List<SpotifyImportTrack> tracks = new ArrayList<>();
+        String path = "/playlists/" + playlistId + "/items?limit=50";
+        while (path != null) {
+            Map<String, Object> page = getJson(path);
+            if (page == null) break;
+            if (page.get("items") instanceof List<?> items) {
+                for (Object entry : items) {
+                    if (!(entry instanceof Map<?, ?> e) || Boolean.TRUE.equals(e.get("is_local"))) continue;
+                    // Spotify renamed the field from "track" to "item" in 2026.
+                    Object t = e.get("item") != null ? e.get("item") : e.get("track");
+                    if (t instanceof Map<?, ?> track && track.get("id") != null
+                            && (track.get("type") == null || "track".equals(track.get("type")))) {
+                        tracks.add(toImportTrack((Map<String, Object>) track, null));
+                    }
+                }
+            }
+            path = page.get("next") instanceof String next ? next.replace(API_URL, "") : null;
+        }
+        return tracks;
+    }
+
+    @SuppressWarnings("unchecked")
+    private SpotifyImportTrack toImportTrack(Map<String, Object> track, SpotifyAlbumRef album) {
+        SpotifyAlbumRef albumRef = album;
+        if (albumRef == null && track.get("album") instanceof Map<?, ?> a) {
+            albumRef = toAlbumRef((Map<String, Object>) a);
+        }
+        Integer durationMs = track.get("duration_ms") instanceof Number n ? n.intValue() : null;
+        String isrc = track.get("external_ids") instanceof Map<?, ?> ids && ids.get("isrc") instanceof String s && !s.isBlank()
+                ? s : null;
+        return new SpotifyImportTrack((String) track.get("id"), (String) track.get("name"), durationMs, isrc,
+                toArtistRefs(track.get("artists")), albumRef);
+    }
+
+    @SuppressWarnings("unchecked")
+    private SpotifyAlbumRef toAlbumRef(Map<String, Object> album) {
+        String cover = null;
+        if (album.get("images") instanceof List<?> images && !images.isEmpty()
+                && images.get(0) instanceof Map<?, ?> image && image.get("url") instanceof String url) {
+            cover = url;
+        }
+        return new SpotifyAlbumRef((String) album.get("id"), (String) album.get("name"), cover,
+                album.get("release_date") instanceof String d ? d : null, toArtistRefs(album.get("artists")));
+    }
+
+    private static List<SpotifyArtistRef> toArtistRefs(Object artists) {
+        List<SpotifyArtistRef> refs = new ArrayList<>();
+        if (artists instanceof List<?> list) {
+            for (Object a : list) {
+                if (a instanceof Map<?, ?> artist && artist.get("name") instanceof String name && !name.isBlank()) {
+                    refs.add(new SpotifyArtistRef(artist.get("id") instanceof String id ? id : null, name));
+                }
+            }
+        }
+        return refs;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getJson(String path) {
+        String token = getToken();
+        return apiClient.get()
+                .uri(path)
+                .header("Authorization", "Bearer " + token)
+                .retrieve()
+                .body(Map.class);
+    }
+
     private synchronized String getToken() {
         if (accessToken != null && Instant.now().isBefore(tokenExpiry)) {
             return accessToken;

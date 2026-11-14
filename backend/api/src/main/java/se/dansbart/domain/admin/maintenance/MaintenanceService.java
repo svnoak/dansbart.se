@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.dansbart.domain.admin.ArtistCrawlLogJooqRepository;
 import se.dansbart.domain.admin.RejectionLogJooqRepository;
+import se.dansbart.domain.spotify.SpotifyImportService;
 import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackDanceStyleJooqRepository;
 import se.dansbart.domain.track.TrackJooqRepository;
@@ -26,6 +27,7 @@ public class MaintenanceService {
     private final RejectionLogJooqRepository rejectionLogJooqRepository;
     private final StringRedisTemplate redisTemplate;
     private final TaskDispatcher taskDispatcher;
+    private final SpotifyImportService spotifyImportService;
 
     @Transactional
     public Map<String, Object> resetCrawlData() {
@@ -184,29 +186,25 @@ public class MaintenanceService {
         return result;
     }
 
-    @Transactional
+    /**
+     * Imports a Spotify playlist, album or artist into the library, in the API.
+     * See {@link SpotifyImportService}.
+     */
     public Map<String, Object> ingestResource(String resourceId, String resourceType) {
         if (resourceId == null || resourceId.isBlank()) {
             throw new IllegalArgumentException("resourceId is required");
         }
-        // Normalize and validate resource type
         String normalizedType = resourceType != null ? resourceType.toLowerCase() : "";
-        Set<String> validTypes = Set.of("playlist", "album", "artist");
-        if (!validTypes.contains(normalizedType)) {
-            throw new IllegalArgumentException("Invalid resourceType. Must be one of: " + String.join(", ", validTypes));
-        }
-
-        // Dispatch Spotify ingestion task (playlist, album, or artist) to light worker
-        String taskId = UUID.randomUUID().toString();
-        taskDispatcher.dispatchSpotifyIngest(normalizedType, resourceId);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("status", "queued");
-        result.put("taskId", taskId);
-        result.put("resourceId", resourceId);
-        result.put("resourceType", resourceType);
-        result.put("message", "Ingestion task queued");
-        return result;
+        SpotifyImportService.ImportResult result = switch (normalizedType) {
+            case "playlist" -> spotifyImportService.importPlaylist(resourceId);
+            case "album" -> spotifyImportService.importAlbum(resourceId);
+            case "artist" -> spotifyImportService.importArtist(resourceId);
+            default -> throw new IllegalArgumentException("Invalid resourceType. Must be one of: playlist, album, artist");
+        };
+        Map<String, Object> body = result.toResponse();
+        body.put("resourceId", resourceId);
+        body.put("resourceType", resourceType);
+        return body;
     }
 
     /**

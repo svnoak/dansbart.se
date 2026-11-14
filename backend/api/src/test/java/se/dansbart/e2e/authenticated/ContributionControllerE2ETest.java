@@ -25,9 +25,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -206,8 +203,6 @@ class ContributionControllerE2ETest extends AbstractE2ETest {
             assertThat(dsl.select(TRACK_SUBMISSIONS.STATUS).from(TRACK_SUBMISSIONS)
                 .where(TRACK_SUBMISSIONS.TRACK_ID.eq(trackId)).fetchOne(TRACK_SUBMISSIONS.STATUS)).isEqualTo("LINKED");
 
-            // The audio analysis is dispatched after the commit, which a test transaction never reaches.
-            verify(taskDispatcher, never()).dispatchSpotifyIngest(anyString(), anyString());
 
             mockMvc.perform(get("/api/tracks").param("mainStyle", "Polska"))
                 .andExpect(status().isOk())

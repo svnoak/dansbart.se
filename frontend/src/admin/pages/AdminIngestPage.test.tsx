@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { AdminIngestPage } from './AdminIngestPage';
 import { typeInto } from '@/test/typeInto';
 import * as toastEmitter from '@/admin/components/toastEmitter';
+import { ApiError } from '@/api/http-client';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -152,6 +153,37 @@ describe('AdminIngestPage', () => {
     const alert = panel.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Import misslyckades');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('says what the import added', async () => {
+    ingestSpotifyTrack.mockResolvedValue({ status: 'done', created: 1, existing: 0, failedAlbums: 0 });
+
+    await renderPage();
+    await act(async () => {
+      typeInto(getUrlInput(), 'spotify:track:1234567890abcdefghijkl');
+    });
+    await click(clickButton('Hämta från Spotify'));
+    await click(clickButton('Importera spår'));
+
+    expect(ingestSpotifyTrack).toHaveBeenCalledWith({ spotifyTrackId: '1234567890abcdefghijkl' });
+    expect(toastSpy).toHaveBeenCalledWith('1 låt tillagd.');
+  });
+
+  it('shows why the import failed when the API says so', async () => {
+    ingestSpotifyTrack.mockRejectedValue(
+      new ApiError('Unprocessable Entity', 422, 'Det gick inte att nå Spotify. Försök igen om en stund.'),
+    );
+
+    await renderPage();
+    await act(async () => {
+      typeInto(getUrlInput(), 'spotify:track:1234567890abcdefghijkl');
+    });
+    await click(clickButton('Hämta från Spotify'));
+    const importButton = clickButton('Importera spår');
+    await click(importButton);
+
+    const panel = closestWithText(importButton, 'Förhandsgranskning');
+    expect(panel.querySelector('[role="alert"]')?.textContent).toContain('Det gick inte att nå Spotify.');
   });
 
   it('shows the single-album import error inline in that album row, not as a toast', async () => {
