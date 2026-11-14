@@ -6,9 +6,15 @@ import {
   ingestSpotifyTrack,
 } from '@/api/generated/spotify-ingest/spotify-ingest';
 import { ingest } from '@/api/generated/admin-maintenance/admin-maintenance';
+import { ApiError } from '@/api/http-client';
 import { Badge, Button, Card, InlineError } from '@/ui';
 import { TextInput } from '@/admin/components/forms/TextInput';
 import { toast } from '@/admin/components/toastEmitter';
+import { importSummary } from '@/admin/importSummary';
+
+function errorText(e: unknown, fallback: string): string {
+  return e instanceof ApiError && e.detail ? e.detail : fallback;
+}
 
 interface PreviewItem {
   name: string;
@@ -118,21 +124,22 @@ export function AdminIngestPage() {
     setIngestError(null);
 
     try {
+      let result: unknown;
       if (previewType === 'track') {
-        await ingestSpotifyTrack({ spotifyTrackId: previewId });
+        result = await ingestSpotifyTrack({ spotifyTrackId: previewId });
       } else if (previewType === 'album') {
-        await ingestSpotifyAlbum({ spotifyAlbumId: previewId });
+        result = await ingestSpotifyAlbum({ spotifyAlbumId: previewId });
       } else if (previewType === 'artist' || previewType === 'playlist') {
-        await ingest(
+        result = await ingest(
           { resourceId: previewId, resourceType: previewType.toUpperCase() },
         );
       }
-      toast('Import startad');
+      toast(importSummary(result));
       addHistory(url, previewType ?? 'unknown', 'success');
       setPreview([]);
       setUrl('');
-    } catch {
-      setIngestError('Import misslyckades');
+    } catch (e) {
+      setIngestError(errorText(e, 'Import misslyckades'));
       addHistory(url, previewType ?? 'unknown', 'error');
     } finally {
       setIngesting(false);
@@ -147,11 +154,11 @@ export function AdminIngestPage() {
       return next;
     });
     try {
-      await ingestSpotifyAlbum({ spotifyAlbumId: albumId });
-      toast('Album-import startad');
+      const result = await ingestSpotifyAlbum({ spotifyAlbumId: albumId });
+      toast(importSummary(result));
       addHistory(`album:${albumId}`, 'album', 'success');
-    } catch {
-      setAlbumErrors((prev) => ({ ...prev, [albumId]: 'Album-import misslyckades' }));
+    } catch (e) {
+      setAlbumErrors((prev) => ({ ...prev, [albumId]: errorText(e, 'Album-import misslyckades') }));
       addHistory(`album:${albumId}`, 'album', 'error');
     } finally {
       setIngesting(false);
@@ -178,7 +185,7 @@ export function AdminIngestPage() {
         </h1>
         <p className="text-[15px] leading-relaxed text-[rgb(var(--color-text-muted))]">
           Hämta en artist, ett album, en låt eller en spellista från Spotify och lägg den i
-          biblioteket. Analysen av låtarna startar i bakgrunden.
+          biblioteket. Låtarna syns direkt. Analysen och sökningen efter en YouTube-video körs i bakgrunden.
         </p>
       </div>
 

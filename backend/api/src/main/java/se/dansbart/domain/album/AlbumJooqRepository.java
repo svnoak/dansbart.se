@@ -138,6 +138,17 @@ public class AlbumJooqRepository {
         return out;
     }
 
+    public Optional<Album> findBySpotifyId(String spotifyId) {
+        return dsl.selectFrom(ALBUMS)
+            .where(ALBUMS.SPOTIFY_ID.eq(spotifyId))
+            .fetchOptional()
+            .map(this::toAlbum);
+    }
+
+    public boolean hasTrack(UUID albumId, UUID trackId) {
+        return dsl.fetchExists(TRACK_ALBUMS, TRACK_ALBUMS.ALBUM_ID.eq(albumId).and(TRACK_ALBUMS.TRACK_ID.eq(trackId)));
+    }
+
     public Album insert(Album album) {
         if (album.getId() == null) {
             album.setId(UUID.randomUUID());
@@ -149,7 +160,7 @@ public class AlbumJooqRepository {
         return album;
     }
 
-    /** Insert a track–album link (for test fixtures). */
+    /** Links a track to an album. */
     public void insertTrackAlbum(UUID trackId, UUID albumId) {
         dsl.insertInto(TRACK_ALBUMS)
             .columns(TRACK_ALBUMS.ID, TRACK_ALBUMS.TRACK_ID, TRACK_ALBUMS.ALBUM_ID)

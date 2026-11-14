@@ -166,19 +166,6 @@ public class TaskDispatcher {
         log.info("Dispatched Spotify preview {} for {}", previewType, spotifyId);
     }
 
-    /**
-     * Dispatch Spotify ingestion task to the light worker.
-     * Used to ingest albums or tracks from Spotify.
-     */
-    public void dispatchSpotifyIngest(String resourceType, String spotifyId) {
-        String taskMessage = buildCeleryMessage(
-            "app.workers.tasks_light.spotify_ingest_task",
-            List.of(resourceType, spotifyId),
-            Map.of()
-        );
-        pushToQueue(LIGHT_QUEUE, taskMessage);
-        log.info("Dispatched Spotify ingest {} for {}", resourceType, spotifyId);
-    }
 
     /**
      * Dispatch model retrain task to the light worker (bypasses cooldown).
