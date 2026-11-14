@@ -6,6 +6,8 @@ on:
 
 jobs:
   check-issue-link:
+    # Dependency bots (Renovate, Dependabot) open PRs without an issue.
+    if: ${{ !endsWith(github.event.pull_request.user.login, '[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - name: Check PR body for issue reference
