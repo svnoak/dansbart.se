@@ -1,17 +1,25 @@
 package se.dansbart.domain.dancelist;
 
 import org.jooq.Condition;
+import org.jooq.Field;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.SelectConditionStep;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.jooq.impl.DSL.coalesce;
+import static org.jooq.impl.DSL.count;
+import static org.jooq.impl.DSL.field;
 import static se.dansbart.jooq.Tables.DANCE_LISTS;
+import static se.dansbart.jooq.Tables.DANCE_LIST_ENTRIES;
+import static se.dansbart.jooq.Tables.GROUPS;
+import static se.dansbart.jooq.Tables.USERS;
 import static se.dansbart.jooq.Tables.DANCE_LIST_COLLABORATORS;
 import static se.dansbart.jooq.Tables.GROUP_MEMBERS;
 
@@ -89,6 +97,28 @@ public class DanceListJooqRepository {
             ? DANCE_LISTS.GROUP_ID.eq(groupId)
             : DANCE_LISTS.GROUP_ID.eq(groupId).and(DANCE_LISTS.IS_PUBLIC.isTrue());
         return dsl.selectFrom(DANCE_LISTS).where(condition).orderBy(DANCE_LISTS.NAME.asc()).fetch(this::toDanceList);
+    }
+
+    /** A public dance list with its number of dances and the names of its owner. */
+    public record DanceListWithOwner(DanceList danceList, int entryCount, String groupName, String ownerDisplayName) {}
+
+    public List<DanceListWithOwner> findPublic() {
+        Field<Integer> entryCount = field(
+            dsl.select(count()).from(DANCE_LIST_ENTRIES).where(DANCE_LIST_ENTRIES.DANCE_LIST_ID.eq(DANCE_LISTS.ID))
+        ).as("entry_count");
+        Field<String> ownerName = coalesce(USERS.DISPLAY_NAME, USERS.USERNAME).as("owner_display_name");
+        return dsl.select(DANCE_LISTS.fields())
+            .select(entryCount, GROUPS.NAME.as("group_name"), ownerName)
+            .from(DANCE_LISTS)
+            .leftJoin(GROUPS).on(DANCE_LISTS.GROUP_ID.eq(GROUPS.ID))
+            .leftJoin(USERS).on(DANCE_LISTS.USER_ID.eq(USERS.ID))
+            .where(DANCE_LISTS.IS_PUBLIC.isTrue())
+            .orderBy(DANCE_LISTS.NAME.asc(), DANCE_LISTS.ID.asc())
+            .fetch(r -> new DanceListWithOwner(
+                toDanceList(r),
+                r.get("entry_count", Integer.class),
+                r.get("group_name", String.class),
+                r.get("owner_display_name", String.class)));
     }
 
     public DanceList insert(DanceList danceList) {

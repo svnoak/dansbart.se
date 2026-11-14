@@ -82,6 +82,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/groups/invitations").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/groups/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/playlists/public").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/dance-lists/public").permitAll()
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // Importing from Spotify adds public tracks, so only admins may do it.

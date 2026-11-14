@@ -5,12 +5,13 @@ import { getStyleOverview } from '@/api/generated/discovery/discovery';
 import { getArtists } from '@/api/generated/artists/artists';
 import { getPublicPlaylists } from '@/api/generated/playlists/playlists';
 import { getStats } from '@/api/generated/stats/stats';
+import { getPublicDanceLists, type DanceListListItemDto } from '@/api/manual/publicDanceLists';
 import type { StyleOverviewDto } from '@/api/models/styleOverviewDto';
 import type { Artist } from '@/api/models/artist';
 import type { PlaylistListItemDto } from '@/api/models/playlistListItemDto';
 import type { StatsDto } from '@/api/models/statsDto';
 import { StyleShortcutCard } from '@/components/StyleShortcutCard';
-import { ArtistCard, PlaylistShortcutCard } from '@/components';
+import { ArtistCard, DanceListShortcutCard, PlaylistShortcutCard } from '@/components';
 import { SectionTitle, Button, Card, LoadError, NewLabel, RowSkeleton } from '@/ui';
 import { MusicNoteIcon, PlusIcon, StarMarkIcon } from '@/icons';
 import { useAuth } from '@/auth/useAuth';
@@ -76,12 +77,15 @@ export function HomePage() {
   const [styles, setStyles] = useState<StyleOverviewDto[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistListItemDto[]>([]);
+  const [danceLists, setDanceLists] = useState<DanceListListItemDto[]>([]);
   const [loadingStyles, setLoadingStyles] = useState(true);
   const [loadingArtists, setLoadingArtists] = useState(true);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
+  const [loadingDanceLists, setLoadingDanceLists] = useState(true);
   const [stylesError, setStylesError] = useState<string | null>(null);
   const [artistsError, setArtistsError] = useState<string | null>(null);
   const [playlistsError, setPlaylistsError] = useState<string | null>(null);
+  const [danceListsError, setDanceListsError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsDto | null>(null);
 
   const fetchStats = useCallback(async () => {
@@ -132,6 +136,19 @@ export function HomePage() {
     }
   }, []);
 
+  const fetchDanceLists = useCallback(async () => {
+    setLoadingDanceLists(true);
+    setDanceListsError(null);
+    try {
+      const data = await getPublicDanceLists({ size: 8 });
+      setDanceLists(data?.items ?? []);
+    } catch {
+      setDanceListsError('Kunde inte hämta danslistorna.');
+    } finally {
+      setLoadingDanceLists(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
@@ -147,6 +164,10 @@ export function HomePage() {
   useEffect(() => {
     fetchPlaylists();
   }, [fetchPlaylists]);
+
+  useEffect(() => {
+    fetchDanceLists();
+  }, [fetchDanceLists]);
 
   function handleSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -284,6 +305,28 @@ export function HomePage() {
             {playlists.map((playlist) => (
               <li key={playlist.id} className="w-[150px] shrink-0">
                 <PlaylistShortcutCard playlist={playlist} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Public dance lists */}
+      <section aria-labelledby="dance-lists-heading">
+        <SectionTitle id="dance-lists-heading">Offentliga danslistor</SectionTitle>
+        {danceListsError ? (
+          <div className="mt-4">
+            <LoadError message={danceListsError} onRetry={fetchDanceLists} />
+          </div>
+        ) : loadingDanceLists ? (
+          <RowSkeleton rows={2} label="Laddar danslistor" className="mt-4" />
+        ) : danceLists.length === 0 ? (
+          <p className="mt-4 text-[15px] text-[rgb(var(--color-text-muted))]">Inga offentliga danslistor ännu.</p>
+        ) : (
+          <ul className="scrollbar-hide -mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-1">
+            {danceLists.map((danceList) => (
+              <li key={danceList.id} className="w-[150px] shrink-0">
+                <DanceListShortcutCard danceList={danceList} />
               </li>
             ))}
           </ul>

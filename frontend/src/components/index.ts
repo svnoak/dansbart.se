@@ -6,6 +6,7 @@ export { FilterBar } from './FilterBar';
 export { FlagTrackModal } from './FlagTrackModal';
 export { GuestCodePanel } from './GuestCodePanel';
 export { PlaylistShortcutCard } from './PlaylistShortcutCard';
+export { DanceListShortcutCard } from './DanceListShortcutCard';
 export { SearchBar } from './SearchBar';
 export { SelectableSearchResults } from './SelectableSearchResults';
 export { SettingsSection } from './SettingsSection';

@@ -1102,6 +1102,26 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
 
     // Helper methods
 
+    @Nested
+    @DisplayName("GET /api/dance-lists/public")
+    class GetPublicDanceLists {
+
+        @Test
+        @DisplayName("should return only public dance lists to an anonymous request")
+        void getPublicDanceLists_withoutAuth_shouldReturnOnlyPublic() throws Exception {
+            createPublicDanceList("Offentlig danslista", owner);
+            createDanceList("Privat danslista", owner);
+
+            mockMvc.perform(get("/api/dance-lists/public"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].name").value("Offentlig danslista"))
+                .andExpect(jsonPath("$.items[0].entryCount").value(0))
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.hasMore").value(false));
+        }
+    }
+
     private String createDanceList(String name, User owner) throws Exception {
         var response = mockMvc.perform(post("/api/dance-lists")
                 .with(jwt.userToken(owner.getId()))

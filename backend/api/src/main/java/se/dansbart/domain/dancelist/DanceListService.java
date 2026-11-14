@@ -18,6 +18,8 @@ import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.DanceListDto;
 import se.dansbart.dto.DanceListEntryDto;
 import se.dansbart.dto.DanceListInvitationDto;
+import se.dansbart.dto.DanceListListItemDto;
+import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.PlaylistTrackDto;
 import se.dansbart.dto.TrackListDto;
@@ -97,6 +99,30 @@ public class DanceListService {
     @Transactional(readOnly = true)
     public List<DanceList> findVisibleToUser(UUID userId) {
         return danceListJooqRepository.findVisibleToUser(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<DanceListListItemDto> findPublicDanceLists(int page, int size) {
+        int clampedSize = Math.min(Math.max(size, 1), 50);
+        int clampedPage = Math.max(page, 0);
+        List<DanceListListItemDto> all = danceListJooqRepository.findPublic().stream()
+            .map(record -> DanceListListItemDto.builder()
+                .id(record.danceList().getId())
+                .name(record.danceList().getName())
+                .description(record.danceList().getDescription())
+                .isPublic(record.danceList().getIsPublic())
+                .entryCount(record.entryCount())
+                .ownerGroup(record.danceList().getGroupId() != null
+                    ? GroupSummaryDto.builder().id(record.danceList().getGroupId()).name(record.groupName()).build()
+                    : null)
+                .ownerDisplayName(record.ownerDisplayName())
+                .build())
+            .collect(Collectors.toList());
+        long total = all.size();
+        int fromIndex = Math.min(clampedPage * clampedSize, all.size());
+        int toIndex = Math.min(fromIndex + clampedSize, all.size());
+        boolean hasMore = (long) (clampedPage + 1) * clampedSize < total;
+        return new PageResponse<>(all.subList(fromIndex, toIndex), total, clampedPage, clampedSize, hasMore);
     }
 
     @Transactional(readOnly = true)
