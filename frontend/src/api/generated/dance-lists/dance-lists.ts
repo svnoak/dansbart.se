@@ -14,6 +14,7 @@ import type {
   DanceListEntryDto,
   DanceListEntryTrack,
   DanceListInvitationDto,
+  DescribeEntryRequest,
   InviteCollaboratorRequest,
   RenameEntryRequest,
   ReorderEntriesRequest,
@@ -198,6 +199,33 @@ export const reorderTracksInEntry = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       reorderTracksRequest,)
+  }
+);}
+  
+
+/**
+ * @summary Set the list's own description of an entry and a link to one elsewhere. An empty value removes it
+ */
+export const getDescribeEntryUrl = (id: string,
+    entryId: string,) => {
+
+
+  
+
+  return `/api/dance-lists/${id}/entries/${entryId}/description`
+}
+
+export const describeEntry = async (id: string,
+    entryId: string,
+    describeEntryRequest: DescribeEntryRequest, options?: RequestInit): Promise<DanceListEntryDto> => {
+  
+  return httpClient<DanceListEntryDto>(getDescribeEntryUrl(id,entryId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      describeEntryRequest,)
   }
 );}
   

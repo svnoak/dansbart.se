@@ -917,6 +917,45 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/api/dance-lists/{id}/entries/{entryId}/description": {
+      "put": {
+        "tags": ["Dance Lists"],
+        "summary": "Set the list's own description of an entry and a link to one elsewhere. An empty value removes it",
+        "operationId": "describeEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DescribeEntryRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DanceListEntryDto" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dance-lists/{id}/entries/order": {
       "put": {
         "tags": ["Dance Lists"],
@@ -5810,6 +5849,39 @@
         }
       }
     },
+    "/api/dance-lists/public": {
+      "get": {
+        "tags": ["Dance Lists"],
+        "summary": "Get public dance lists",
+        "operationId": "getPublicDanceLists",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseDanceListListItemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dance-lists/invitations": {
       "get": {
         "tags": ["Dance Lists"],
@@ -8024,6 +8096,77 @@
         "type": "object",
         "properties": { "name": { "type": "string" } }
       },
+      "DescribeEntryRequest": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "descriptionUrl": { "type": "string" }
+        }
+      },
+      "DanceListEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "danceId": { "type": "string", "format": "uuid" },
+          "danceName": { "type": "string" },
+          "freeTextName": { "type": "string" },
+          "description": { "type": "string" },
+          "descriptionUrl": { "type": "string" },
+          "playMode": { "type": "string" },
+          "position": { "type": "integer", "format": "int32" },
+          "addedByGuest": { "type": "boolean" },
+          "tracks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaylistTrackDto" }
+          }
+        }
+      },
+      "PlaybackLinkDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "platform": { "type": "string" },
+          "deepLink": { "type": "string" },
+          "isWorking": { "type": "boolean" }
+        }
+      },
+      "PlaylistTrackDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "position": { "type": "integer", "format": "int32" },
+          "addedAt": { "type": "string", "format": "date-time" },
+          "addedByUserId": { "type": "string", "format": "uuid" },
+          "addedByGuest": { "type": "boolean" },
+          "track": { "$ref": "#/components/schemas/TrackListDto" }
+        }
+      },
+      "TrackListDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "playable": { "type": "boolean" },
+          "durationMs": { "type": "integer", "format": "int32" },
+          "danceStyle": { "type": "string" },
+          "subStyle": { "type": "string" },
+          "matchedStyle": { "type": "string" },
+          "effectiveBpm": { "type": "integer", "format": "int32" },
+          "tempoCategory": { "type": "string" },
+          "confidence": { "type": "number", "format": "float" },
+          "source": { "type": "string" },
+          "hasVocals": { "type": "boolean" },
+          "artistId": { "type": "string", "format": "uuid" },
+          "artistName": { "type": "string" },
+          "albumId": { "type": "string", "format": "uuid" },
+          "albumTitle": { "type": "string" },
+          "playbackLinks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
+          },
+          "sheetMusicUrl": { "type": "string" }
+        }
+      },
       "ReorderEntriesRequest": {
         "type": "object",
         "properties": {
@@ -8260,41 +8403,6 @@
           }
         }
       },
-      "PlaybackLinkDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "platform": { "type": "string" },
-          "deepLink": { "type": "string" },
-          "isWorking": { "type": "boolean" }
-        }
-      },
-      "TrackListDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "title": { "type": "string" },
-          "playable": { "type": "boolean" },
-          "durationMs": { "type": "integer", "format": "int32" },
-          "danceStyle": { "type": "string" },
-          "subStyle": { "type": "string" },
-          "matchedStyle": { "type": "string" },
-          "effectiveBpm": { "type": "integer", "format": "int32" },
-          "tempoCategory": { "type": "string" },
-          "confidence": { "type": "number", "format": "float" },
-          "source": { "type": "string" },
-          "hasVocals": { "type": "boolean" },
-          "artistId": { "type": "string", "format": "uuid" },
-          "artistName": { "type": "string" },
-          "albumId": { "type": "string", "format": "uuid" },
-          "albumTitle": { "type": "string" },
-          "playbackLinks": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/PlaybackLinkDto" }
-          },
-          "sheetMusicUrl": { "type": "string" }
-        }
-      },
       "AddGuestDanceRequest": {
         "type": "object",
         "properties": {
@@ -8413,17 +8521,6 @@
           }
         }
       },
-      "PlaylistTrackDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "position": { "type": "integer", "format": "int32" },
-          "addedAt": { "type": "string", "format": "date-time" },
-          "addedByUserId": { "type": "string", "format": "uuid" },
-          "addedByGuest": { "type": "boolean" },
-          "track": { "$ref": "#/components/schemas/TrackListDto" }
-        }
-      },
       "UserSummaryDto": {
         "type": "object",
         "properties": {
@@ -8455,22 +8552,6 @@
         "properties": {
           "danceId": { "type": "string", "format": "uuid" },
           "freeTextName": { "type": "string" }
-        }
-      },
-      "DanceListEntryDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "danceId": { "type": "string", "format": "uuid" },
-          "danceName": { "type": "string" },
-          "freeTextName": { "type": "string" },
-          "playMode": { "type": "string" },
-          "position": { "type": "integer", "format": "int32" },
-          "addedByGuest": { "type": "boolean" },
-          "tracks": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/PlaylistTrackDto" }
-          }
         }
       },
       "DanceListEntryTrack": {
@@ -8946,6 +9027,31 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/CollaboratorDto" }
           }
+        }
+      },
+      "DanceListListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isPublic": { "type": "boolean" },
+          "entryCount": { "type": "integer", "format": "int32" },
+          "ownerGroup": { "$ref": "#/components/schemas/GroupSummaryDto" },
+          "ownerDisplayName": { "type": "string" }
+        }
+      },
+      "PageResponseDanceListListItemDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DanceListListItemDto" }
+          },
+          "total": { "type": "integer", "format": "int64" },
+          "page": { "type": "integer", "format": "int32" },
+          "size": { "type": "integer", "format": "int32" },
+          "hasMore": { "type": "boolean" }
         }
       },
       "LinkPreviewDto": {

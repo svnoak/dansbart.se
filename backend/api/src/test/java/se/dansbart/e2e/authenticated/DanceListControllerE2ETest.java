@@ -516,6 +516,83 @@ class DanceListControllerE2ETest extends AbstractE2ETest {
     }
 
     @Nested
+    @DisplayName("PUT /api/dance-lists/{id}/entries/{entryId}/description")
+    class DescribeEntry {
+
+        @Test
+        @DisplayName("saves a description and a link, and shows them to a person who views the list")
+        void describeEntry_shouldSaveAndShow() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithDance(danceListId, DANCE_ID, owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/description", danceListId, entryId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of(
+                        "description", "  Two turns, then promenade.  ",
+                        "descriptionUrl", " https://example.org/dances/test-dance "))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value("Two turns, then promenade."))
+                .andExpect(jsonPath("$.descriptionUrl").value("https://example.org/dances/test-dance"));
+
+            mockMvc.perform(get("/api/dance-lists/{id}", danceListId)
+                    .with(jwt.userToken(owner.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries[0].danceId").value(DANCE_ID.toString()))
+                .andExpect(jsonPath("$.entries[0].description").value("Two turns, then promenade."))
+                .andExpect(jsonPath("$.entries[0].descriptionUrl").value("https://example.org/dances/test-dance"));
+        }
+
+        @Test
+        @DisplayName("blank values remove the description and the link")
+        void describeEntry_blank_shouldRemove() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithFreeText(danceListId, "Polska", owner);
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/description", danceListId, entryId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("description", "Slow", "descriptionUrl", "https://example.org/polska"))))
+                .andExpect(status().isOk());
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/description", danceListId, entryId)
+                    .with(jwt.userToken(owner.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("description", "  ", "descriptionUrl", ""))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").doesNotExist())
+                .andExpect(jsonPath("$.descriptionUrl").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("rejects a link that is not a web address with 400")
+        void describeEntry_notWebAddress_shouldReturn400() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithFreeText(danceListId, "Polska", owner);
+
+            for (String link : List.of("javascript:alert(1)", "example.org/polska", "ftp://example.org/polska")) {
+                mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/description", danceListId, entryId)
+                        .with(jwt.userToken(owner.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("descriptionUrl", link))))
+                    .andExpect(status().isBadRequest());
+            }
+        }
+
+        @Test
+        @DisplayName("a person without access gets 404")
+        void describeEntry_byOtherUser_shouldReturn404() throws Exception {
+            String danceListId = createDanceList("My Dance List", owner);
+            String entryId = addEntryWithFreeText(danceListId, "Polska", owner);
+
+            mockMvc.perform(put("/api/dance-lists/{id}/entries/{entryId}/description", danceListId, entryId)
+                    .with(jwt.userToken(otherUser.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(Map.of("description", "Mine now"))))
+                .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
     @DisplayName("POST /api/dance-lists/{id}/entries/{entryId}/tracks")
     class AddTrackToEntry {
 

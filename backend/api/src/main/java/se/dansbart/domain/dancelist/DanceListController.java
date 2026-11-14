@@ -150,6 +150,18 @@ public class DanceListController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/{id}/entries/{entryId}/description")
+    @Operation(operationId = "describeEntry",
+        summary = "Set the list's own description of an entry and a link to one elsewhere. An empty value removes it")
+    public ResponseEntity<DanceListEntryDto> describeEntry(
+            @PathVariable UUID id,
+            @PathVariable UUID entryId,
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody DescribeEntryRequest request) {
+        return ResponseEntity.ok(
+            danceListService.describeEntry(id, userId, entryId, request.description(), request.descriptionUrl()));
+    }
+
     @PostMapping("/{id}/entries/{entryId}/tracks")
     @Operation(summary = "Link a track to an entry")
     public ResponseEntity<DanceListEntryTrack> addTrackToEntry(
@@ -282,6 +294,7 @@ public class DanceListController {
     public record ReorderEntriesRequest(List<UUID> entryIds) {}
     public record SetPlayModeRequest(String playMode) {}
     public record RenameEntryRequest(String name) {}
+    public record DescribeEntryRequest(String description, String descriptionUrl) {}
     public record AddTrackRequest(UUID trackId) {}
     public record ReorderTracksRequest(List<UUID> trackIds) {}
     public record InviteCollaboratorRequest(String username, String groupName, String permission) {}

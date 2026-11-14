@@ -110,6 +110,16 @@ public class DanceListEntries extends TableImpl<Record> {
      */
     public final TableField<Record, Boolean> ADDED_BY_GUEST = createField(DSL.name("added_by_guest"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
+    /**
+     * The column <code>public.dance_list_entries.description</code>.
+     */
+    public final TableField<Record, String> DESCRIPTION = createField(DSL.name("description"), SQLDataType.CLOB, this, "");
+
+    /**
+     * The column <code>public.dance_list_entries.description_url</code>.
+     */
+    public final TableField<Record, String> DESCRIPTION_URL = createField(DSL.name("description_url"), SQLDataType.VARCHAR(2000), this, "");
+
     private DanceListEntries(Name alias, Table<Record> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

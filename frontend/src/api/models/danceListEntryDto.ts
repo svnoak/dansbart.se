@@ -11,6 +11,8 @@ export interface DanceListEntryDto {
   danceId?: string;
   danceName?: string;
   freeTextName?: string;
+  description?: string;
+  descriptionUrl?: string;
   playMode?: string;
   position?: number;
   addedByGuest?: boolean;

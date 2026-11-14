@@ -13,6 +13,7 @@ const getDanceList = vi.fn();
 const addEntry = vi.fn();
 const removeEntry = vi.fn();
 const renameEntry = vi.fn();
+const describeEntry = vi.fn();
 const getDances = vi.fn();
 const searchTracks = vi.fn();
 const addTrackToEntry = vi.fn();
@@ -27,6 +28,7 @@ vi.mock('@/api/generated/dance-lists/dance-lists', () => ({
   addEntry: (...args: unknown[]) => addEntry(...args),
   removeEntry: (...args: unknown[]) => removeEntry(...args),
   renameEntry: (...args: unknown[]) => renameEntry(...args),
+  describeEntry: (...args: unknown[]) => describeEntry(...args),
   addTrackToEntry: (...args: unknown[]) => addTrackToEntry(...args),
   removeTrackFromEntry: (...args: unknown[]) => removeTrackFromEntry(...args),
   setPlayMode: (...args: unknown[]) => setPlayMode(...args),
@@ -182,6 +184,7 @@ describe('DanceListPage', () => {
     addEntry.mockReset();
     removeEntry.mockReset();
     renameEntry.mockReset();
+    describeEntry.mockReset();
     getDances.mockReset();
     searchTracks.mockReset();
     addTrackToEntry.mockReset();
@@ -1124,6 +1127,113 @@ describe('DanceListPage', () => {
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain('Det gick inte att byta namn.');
     expect(document.body.textContent).toContain('Egen dans');
     expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  async function openDescribeForm(danceName: string) {
+    await act(async () => {
+      (
+        document.body.querySelector(`button[aria-label="Fler alternativ för ${danceName}"]`) as HTMLButtonElement
+      ).click();
+    });
+    await act(async () => {
+      clickButton('Ändra beskrivning')!.click();
+    });
+  }
+
+  it('describes a dance and links to a description from the row menu', async () => {
+    describeEntry.mockResolvedValue({
+      id: 'entry-2',
+      freeTextName: 'Egen dans',
+      description: 'Två varv, sedan promenad.',
+      descriptionUrl: 'https://www.folkdans.se/egen-dans',
+    });
+
+    await renderPage();
+    await openDescribeForm('Egen dans');
+
+    const text = getInputByLabel('Beskrivning av Egen dans');
+    const link = getInputByLabel('Länk till en beskrivning eller film');
+    expect(text!.value).toBe('');
+    expect(link!.value).toBe('');
+
+    await act(async () => {
+      typeInto(text!, 'Två varv, sedan promenad.');
+      typeInto(link!, 'www.folkdans.se/egen-dans');
+    });
+    await act(async () => {
+      clickButton('Spara beskrivningen')!.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(describeEntry).toHaveBeenCalledWith('list-1', 'entry-2', {
+      description: 'Två varv, sedan promenad.',
+      descriptionUrl: 'https://www.folkdans.se/egen-dans',
+    });
+    expect(getInputByLabel('Beskrivning av Egen dans')).toBeNull();
+    expect(document.body.textContent).toContain('Två varv, sedan promenad.');
+    const anchor = document.body.querySelector('a[href="https://www.folkdans.se/egen-dans"]');
+    expect(anchor?.textContent).toContain('Beskrivning hos folkdans.se');
+    expect(anchor?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(toastSpy).toHaveBeenCalledWith('Beskrivningen sparad');
+  });
+
+  it('refuses a link that is not a web address, without saving', async () => {
+    await renderPage();
+    await openDescribeForm('Egen dans');
+
+    await act(async () => {
+      typeInto(getInputByLabel('Länk till en beskrivning eller film')!, 'javascript:alert(1)');
+    });
+    await act(async () => {
+      clickButton('Spara beskrivningen')!.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(describeEntry).not.toHaveBeenCalled();
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
+      'Länken ser inte ut som en webbadress.',
+    );
+  });
+
+  it('shows the description error next to the form and keeps what was typed', async () => {
+    describeEntry.mockRejectedValue(new Error('Server error'));
+
+    await renderPage();
+    await openDescribeForm('Egen dans');
+    await act(async () => {
+      typeInto(getInputByLabel('Beskrivning av Egen dans')!, 'Två varv.');
+    });
+    await act(async () => {
+      clickButton('Spara beskrivningen')!.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
+      'Det gick inte att spara beskrivningen.',
+    );
+    expect(getInputByLabel('Beskrivning av Egen dans')!.value).toBe('Två varv.');
+    expect(toastSpy).not.toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+
+  it('shows the description of a dance to a person who may only view', async () => {
+    getDanceList.mockResolvedValue({
+      ...mockDanceListFull,
+      viewerCanManage: false,
+      entries: mockDanceListFull.entries.map((e) =>
+        e.id === 'entry-2'
+          ? { ...e, description: 'Två varv.', descriptionUrl: 'https://www.folkdans.se/egen-dans' }
+          : e,
+      ),
+    });
+
+    await renderPage();
+
+    expect(document.body.textContent).toContain('Med beskrivning');
+    expect(document.body.textContent).not.toContain('Två varv.');
+    await openDance('Egen dans');
+    expect(document.body.textContent).toContain('Två varv.');
+    expect(document.body.querySelector('a[href="https://www.folkdans.se/egen-dans"]')).not.toBeNull();
+    expect(document.body.querySelector('button[aria-label="Fler alternativ för Egen dans"]')).toBeNull();
   });
 
   it('can limit the track search to the person\'s own tracks', async () => {
