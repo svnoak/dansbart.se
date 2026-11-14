@@ -242,6 +242,27 @@ describe('DanceListPage', () => {
     return labelElement.querySelector('input') as HTMLInputElement | null;
   }
 
+  /** The tracks of a dance are folded away until the person opens the dance. */
+  function getDanceToggle(danceName: string) {
+    const toggle = document.body.querySelector(
+      `button[aria-label="Visa eller dölj låtar för ${danceName}"]`,
+    ) as HTMLButtonElement | null;
+    expect(toggle).not.toBeNull();
+    return toggle as HTMLButtonElement;
+  }
+
+  async function openDance(danceName: string) {
+    await act(async () => {
+      getDanceToggle(danceName).click();
+    });
+  }
+
+  function getPlayButtons() {
+    return Array.from(document.body.querySelectorAll('button')).filter((b) =>
+      b.getAttribute('aria-label')?.startsWith('Spela '),
+    );
+  }
+
   function getRemoveTrackButtons() {
     return Array.from(document.body.querySelectorAll('button')).filter((b) => {
       const label = b.getAttribute('aria-label') ?? '';
@@ -428,6 +449,7 @@ describe('DanceListPage', () => {
 
   it('shows the tracks of a dance', async () => {
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const text = document.body.textContent;
     expect(text).toContain('Första låten');
@@ -458,6 +480,7 @@ describe('DanceListPage', () => {
     });
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const addTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
       b.textContent?.includes('Lägg till låt'),
@@ -489,6 +512,7 @@ describe('DanceListPage', () => {
     removeTrackFromEntry.mockResolvedValue(undefined);
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const removeTrackButtons = getRemoveTrackButtons();
     const firstRemoveButton = removeTrackButtons[0];
@@ -509,9 +533,7 @@ describe('DanceListPage', () => {
   it('plays the first track in order', async () => {
     await renderPage();
 
-    const playButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
-      b.textContent?.includes('Spela'),
-    );
+    const playButtons = getPlayButtons();
     const firstPlayButton = playButtons[0];
     expect(firstPlayButton).toBeDefined();
 
@@ -543,9 +565,7 @@ describe('DanceListPage', () => {
 
     await renderPage();
 
-    const playButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
-      b.textContent?.includes('Spela'),
-    );
+    const playButtons = getPlayButtons();
     const firstPlayButton = playButtons[0];
     expect(firstPlayButton).toBeDefined();
 
@@ -565,6 +585,7 @@ describe('DanceListPage', () => {
     setPlayMode.mockResolvedValue(undefined);
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const randomButton = getPlayModeButton('Familjevals från Ödsmål', 'Slumpvis');
 
@@ -580,6 +601,7 @@ describe('DanceListPage', () => {
     getDanceList.mockResolvedValue(mockDanceListReadOnly);
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const hasAddTrackButton = Array.from(document.body.querySelectorAll('button')).some((b) =>
       b.textContent?.includes('Lägg till låt'),
@@ -588,9 +610,7 @@ describe('DanceListPage', () => {
     const hasPlayModeSelect =
       document.body.querySelector('[role="group"][aria-label^="Spelläge för"]') !== null;
 
-    const hasPlayButton = Array.from(document.body.querySelectorAll('button')).some((b) =>
-      b.textContent?.includes('Spela'),
-    );
+    const hasPlayButton = getPlayButtons().length > 0;
 
     expect(hasAddTrackButton).toBe(false);
     expect(hasRemoveTrackButton).toBe(false);
@@ -650,6 +670,7 @@ describe('DanceListPage', () => {
     addTrackToEntry.mockRejectedValue(new Error('Server error'));
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const addTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
       b.textContent?.includes('Lägg till låt'),
@@ -701,6 +722,7 @@ describe('DanceListPage', () => {
     removeTrackFromEntry.mockRejectedValue(new Error('Server error'));
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const removeTrackButtons = getRemoveTrackButtons();
     const firstRemoveButton = removeTrackButtons[0];
@@ -748,6 +770,7 @@ describe('DanceListPage', () => {
     searchTracks.mockRejectedValue(new Error('Network error'));
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const addTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
       b.textContent?.includes('Lägg till låt'),
@@ -789,6 +812,7 @@ describe('DanceListPage', () => {
     });
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const addTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
       b.textContent?.includes('Lägg till låt'),
@@ -826,8 +850,9 @@ describe('DanceListPage', () => {
     expect(entries.length).toBeGreaterThan(0);
 
     const secondDanceEntry = entries[0];
-    const playButtons = Array.from(secondDanceEntry.querySelectorAll('button'));
-    const hasPlayButton = playButtons.some((b) => b.textContent?.includes('Spela'));
+    const hasPlayButton = Array.from(secondDanceEntry.querySelectorAll('button')).some((b) =>
+      b.getAttribute('aria-label')?.startsWith('Spela '),
+    );
 
     expect(hasPlayButton).toBe(false);
   });
@@ -885,6 +910,7 @@ describe('DanceListPage', () => {
     addTrackToEntry.mockRejectedValue(new Error('Server error'));
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const addTrackButtons = Array.from(document.body.querySelectorAll('button')).filter((b) =>
       b.textContent?.includes('Lägg till låt'),
@@ -940,6 +966,7 @@ describe('DanceListPage', () => {
     removeTrackFromEntry.mockRejectedValue(new Error('Server error'));
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const removeTrackButtons = getRemoveTrackButtons();
     await act(async () => {
@@ -965,6 +992,7 @@ describe('DanceListPage', () => {
     setPlayMode.mockRejectedValue(new Error('Server error'));
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const randomButton = getPlayModeButton('Familjevals från Ödsmål', 'Slumpvis');
 
@@ -1110,6 +1138,7 @@ describe('DanceListPage', () => {
     });
 
     await renderPage();
+    await openDance('Familjevals från Ödsmål');
 
     const addTrackButton = Array.from(document.body.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Lägg till låt'),
@@ -1140,29 +1169,92 @@ describe('DanceListPage', () => {
     expect(searchTracks).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'Min', mine: true }));
   });
 
-  it('folds the tracks of a dance away and back', async () => {
+  it('keeps the tracks of a dance folded away until the dance is opened', async () => {
     await renderPage();
 
-    const toggle = document.body.querySelector(
-      'button[aria-label="Visa eller dölj låtar för Familjevals från Ödsmål"]',
-    ) as HTMLButtonElement | null;
-    expect(toggle).not.toBeNull();
-    expect(toggle!.getAttribute('aria-expanded')).toBe('true');
-    expect(document.body.textContent).toContain('Första låten');
-
-    await act(async () => {
-      toggle!.click();
-    });
-
-    expect(toggle!.getAttribute('aria-expanded')).toBe('false');
+    const toggle = getDanceToggle('Familjevals från Ödsmål');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(document.body.textContent).not.toContain('Första låten');
 
     await act(async () => {
-      toggle!.click();
+      toggle.click();
     });
 
-    expect(toggle!.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(document.body.textContent).toContain('Första låten');
+
+    await act(async () => {
+      toggle.click();
+    });
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.body.textContent).not.toContain('Första låten');
+  });
+
+  it('plays a dance without opening it', async () => {
+    await renderPage();
+
+    const playButton = document.body.querySelector(
+      'button[aria-label="Spela Familjevals från Ödsmål"]',
+    ) as HTMLButtonElement | null;
+    expect(playButton).not.toBeNull();
+    await act(async () => {
+      playButton!.click();
+    });
+
+    expect(usePlayerMock.play).toHaveBeenCalledWith(expect.objectContaining({ id: 'track-1' }), expect.any(Array));
+    expect(getDanceToggle('Familjevals från Ödsmål').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('shows the style and the number of tracks on a folded dance', async () => {
+    await renderPage();
+
+    expect(getDanceToggle('Familjevals från Ödsmål').textContent).toContain('2 låtar');
+    const ownRow = getDanceToggle('Egen dans').textContent;
+    expect(ownRow).toContain('Egen rad');
+    expect(ownRow).toContain('Inga låtar');
+  });
+
+  it('offers the play mode only for a dance with more than one track', async () => {
+    await renderPage();
+    await openDance('Familjevals från Ödsmål');
+    await openDance('Egen dans');
+
+    expect(document.body.querySelector('[role="group"][aria-label="Spelläge för Familjevals från Ödsmål"]')).not.toBeNull();
+    expect(document.body.querySelector('[role="group"][aria-label="Spelläge för Egen dans"]')).toBeNull();
+  });
+
+  it('links to the page of the dance from the opened dance', async () => {
+    await renderPage();
+    expect(document.body.querySelector('a[href="/dance/dance-1"]')).toBeNull();
+
+    await openDance('Familjevals från Ödsmål');
+
+    expect(document.body.querySelector('a[href="/dance/dance-1"]')?.textContent).toContain('Om dansen');
+  });
+
+  it('moves a dance down from the row menu and saves the order', async () => {
+    reorderEntries.mockResolvedValue(undefined);
+
+    await renderPage();
+
+    await act(async () => {
+      (
+        document.body.querySelector(
+          'button[aria-label="Fler alternativ för Familjevals från Ödsmål"]',
+        ) as HTMLButtonElement
+      ).click();
+    });
+    const hasMoveUp = Array.from(document.body.querySelectorAll('button')).some(
+      (b) => b.textContent?.trim() === 'Flytta upp',
+    );
+    expect(hasMoveUp).toBe(false);
+    await act(async () => {
+      clickButton('Flytta ned')!.click();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(reorderEntries).toHaveBeenCalledWith('list-1', { entryIds: ['entry-2', 'entry-1'] });
   });
 
   it('moves a dance down with the keyboard and saves the order', async () => {

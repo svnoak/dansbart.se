@@ -33,6 +33,7 @@ import {
   toast,
 } from '@/ui';
 import {
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
@@ -97,6 +98,8 @@ function EntryMenu({
   open,
   onToggle,
   onClose,
+  onMoveUp,
+  onMoveDown,
   onRename,
   onRemove,
 }: {
@@ -104,6 +107,10 @@ function EntryMenu({
   open: boolean;
   onToggle: () => void;
   onClose: () => void;
+  /** Absent for the first dance. */
+  onMoveUp?: () => void;
+  /** Absent for the last dance. */
+  onMoveDown?: () => void;
   onRename: () => void;
   onRemove: () => void;
 }) {
@@ -120,6 +127,20 @@ function EntryMenu({
         <MoreVerticalIcon className="h-5 w-5" aria-hidden />
       </IconButton>
       <AnchoredMenu open={open} anchorRef={buttonRef} onClose={onClose} width={192}>
+        {onMoveUp && (
+          <li role="none">
+            <button type="button" role="menuitem" className={menuItemClassName} onClick={onMoveUp}>
+              Flytta upp
+            </button>
+          </li>
+        )}
+        {onMoveDown && (
+          <li role="none">
+            <button type="button" role="menuitem" className={menuItemClassName} onClick={onMoveDown}>
+              Flytta ned
+            </button>
+          </li>
+        )}
         <li role="none">
           <button type="button" role="menuitem" className={menuItemClassName} onClick={onRename}>
             Byt namn
@@ -182,7 +203,8 @@ export default function DanceListPage() {
   const [notFound, setNotFound] = useState(false);
   const [activeSearch, setActiveSearch] = useState<ActiveSearch>(null);
   const [confirmRemoval, setConfirmRemoval] = useState<ConfirmRemoval>(null);
-  const [closedEntries, setClosedEntries] = useState<Set<string>>(() => new Set());
+  // The tracks of a dance stay folded away until the person opens the dance.
+  const [openEntries, setOpenEntries] = useState<Set<string>>(() => new Set());
   const [menuEntryId, setMenuEntryId] = useState<string | null>(null);
   const [renamingEntryId, setRenamingEntryId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -321,12 +343,7 @@ export default function DanceListPage() {
     setTrackQuery('');
     setAddTrackError(null);
     setActiveSearch({ entryId });
-    setClosedEntries((prev) => {
-      if (!prev.has(entryId)) return prev;
-      const next = new Set(prev);
-      next.delete(entryId);
-      return next;
-    });
+    setOpenEntries((prev) => (prev.has(entryId) ? prev : new Set(prev).add(entryId)));
   }
 
   function closeSearch() {
@@ -338,7 +355,7 @@ export default function DanceListPage() {
   }
 
   function toggleEntryOpen(entryId: string) {
-    setClosedEntries((prev) => {
+    setOpenEntries((prev) => {
       const next = new Set(prev);
       if (next.has(entryId)) next.delete(entryId);
       else next.add(entryId);
@@ -357,6 +374,8 @@ export default function DanceListPage() {
       setDanceList((prev) =>
         prev ? { ...prev, entries: [...(prev.entries ?? []), newEntry] } : prev,
       );
+      // A new dance opens, so the way to add its first track is in view.
+      if (newEntry.id) setOpenEntries((prev) => new Set(prev).add(newEntry.id as string));
       closeSearch();
     } catch {
       setAddDanceError('Det gick inte att lägga till dansen.');
@@ -614,16 +633,16 @@ export default function DanceListPage() {
       <BackLink />
 
       {/* Header */}
-      <Card className="p-7">
+      <Card className="p-5 sm:p-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           <span
-            className="flex h-28 w-28 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))]"
+            className="hidden h-28 w-28 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[rgb(var(--color-accent-muted))] text-[rgb(var(--color-text))] sm:flex"
             aria-hidden
           >
             <QueueListIcon className="h-[52px] w-[52px]" aria-hidden />
           </span>
           <div className="min-w-0 flex-1 space-y-2">
-            <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[rgb(var(--color-text))]">
+            <h1 className="text-[26px] font-bold sm:text-[32px] leading-tight tracking-tight text-[rgb(var(--color-text))]">
               {danceList.name}
             </h1>
             {danceList.description && (
@@ -758,12 +777,8 @@ export default function DanceListPage() {
           }
         />
       ) : (
-        <section className="space-y-3" aria-label="Danser i listan">
-          <p className="text-sm text-[rgb(var(--color-text-muted))]">
-            Fäll ihop danser du är klar med. Varje dans spelar sina låtar i ordning eller slumpvis.
-          </p>
-
-          <ol className="flex flex-col gap-3">
+        <section aria-label="Danser i listan">
+          <ol className="flex flex-col gap-2">
             {entries.map((entry, index) => {
               const entryId = entry.id ?? '';
               const name = entryName(entry);
@@ -771,7 +786,7 @@ export default function DanceListPage() {
               const linkedTrackIds = new Set(
                 tracks.map((t) => t.track?.id).filter((trackId): trackId is string => !!trackId),
               );
-              const isOpen = !closedEntries.has(entryId);
+              const isOpen = openEntries.has(entryId);
               const isFreeText = !entry.danceId;
               const style = entryStyle(tracks);
               const isConfirmingEntryRemoval =
@@ -781,6 +796,14 @@ export default function DanceListPage() {
               const isRenaming = renamingEntryId === entryId;
               const bodyId = `dance-entry-body-${entryId}`;
               const currentPlayMode = entry.playMode ?? 'in_order';
+              // The play mode only matters when there is more than one track to choose from.
+              const hasPlayModeChoice = tracks.length > 1;
+              const details = [
+                !style && isFreeText ? 'Egen rad' : null,
+                tracks.length === 0 ? 'Inga låtar' : countLabel(tracks.length, 'låt', 'låtar'),
+                hasPlayModeChoice && currentPlayMode === 'random' ? 'Slumpvis' : null,
+                entry.addedByGuest ? 'Tillagd med kod' : null,
+              ].filter((part): part is string => !!part);
 
               return (
                 <li
@@ -795,8 +818,8 @@ export default function DanceListPage() {
                   }`}
                 >
                   <Card className="overflow-hidden">
-                    {/* Entry header */}
-                    <div className="flex flex-wrap items-center gap-2 border-b border-[rgb(var(--color-border))] p-3">
+                    {/* Entry header: the name opens the tracks, the round button plays the dance */}
+                    <div className="flex items-center gap-1 p-2">
                       {canManage && (
                         <button
                           type="button"
@@ -805,108 +828,81 @@ export default function DanceListPage() {
                           onPointerDown={() => setDragArmedEntryId(entryId)}
                           onPointerUp={() => setDragArmedEntryId(null)}
                           onKeyDown={(e) => handleGripKeyDown(e, index)}
-                          className="flex h-11 w-8 shrink-0 cursor-grab items-center justify-center rounded-[var(--radius)] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] active:cursor-grabbing"
+                          className="hidden h-11 w-8 shrink-0 cursor-grab items-center justify-center rounded-[var(--radius)] text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] active:cursor-grabbing sm:flex"
                         >
                           <GripIcon className="h-4 w-4" aria-hidden />
                         </button>
                       )}
 
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-[13px] font-bold tabular-nums text-[rgb(var(--color-accent-foreground))]">
-                        {index + 1}
-                      </span>
-
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                        {entry.danceId ? (
-                          <Link
-                            to={`/dance/${entry.danceId}`}
-                            className="truncate text-base font-bold text-[rgb(var(--color-text))] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
-                          >
-                            {name}
-                          </Link>
-                        ) : (
-                          <span className="truncate text-base font-bold text-[rgb(var(--color-text))]">{name}</span>
-                        )}
-                        {style ? (
-                          <StylePill style={style} state="confirmed" />
-                        ) : isFreeText ? (
-                          <span className="inline-flex h-7 items-center rounded-full bg-[rgb(var(--color-accent-muted))] px-2.5 text-[13px] font-medium text-[rgb(var(--color-text-muted))]">
-                            Egen rad
-                          </span>
-                        ) : null}
-                        {entry.addedByGuest && (
-                          <span className="inline-flex h-7 items-center rounded-full bg-[rgb(var(--color-accent-muted))] px-2.5 text-[13px] font-medium text-[rgb(var(--color-text-muted))]">
-                            Tillagd med kod
-                          </span>
-                        )}
-                        <span className="text-[13px] text-[rgb(var(--color-text-muted))]">
-                          {countLabel(tracks.length, 'låt', 'låtar')}
+                      <button
+                        type="button"
+                        aria-label={`Visa eller dölj låtar för ${name}`}
+                        aria-expanded={isOpen}
+                        aria-controls={bodyId}
+                        onClick={() => toggleEntryOpen(entryId)}
+                        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-[var(--radius)] px-2 py-1.5 text-left hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent-muted))] text-[13px] font-bold tabular-nums text-[rgb(var(--color-text))]">
+                          {index + 1}
                         </span>
-                      </div>
+                        <span className="min-w-0 flex-1">
+                          <span className="block break-words text-[17px] font-bold leading-snug text-[rgb(var(--color-text))]">
+                            {name}
+                          </span>
+                          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[rgb(var(--color-text-muted))]">
+                            {style && <StylePill style={style} state="confirmed" />}
+                            <span>{details.join(' · ')}</span>
+                          </span>
+                        </span>
+                        <ChevronDownIcon
+                          className={`h-5 w-5 shrink-0 text-[rgb(var(--color-text-muted))] transition-transform ${
+                            isOpen ? 'rotate-180' : ''
+                          }`}
+                          aria-hidden
+                        />
+                      </button>
 
-                      <div className="ml-auto flex flex-wrap items-center gap-1.5">
-                        {canManage && (
-                          <div
-                            role="group"
-                            aria-label={`Spelläge för ${name}`}
-                            className="inline-flex h-8 overflow-hidden rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] text-sm font-medium"
-                          >
-                            {PLAY_MODE_OPTIONS.map((option) => {
-                              const active = currentPlayMode === option.value;
-                              return (
-                                <button
-                                  key={option.value}
-                                  type="button"
-                                  aria-pressed={active}
-                                  onClick={() => {
-                                    if (!active) void handlePlayModeChange(entryId, option.value);
-                                  }}
-                                  className={`px-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgb(var(--color-focus))] ${
-                                    active
-                                      ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
-                                      : 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
-                                  }`}
-                                >
-                                  {option.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {tracks.length > 0 && (
-                          <Button variant="secondary" onClick={() => handlePlayEntry(entry)}>
-                            <PlayIcon className="h-4 w-4" aria-hidden />
-                            Spela
-                          </Button>
-                        )}
-
-                        {canManage && (
-                          <EntryMenu
-                            name={name}
-                            open={isMenuOpen}
-                            onToggle={() => setMenuEntryId(isMenuOpen ? null : entryId)}
-                            onClose={() => setMenuEntryId(null)}
-                            onRename={() => openRename(entry)}
-                            onRemove={() => {
-                              setMenuEntryId(null);
-                              setRenamingEntryId(null);
-                              setConfirmRemoval({ kind: 'entry', entryId });
-                            }}
-                          />
-                        )}
-
-                        <IconButton
-                          aria-label={`Visa eller dölj låtar för ${name}`}
-                          aria-expanded={isOpen}
-                          aria-controls={bodyId}
-                          onClick={() => toggleEntryOpen(entryId)}
+                      {tracks.length > 0 && (
+                        <button
+                          type="button"
+                          aria-label={`Spela ${name}`}
+                          onClick={() => handlePlayEntry(entry)}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))] hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
                         >
-                          <ChevronRightIcon
-                            className={`h-5 w-5 transition-transform ${isOpen ? 'rotate-90' : ''}`}
-                            aria-hidden
-                          />
-                        </IconButton>
-                      </div>
+                          <PlayIcon className="h-5 w-5" aria-hidden />
+                        </button>
+                      )}
+
+                      {canManage && (
+                        <EntryMenu
+                          name={name}
+                          open={isMenuOpen}
+                          onToggle={() => setMenuEntryId(isMenuOpen ? null : entryId)}
+                          onClose={() => setMenuEntryId(null)}
+                          onMoveUp={
+                            index > 0
+                              ? () => {
+                                  setMenuEntryId(null);
+                                  void moveEntry(index, index - 1);
+                                }
+                              : undefined
+                          }
+                          onMoveDown={
+                            index < entries.length - 1
+                              ? () => {
+                                  setMenuEntryId(null);
+                                  void moveEntry(index, index + 1);
+                                }
+                              : undefined
+                          }
+                          onRename={() => openRename(entry)}
+                          onRemove={() => {
+                            setMenuEntryId(null);
+                            setRenamingEntryId(null);
+                            setConfirmRemoval({ kind: 'entry', entryId });
+                          }}
+                        />
+                      )}
                     </div>
 
                     {(isRenaming ||
@@ -914,7 +910,7 @@ export default function DanceListPage() {
                       renameErrors[entryId] ||
                       entryRemoveErrors[entryId] ||
                       playModeErrors[entryId]) && (
-                      <div className="space-y-2 border-b border-[rgb(var(--color-border))] px-3 py-2.5">
+                      <div className="space-y-2 border-t border-[rgb(var(--color-border))] px-3 py-2.5">
                         {isRenaming && (
                           <form
                             className="flex flex-wrap items-end gap-2"
@@ -974,7 +970,7 @@ export default function DanceListPage() {
 
                     {/* Entry body */}
                     {isOpen && (
-                      <div id={bodyId} className="pl-10 pr-2 pb-2">
+                      <div id={bodyId} className="border-t border-[rgb(var(--color-border))] px-2 pb-2 sm:pl-10">
                         {tracks.length === 0 ? (
                           <p className="px-2 py-3 text-sm text-[rgb(var(--color-text-muted))]">
                             {isFreeText ? 'Egen rad utan låtar.' : 'Inga låtar ännu.'}
@@ -1032,16 +1028,58 @@ export default function DanceListPage() {
                           </ul>
                         )}
 
-                        {canManage && !isTrackSearchOpen && (
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              onClick={() => openTrackSearch(entryId)}
-                              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius)] px-3 text-sm font-semibold text-[rgb(var(--color-link))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
-                            >
-                              <PlusIcon className="h-4 w-4" aria-hidden />
-                              Lägg till låt
-                            </button>
+                        {!isTrackSearchOpen && (canManage || entry.danceId) && (
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-2 pt-2">
+                            {canManage && (
+                              <button
+                                type="button"
+                                onClick={() => openTrackSearch(entryId)}
+                                className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius)] px-3 text-sm font-semibold text-[rgb(var(--color-link))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                              >
+                                <PlusIcon className="h-4 w-4" aria-hidden />
+                                Lägg till låt
+                              </button>
+                            )}
+                            {entry.danceId && (
+                              <Link
+                                to={`/dance/${entry.danceId}`}
+                                className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius)] px-3 text-sm font-semibold text-[rgb(var(--color-link))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                              >
+                                Om dansen
+                                <ChevronRightIcon className="h-4 w-4" aria-hidden />
+                              </Link>
+                            )}
+                            {canManage && hasPlayModeChoice && (
+                              <div className="ml-auto flex items-center gap-2 px-1">
+                                <span className="text-sm text-[rgb(var(--color-text-muted))]">Spelas</span>
+                                <div
+                                  role="group"
+                                  aria-label={`Spelläge för ${name}`}
+                                  className="inline-flex h-9 overflow-hidden rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] text-sm font-medium"
+                                >
+                                  {PLAY_MODE_OPTIONS.map((option) => {
+                                    const active = currentPlayMode === option.value;
+                                    return (
+                                      <button
+                                        key={option.value}
+                                        type="button"
+                                        aria-pressed={active}
+                                        onClick={() => {
+                                          if (!active) void handlePlayModeChange(entryId, option.value);
+                                        }}
+                                        className={`px-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgb(var(--color-focus))] ${
+                                          active
+                                            ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
+                                            : 'bg-[rgb(var(--color-bg-elevated))] text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
+                                        }`}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
