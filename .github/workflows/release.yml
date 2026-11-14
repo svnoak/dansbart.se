@@ -63,7 +63,7 @@ jobs:
           ref: ${{ steps.commit.outputs.sha }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Maven Central rate-limits shared runner addresses, and the package step
       # downloads POMs that dependency:go-offline does not. Keep the Maven
