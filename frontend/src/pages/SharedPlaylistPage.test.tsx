@@ -8,7 +8,12 @@ import { authValue } from '@/test/authValue';
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const getPlaylistByShareToken = vi.fn();
+const getPublicPlaylist = vi.fn();
 const useAuth = vi.fn();
+
+vi.mock('@/api/manual/publicLists', () => ({
+  getPublicPlaylist: (...args: unknown[]) => getPublicPlaylist(...args),
+}));
 
 vi.mock('@/api/generated/playlists/playlists', () => ({
   getPlaylistByShareToken: (...args: unknown[]) => getPlaylistByShareToken(...args),
@@ -32,6 +37,7 @@ describe('SharedPlaylistPage', () => {
 
   beforeEach(() => {
     getPlaylistByShareToken.mockReset();
+    getPublicPlaylist.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(authValue());
     container = document.createElement('div');
@@ -53,6 +59,21 @@ describe('SharedPlaylistPage', () => {
           </Routes>
         </MemoryRouter>,
       );
+    });
+  }
+
+  async function renderPublicPage() {
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/playlists/p1']}>
+          <Routes>
+            <Route path="/playlists/:id" element={<SharedPlaylistPage source="public" />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
   }
 
@@ -96,5 +117,31 @@ describe('SharedPlaylistPage', () => {
     });
 
     expect(document.body.textContent).toContain('Av Anna');
+  });
+
+  it('opens a public playlist by its id from the public API', async () => {
+    getPublicPlaylist.mockResolvedValue({
+      id: 'p1',
+      name: 'Bygdedans',
+      owner: { id: 'u1', username: 'anna', displayName: 'Anna' },
+      trackCount: 0,
+      tracks: [],
+    });
+
+    await renderPublicPage();
+
+    expect(getPublicPlaylist).toHaveBeenCalledWith('p1', expect.anything());
+    expect(getPlaylistByShareToken).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Bygdedans');
+    expect(document.body.textContent).toContain('Av Anna');
+  });
+
+  it('says that a private or missing playlist was not found, with a hint to sign in', async () => {
+    getPublicPlaylist.mockRejectedValue(new Error('not found'));
+
+    await renderPublicPage();
+
+    expect(document.body.textContent).toContain('Spellistan hittades inte');
+    expect(document.body.textContent).toContain('Logga in om det är din spellista.');
   });
 });

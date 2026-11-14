@@ -45,8 +45,18 @@ vi.mock('@/player/usePlayer', () => ({
   usePlayer: () => usePlayerMock,
 }));
 
+let authState: { isAuthenticated: boolean; isLoading: boolean; user: { id: string } | null } = {
+  isAuthenticated: true,
+  isLoading: false,
+  user: { id: 'user-1' },
+};
 vi.mock('@/auth/useAuth', () => ({
-  useAuth: () => ({ isAuthenticated: true, isLoading: false, user: { id: 'user-1' } }),
+  useAuth: () => authState,
+}));
+
+const getPublicDanceList = vi.fn();
+vi.mock('@/api/manual/publicLists', () => ({
+  getPublicDanceList: (...args: unknown[]) => getPublicDanceList(...args),
 }));
 
 vi.mock('@/favorites/useFavorites', () => ({
@@ -191,6 +201,8 @@ describe('DanceListPage', () => {
     usePlayerMock.play.mockReset();
     getDanceList.mockResolvedValue(mockDanceListFull);
     getDanceListByShareToken.mockReset();
+    getPublicDanceList.mockReset();
+    authState = { isAuthenticated: true, isLoading: false, user: { id: 'user-1' } };
     routeParams = { id: 'list-1' };
     vi.useFakeTimers();
     container = document.createElement('div');
@@ -436,6 +448,47 @@ describe('DanceListPage', () => {
 
     expect(hasAddButton).toBe(false);
     expect(hasRemoveButton).toBe(false);
+  });
+
+  it('a visitor who is not signed in reads a public list from the public API', async () => {
+    authState = { isAuthenticated: false, isLoading: false, user: null };
+    getPublicDanceList.mockResolvedValue({
+      id: 'list-1',
+      name: 'Kursdansen',
+      owner: { id: 'user-2', username: 'anna', displayName: 'Anna' },
+      entries: mockDanceListFull.entries,
+    });
+
+    await renderPage();
+
+    expect(getPublicDanceList).toHaveBeenCalledWith('list-1');
+    expect(getDanceList).not.toHaveBeenCalled();
+    const text = document.body.textContent;
+    expect(text).toContain('Kursdansen');
+    expect(text).toContain('Familjevals från Ödsmål');
+    const hasAddButton = Array.from(document.body.querySelectorAll('button')).some((b) =>
+      b.textContent?.includes('Lägg till'),
+    );
+    expect(hasAddButton).toBe(false);
+  });
+
+  it('waits for the sign-in check before it loads a list', async () => {
+    authState = { isAuthenticated: false, isLoading: true, user: null };
+
+    await renderPage();
+
+    expect(getDanceList).not.toHaveBeenCalled();
+    expect(getPublicDanceList).not.toHaveBeenCalled();
+  });
+
+  it('tells a visitor that a private list may be theirs to sign in for', async () => {
+    authState = { isAuthenticated: false, isLoading: false, user: null };
+    getPublicDanceList.mockRejectedValue(new Error('not found'));
+
+    await renderPage();
+
+    expect(document.body.textContent).toContain('Danslistan hittades inte.');
+    expect(document.body.textContent).toContain('Logga in om det är din danslista.');
   });
 
   it('shows not found', async () => {

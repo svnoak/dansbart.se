@@ -23,6 +23,7 @@ import se.dansbart.dto.InvitationDto;
 import se.dansbart.dto.PageResponse;
 import se.dansbart.dto.PlaylistDto;
 import se.dansbart.dto.PlaylistListItemDto;
+import se.dansbart.dto.PublicPlaylistDto;
 import se.dansbart.dto.PlaylistTrackDto;
 import se.dansbart.dto.TrackListDto;
 import se.dansbart.dto.UserSummaryDto;
@@ -285,6 +286,28 @@ public class PlaylistService {
         return playlistJooqRepository.findById(playlistId)
             .filter(playlist -> canView(playlist, viewerId))
             .map(playlist -> toPlaylistDto(playlist, viewerId));
+    }
+
+    /** A public playlist as an anonymous viewer sees it; empty when the playlist is private or missing. */
+    @Transactional(readOnly = true)
+    public Optional<PublicPlaylistDto> findPublicByIdAsDto(UUID playlistId) {
+        return playlistJooqRepository.findById(playlistId)
+            .filter(playlist -> Boolean.TRUE.equals(playlist.getIsPublic()))
+            .map(playlist -> toPlaylistDto(playlist, null))
+            .map(dto -> PublicPlaylistDto.builder()
+                .id(dto.getId())
+                .name(dto.getName())
+                .description(dto.getDescription())
+                .danceStyle(dto.getDanceStyle())
+                .subStyle(dto.getSubStyle())
+                .tempoCategory(dto.getTempoCategory())
+                .createdAt(dto.getCreatedAt())
+                .updatedAt(dto.getUpdatedAt())
+                .owner(dto.getOwner())
+                .ownerGroup(dto.getOwnerGroup())
+                .trackCount(dto.getTrackCount())
+                .tracks(dto.getTracks())
+                .build());
     }
 
     private boolean canView(Playlist playlist, UUID viewerId) {

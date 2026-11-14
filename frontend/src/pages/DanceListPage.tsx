@@ -11,6 +11,7 @@ import {
   setPlayMode,
   reorderEntries,
 } from '@/api/generated/dance-lists/dance-lists';
+import { getPublicDanceList } from '@/api/manual/publicLists';
 import { getDances } from '@/api/generated/dances/dances';
 import { searchTracks } from '@/api/generated/tracks/tracks';
 import type { DanceListDto } from '@/api/models/danceListDto';
@@ -46,6 +47,7 @@ import {
   ShareIcon,
 } from '@/icons';
 import { usePlayer } from '@/player/usePlayer';
+import { useAuth } from '@/auth/useAuth';
 import { GuestCodePanel, SelectableSearchResults, TrackRow } from '@/components';
 import { StylePill } from '@/components/TrackRow/StylePill';
 
@@ -194,6 +196,7 @@ function formatTotalDuration(ms: number): string | null {
 
 export default function DanceListPage() {
   const { id: routeId, token } = useParams<{ id?: string; token?: string }>();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   // A share link shows the list read-only; the id then comes from the loaded list.
   const [loadedId, setLoadedId] = useState<string | undefined>(undefined);
   const id = routeId ?? loadedId;
@@ -244,10 +247,16 @@ export default function DanceListPage() {
 
   useEffect(() => {
     if (!routeId && !token) return;
+    // Someone who is not signed in reads a public list from the public API.
+    if (routeId && authLoading) return;
     let cancelled = false;
     async function load() {
       try {
-        const data = routeId ? await getDanceList(routeId) : await getDanceListByShareToken(token as string);
+        const data = routeId
+          ? isAuthenticated
+            ? await getDanceList(routeId)
+            : await getPublicDanceList(routeId)
+          : await getDanceListByShareToken(token as string);
         if (!cancelled) {
           setDanceList(data);
           setLoadedId(data.id);
@@ -262,7 +271,7 @@ export default function DanceListPage() {
     return () => {
       cancelled = true;
     };
-  }, [routeId, token]);
+  }, [routeId, token, isAuthenticated, authLoading]);
 
   useEffect(() => {
     if (activeSearch !== 'dance' || !danceQuery.trim()) {
@@ -605,7 +614,11 @@ export default function DanceListPage() {
         <EmptyState
           icon={<QueueListIcon className="h-7 w-7" aria-hidden />}
           title="Danslistan hittades inte."
-          description="Den kan ha tagits bort, eller så har du inte tillgång till den."
+          description={
+            isAuthenticated
+              ? 'Den kan ha tagits bort, eller så har du inte tillgång till den.'
+              : 'Den kan ha tagits bort, eller vara privat. Logga in om det är din danslista.'
+          }
           action={
             <Link
               to="/dance-lists"

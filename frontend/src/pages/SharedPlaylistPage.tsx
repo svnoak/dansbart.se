@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { getPlaylistByShareToken } from '@/api/generated/playlists/playlists';
+import { getPublicPlaylist, type PublicPlaylistDto } from '@/api/manual/publicLists';
 import type { PlaylistDto } from '@/api/models/playlistDto';
 import type { TrackListDto } from '@/api/models/trackListDto';
 import { TrackRow } from '@/components/TrackRow';
@@ -37,19 +38,32 @@ function formatTotalDuration(ms: number): string {
 const primaryLinkClass =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] bg-[rgb(var(--color-accent))] px-4 py-2 text-sm font-semibold text-[rgb(var(--color-accent-foreground))] transition-colors hover:bg-[rgb(var(--color-accent-hover))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]';
 
-export function SharedPlaylistPage() {
-  const { token } = useParams<{ token: string }>();
+interface SharedPlaylistPageProps {
+  /**
+   * "share" opens a playlist from its share link (`:token`). "public" opens a public playlist by
+   * its id (`:id`) for someone who is not signed in.
+   */
+  source?: 'share' | 'public';
+}
+
+export function SharedPlaylistPage({ source = 'share' }: SharedPlaylistPageProps) {
+  const { token, id } = useParams<{ token?: string; id?: string }>();
+  const key = source === 'public' ? id : token;
   const { theme } = useTheme();
   const { user } = useAuth();
 
-  const [playlist, setPlaylist] = useState<PlaylistDto | null>(null);
+  const [playlist, setPlaylist] = useState<(PlaylistDto | PublicPlaylistDto) | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!key) return;
     const controller = new AbortController();
-    getPlaylistByShareToken(token, { signal: controller.signal })
+    const request =
+      source === 'public'
+        ? getPublicPlaylist(key, { signal: controller.signal })
+        : getPlaylistByShareToken(key, { signal: controller.signal });
+    request
       .then(setPlaylist)
       .catch(() => {
         if (controller.signal.aborted) return;
@@ -57,11 +71,11 @@ export function SharedPlaylistPage() {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [token]);
+  }, [key, source]);
 
   if (loading) return <RowSkeleton rows={5} label="Laddar spellistan" />;
 
-  if (!notFound && playlist && user?.id) {
+  if (!notFound && playlist && user?.id && 'collaborators' in playlist) {
     const isOwner = playlist.owner?.id === user.id;
     const isCollaborator = playlist.collaborators?.some(
       (c) => c.userId === user.id && c.status === 'accepted',
@@ -75,8 +89,12 @@ export function SharedPlaylistPage() {
     return (
       <EmptyState
         icon={<PlaylistIcon className="h-7 w-7" aria-hidden />}
-        title="Länken är inte längre giltig"
-        description="Den som delade spellistan kan ha tagit bort länken."
+        title={source === 'public' ? 'Spellistan hittades inte' : 'Länken är inte längre giltig'}
+        description={
+          source === 'public'
+            ? 'Den kan ha tagits bort, eller vara privat. Logga in om det är din spellista.'
+            : 'Den som delade spellistan kan ha tagit bort länken.'
+        }
         action={
           <Link to="/" className={primaryLinkClass}>
             Gå till startsidan

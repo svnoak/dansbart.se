@@ -11,6 +11,7 @@ import se.dansbart.domain.group.GroupJooqRepository;
 import se.dansbart.domain.group.GroupMember;
 import se.dansbart.domain.group.GroupMemberJooqRepository;
 import se.dansbart.domain.guestcode.GuestCodeJooqRepository;
+import se.dansbart.domain.track.PrivateTrackGuard;
 import se.dansbart.domain.track.TrackJooqRepository;
 import se.dansbart.domain.track.UserTrackSourceJooqRepository;
 import se.dansbart.domain.user.UserJooqRepository;
@@ -20,6 +21,7 @@ import se.dansbart.dto.DanceListEntryDto;
 import se.dansbart.dto.DanceListInvitationDto;
 import se.dansbart.dto.DanceListListItemDto;
 import se.dansbart.dto.PageResponse;
+import se.dansbart.dto.PublicDanceListDto;
 import se.dansbart.dto.GroupSummaryDto;
 import se.dansbart.dto.PlaylistTrackDto;
 import se.dansbart.dto.TrackListDto;
@@ -60,6 +62,7 @@ public class DanceListService {
     private final DanceService danceService;
     private final CollaborationAccess collaborationAccess;
     private final GuestCodeJooqRepository guestCodeJooqRepository;
+    private final PrivateTrackGuard privateTrackGuard;
 
     @Transactional
     public DanceList create(UUID userId, String name, String description, Boolean isPublic) {
@@ -135,6 +138,38 @@ public class DanceListService {
         return danceListJooqRepository.findById(danceListId)
             .filter(danceList -> canView(danceList, viewerId))
             .map(danceList -> toDanceListDto(danceList, viewerId));
+    }
+
+    /** A public dance list as an anonymous viewer sees it; empty when the list is private or missing. */
+    @Transactional(readOnly = true)
+    public Optional<PublicDanceListDto> findPublicByIdAsDto(UUID danceListId) {
+        return danceListJooqRepository.findById(danceListId)
+            .filter(danceList -> Boolean.TRUE.equals(danceList.getIsPublic()))
+            .map(danceList -> toDanceListDto(danceList, null))
+            .map(dto -> {
+                // A track from its owner's own library stays private, so an anonymous viewer does not see it.
+                List<UUID> trackIds = dto.getEntries().stream()
+                    .flatMap(entry -> entry.getTracks().stream())
+                    .map(link -> link.getTrack() != null ? link.getTrack().getId() : null)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+                Set<UUID> hidden = privateTrackGuard.hiddenTrackIds(trackIds, null);
+                dto.getEntries().forEach(entry -> entry.setTracks(entry.getTracks().stream()
+                    .filter(link -> link.getTrack() == null || !hidden.contains(link.getTrack().getId()))
+                    .collect(Collectors.toList())));
+                return dto;
+            })
+            .map(dto -> PublicDanceListDto.builder()
+                .id(dto.getId())
+                .name(dto.getName())
+                .description(dto.getDescription())
+                .createdAt(dto.getCreatedAt())
+                .updatedAt(dto.getUpdatedAt())
+                .owner(dto.getOwner())
+                .ownerGroup(dto.getOwnerGroup())
+                .entries(dto.getEntries())
+                .build());
     }
 
     @Transactional

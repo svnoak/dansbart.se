@@ -27,7 +27,7 @@ import { FavoritesProvider } from '@/favorites/FavoritesContext';
 import { FavoritesPage } from '@/pages/FavoritesPage';
 import { AddTrackPage } from '@/pages/AddTrackPage';
 import { PlaylistsPage } from '@/pages/PlaylistsPage';
-import { PlaylistPage } from '@/pages/PlaylistPage';
+import { PlaylistRoutePage } from '@/pages/PlaylistRoutePage';
 import { PlaylistSettingsPage } from '@/pages/PlaylistSettingsPage';
 import { SharedPlaylistPage } from '@/pages/SharedPlaylistPage';
 import { GuestCodePage } from '@/pages/GuestCodePage';
@@ -84,14 +84,7 @@ export function App() {
                         <Route path="/artist/:id" element={<ArtistPage />} />
                         <Route path="/album/:id" element={<AlbumPage />} />
                         <Route path="/playlists" element={<PlaylistsPage />} />
-                        <Route
-                          path="/playlists/:id"
-                          element={
-                            <ProtectedRoute>
-                              <PlaylistPage />
-                            </ProtectedRoute>
-                          }
-                        />
+                        <Route path="/playlists/:id" element={<PlaylistRoutePage />} />
                         <Route
                           path="/playlists/:id/settings"
                           element={
