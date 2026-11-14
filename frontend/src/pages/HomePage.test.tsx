@@ -13,6 +13,7 @@ const getStyleOverview = vi.fn();
 const getArtists = vi.fn();
 const getPublicPlaylists = vi.fn();
 const getStats = vi.fn();
+const getPublicDanceLists = vi.fn();
 const navigateMock = vi.fn();
 const useAuth = vi.fn();
 
@@ -36,6 +37,10 @@ vi.mock('@/api/generated/playlists/playlists', () => ({
   getPublicPlaylists: (...args: unknown[]) => getPublicPlaylists(...args),
 }));
 
+vi.mock('@/api/manual/publicDanceLists', () => ({
+  getPublicDanceLists: (...args: unknown[]) => getPublicDanceLists(...args),
+}));
+
 vi.mock('@/api/generated/stats/stats', () => ({
   getStats: () => getStats(),
 }));
@@ -57,6 +62,7 @@ describe('HomePage', () => {
     getArtists.mockReset();
     getPublicPlaylists.mockReset();
     getStats.mockReset();
+    getPublicDanceLists.mockReset();
     navigateMock.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue(authValue());
@@ -65,6 +71,13 @@ describe('HomePage', () => {
     getArtists.mockResolvedValue({ items: [{ id: 'a1', name: 'Spelmanslaget' }] });
     getPublicPlaylists.mockResolvedValue({
       items: [{ id: 'p1', name: 'Bygdedans', trackCount: 4 }],
+      total: 1,
+      page: 0,
+      size: 8,
+      hasMore: false,
+    });
+    getPublicDanceLists.mockResolvedValue({
+      items: [{ id: 'd1', name: 'Kursdansen', entryCount: 5 }],
       total: 1,
       page: 0,
       size: 8,
@@ -201,6 +214,32 @@ describe('HomePage', () => {
     await renderPage();
 
     expect(document.body.textContent).toContain('Inga offentliga spellistor ännu.');
+  });
+
+  it('shows the public dance lists the endpoint returns', async () => {
+    await renderPage();
+
+    expect(document.body.textContent).toContain('Offentliga danslistor');
+    expect(document.body.textContent).toContain('Kursdansen');
+    expect(document.body.textContent).toContain('5 danser');
+  });
+
+  it('shows an empty state when no public dance lists exist', async () => {
+    getPublicDanceLists.mockResolvedValue({ items: [], total: 0, page: 0, size: 8, hasMore: false });
+
+    await renderPage();
+
+    expect(document.body.textContent).toContain('Inga offentliga danslistor ännu.');
+  });
+
+  it('shows a retry error when the dance lists fetch fails', async () => {
+    getPublicDanceLists.mockReset();
+    getPublicDanceLists.mockRejectedValue(new Error('network error'));
+
+    await renderPage();
+
+    const alert = document.body.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Kunde inte hämta danslistorna.');
   });
 
   function addTrackLink() {

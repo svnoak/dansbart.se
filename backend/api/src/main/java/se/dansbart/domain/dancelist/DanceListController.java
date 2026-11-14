@@ -11,6 +11,8 @@ import se.dansbart.dto.CollaboratorDto;
 import se.dansbart.dto.DanceListDto;
 import se.dansbart.dto.DanceListEntryDto;
 import se.dansbart.dto.DanceListInvitationDto;
+import se.dansbart.dto.DanceListListItemDto;
+import se.dansbart.dto.PageResponse;
 
 import java.net.URI;
 import java.util.List;
@@ -23,6 +25,14 @@ import java.util.UUID;
 public class DanceListController {
 
     private final DanceListService danceListService;
+
+    @GetMapping("/public")
+    @Operation(operationId = "getPublicDanceLists", summary = "Get public dance lists")
+    public ResponseEntity<PageResponse<DanceListListItemDto>> getPublicDanceLists(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(danceListService.findPublicDanceLists(page, size));
+    }
 
     @GetMapping
     @Operation(summary = "Get the dance lists the current user owns, or sees through a group or a collaboration")
