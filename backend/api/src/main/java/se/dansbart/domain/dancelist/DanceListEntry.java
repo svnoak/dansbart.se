@@ -18,6 +18,10 @@ public class DanceListEntry {
     private String freeTextName;
     private UUID suggestionId;
 
+    // What the people who edit the list wrote about the dance, and where it is described
+    private String description;
+    private String descriptionUrl;
+
     @Builder.Default
     private String playMode = "in_order";
 

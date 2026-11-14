@@ -30,6 +30,8 @@ import se.dansbart.exception.ForbiddenException;
 import se.dansbart.exception.ResourceNotFoundException;
 import se.dansbart.exception.UnprocessableEntityException;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +48,8 @@ public class DanceListService {
     private static final Set<String> PLAY_MODES = Set.of("in_order", "random");
     private static final Set<String> PERMISSIONS = Set.of("view", "edit");
     private static final int MAX_ENTRY_NAME_LENGTH = 200;
+    private static final int MAX_ENTRY_DESCRIPTION_LENGTH = 5000;
+    private static final int MAX_ENTRY_DESCRIPTION_URL_LENGTH = 2000;
 
     private final DanceListJooqRepository danceListJooqRepository;
     private final DanceListEntryJooqRepository entryJooqRepository;
@@ -237,6 +241,47 @@ public class DanceListService {
         requireEditAccess(danceList, userId);
         requireOwnEntry(danceListId, entryId);
         entryJooqRepository.updateFreeTextName(entryId, trimmed);
+    }
+
+    /**
+     * Sets what the list says about a dance: a text of the person's own, and a link to a
+     * description elsewhere. A blank value removes that part. The dance of the site is not changed.
+     */
+    @Transactional
+    public DanceListEntryDto describeEntry(UUID danceListId, UUID userId, UUID entryId,
+                                           String description, String descriptionUrl) {
+        String text = description == null || description.isBlank() ? null : description.strip();
+        if (text != null && text.length() > MAX_ENTRY_DESCRIPTION_LENGTH) {
+            throw new BadRequestException(
+                "The description can be at most " + MAX_ENTRY_DESCRIPTION_LENGTH + " characters.");
+        }
+        String url = descriptionUrl == null || descriptionUrl.isBlank() ? null : descriptionUrl.strip();
+        if (url != null && !isWebAddress(url)) {
+            throw new BadRequestException("The link must be a web address that starts with http:// or https://.");
+        }
+        DanceList danceList = requireVisible(danceListId, userId);
+        requireEditAccess(danceList, userId);
+        DanceListEntry entry = requireOwnEntry(danceListId, entryId);
+        entryJooqRepository.updateDescription(entryId, text, url);
+        entry.setDescription(text);
+        entry.setDescriptionUrl(url);
+        return toDanceListEntryDto(entry);
+    }
+
+    /** Only http and https, so the link is safe to show as a link to everyone who sees the list. */
+    private static boolean isWebAddress(String url) {
+        if (url.length() > MAX_ENTRY_DESCRIPTION_URL_LENGTH) {
+            return false;
+        }
+        try {
+            URI uri = new URI(url);
+            String scheme = uri.getScheme();
+            return scheme != null
+                && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
+                && uri.getHost() != null;
+        } catch (URISyntaxException e) {
+            return false;
+        }
     }
 
     @Transactional
@@ -461,6 +506,8 @@ public class DanceListService {
             .danceId(entry.getDanceId())
             .danceName(danceName)
             .freeTextName(entry.getFreeTextName())
+            .description(entry.getDescription())
+            .descriptionUrl(entry.getDescriptionUrl())
             .playMode(entry.getPlayMode())
             .position(entry.getPosition())
             .addedByGuest(Boolean.TRUE.equals(entry.getAddedByGuest()))

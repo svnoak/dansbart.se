@@ -18,6 +18,10 @@ public class DanceListEntryDto {
     private UUID danceId;
     private String danceName;
     private String freeTextName;
+
+    // The list's own description of the dance, and a link to one elsewhere
+    private String description;
+    private String descriptionUrl;
     private String playMode;
     private Integer position;
 

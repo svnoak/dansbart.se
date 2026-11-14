@@ -6,6 +6,7 @@ import {
   addEntry,
   removeEntry,
   renameEntry,
+  describeEntry,
   addTrackToEntry,
   removeTrackFromEntry,
   setPlayMode,
@@ -65,6 +66,57 @@ const INPUT_CLASS =
 const SEARCH_INPUT_CLASS = `${INPUT_CLASS} pl-10`;
 const TEXT_INPUT_CLASS = `${INPUT_CLASS} pl-3`;
 const MAX_ENTRY_NAME_LENGTH = 200;
+const MAX_ENTRY_DESCRIPTION_LENGTH = 5000;
+const MAX_ENTRY_DESCRIPTION_URL_LENGTH = 2000;
+const TEXTAREA_CLASS =
+  'min-h-28 w-full rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] px-3 py-2 text-[15px] leading-relaxed text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:border-[rgb(var(--color-focus))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--color-focus))]';
+
+function ExternalLinkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z"
+        clipRule="evenodd"
+      />
+      <path
+        fillRule="evenodd"
+        d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+/** The site the link leads to, so a person sees where a click takes them. */
+function linkHost(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+/** Accepts "folkdans.se/hambo" as well as a full address; anything but http and https is refused. */
+function normalizeLink(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(withScheme);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    if (!url.hostname.includes('.')) return null;
+    return withScheme;
+  } catch {
+    return null;
+  }
+}
 
 function SearchGlyph() {
   return (
@@ -101,6 +153,7 @@ function EntryMenu({
   onMoveUp,
   onMoveDown,
   onRename,
+  onDescribe,
   onRemove,
 }: {
   name: string;
@@ -112,6 +165,7 @@ function EntryMenu({
   /** Absent for the last dance. */
   onMoveDown?: () => void;
   onRename: () => void;
+  onDescribe: () => void;
   onRemove: () => void;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -126,7 +180,7 @@ function EntryMenu({
       >
         <MoreVerticalIcon className="h-5 w-5" aria-hidden />
       </IconButton>
-      <AnchoredMenu open={open} anchorRef={buttonRef} onClose={onClose} width={192}>
+      <AnchoredMenu open={open} anchorRef={buttonRef} onClose={onClose} width={208}>
         {onMoveUp && (
           <li role="none">
             <button type="button" role="menuitem" className={menuItemClassName} onClick={onMoveUp}>
@@ -144,6 +198,11 @@ function EntryMenu({
         <li role="none">
           <button type="button" role="menuitem" className={menuItemClassName} onClick={onRename}>
             Byt namn
+          </button>
+        </li>
+        <li role="none">
+          <button type="button" role="menuitem" className={menuItemClassName} onClick={onDescribe}>
+            Ändra beskrivning
           </button>
         </li>
         <li role="none">
@@ -210,6 +269,11 @@ export default function DanceListPage() {
   const [renameValue, setRenameValue] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [renameErrors, setRenameErrors] = useState<Record<string, string>>({});
+  const [describingEntryId, setDescribingEntryId] = useState<string | null>(null);
+  const [descriptionValue, setDescriptionValue] = useState('');
+  const [descriptionUrlValue, setDescriptionUrlValue] = useState('');
+  const [describing, setDescribing] = useState(false);
+  const [describeError, setDescribeError] = useState<string | null>(null);
 
   const [danceQuery, setDanceQuery] = useState('');
   const [danceResults, setDanceResults] = useState<Dance[]>([]);
@@ -394,7 +458,56 @@ export default function DanceListPage() {
       return next;
     });
     setRenameValue(entryName(entry));
+    setDescribingEntryId(null);
     setRenamingEntryId(entryId);
+  }
+
+  function openDescribe(entry: DanceListEntryDto) {
+    const entryId = entry.id ?? '';
+    setMenuEntryId(null);
+    setConfirmRemoval(null);
+    setRenamingEntryId(null);
+    setDescribeError(null);
+    setDescriptionValue(entry.description ?? '');
+    setDescriptionUrlValue(entry.descriptionUrl ?? '');
+    setDescribingEntryId(entryId);
+    // The saved description shows in the opened dance, so open it.
+    setOpenEntries((prev) => (prev.has(entryId) ? prev : new Set(prev).add(entryId)));
+  }
+
+  async function handleDescribe(entryId: string) {
+    if (!id || describing) return;
+    const descriptionUrl = normalizeLink(descriptionUrlValue);
+    if (descriptionUrl === null) {
+      setDescribeError('Länken ser inte ut som en webbadress. Skriv till exempel https://www.folkdans.se');
+      return;
+    }
+    setDescribing(true);
+    setDescribeError(null);
+    try {
+      const saved = await describeEntry(id, entryId, {
+        description: descriptionValue.trim(),
+        descriptionUrl,
+      });
+      setDanceList((prev) =>
+        prev
+          ? {
+              ...prev,
+              entries: (prev.entries ?? []).map((e) =>
+                e.id === entryId
+                  ? { ...e, description: saved.description, descriptionUrl: saved.descriptionUrl }
+                  : e,
+              ),
+            }
+          : prev,
+      );
+      setDescribingEntryId(null);
+      toast('Beskrivningen sparad');
+    } catch {
+      setDescribeError('Det gick inte att spara beskrivningen.');
+    } finally {
+      setDescribing(false);
+    }
   }
 
   async function handleRename(entryId: string) {
@@ -794,6 +907,9 @@ export default function DanceListPage() {
               const isTrackSearchOpen = typeof activeSearch === 'object' && activeSearch?.entryId === entryId;
               const isMenuOpen = menuEntryId === entryId;
               const isRenaming = renamingEntryId === entryId;
+              const isDescribing = describingEntryId === entryId;
+              const hasDescription = !!entry.description || !!entry.descriptionUrl;
+              const descriptionHost = entry.descriptionUrl ? linkHost(entry.descriptionUrl) : null;
               const bodyId = `dance-entry-body-${entryId}`;
               const currentPlayMode = entry.playMode ?? 'in_order';
               // The play mode only matters when there is more than one track to choose from.
@@ -802,6 +918,7 @@ export default function DanceListPage() {
                 !style && isFreeText ? 'Egen rad' : null,
                 tracks.length === 0 ? 'Inga låtar' : countLabel(tracks.length, 'låt', 'låtar'),
                 hasPlayModeChoice && currentPlayMode === 'random' ? 'Slumpvis' : null,
+                hasDescription ? 'Med beskrivning' : null,
                 entry.addedByGuest ? 'Tillagd med kod' : null,
               ].filter((part): part is string => !!part);
 
@@ -896,9 +1013,11 @@ export default function DanceListPage() {
                               : undefined
                           }
                           onRename={() => openRename(entry)}
+                          onDescribe={() => openDescribe(entry)}
                           onRemove={() => {
                             setMenuEntryId(null);
                             setRenamingEntryId(null);
+                            setDescribingEntryId(null);
                             setConfirmRemoval({ kind: 'entry', entryId });
                           }}
                         />
@@ -906,6 +1025,7 @@ export default function DanceListPage() {
                     </div>
 
                     {(isRenaming ||
+                      isDescribing ||
                       isConfirmingEntryRemoval ||
                       renameErrors[entryId] ||
                       entryRemoveErrors[entryId] ||
@@ -949,6 +1069,73 @@ export default function DanceListPage() {
                             )}
                           </form>
                         )}
+                        {isDescribing && (
+                          <form
+                            className="space-y-3 py-1"
+                            noValidate
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              void handleDescribe(entryId);
+                            }}
+                          >
+                            <div>
+                              <label
+                                htmlFor={`describe-entry-${entryId}`}
+                                className="mb-1.5 block text-sm font-medium text-[rgb(var(--color-text))]"
+                              >
+                                Beskrivning av {name}
+                              </label>
+                              <textarea
+                                id={`describe-entry-${entryId}`}
+                                value={descriptionValue}
+                                onChange={(e) => setDescriptionValue(e.target.value)}
+                                maxLength={MAX_ENTRY_DESCRIPTION_LENGTH}
+                                rows={5}
+                                autoFocus
+                                placeholder="Till exempel turer, fattning eller vad ni brukar tänka på"
+                                className={TEXTAREA_CLASS}
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`describe-entry-url-${entryId}`}
+                                className="mb-1.5 block text-sm font-medium text-[rgb(var(--color-text))]"
+                              >
+                                Länk till en beskrivning eller film
+                              </label>
+                              <input
+                                id={`describe-entry-url-${entryId}`}
+                                type="url"
+                                inputMode="url"
+                                value={descriptionUrlValue}
+                                onChange={(e) => {
+                                  setDescriptionUrlValue(e.target.value);
+                                  setDescribeError(null);
+                                }}
+                                maxLength={MAX_ENTRY_DESCRIPTION_URL_LENGTH}
+                                placeholder="https://"
+                                className={TEXT_INPUT_CLASS}
+                              />
+                            </div>
+                            <p className="text-[13px] text-[rgb(var(--color-text-muted))]">
+                              Alla som ser danslistan ser beskrivningen och länken. Lämna ett fält tomt för att ta bort det.
+                            </p>
+                            <InlineError>{describeError}</InlineError>
+                            <div className="flex flex-wrap gap-2">
+                              <Button type="submit" disabled={describing}>
+                                Spara beskrivningen
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setDescribingEntryId(null)}
+                                disabled={describing}
+                              >
+                                Avbryt
+                              </Button>
+                            </div>
+                          </form>
+                        )}
                         {isConfirmingEntryRemoval && (
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm text-[rgb(var(--color-text))]">
@@ -971,6 +1158,31 @@ export default function DanceListPage() {
                     {/* Entry body */}
                     {isOpen && (
                       <div id={bodyId} className="border-t border-[rgb(var(--color-border))] px-2 pb-2 sm:pl-10">
+                        {hasDescription && (
+                          <div className="space-y-2 border-b border-[rgb(var(--color-border))] px-2 py-3">
+                            {entry.description && (
+                              <p className="whitespace-pre-line break-words text-[15px] leading-relaxed text-[rgb(var(--color-text))]">
+                                {entry.description}
+                              </p>
+                            )}
+                            {entry.descriptionUrl && (
+                              <a
+                                href={entry.descriptionUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`Öppna beskrivningen av ${name}${
+                                  descriptionHost ? ` hos ${descriptionHost}` : ''
+                                }, öppnas i ny flik`}
+                                className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-[var(--radius)] text-sm font-semibold text-[rgb(var(--color-link))] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))]"
+                              >
+                                <span className="min-w-0 break-words">
+                                  {descriptionHost ? `Beskrivning hos ${descriptionHost}` : 'Öppna beskrivningen'}
+                                </span>
+                                <ExternalLinkIcon className="h-4 w-4 shrink-0" />
+                              </a>
+                            )}
+                          </div>
+                        )}
                         {tracks.length === 0 ? (
                           <p className="px-2 py-3 text-sm text-[rgb(var(--color-text-muted))]">
                             {isFreeText ? 'Egen rad utan låtar.' : 'Inga låtar ännu.'}

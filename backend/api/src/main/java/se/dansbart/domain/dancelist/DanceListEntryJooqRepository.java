@@ -50,6 +50,8 @@ public class DanceListEntryJooqRepository {
             .set(DANCE_LIST_ENTRIES.DANCE_ID, entry.getDanceId())
             .set(DANCE_LIST_ENTRIES.FREE_TEXT_NAME, entry.getFreeTextName())
             .set(DANCE_LIST_ENTRIES.SUGGESTION_ID, entry.getSuggestionId())
+            .set(DANCE_LIST_ENTRIES.DESCRIPTION, entry.getDescription())
+            .set(DANCE_LIST_ENTRIES.DESCRIPTION_URL, entry.getDescriptionUrl())
             .set(DANCE_LIST_ENTRIES.POSITION, entry.getPosition())
             .set(DANCE_LIST_ENTRIES.ADDED_BY_GUEST, Boolean.TRUE.equals(entry.getAddedByGuest()));
         if (entry.getPlayMode() != null) {
@@ -75,6 +77,14 @@ public class DanceListEntryJooqRepository {
         dsl.update(DANCE_LIST_ENTRIES).set(DANCE_LIST_ENTRIES.FREE_TEXT_NAME, freeTextName).where(DANCE_LIST_ENTRIES.ID.eq(entryId)).execute();
     }
 
+    public void updateDescription(UUID entryId, String description, String descriptionUrl) {
+        dsl.update(DANCE_LIST_ENTRIES)
+            .set(DANCE_LIST_ENTRIES.DESCRIPTION, description)
+            .set(DANCE_LIST_ENTRIES.DESCRIPTION_URL, descriptionUrl)
+            .where(DANCE_LIST_ENTRIES.ID.eq(entryId))
+            .execute();
+    }
+
     public void delete(UUID entryId) {
         dsl.deleteFrom(DANCE_LIST_ENTRIES).where(DANCE_LIST_ENTRIES.ID.eq(entryId)).execute();
     }
@@ -86,6 +96,8 @@ public class DanceListEntryJooqRepository {
             .danceId(r.get(DANCE_LIST_ENTRIES.DANCE_ID))
             .freeTextName(r.get(DANCE_LIST_ENTRIES.FREE_TEXT_NAME))
             .suggestionId(r.get(DANCE_LIST_ENTRIES.SUGGESTION_ID))
+            .description(r.get(DANCE_LIST_ENTRIES.DESCRIPTION))
+            .descriptionUrl(r.get(DANCE_LIST_ENTRIES.DESCRIPTION_URL))
             .playMode(r.get(DANCE_LIST_ENTRIES.PLAY_MODE))
             .position(r.get(DANCE_LIST_ENTRIES.POSITION))
             .addedByGuest(Boolean.TRUE.equals(r.get(DANCE_LIST_ENTRIES.ADDED_BY_GUEST)))
