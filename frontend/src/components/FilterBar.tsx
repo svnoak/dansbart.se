@@ -1,6 +1,6 @@
-import { useId, useMemo, useState, type ChangeEvent, type CSSProperties } from 'react';
-import { Button, Card, Pill } from '@/ui';
-import { CheckIcon, ChevronDownIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
+import { useEffect, useId, useMemo, useState, type ChangeEvent, type CSSProperties } from 'react';
+import { Button, Pill } from '@/ui';
+import { CheckIcon, ChevronDownIcon, CloseIcon, SpotifyIcon, YouTubeIcon } from '@/icons';
 import { useTheme } from '@/theme/useTheme';
 import { getStyleColor } from '@/styles/danceStyleColors';
 import type { SearchFilters, SearchType } from '@/hooks/useSearchParamsState';
@@ -23,6 +23,8 @@ interface FilterBarProps {
   styleOverview: StyleOverviewDto[] | null;
   onClearFilters: () => void;
   hasActiveFilters: boolean;
+  /** The result count in words, for the button that closes the filter sheet on a phone. */
+  resultsLabel?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -42,6 +44,8 @@ interface SegmentedControlProps<T extends string> {
   options: SegmentOption<T>[];
   onChange: (value: T) => void;
   size?: 'sm' | 'md';
+  /** Fill the row on a phone, with segments of equal width. */
+  stretch?: boolean;
   className?: string;
 }
 
@@ -56,6 +60,7 @@ export function SegmentedControl<T extends string>({
   options,
   onChange,
   size = 'sm',
+  stretch = false,
   className = '',
 }: SegmentedControlProps<T>) {
   const sizeClass = size === 'md' ? 'min-h-10 px-4 text-sm' : 'min-h-8 px-3 text-sm';
@@ -63,7 +68,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="group"
       aria-label={label}
-      className={`inline-flex flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-1 ${className}`}
+      className={`${stretch ? 'flex md:inline-flex' : 'inline-flex'} flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] p-1 ${className}`}
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -75,6 +80,8 @@ export function SegmentedControl<T extends string>({
             aria-label={o.ariaLabel}
             onClick={() => onChange(o.value)}
             className={`inline-flex items-center justify-center rounded-[var(--radius)] font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))] ${sizeClass} ${
+              stretch ? 'flex-1 md:flex-none' : ''
+            } ${
               active
                 ? 'bg-[rgb(var(--color-accent))] text-[rgb(var(--color-accent-foreground))]'
                 : 'text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))]'
@@ -335,7 +342,7 @@ function RangeSlider({
             onMinChange(v);
             if (v > maxValue) onMaxChange(v);
           }}
-          className="h-11 flex-1 accent-[rgb(var(--color-accent))]"
+          className="h-11 min-w-0 flex-1 accent-[rgb(var(--color-accent))]"
           aria-label={`Välj minsta ${label.toLowerCase()}`}
         />
         <input
@@ -350,7 +357,7 @@ function RangeSlider({
             onMaxChange(v);
             if (v < minValue) onMinChange(v);
           }}
-          className="h-11 flex-1 accent-[rgb(var(--color-accent))]"
+          className="h-11 min-w-0 flex-1 accent-[rgb(var(--color-accent))]"
           aria-label={`Välj största ${label.toLowerCase()}`}
         />
         <span className="whitespace-nowrap text-[13px] text-[rgb(var(--color-text-muted))]">{maxLabel}</span>
@@ -366,18 +373,18 @@ function RangeSlider({
 /* FilterBar                                                           */
 /* ------------------------------------------------------------------ */
 
-const TEMPO_SEGMENTS: SegmentOption<string>[] = [
-  { value: '', label: 'Alla', ariaLabel: 'Visa alla tempon' },
-  ...TEMPO_PRESETS.map((p) => ({
-    value: p.key,
-    label: p.label,
-    ariaLabel: `Visa ${p.label.toLowerCase()} tempo`,
-  })),
-];
+const WIDE_SCREEN = '(min-width: 768px)';
+
+/** True from the `md` breakpoint up, and where the width is unknown. */
+function isWideScreen(): boolean {
+  return typeof window.matchMedia !== 'function' || window.matchMedia(WIDE_SCREEN).matches;
+}
 
 /**
- * The filter card for tracks. Dance style and tempo are chips and a segmented
- * control that act at once; the rarer filters sit behind "Fler filter".
+ * The filters for tracks. Dance style is a row of chips, tempo a select and
+ * "Bara bekräftade" a toggle; all three act at once. The rarer filters sit
+ * behind "Fler filter": a sheet from the bottom on a phone, a drawer in the
+ * card on a wide screen.
  */
 export function FilterBar({
   filters,
@@ -386,12 +393,23 @@ export function FilterBar({
   styleOverview,
   onClearFilters,
   hasActiveFilters,
+  resultsLabel,
 }: FilterBarProps) {
   const ids = useId();
   const drawerId = `${ids}-fler-filter`;
   const { theme } = useTheme();
   const advancedCount = advancedFilterCount(filters);
-  const [moreOpen, setMoreOpen] = useState(advancedCount > 0);
+  // A sheet that covers the results does not open by itself.
+  const [moreOpen, setMoreOpen] = useState(() => advancedCount > 0 && isWideScreen());
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isWideScreen()) setMoreOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [moreOpen]);
 
   const mainStyles = useMemo(() => {
     if (!styleOverview?.length) return [];
@@ -414,13 +432,10 @@ export function FilterBar({
   const chipRow = '-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide md:mx-0 md:flex-wrap md:px-0 md:pb-0';
 
   return (
-    <Card className="space-y-4 p-4">
+    <div className="space-y-3 md:space-y-4 md:rounded-[var(--radius-lg)] md:border md:border-[rgb(var(--color-border))] md:bg-[rgb(var(--color-bg-elevated))] md:p-4">
       {/* Dansstil */}
       <div className="space-y-2">
-        <span id={`${ids}-style-label`} className={FIELD_LABEL}>
-          Dansstil
-        </span>
-        <div role="group" aria-labelledby={`${ids}-style-label`} className={chipRow}>
+        <div role="group" aria-label="Dansstil" className={chipRow}>
           <Pill
             active={filters.style === ''}
             aria-pressed={filters.style === ''}
@@ -428,7 +443,7 @@ export function FilterBar({
             className="shrink-0"
             onClick={() => setFilters({ style: '', subStyle: '', offset: 0 })}
           >
-            Alla
+            Alla stilar
           </Pill>
           {mainStyles.map((style) => (
             <StyleChip
@@ -481,16 +496,32 @@ export function FilterBar({
       </div>
 
       {/* Tempo, bekräftade, fler filter */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[13px] font-medium text-[rgb(var(--color-text-muted))]" aria-hidden>
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-x-3">
+        <div className="relative inline-flex items-center">
+          <label htmlFor={`${ids}-tempo`} className="sr-only">
             Tempo
-          </span>
-          <SegmentedControl
-            label="Tempo"
+          </label>
+          <select
+            id={`${ids}-tempo`}
             value={tempoValue}
-            options={TEMPO_SEGMENTS}
-            onChange={(key) => setFilters(tempoFiltersFromKey(key))}
+            onChange={(e) => setFilters(tempoFiltersFromKey(e.target.value))}
+            className="min-h-11 cursor-pointer appearance-none rounded-[var(--radius)] border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] py-0 pl-3 pr-7 text-sm font-semibold text-[rgb(var(--color-text))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+          >
+            <option value="">Alla tempon</option>
+            {TEMPO_PRESETS.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+            {tempoValue === 'custom' && (
+              <option value="custom">
+                {filters.minBpm ?? ''}–{filters.maxBpm ?? ''} BPM
+              </option>
+            )}
+          </select>
+          <ChevronDownIcon
+            className="pointer-events-none absolute right-2 h-4 w-4 text-[rgb(var(--color-text))]"
+            aria-hidden
           />
         </div>
 
@@ -506,7 +537,8 @@ export function FilterBar({
           }`}
         >
           {filters.confirmed && <CheckIcon className="h-3.5 w-3.5" aria-hidden />}
-          Bara bekräftade
+          <span className="md:hidden" aria-hidden>Bekräftade</span>
+          <span className="hidden md:inline">Bara bekräftade</span>
         </button>
 
         <Button
@@ -515,7 +547,7 @@ export function FilterBar({
           aria-expanded={moreOpen}
           aria-controls={drawerId}
           onClick={() => setMoreOpen((o) => !o)}
-          className="border-[rgb(var(--color-border-strong))]"
+          className="border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))]"
         >
           Fler filter
           {advancedCount > 0 && (
@@ -525,7 +557,7 @@ export function FilterBar({
             </span>
           )}
           <ChevronDownIcon
-            className={`h-4 w-4 transition-transform ${moreOpen ? 'rotate-180' : ''}`}
+            className={`hidden h-4 w-4 transition-transform md:block ${moreOpen ? 'rotate-180' : ''}`}
             aria-hidden
           />
         </Button>
@@ -540,9 +572,33 @@ export function FilterBar({
       {/* Fler filter */}
       {moreOpen && (
         <div
+          className="fixed inset-0 z-[130] bg-black/50 md:hidden"
+          aria-hidden
+          onClick={() => setMoreOpen(false)}
+        />
+      )}
+      {moreOpen && (
+        <div
           id={drawerId}
-          className="grid gap-5 border-t border-[rgb(var(--color-border))] pt-4 md:grid-cols-2"
+          role="group"
+          aria-label="Fler filter"
+          className="grid grid-cols-[minmax(0,1fr)] gap-5 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-[131] max-md:max-h-[85dvh] max-md:overflow-y-auto max-md:overscroll-contain max-md:rounded-t-[var(--radius-lg)] max-md:bg-[rgb(var(--color-bg-elevated))] max-md:px-4 max-md:shadow-[var(--color-card-shadow)] md:grid-cols-2 md:border-t md:border-[rgb(var(--color-border))] md:pt-4"
         >
+          <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] py-1 pl-4 pr-2 md:hidden">
+            <span className="text-base font-semibold text-[rgb(var(--color-text))]" aria-hidden>
+              Fler filter
+            </span>
+            <button
+              type="button"
+              onClick={() => setMoreOpen(false)}
+              aria-label="Stäng fler filter"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius)] px-3 text-sm font-medium text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-accent-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-focus))]"
+            >
+              <CloseIcon className="h-4 w-4" aria-hidden />
+              Stäng
+            </button>
+          </div>
+
           <div className="space-y-2">
             <span id={`${ids}-source-label`} className={FIELD_LABEL}>
               Källa
@@ -655,8 +711,14 @@ export function FilterBar({
             label="Artikulation"
             step={0.1}
           />
+
+          <div className="sticky bottom-0 -mx-4 border-t border-[rgb(var(--color-border))] bg-[rgb(var(--color-bg-elevated))] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 md:hidden">
+            <Button variant="primary" className="w-full" onClick={() => setMoreOpen(false)}>
+              {resultsLabel ? `Visa ${resultsLabel}` : 'Visa resultat'}
+            </Button>
+          </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

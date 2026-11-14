@@ -284,12 +284,13 @@ export function SearchPage() {
   }, [hasMore, loadingMore, loadMore]);
 
   const noun = NOUNS[searchType] ?? NOUNS.tracks;
+  const countLabel = `${total.toLocaleString('sv-SE')} ${total === 1 ? noun.one : noun.many}`;
   const summary = useMemo(() => {
-    const count = `${total.toLocaleString('sv-SE')} ${total === 1 ? noun.one : noun.many}`;
+    const count = countLabel;
     const words = filters.searchType === 'tracks' ? activeFilterWords(filters) : [];
     if (filters.q) words.unshift(`”${filters.q}”`);
     return [count, ...words].join(' · ');
-  }, [filters, noun, total]);
+  }, [countLabel, filters]);
 
   const isEmpty = tracks.length === 0 && artists.length === 0 && albums.length === 0;
   const showEmpty = !loading && !error && isEmpty;
@@ -305,7 +306,7 @@ export function SearchPage() {
       : 'Det finns inget att visa här ännu.';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <h1 className="text-[32px] font-bold tracking-tight text-[rgb(var(--color-text))]">Sök</h1>
 
       {addToId && (
@@ -347,6 +348,7 @@ export function SearchPage() {
         styleOverview={styleOverview}
         onClearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
+        resultsLabel={loading ? undefined : countLabel}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

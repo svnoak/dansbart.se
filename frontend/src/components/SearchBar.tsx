@@ -21,8 +21,8 @@ const SEARCH_TYPES: SegmentOption<SearchType>[] = [
 const SEARCH_LABEL = 'Sök låt, artist eller album';
 
 /**
- * The search row: a fully rounded field, a segmented control for what is
- * searched, and the one primary button. The query is a draft until the person
+ * The search row: a fully rounded field that holds the one primary button,
+ * and a segmented control for what is searched. The query is a draft until the person
  * presses Sök or Enter.
  */
 export function SearchBar({
@@ -71,32 +71,37 @@ export function SearchBar({
           placeholder={SEARCH_LABEL}
           aria-label={SEARCH_LABEL}
           enterKeyHint="search"
-          className="h-12 w-full rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] pl-11 pr-12 text-base text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] [&::-webkit-search-cancel-button]:hidden"
+          className={`h-12 w-full rounded-full border border-[rgb(var(--color-border-strong))] bg-[rgb(var(--color-bg-elevated))] pl-11 text-base text-[rgb(var(--color-text))] placeholder:text-[rgb(var(--color-text-muted))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-focus))] [&::-webkit-search-cancel-button]:hidden ${
+            query ? 'pr-[7.25rem]' : 'pr-[4.75rem]'
+          }`}
         />
         {query && (
           <button
             type="button"
             onClick={() => onQueryChange('')}
-            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))]"
+            className="absolute right-[4.5rem] top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-[rgb(var(--color-text-muted))] hover:bg-[rgb(var(--color-accent-muted))] hover:text-[rgb(var(--color-text))]"
             aria-label="Rensa sökfältet"
           >
             <CloseIcon className="h-5 w-5" aria-hidden />
           </button>
         )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <SegmentedControl
-          label="Vad som söks"
-          value={searchType}
-          options={SEARCH_TYPES}
-          onChange={onSearchTypeChange}
-          size="md"
-        />
-        <Button type="submit" variant="primary" className="h-12 rounded-full px-6 text-base">
+        <Button
+          type="submit"
+          variant="primary"
+          className="absolute right-1 top-1/2 h-10 min-h-10 -translate-y-1/2 rounded-full px-5 text-base"
+        >
           Sök
         </Button>
       </div>
+
+      <SegmentedControl
+        label="Vad som söks"
+        value={searchType}
+        options={SEARCH_TYPES}
+        onChange={onSearchTypeChange}
+        size="md"
+        stretch
+      />
     </form>
   );
 }
