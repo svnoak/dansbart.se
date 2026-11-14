@@ -50,6 +50,8 @@ public class TestSecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/suggestions/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/artists/*/flag").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Importing from Spotify adds public tracks, so only admins may do it.
+                .requestMatchers(HttpMethod.POST, "/api/spotify/ingest/**").hasRole("ADMIN")
                 .requestMatchers("/api/playlists/**").authenticated()
                 .requestMatchers("/api/dance-lists/**").authenticated()
                 .requestMatchers("/api/groups/**").authenticated()

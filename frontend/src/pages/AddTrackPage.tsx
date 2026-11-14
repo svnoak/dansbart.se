@@ -133,8 +133,6 @@ export function AddTrackPage() {
       });
       if (result.status === 'EXISTS') {
         toast('Låten fanns redan. Din dansstil är sparad som en röst.');
-      } else if (result.status === 'QUEUED') {
-        toast('Tack! Vi hämtar låten från Spotify. Den syns i sökningen om en liten stund.');
       } else {
         toast('Tack! Låten är tillagd och går att spela direkt.');
       }

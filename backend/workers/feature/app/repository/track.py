@@ -28,6 +28,20 @@ class TrackRepository:
         """Get a track by its ISRC."""
         return self.db.query(Track).filter(Track.isrc == isrc).first()
 
+    def get_by_spotify_link(self, spotify_id: str) -> Optional[Track]:
+        """Get the public track that has this Spotify track id as a playback link."""
+        return (
+            self.db.query(Track)
+            .join(PlaybackLink, PlaybackLink.track_id == Track.id)
+            .filter(
+                PlaybackLink.platform == "spotify",
+                PlaybackLink.deep_link == spotify_id,
+                Track.is_private.is_(False),
+            )
+            .order_by(Track.created_at.asc())
+            .first()
+        )
+
     def get_or_create_artist(
         self, name: str, spotify_id: str = None, image_url: str = None
     ) -> Artist:

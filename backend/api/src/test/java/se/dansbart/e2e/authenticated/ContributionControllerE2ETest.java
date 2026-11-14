@@ -25,6 +25,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -180,12 +183,69 @@ class ContributionControllerE2ETest extends AbstractE2ETest {
         }
 
         @Test
-        @DisplayName("a Spotify link is queued and linked once the worker has created the track")
-        void spotifyLinkIsQueuedThenLinked() throws Exception {
+        @DisplayName("a Spotify link creates the track at once and starts the analysis, without the ingest worker")
+        void spotifyLinkCreatesTrack() throws Exception {
+            when(linkMetadataService.lookup(any())).thenReturn(
+                new LinkMetadataService.LinkMetadata("Hamborg Sekstur", "Spælimenninir", 200_000, "FOA000000001"));
+
             MvcResult result = submit(contributor, SPOTIFY_URL, "Polska", null);
             Map<?, ?> body = fromJson(result.getResponse().getContentAsString(), Map.class);
-            assertThat(body.get("status")).isEqualTo("QUEUED");
-            UUID submissionId = UUID.fromString((String) body.get("submissionId"));
+            assertThat(body.get("status")).isEqualTo("CREATED");
+            UUID trackId = UUID.fromString((String) body.get("trackId"));
+
+            Record track = dsl.selectFrom(TRACKS).where(TRACKS.ID.eq(trackId)).fetchOne();
+            assertThat(track.get(TRACKS.TITLE)).isEqualTo("Hamborg Sekstur");
+            assertThat(track.get(TRACKS.ISRC)).isEqualTo("FOA000000001");
+            assertThat(track.get(TRACKS.PROCESSING_STATUS)).isEqualTo("PENDING");
+            assertThat(track.get(TRACKS.UPLOADER_ID)).isEqualTo(contributor.getId());
+            assertThat(dsl.fetchExists(PLAYBACK_LINKS, PLAYBACK_LINKS.TRACK_ID.eq(trackId)
+                .and(PLAYBACK_LINKS.PLATFORM.eq("spotify")).and(PLAYBACK_LINKS.DEEP_LINK.eq(SPOTIFY_ID)))).isTrue();
+            assertThat(dsl.fetchExists(TRACK_DANCE_STYLES, TRACK_DANCE_STYLES.TRACK_ID.eq(trackId)
+                .and(TRACK_DANCE_STYLES.DANCE_STYLE.eq("Polska"))
+                .and(TRACK_DANCE_STYLES.IS_USER_CONFIRMED.isTrue()))).isTrue();
+            assertThat(dsl.select(TRACK_SUBMISSIONS.STATUS).from(TRACK_SUBMISSIONS)
+                .where(TRACK_SUBMISSIONS.TRACK_ID.eq(trackId)).fetchOne(TRACK_SUBMISSIONS.STATUS)).isEqualTo("LINKED");
+
+            // The audio analysis is dispatched after the commit, which a test transaction never reaches.
+            verify(taskDispatcher, never()).dispatchSpotifyIngest(anyString(), anyString());
+
+            mockMvc.perform(get("/api/tracks").param("mainStyle", "Polska"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].title").value("Hamborg Sekstur"));
+        }
+
+        @Test
+        @DisplayName("a Spotify link is added with the typed title when the Spotify lookup gives nothing")
+        void spotifyLinkWithoutLookup() throws Exception {
+            when(linkMetadataService.lookup(any())).thenReturn(
+                new LinkMetadataService.LinkMetadata(null, null, null));
+            Map<String, Object> request = new java.util.HashMap<>();
+            request.put("url", SPOTIFY_URL);
+            request.put("title", "Typed title");
+            request.put("mainStyle", "Polska");
+            MvcResult result = mockMvc.perform(post("/api/contributions/tracks")
+                    .with(jwt.userToken(contributor.getId()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(toJson(request)))
+                .andExpect(status().isOk())
+                .andReturn();
+            UUID trackId = UUID.fromString((String) fromJson(result.getResponse().getContentAsString(), Map.class).get("trackId"));
+            assertThat(dsl.select(TRACKS.TITLE).from(TRACKS).where(TRACKS.ID.eq(trackId)).fetchOne(TRACKS.TITLE))
+                .isEqualTo("Typed title");
+        }
+
+        @Test
+        @DisplayName("a queued Spotify submission from before is still linked once the worker has created the track")
+        void queuedSpotifySubmissionIsLinked() throws Exception {
+            UUID submissionId = UUID.randomUUID();
+            dsl.insertInto(TRACK_SUBMISSIONS)
+                .set(TRACK_SUBMISSIONS.ID, submissionId)
+                .set(TRACK_SUBMISSIONS.USER_ID, contributor.getId())
+                .set(TRACK_SUBMISSIONS.SOURCE, "SPOTIFY")
+                .set(TRACK_SUBMISSIONS.EXTERNAL_ID, SPOTIFY_ID)
+                .set(TRACK_SUBMISSIONS.DANCE_STYLE, "Polska")
+                .set(TRACK_SUBMISSIONS.STATUS, "QUEUED")
+                .execute();
 
             // The worker ingests the track and adds its Spotify link.
             Track ingested = testData.track().withTitle("Ingested").pending().build();

@@ -7,10 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import se.dansbart.domain.admin.StyleKeywordJooqRepository;
-import se.dansbart.domain.artist.Artist;
-import se.dansbart.domain.artist.ArtistJooqRepository;
 import se.dansbart.domain.track.BpmMultiplierResolver;
-import se.dansbart.domain.track.PlaybackLink;
+import se.dansbart.domain.track.LinkedTrackCreator;
 import se.dansbart.domain.track.PlaybackLinkJooqRepository;
 import se.dansbart.domain.track.Track;
 import se.dansbart.domain.track.TrackDanceStyle;
@@ -39,11 +37,11 @@ import java.util.regex.Pattern;
 /**
  * Lets signed-in users add tracks and dance styles to the public library.
  *
- * A YouTube link creates the track at once and starts the audio analysis, which
- * downloads that exact video. A Spotify link starts the same ingest an admin uses: the
- * worker creates the track and the analysis searches YouTube for a matching video.
- * The track id is only known once the worker is done, so {@link TrackSubmissionResolverJob}
- * links the submission afterwards.
+ * Both a YouTube and a Spotify link create the track here, at once, and start the audio
+ * analysis. The analysis downloads the YouTube video, or for a Spotify link searches
+ * YouTube by artist and title. Adding never waits for a worker or for Spotify: when the
+ * Spotify lookup fails, the title the person typed is enough. {@link TrackSubmissionResolverJob}
+ * puts the submitter's style back as primary once the analysis is done.
  *
  * The submitter's dance style is stored as a user-confirmed style, which the classifier
  * never overwrites. Additions are public at once; admins look at them afterwards.
@@ -69,7 +67,7 @@ public class ContributionService {
     private final TrackSubmissionJooqRepository submissionRepository;
     private final TrackJooqRepository trackRepository;
     private final PlaybackLinkJooqRepository playbackLinkRepository;
-    private final ArtistJooqRepository artistRepository;
+    private final LinkedTrackCreator linkedTrackCreator;
     private final TrackDanceStyleJooqRepository danceStyleRepository;
     private final StyleKeywordJooqRepository styleKeywordRepository;
     private final TrackFeedbackService feedbackService;
@@ -125,16 +123,7 @@ public class ContributionService {
         // An admin's own additions need no review.
         OffsetDateTime reviewedAt = admin ? OffsetDateTime.now() : null;
 
-        if (link.source() == TrackLinkParser.Source.SPOTIFY) {
-            TrackSubmission submission = submissionRepository.insert(new TrackSubmission(
-                null, userId, link.source().name(), link.externalId(), title, artistName,
-                style.mainStyle(), style.subStyle(), tempo, null, false, TrackSubmission.QUEUED, null, null),
-                reviewedAt);
-            afterCommit(() -> taskDispatcher.dispatchSpotifyIngest("track", link.externalId()));
-            return new TrackSubmissionResultDto(submission.id(), null, "QUEUED");
-        }
-
-        UUID trackId = createYoutubeTrack(link.externalId(), title, artistName, meta.durationMs(), userId);
+        UUID trackId = createTrack(link, title, artistName, meta, userId);
         TrackSubmission submission = submissionRepository.insert(new TrackSubmission(
             null, userId, link.source().name(), link.externalId(), title, artistName,
             style.mainStyle(), style.subStyle(), tempo, trackId, true, TrackSubmission.LINKED, null, null),
@@ -144,33 +133,10 @@ public class ContributionService {
         return new TrackSubmissionResultDto(submission.id(), trackId, "CREATED");
     }
 
-    private UUID createYoutubeTrack(String videoId, String title, String artistName, Integer durationMs, UUID userId) {
-        Track track = new Track();
-        track.setId(UUID.randomUUID());
-        track.setTitle(title);
-        track.setDurationMs(durationMs);
-        track.setProcessingStatus("PENDING");
-        track.setIsPrivate(false);
-        track.setUploaderId(userId);
-        trackRepository.insert(track);
-
-        if (artistName != null) {
-            Artist artist = artistRepository.findFirstByNameIgnoreCase(artistName).orElseGet(() -> {
-                Artist created = new Artist();
-                created.setName(artistName);
-                created.setIsVerified(false);
-                return artistRepository.insert(created);
-            });
-            trackRepository.insertTrackArtist(track.getId(), artist.getId(), "primary");
-        }
-
-        PlaybackLink youtube = new PlaybackLink();
-        youtube.setTrackId(track.getId());
-        youtube.setPlatform("youtube");
-        youtube.setDeepLink(videoId);
-        youtube.setIsWorking(true);
-        playbackLinkRepository.insert(youtube);
-        return track.getId();
+    private UUID createTrack(TrackLinkParser.ParsedLink link, String title, String artistName,
+                             LinkMetadataService.LinkMetadata meta, UUID userId) {
+        return linkedTrackCreator.create(link.source().name().toLowerCase(), link.externalId(),
+            title, artistName, meta.durationMs(), meta.isrc(), userId);
     }
 
     /**

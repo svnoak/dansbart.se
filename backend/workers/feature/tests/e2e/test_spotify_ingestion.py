@@ -27,6 +27,7 @@ class TestSpotifyTrackIngestion:
         # Set up mock repository
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None  # Track doesn't exist
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -53,6 +54,7 @@ class TestSpotifyTrackIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -84,6 +86,7 @@ class TestSpotifyTrackIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -126,6 +129,34 @@ class TestSpotifyTrackIngestion:
         mock_repo.create_track.assert_not_called()
         assert len(track_ids) == 0
 
+    @pytest.mark.e2e
+    def test_track_created_by_api_is_found_by_spotify_link(
+        self, mock_db_session, mock_spotify_client, mock_spotify_credentials, e2e_env_vars
+    ):
+        """Test: A track the API created from a Spotify link, without ISRC, is reused."""
+        from app.workers.ingestion.spotify import SpotifyIngestor
+
+        api_track = MagicMock()
+        api_track.id = uuid.uuid4()
+        api_track.isrc = None
+        api_track.processing_status = "PENDING"
+        api_track.duration_ms = 180000
+
+        mock_repo = MagicMock()
+        mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = api_track
+
+        sp_track = mock_spotify_client.track.return_value
+        with patch("app.workers.ingestion.spotify.TrackRepository", return_value=mock_repo):
+            ingestor = SpotifyIngestor(mock_db_session)
+            ingestor.sp = mock_spotify_client
+
+            ingestor.ingest_tracks_from_list([sp_track])
+
+        mock_repo.create_track.assert_not_called()
+        mock_repo.get_by_spotify_link.assert_called_with(sp_track["id"])
+        assert api_track.isrc == sp_track["external_ids"]["isrc"]
+
 
 class TestSpotifyPlaylistIngestion:
     """Tests for playlist ingestion from Spotify."""
@@ -139,6 +170,7 @@ class TestSpotifyPlaylistIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -206,6 +238,7 @@ class TestSpotifyPlaylistIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -265,6 +298,7 @@ class TestSpotifyPlaylistIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -295,6 +329,7 @@ class TestSpotifyAlbumIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -321,6 +356,7 @@ class TestSpotifyAlbumIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -350,6 +386,7 @@ class TestSpotifyArtistIngestion:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -407,6 +444,7 @@ class TestSpotifyPlaybackLinks:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -437,6 +475,7 @@ class TestSpotifyTaskIntegration:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -461,6 +500,7 @@ class TestSpotifyTaskIntegration:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()
@@ -497,6 +537,7 @@ class TestSpotifyIngestTrackTask:
 
         mock_repo = MagicMock()
         mock_repo.get_by_isrc.return_value = None
+        mock_repo.get_by_spotify_link.return_value = None
 
         mock_track = MagicMock()
         mock_track.id = uuid.uuid4()

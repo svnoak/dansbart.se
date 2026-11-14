@@ -289,6 +289,15 @@ class SpotifyIngestor:
         # Database Interaction
         db_track = self.repo.get_by_isrc(isrc)
 
+        # The API creates tracks that people add from a Spotify link itself, sometimes
+        # without an ISRC. Find such a track by its Spotify link instead of adding it twice.
+        spotify_id = sp_track.get("id")
+        if not db_track and spotify_id:
+            db_track = self.repo.get_by_spotify_link(spotify_id)
+            if db_track and not db_track.isrc and not isrc.startswith("FALLBACK-"):
+                db_track.isrc = isrc
+                self.db.commit()
+
         if not db_track:
             log.info("new_track_found", title=title, isrc=isrc)
             db_track = self.repo.create_track(
@@ -365,7 +374,6 @@ class SpotifyIngestor:
                 self.db.commit()
 
         # Link Spotify ID
-        spotify_id = sp_track.get("id")
         if spotify_id:
             self.repo.add_playback_link(track_id=db_track.id, platform="spotify", url=spotify_id)
 

@@ -57,8 +57,8 @@ If a worker crashes, its tracks stay in `PROCESSING`. To reset them, call `POST 
 
 Signed-in users add tracks and dance styles to the public library under `/api/contributions` (`domain/contribution/`, frontend `/lagg-till`). Additions are public at once; admins review them afterwards at `/admin/contributions`.
 
-- A YouTube link creates the track and dispatches `analyze_track_task`, which downloads that exact video.
-- A Spotify link dispatches the normal `spotify_ingest_task`. `TrackSubmissionResolverJob` links the `track_submissions` row once the worker has created the track, and after analysis puts the submitter's style back as primary.
+- A YouTube or Spotify link creates the track in the API (`LinkedTrackCreator`) and dispatches `analyze_track_task`. For YouTube the analysis downloads that exact video; for Spotify it searches YouTube by artist and title. Adding never waits for the feature worker or for Spotify: when the Spotify lookup fails, the typed title is enough. `TrackSubmissionResolverJob` puts the submitter's style back as primary after analysis.
+- The admin import of a single Spotify track (`POST /api/spotify/ingest/track`, admins only) creates the track the same way. Albums, artists and playlists still go through the feature worker, which finds a track the API created by its Spotify link or ISRC.
 - The submitter's style is stored with `is_user_confirmed`, so the classifier keeps it.
 - A track a person added (`tracks.uploader_id` set) is listed in `GET /api/tracks` at once, before its analysis. Other tracks wait for `DONE`, because the spider ingests tracks of artists an admin has not approved.
 - A new dance style is a `style_keywords` row with `created_by` set.
