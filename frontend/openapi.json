@@ -8865,6 +8865,7 @@
           "failedTracks": { "type": "integer", "format": "int64" },
           "queuedTracks": { "type": "integer", "format": "int64" },
           "coveragePercent": { "type": "integer", "format": "int32" },
+          "confirmedPercent": { "type": "integer", "format": "int32" },
           "lastAdded": { "type": "string", "format": "date-time" }
         }
       },

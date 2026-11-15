@@ -14,5 +14,6 @@ export interface StatsDto {
   failedTracks?: number;
   queuedTracks?: number;
   coveragePercent?: number;
+  confirmedPercent?: number;
   lastAdded?: string;
 }
