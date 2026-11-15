@@ -43,6 +43,15 @@ public class StatsService {
             .where(statusCondition.and(TrackVisibility.publicOnly()))
             .fetchOne(0, Long.class);
 
+        // Tracks where a person has confirmed a dance style (is_user_confirmed), as opposed to
+        // a style that only the ML classifier suggested.
+        Long confirmed = dsl.select(countDistinct(TRACK_DANCE_STYLES.TRACK_ID))
+            .from(TRACK_DANCE_STYLES)
+            .join(TRACKS).on(TRACK_DANCE_STYLES.TRACK_ID.eq(TRACKS.ID))
+            .where(TRACK_DANCE_STYLES.IS_USER_CONFIRMED.eq(true)
+                .and(statusCondition).and(TrackVisibility.publicOnly()))
+            .fetchOne(0, Long.class);
+
         // Tracks with FAILED status
         Long failedTracks = dsl.selectCount()
             .from(TRACKS)
@@ -65,6 +74,9 @@ public class StatsService {
         int coveragePercent = totalTracks > 0
             ? (int) ((classified * 100) / totalTracks)
             : 0;
+        int confirmedPercent = totalTracks > 0
+            ? (int) ((confirmed * 100) / totalTracks)
+            : 0;
 
         return StatsDto.builder()
             .totalTracks(totalTracks)
@@ -75,6 +87,7 @@ public class StatsService {
             .failedTracks(failedTracks)
             .queuedTracks(queuedTracks)
             .coveragePercent(coveragePercent)
+            .confirmedPercent(confirmedPercent)
             .lastAdded(lastAdded)
             .build();
     }

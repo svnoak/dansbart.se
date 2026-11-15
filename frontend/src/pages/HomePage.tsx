@@ -191,7 +191,7 @@ export function HomePage() {
               />
               <StatPill
                 icon={<CircleCheckIcon className="h-4 w-4" />}
-                value={`${stats.coveragePercent ?? 0} %`}
+                value={`${stats.confirmedPercent ?? 0} %`}
                 label="bekräftade"
               />
             </div>

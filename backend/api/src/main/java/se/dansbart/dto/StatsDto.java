@@ -21,5 +21,7 @@ public class StatsDto {
     private Long failedTracks;
     private Long queuedTracks;
     private Integer coveragePercent;
+    /** Share of tracks with a dance style that a person confirmed. */
+    private Integer confirmedPercent;
     private OffsetDateTime lastAdded;
 }

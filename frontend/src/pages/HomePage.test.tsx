@@ -83,7 +83,7 @@ describe('HomePage', () => {
       size: 8,
       hasMore: false,
     });
-    getStats.mockResolvedValue({ totalTracks: 100, coveragePercent: 42, lastAdded: '2024-01-01' });
+    getStats.mockResolvedValue({ totalTracks: 100, confirmedPercent: 42, lastAdded: '2024-01-01' });
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
