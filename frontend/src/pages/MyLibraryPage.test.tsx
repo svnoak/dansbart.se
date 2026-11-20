@@ -19,6 +19,10 @@ const hasLocalFileForTrack = vi.fn();
 const getLocalFileForTrack = vi.fn();
 const canKeepHandles = vi.fn();
 const pickAudioFiles = vi.fn();
+const canPickFolder = vi.fn();
+const canKeepFolderHandles = vi.fn();
+const pickAudioFolder = vi.fn();
+const audioFilesFromDrop = vi.fn();
 
 vi.mock('@/api/generated/library/library', () => ({
   listMyTracks: () => listMyTracks(),
@@ -48,6 +52,10 @@ vi.mock('@/library/localHandles', async (importOriginal) => ({
   hasLocalFileForTrack: (...args: unknown[]) => hasLocalFileForTrack(...args),
   canKeepHandles: () => canKeepHandles(),
   pickAudioFiles: (...args: unknown[]) => pickAudioFiles(...args),
+  canPickFolder: () => canPickFolder(),
+  canKeepFolderHandles: () => canKeepFolderHandles(),
+  pickAudioFolder: () => pickAudioFolder(),
+  audioFilesFromDrop: (...args: unknown[]) => audioFilesFromDrop(...args),
   getLocalFileForTrack: (...args: unknown[]) => getLocalFileForTrack(...args),
 }));
 
@@ -118,6 +126,12 @@ describe('MyLibraryPage', () => {
     pickAudioFiles.mockReset();
     deleteLocalCopy.mockReset();
     requestPersistentStorage.mockReset();
+    canPickFolder.mockReset();
+    canKeepFolderHandles.mockReset();
+    pickAudioFolder.mockReset();
+    audioFilesFromDrop.mockReset();
+    canPickFolder.mockReturnValue(true);
+    canKeepFolderHandles.mockReturnValue(true);
     hasLocalFileForTrack.mockResolvedValue(true);
     canKeepHandles.mockReturnValue(false);
     getLocalFileForTrack.mockResolvedValue(new File(['audio bytes'], 'vals.mp3'));
@@ -421,5 +435,95 @@ describe('MyLibraryPage', () => {
     await act(async () => getButtons('Importera låtar')[0].click());
 
     expect(requestPersistentStorage).toHaveBeenCalledTimes(1);
+  });
+
+  it('imports the audio files of a picked folder', async () => {
+    const picked = [{ file: new File(['audio'], 'vals.mp3') }];
+    pickAudioFolder.mockResolvedValue(picked);
+    importFiles.mockResolvedValue({ imported: 1, skipped: 0 });
+
+    await renderPage();
+    await act(async () => getButtons('Importera mapp')[0].click());
+
+    await vi.waitFor(() => expect(importFiles).toHaveBeenCalledWith(picked));
+  });
+
+  it('hides Importera mapp when the browser cannot pick a folder', async () => {
+    canPickFolder.mockReturnValue(false);
+
+    await renderPage();
+
+    expect(getButtons('Importera mapp')).toHaveLength(0);
+    expect(getButtons('Importera låtar')).toHaveLength(1);
+  });
+
+  it('says so when a picked folder has no audio files', async () => {
+    pickAudioFolder.mockResolvedValue([]);
+
+    await renderPage();
+    await act(async () => getButtons('Importera mapp')[0].click());
+
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Det fanns inga ljudfiler i det du valde.'),
+    );
+    expect(importFiles).not.toHaveBeenCalled();
+  });
+
+  it('imports nothing and shows no message when the person closes the folder picker', async () => {
+    pickAudioFolder.mockResolvedValue(null);
+
+    await renderPage();
+    await act(async () => getButtons('Importera mapp')[0].click());
+
+    expect(importFiles).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain('Det fanns inga ljudfiler');
+  });
+
+  it('picks the folder with a folder input when the browser keeps no folder handles', async () => {
+    canKeepFolderHandles.mockReturnValue(false);
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+
+    await renderPage();
+    await act(async () => getButtons('Importera mapp')[0].click());
+
+    const folderInput = click.mock.contexts[0] as HTMLInputElement;
+    expect(folderInput.webkitdirectory).toBe(true);
+    expect(pickAudioFolder).not.toHaveBeenCalled();
+    click.mockRestore();
+  });
+
+  it('shows a folder read error next to the buttons', async () => {
+    pickAudioFolder.mockRejectedValue(new DOMException('Gone', 'NotFoundError'));
+
+    await renderPage();
+    await act(async () => getButtons('Importera mapp')[0].click());
+
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('[role="alert"]')?.textContent).toBe(
+        'Det gick inte att läsa mappen. Försök igen.',
+      ),
+    );
+  });
+
+  it('imports dropped files and folders', async () => {
+    const dropped = [{ file: new File(['audio'], 'polska.flac') }];
+    audioFilesFromDrop.mockResolvedValue(dropped);
+    importFiles.mockResolvedValue({ imported: 1, skipped: 0 });
+    await renderPage();
+    const page = container.querySelector('h1')!.closest('.relative')!;
+    const dataTransfer = { types: ['Files'], items: [], dropEffect: 'none' };
+
+    const dragOver = new Event('dragover', { bubbles: true, cancelable: true });
+    Object.assign(dragOver, { dataTransfer });
+    await act(async () => page.dispatchEvent(dragOver));
+    expect(document.body.textContent).toContain('Släpp filer eller mappar för att importera');
+
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+    Object.assign(drop, { dataTransfer });
+    await act(async () => page.dispatchEvent(drop));
+
+    expect(audioFilesFromDrop).toHaveBeenCalledWith(dataTransfer);
+    await vi.waitFor(() => expect(importFiles).toHaveBeenCalledWith(dropped));
+    expect(document.body.textContent).not.toContain('Släpp filer eller mappar för att importera');
   });
 });
