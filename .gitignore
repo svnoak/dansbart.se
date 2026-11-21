@@ -226,3 +226,6 @@ __marimo__/
 CLAUDE.local.md
 
 node_modules/
+
+# Built Discourse theme
+discourse/dansbart-theme.zip

@@ -1,0 +1,25 @@
+en:
+  theme_metadata:
+    description: "The Dansbart theme: the colours, type and shapes of dansbart.se, a feed that feels like a Facebook group, and a prominent Google sign-in."
+    settings:
+      main_site_url: "The address of dansbart.se. Used by the header link."
+      main_site_label: "The label of the header link that leads to dansbart.se."
+      show_site_link_in_header: "Show a link to dansbart.se in the header."
+      feed_layout: "Show topic lists as a feed of cards instead of a table."
+      show_feed_author: "Show who wrote the topic, when, and an excerpt in the feed. Needs the site setting 'always include topic excerpts'."
+      show_composer_prompt: "Show the 'Write something…' box at the top of the feed."
+      composer_prompt_text: "The text in the box that opens a new topic."
+      show_like_labels: "Show the word 'Like' next to the heart under every post."
+      login_heading: "The heading on the login page."
+      login_blurb: "The text under the heading on the login page."
+      signup_heading: "The heading on the create-account page."
+      signup_blurb: "The text under the heading on the create-account page."
+      svg_icons: "Icons the theme uses that must be in the icon sprite."
+  dansbart:
+    composer_prompt_login: "Log in to write in the group"
+    composer_prompt_aria: "Write a new post"
+    feed_author_wrote: "wrote"
+    login_or_email: "or log in with email"
+    signup_or_email: "or create an account with email"
+    login_back: "Back to dansbart.se"
+    excerpt_read_more: "Read more"

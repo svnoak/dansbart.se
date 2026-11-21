@@ -1,0 +1,25 @@
+sv:
+  theme_metadata:
+    description: "Dansbart-temat: samma färger, typsnitt och former som dansbart.se, en flödesvy som känns igen från Facebook-grupper och en tydlig Google-inloggning."
+    settings:
+      main_site_url: "Adressen till dansbart.se. Används av länken i sidhuvudet."
+      main_site_label: "Texten på länken i sidhuvudet som leder till dansbart.se."
+      show_site_link_in_header: "Visa en länk till dansbart.se i sidhuvudet."
+      feed_layout: "Visa ämneslistor som ett flöde av kort i stället för en tabell."
+      show_feed_author: "Visa vem som skrev inlägget, när, och ett utdrag i flödet. Kräver webbplatsinställningen 'always include topic excerpts'."
+      show_composer_prompt: "Visa rutan 'Skriv något till gruppen…' överst i flödet."
+      composer_prompt_text: "Texten i rutan som öppnar ett nytt inlägg."
+      show_like_labels: "Visa ordet 'Gilla' bredvid hjärtat under varje inlägg."
+      login_heading: "Rubriken på inloggningssidan."
+      login_blurb: "Texten under rubriken på inloggningssidan."
+      signup_heading: "Rubriken på sidan för att skapa konto."
+      signup_blurb: "Texten under rubriken på sidan för att skapa konto."
+      svg_icons: "Ikoner som temat använder och som måste finnas i ikonarket."
+  dansbart:
+    composer_prompt_login: "Logga in för att skriva i gruppen"
+    composer_prompt_aria: "Skriv ett nytt inlägg"
+    feed_author_wrote: "skrev"
+    login_or_email: "eller logga in med e-post"
+    signup_or_email: "eller skapa konto med e-post"
+    login_back: "Tillbaka till dansbart.se"
+    excerpt_read_more: "Läs mer"

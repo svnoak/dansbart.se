@@ -1,0 +1,52 @@
+main_site_url:
+  type: string
+  default: "https://dansbart.se"
+
+main_site_label:
+  type: string
+  default: "Till musiken"
+
+show_site_link_in_header:
+  type: bool
+  default: true
+
+feed_layout:
+  type: bool
+  default: true
+
+show_feed_author:
+  type: bool
+  default: true
+
+show_composer_prompt:
+  type: bool
+  default: true
+
+composer_prompt_text:
+  type: string
+  default: "Skriv något till gruppen…"
+
+show_like_labels:
+  type: bool
+  default: true
+
+login_heading:
+  type: string
+  default: "Logga in med Google"
+
+login_blurb:
+  type: string
+  default: "Samma konto som på dansbart.se. Du behöver inget nytt lösenord."
+
+signup_heading:
+  type: string
+  default: "Skapa konto med Google"
+
+signup_blurb:
+  type: string
+  default: "Snabbast är att fortsätta med Google. Du kan också skapa ett konto med e-post."
+
+svg_icons:
+  type: list
+  list_type: compact
+  default: "music|pencil|far-image|arrow-left"

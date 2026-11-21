@@ -1,0 +1,917 @@
+// Dansbart theme for Discourse.
+//
+// The tokens below mirror frontend/src/index.css and frontend/DESIGN.md in
+// the dansbart.se repository: a cool stone ground, white hairline-bordered
+// cards, one grotesk at every size, ink for actions, blue for links and
+// selection. Discourse compiles this file once per colour scheme, so
+// dark-light-choose() picks the right neutral for "Dansbart ljus" and
+// "Dansbart mörk".
+
+// ---------------------------------------------------------------------------
+// Type: Schibsted Grotesk, served from the theme so no request leaves the
+// forum. The site itself serves the same family from its own origin.
+// ---------------------------------------------------------------------------
+
+@font-face {
+  font-family: "Schibsted Grotesk Variable";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url($schibsted-normal) format("woff2-variations"),
+    url($schibsted-normal) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Schibsted Grotesk Variable";
+  font-style: italic;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url($schibsted-italic) format("woff2-variations"),
+    url($schibsted-italic) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+// ---------------------------------------------------------------------------
+// Tokens
+// ---------------------------------------------------------------------------
+
+:root {
+  --font-family: "Schibsted Grotesk Variable", ui-sans-serif, system-ui,
+    sans-serif;
+  --heading-font-family: var(--font-family);
+
+  // Shape: 8 px controls, 12 px cards, full for pills. Discourse reads these.
+  --d-border-radius: 8px;
+  --d-border-radius-large: 12px;
+  --d-input-border-radius: 8px;
+  --d-nav-pill-border-radius: 9999px;
+
+  // Neutrals. --secondary (the surface) comes from the colour scheme.
+  --db-ground: #{dark-light-choose(#f3f3ef, #16181b)};
+  --db-surface: var(--secondary);
+  --db-hairline: #{dark-light-choose(#e1e1db, #3a3e44)};
+  --db-control-border: #{dark-light-choose(#8a8f96, #80868e)};
+  --db-text-muted: #{dark-light-choose(#596069, #a4aab2)};
+  --db-secondary-fill: #{dark-light-choose(#e9e9e4, #2c3035)};
+  --db-ink-hover: #{dark-light-choose(#32373e, #ffffff)};
+  --db-selected-tint: rgb(var(--tertiary-rgb) / 0.1);
+  --db-card-shadow: #{dark-light-choose(
+      "0 8px 24px -4px rgb(0 0 0 / 0.12), 0 2px 6px -2px rgb(0 0 0 / 0.06)",
+      "0 8px 24px -4px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.35)"
+    )};
+
+  // Sidebar rows look like the sidebar on dansbart.se: left-aligned rows,
+  // a tinted blue background on the active item, no bar and no border.
+  --d-sidebar-background: var(--db-ground);
+  --d-sidebar-border-color: transparent;
+  --d-sidebar-section-border-color: var(--db-hairline);
+  --d-sidebar-link-color: var(--primary);
+  --d-sidebar-link-icon-color: var(--db-text-muted);
+  --d-sidebar-highlight-background: var(--db-secondary-fill);
+  --d-sidebar-highlight-color: var(--primary);
+  --d-sidebar-active-background: var(--db-selected-tint);
+  --d-sidebar-active-color: var(--tertiary);
+  --d-sidebar-active-icon-color: var(--tertiary);
+  --d-sidebar-row-height: 2.75em;
+
+  --d-header-icon-color: var(--db-text-muted);
+  --d-header-icon-color--hover: var(--primary);
+  --d-content-background: var(--db-ground);
+}
+
+// ---------------------------------------------------------------------------
+// Ground, surfaces and type
+// ---------------------------------------------------------------------------
+
+html,
+body {
+  background-color: var(--db-ground);
+  color: var(--primary);
+}
+
+body {
+  font-family: var(--font-family);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+h1 {
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+a {
+  color: var(--tertiary);
+}
+
+// Visible focus everywhere (WCAG 2.4.7), the same 2 px blue ring as the site.
+:focus-visible {
+  outline: 2px solid var(--tertiary);
+  outline-offset: 2px;
+}
+
+// ---------------------------------------------------------------------------
+// Controls: 8 px corners, ink primary, muted secondary, 44 px tall targets.
+// Flat and icon-only buttons keep their own size so toolbars stay compact.
+// ---------------------------------------------------------------------------
+
+.btn {
+  border-radius: var(--d-border-radius);
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-primary,
+.btn-default,
+.btn-danger,
+.btn-social,
+.btn-large {
+  min-height: 44px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--secondary);
+
+  .d-icon {
+    color: inherit;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--db-ink-hover);
+    color: var(--secondary);
+  }
+}
+
+.btn-default {
+  background: var(--db-secondary-fill);
+  color: var(--primary);
+  border: none;
+
+  .d-icon {
+    color: var(--db-text-muted);
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--db-hairline);
+    color: var(--primary);
+  }
+}
+
+.btn-flat,
+.btn-transparent {
+  border-radius: var(--d-border-radius);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+input[type="number"],
+textarea,
+.select-kit .select-kit-header {
+  border: 1px solid var(--db-control-border);
+  border-radius: var(--d-input-border-radius);
+  background: var(--db-surface);
+  color: var(--primary);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  border-color: var(--tertiary);
+  outline: 2px solid var(--tertiary);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+// ---------------------------------------------------------------------------
+// Header: a white bar with a hairline, the mark at the left, no shadow.
+// ---------------------------------------------------------------------------
+
+.d-header {
+  background: var(--header_background);
+  border-bottom: 1px solid var(--db-hairline);
+  box-shadow: none;
+
+  .title a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  #site-logo {
+    max-height: 2.25rem;
+  }
+
+  #site-text-logo {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--header_primary);
+  }
+
+  .d-header-icons .icon {
+    border-radius: 9999px;
+  }
+}
+
+.dansbart-site-link {
+  .dansbart-site-link__anchor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 0.875rem;
+    border-radius: 9999px;
+    color: var(--primary);
+    font-size: var(--font-down-1);
+    font-weight: 600;
+    text-decoration: none;
+
+    .d-icon {
+      color: var(--db-text-muted);
+    }
+
+    &:hover {
+      background: var(--db-secondary-fill);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Navigation pills: rounded, the active one in ink.
+// ---------------------------------------------------------------------------
+
+.nav-pills {
+  gap: 0.25rem;
+
+  > li > a,
+  > li > button {
+    border-radius: 9999px;
+    padding: 0.5rem 0.875rem;
+    font-weight: 600;
+    color: var(--primary);
+    min-height: 40px;
+
+    &:hover {
+      background: var(--db-secondary-fill);
+      color: var(--primary);
+    }
+  }
+
+  > li.active > a,
+  > li > a.active,
+  > li > button.active {
+    background: var(--primary);
+    color: var(--secondary);
+
+    .d-icon {
+      color: inherit;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cards shared by the feed, the composer prompt and the login page.
+// ---------------------------------------------------------------------------
+
+%dansbart-card {
+  background: var(--db-surface);
+  border: 1px solid var(--db-hairline);
+  border-radius: var(--d-border-radius-large);
+  box-shadow: none;
+}
+
+.dansbart-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--d-border-radius-large);
+  background: var(--primary);
+  color: var(--secondary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+// ---------------------------------------------------------------------------
+// The "Skriv något till gruppen…" box: avatar at the left, a rounded field
+// that opens the composer, the way a Facebook group starts its feed.
+// ---------------------------------------------------------------------------
+
+.dansbart-composer-prompt {
+  @extend %dansbart-card;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0 0.75rem;
+
+  &__avatar .avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+  }
+
+  &__button {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 1px solid var(--db-control-border);
+    border-radius: 9999px;
+    background: var(--db-surface);
+    color: var(--db-text-muted);
+    font-family: inherit;
+    font-size: var(--font-0);
+    text-align: left;
+    cursor: pointer;
+
+    .d-icon {
+      color: var(--db-text-muted);
+    }
+
+    &:hover {
+      background: var(--db-secondary-fill);
+      color: var(--primary);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The feed: every topic is a card with its author on top, the title, the
+// first lines, and the counts below. Scoped to discovery lists so the
+// suggested-topics table under a topic keeps its compact layout.
+// ---------------------------------------------------------------------------
+
+body.dansbart-feed #list-area {
+  .topic-list {
+    display: block;
+    width: 100%;
+    border: none;
+    border-collapse: separate;
+  }
+
+  .topic-list-header {
+    display: none;
+  }
+
+  .topic-list-body {
+    display: block;
+    border: none;
+  }
+
+  .topic-list-item-separator {
+    display: block;
+    margin: 0.5rem 0;
+
+    .topic-list-data {
+      display: block;
+      padding: 0;
+    }
+  }
+
+  .topic-list-item {
+    @extend %dansbart-card;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+
+    &:hover,
+    &.selected,
+    &.last-visit,
+    &.visited {
+      background: var(--db-surface);
+    }
+
+    &.last-visit {
+      border-color: var(--db-hairline);
+    }
+
+    > .topic-list-data {
+      display: block;
+      padding: 0;
+      border: none;
+      vertical-align: middle;
+    }
+
+    .main-link {
+      flex: 1 1 100%;
+      order: 1;
+    }
+
+    .posters {
+      order: 2;
+      width: auto;
+
+      a:first-child .avatar {
+        display: none;
+      }
+    }
+
+    .posts-map,
+    .likes {
+      order: 3;
+    }
+
+    .views {
+      display: none;
+    }
+
+    .activity {
+      order: 4;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .num {
+      font-size: var(--font-down-1);
+      color: var(--db-text-muted);
+
+      .badge-posts,
+      a {
+        color: var(--db-text-muted);
+        font-weight: 600;
+      }
+    }
+
+    .link-top-line {
+      display: block;
+      margin-top: 0.25rem;
+    }
+
+    .raw-topic-link {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--primary);
+    }
+
+    &.visited .raw-topic-link {
+      color: var(--primary);
+    }
+
+    .link-bottom-line {
+      margin-top: 0.375rem;
+    }
+
+    .badge-category__wrapper .badge-category {
+      border-radius: 9999px;
+      padding: 0.125rem 0.625rem;
+    }
+
+    .bulk-select {
+      order: 0;
+    }
+  }
+
+  .topic-list-bottom {
+    margin-top: 0.75rem;
+  }
+}
+
+.dansbart-feed-author {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.25rem;
+
+  &__avatar .avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+
+  &__name {
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  &__time {
+    font-size: var(--font-down-1);
+    color: var(--db-text-muted);
+  }
+}
+
+.dansbart-feed-excerpt {
+  display: block;
+  margin-top: 0.375rem;
+  color: var(--primary);
+  font-size: var(--font-0);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  &__more {
+    color: var(--tertiary);
+    font-weight: 600;
+  }
+
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// A topic: each post is a card, the author on top, "Gilla" and "Svara" as
+// words under the text.
+// ---------------------------------------------------------------------------
+
+.topic-post {
+  > article,
+  .topic-body {
+    border: none;
+  }
+
+  > article {
+    @extend %dansbart-card;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .topic-avatar {
+    border: none;
+    padding-top: 0;
+  }
+
+  .topic-body {
+    padding-top: 0;
+  }
+
+  .topic-meta-data {
+    padding-top: 0;
+  }
+
+  .names .first,
+  .names .full-name {
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .post-info a,
+  .post-info .relative-date {
+    color: var(--db-text-muted);
+  }
+
+  .cooked {
+    font-size: var(--font-0);
+    line-height: 1.6;
+  }
+
+  .post-menu-area {
+    border-top: 1px solid var(--db-hairline);
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+  }
+
+  .post-controls .actions .btn,
+  .post-controls .actions .btn-flat {
+    min-height: 40px;
+    border-radius: var(--d-border-radius);
+    color: var(--db-text-muted);
+    font-weight: 600;
+
+    .d-icon {
+      color: var(--db-text-muted);
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--db-secondary-fill);
+      color: var(--primary);
+
+      .d-icon {
+        color: var(--primary);
+      }
+    }
+  }
+
+  .post-controls .actions .has-like,
+  .post-controls .actions .has-like .d-icon {
+    color: var(--love);
+  }
+}
+
+.small-action {
+  border-top: none;
+}
+
+#topic-footer-buttons {
+  .topic-footer-main-buttons .btn-primary.create {
+    min-height: 48px;
+    padding-inline: 1.25rem;
+  }
+}
+
+.topic-map {
+  border-radius: var(--d-border-radius-large);
+  border: 1px solid var(--db-hairline);
+}
+
+// ---------------------------------------------------------------------------
+// Composer: a surface with a hairline, nothing heavier.
+// ---------------------------------------------------------------------------
+
+#reply-control {
+  background: var(--db-surface);
+  border-top: 1px solid var(--db-hairline);
+  box-shadow: var(--db-card-shadow);
+
+  .d-editor-textarea-wrapper,
+  .d-editor-preview-wrapper {
+    border-radius: var(--d-border-radius);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Login and create-account: one card. The intro on top, the Google button
+// first and large, then "eller logga in med e-post" and the email form.
+// ---------------------------------------------------------------------------
+
+body.login-page,
+body.signup-page {
+  background-color: var(--db-ground);
+
+  .d-header {
+    background: var(--db-ground);
+    border-bottom: none;
+  }
+}
+
+.login-fullpage,
+.signup-fullpage {
+  padding: 1rem;
+  box-sizing: border-box;
+
+  .login-body,
+  .signup-body {
+    @extend %dansbart-card;
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 30rem;
+    padding: 2rem 1.5rem;
+    gap: 0;
+  }
+
+  // The intro from the theme replaces the core welcome header.
+  .login-welcome-header {
+    display: none;
+  }
+
+  .dansbart-login-intro {
+    order: 0;
+    text-align: center;
+    padding: 0 0 1.5rem;
+
+    &__heading {
+      margin: 1rem 0 0;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: var(--primary);
+    }
+
+    &__blurb {
+      margin: 0.5rem 0 0;
+      font-size: var(--font-0);
+      color: var(--db-text-muted);
+    }
+
+    &__back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      margin-top: 0.75rem;
+      min-height: 24px;
+      font-size: var(--font-down-1);
+      font-weight: 600;
+      color: var(--tertiary);
+
+      .d-icon {
+        color: inherit;
+      }
+    }
+  }
+
+  // Social buttons first, directly under the intro.
+  .login-right-side {
+    order: 1;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    background: none;
+
+    &::before {
+      display: none;
+    }
+  }
+
+  // The email form comes after the separator.
+  .login-left-side {
+    order: 2;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .login-or-separator {
+    display: none;
+  }
+
+  #login-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: auto;
+    padding: 0;
+    margin: 0;
+
+    .btn-social {
+      flex: 1 1 100%;
+      width: 100%;
+      min-height: 52px;
+      margin: 0;
+      padding: 0.75rem 1rem;
+      justify-content: center;
+      gap: 0.75rem;
+      border: none;
+      border-radius: var(--d-border-radius);
+      background: var(--primary);
+      color: var(--secondary);
+      font-size: 1.0625rem;
+      font-weight: 600;
+
+      .d-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: inherit;
+      }
+
+      &:hover,
+      &:focus-visible {
+        background: var(--db-ink-hover);
+        color: var(--secondary);
+      }
+    }
+
+    // The Google "G" keeps its brand colours on a white disc so the button
+    // reads as a Google sign-in and not just as another ink button.
+    .btn-social.google_oauth2 .d-icon-custom-google-oauth2 {
+      box-sizing: content-box;
+      padding: 0.25rem;
+      border-radius: 9999px;
+      background: #ffffff;
+    }
+
+    .btn-social-title {
+      overflow: visible;
+    }
+
+    .btn.passkey-login-button {
+      width: 100%;
+      min-height: 44px;
+    }
+  }
+
+  // The "eller logga in med e-post" line only makes sense above an email
+  // form, so it shows only when one is there.
+  .dansbart-login-separator {
+    display: none;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin: 0.5rem 0 0.25rem;
+    font-size: var(--font-down-1);
+    color: var(--db-text-muted);
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      background: var(--db-hairline);
+    }
+
+    span {
+      display: none;
+      position: relative;
+      padding: 0 0.75rem;
+      background: var(--db-surface);
+    }
+  }
+
+  .login-body:has(#login-form) .dansbart-login-separator,
+  .signup-body:has(#login-form) .dansbart-login-separator {
+    display: flex;
+  }
+
+  .login-body .dansbart-login-separator__login,
+  .signup-body .dansbart-login-separator__signup {
+    display: inline-block;
+  }
+
+  #login-form,
+  .login-form {
+    margin-top: 1rem;
+  }
+
+  .input-group input {
+    min-height: 44px;
+  }
+
+  .login-page-cta,
+  .signup-page-cta {
+    padding: 0;
+
+    &__buttons {
+      align-items: stretch;
+    }
+
+    &__login,
+    &__signup {
+      width: 100%;
+    }
+
+    &__no-account-yet,
+    &__existing-account {
+      margin-top: 0.5rem;
+    }
+  }
+
+  .login-page-cta__login,
+  .signup-page-cta__signup {
+    background: var(--db-secondary-fill);
+    color: var(--primary);
+
+    &:hover,
+    &:focus-visible {
+      background: var(--db-hairline);
+      color: var(--primary);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Floating layers: the only things that cast the single soft shadow.
+// ---------------------------------------------------------------------------
+
+.menu-panel,
+.user-menu,
+.d-modal__container,
+.fk-d-menu,
+.fk-d-tooltip__inner-content,
+.select-kit-body {
+  border-radius: var(--d-border-radius-large);
+  border: 1px solid var(--db-hairline);
+  box-shadow: var(--db-card-shadow);
+}
+
+// ---------------------------------------------------------------------------
+// Categories and user pages pick up the card shape too.
+// ---------------------------------------------------------------------------
+
+.category-list,
+.user-main .user-content,
+.user-main .about,
+.group-details-container {
+  border-radius: var(--d-border-radius-large);
+}
+
+.badge-category__wrapper .badge-category {
+  border-radius: 9999px;
+}
